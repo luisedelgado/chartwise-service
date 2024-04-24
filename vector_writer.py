@@ -3,71 +3,59 @@ import os
 import time
 
 from dotenv import load_dotenv
-from llama_index.core import Settings, SimpleDirectoryReader
+from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 from pinecone.grpc import PineconeGRPC
 
-load_dotenv('environment.env')
+def upload_session(session_text, session_date):
+    load_dotenv('environment.env')
 
-# Globals
-Settings.embed_model = OpenAIEmbedding()
+    # Globals
+    Settings.embed_model = OpenAIEmbedding()
 
-# local_directory = "data"
-# dummy_session_date = "10/24/2021"
-local_directory = "data2"
-dummy_session_date = "03/03/2023"
+    doc = Document() 
+    doc.set_content(data_cleaner.clean_up_text(session_text))
 
-#clean and prep local documents for Pinecone store ingestion
-raw_documents = SimpleDirectoryReader(local_directory).load_data()
-cleaned_docs = []
-for d in raw_documents: 
-    cleaned_text = data_cleaner.clean_up_text(d.get_content())
-    d.set_content(cleaned_text)
-    cleaned_docs.append(d)
+    # Add metadata
+    metadata_additions = {
+        "session_date": session_date
+    }
+    doc.metadata.update(metadata_additions)
 
-# Iterate through `cleaned_docs` and add our new metadata key:value pairs
-metadata_additions = {
-    "patient": "John Doe",
-    "session_date": dummy_session_date
-}
+    # Initialize connection to Pinecone
+    pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
 
- # Update dict in place
-[cd.metadata.update(metadata_additions) for cd in cleaned_docs]
+    index_name = 'patient-john-doe'
 
-# Initialize connection to Pinecone
-pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+    # wait for index to be initialized  
+    while not pc.describe_index(index_name).status['ready']:
+        print("sleeping")
+        time.sleep(1)
 
-index_name = 'patient-john-doe'
+    #check index current stats
+    index = pc.Index(index_name)
 
-# wait for index to be initialized  
-while not pc.describe_index(index_name).status['ready']:
-    print("sleeping")
-    time.sleep(1)
+    # Initialize VectorStore
+    vector_store = PineconeVectorStore(pinecone_index=index)
 
-#check index current stats
-index = pc.Index(index_name)
+    # This will be the model we use both for Node parsing and for vectorization
+    embed_model = OpenAIEmbedding(api_key=os.environ.get('OPENAI_API_KEY'))
 
-# Initialize VectorStore
-vector_store = PineconeVectorStore(pinecone_index=index)
+    # Define the initial pipeline
+    pipeline = IngestionPipeline(
+        transformations=[
+            SemanticSplitterNodeParser(
+                buffer_size=1,
+                breakpoint_percentile_threshold=95, 
+                embed_model=embed_model,
+                ),
+            embed_model,
+            ],
+            vector_store=vector_store
+        )
 
-# This will be the model we use both for Node parsing and for vectorization
-embed_model = OpenAIEmbedding(api_key=os.environ.get('OPENAI_API_KEY'))
-
-# Define the initial pipeline
-pipeline = IngestionPipeline(
-    transformations=[
-        SemanticSplitterNodeParser(
-            buffer_size=1,
-            breakpoint_percentile_threshold=95, 
-            embed_model=embed_model,
-            ),
-        embed_model,
-        ],
-        vector_store=vector_store
-    )
-
-# Now we run our pipeline!
-pipeline.run(documents=cleaned_docs)
+    # Now we run our pipeline!
+    pipeline.run(documents=[doc])
