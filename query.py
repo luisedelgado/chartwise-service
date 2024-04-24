@@ -19,7 +19,7 @@ def query_model(input):
     while not pc.describe_index(index_name).status['ready']:
         print("sleeping")
         time.sleep(1)
-
+    
     #check index current stats
     index = pc.Index(index_name)
 
@@ -37,4 +37,4 @@ def query_model(input):
         streaming=True,
     )
 
-    return query_engine.query(input)
+    return str(query_engine.query(input))

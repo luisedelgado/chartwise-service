@@ -21,4 +21,4 @@ def upload_new_session(session_report: SessionReport):
 def execute_assistant_query(query: AssistantQuery):
     response = query_handler.query_model(query.text)
     return {"success": True,
-            "response": {response}}
+            "response": response}
