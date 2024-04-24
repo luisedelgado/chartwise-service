@@ -10,7 +10,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 from pinecone.grpc import PineconeGRPC
 
-def upload_session(session_text, session_date):
+def upload_session_vector(session_text, session_date):
     load_dotenv('environment.env')
 
     # Globals
