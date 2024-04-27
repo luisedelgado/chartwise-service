@@ -8,9 +8,10 @@ from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
+from pinecone import ServerlessSpec
 from pinecone.grpc import PineconeGRPC
 
-def upload_session_vector(session_text, session_date):
+def upload_session_vector(index_name, session_text, session_date):
     load_dotenv('environment.env')
 
     # Globals
@@ -27,8 +28,6 @@ def upload_session_vector(session_text, session_date):
 
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-
-    index_name = 'patient-john-doe'
 
     # wait for index to be initialized  
     while not pc.describe_index(index_name).status['ready']:
@@ -59,3 +58,13 @@ def upload_session_vector(session_text, session_date):
 
     # Now we run our pipeline!
     pipeline.run(documents=[doc])
+
+def create_index(index_name: str):
+    pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+    pc.create_index(
+        name=index_name,
+        dimension=1536,
+        spec=ServerlessSpec(
+            cloud='aws',
+            region='us-west-2')
+    )
