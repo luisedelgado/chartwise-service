@@ -8,12 +8,11 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone.grpc import PineconeGRPC
 
-def query_model(input):
+def query_model(index_name, input):
     load_dotenv('environment.env')
 
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-    index_name = 'patient-john-doe'
 
     # wait for index to be initialized  
     while not pc.describe_index(index_name).status['ready']:
@@ -37,4 +36,5 @@ def query_model(input):
         streaming=True,
     )
 
-    return str(query_engine.query(input))
+    response = query_engine.query(input)
+    return str(response)
