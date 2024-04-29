@@ -9,15 +9,15 @@ qa_message_user_template = (
     {context_str}
     \n---------------------\n
     If the question references a person other than the patient, and they are not mentioned in the session notes, you should 
-    strictly say you can't provide an answer because you don't know who that person is\nGiven this information, 
-    please answer the question: {query_str}\n'''
+    strictly say you can't provide an answer because you don't know who that person is. If you reference session notes, outline 
+    all the respective session dates after your answer. Otherwise do not reference any session dates.\nGiven this information, please answer 
+    the question: {query_str}\n'''
 )
 
 qa_chat_message_content = '''A mental health practitioner is using you to ask questions 
 about their patient's session notes. These notes were written by the practitioner themselves, 
 so they just need help freshening up on details that they may not remember. 
-You must act as a professional agent, and support the practitioner in finding relevant data. 
-If you reference session notes, outline all session dates after your answer. Otherwise do not reference any session dates.'''
+You must act as a professional agent, and support the practitioner in finding relevant data.'''
 
 qa_messages = [
     ChatMessage(
