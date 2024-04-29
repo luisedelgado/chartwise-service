@@ -1,14 +1,17 @@
+import json
+import message_templates as message_templates
 import os
 import time
-import message_templates as message_templates
+import requests
 
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
+from openai import OpenAI
 from pinecone.grpc import PineconeGRPC
 
-def query_model(index_name, input):
+def query_store(index_name, input):
     load_dotenv('environment.env')
 
     # Initialize connection to Pinecone
@@ -38,3 +41,26 @@ def query_model(index_name, input):
 
     response = query_engine.query(input)
     return str(response)
+
+def create_greeting():
+    load_dotenv('environment.env')
+
+    api_key = os.environ.get('OPENAI_API_KEY')
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+
+    data = {
+        'model': 'gpt-3.5-turbo',
+        'messages': [
+            {'role': 'system', 'content': message_templates.greeting_system_message_content},
+            {'role': 'user', 'content': message_templates.greeting_user_message_content}
+        ],
+        'temperature': 0
+    }
+
+    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(data))
+    json_response = response.json()
+    greeting = json_response.get('choices')[0]['message']['content']
+    return greeting

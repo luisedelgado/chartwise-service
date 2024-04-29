@@ -26,7 +26,7 @@ def upload_new_session(session_report: SessionReport):
 
 @app.get("/v1/assistant-queries")
 def execute_assistant_query(query: AssistantQuery):
-    response = query_handler.query_model(query.index_name, query.text)
+    response = query_handler.query_store(query.index_name, query.text)
     return {"success": True,
             "response": response}
     
@@ -34,3 +34,7 @@ def execute_assistant_query(query: AssistantQuery):
 def create_patient(patient: Patient):
     response = vector_writer.create_index(patient.id)
     return {"success": True}
+
+@app.get("/v1/greetings")
+def fetch_greeting():
+    return {"success": True, "message": query_handler.create_greeting()}
