@@ -30,7 +30,8 @@ def query_store(index_name, input):
 
     # Instantiate VectorStoreIndex object from your vector_store object
     vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
-
+    vector_index.storage_context.persist()
+    
     llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
     query_engine = vector_index.as_query_engine(
         text_qa_template=message_templates.qa_template,
