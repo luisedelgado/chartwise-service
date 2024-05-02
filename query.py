@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from openai import OpenAI
 from pinecone.grpc import PineconeGRPC
 
 def query_store(index_name, input):
@@ -42,6 +41,7 @@ def query_store(index_name, input):
 
     response = query_engine.query(input)
     return str(response)
+    # response.print_response_stream()
 
 def create_greeting():
     load_dotenv('environment.env')
