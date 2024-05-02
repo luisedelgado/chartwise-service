@@ -10,19 +10,19 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone.grpc import PineconeGRPC
 
-def query_store(index_name, input):
+def query_store(index_id, input):
     load_dotenv('environment.env')
 
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
 
     # wait for index to be initialized  
-    while not pc.describe_index(index_name).status['ready']:
+    while not pc.describe_index(index_id).status['ready']:
         print("sleeping")
         time.sleep(1)
     
     #check index current stats
-    index = pc.Index(index_name)
+    index = pc.Index(index_id)
 
     # Initialize VectorStore
     vector_store = PineconeVectorStore(pinecone_index=index)
@@ -41,7 +41,6 @@ def query_store(index_name, input):
 
     response = query_engine.query(input)
     return str(response)
-    # response.print_response_stream()
 
 def create_greeting():
     load_dotenv('environment.env')

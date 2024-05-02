@@ -9,7 +9,7 @@ class SessionReport(BaseModel):
     date: str
     
 class AssistantQuery(BaseModel):
-    index_name: str
+    index_id: str
     text: str
     
 class Patient(BaseModel):
@@ -26,7 +26,7 @@ def upload_new_session(session_report: SessionReport):
 
 @app.get("/v1/assistant-queries")
 def execute_assistant_query(query: AssistantQuery):
-    response = query_handler.query_store(query.index_name, query.text)
+    response = query_handler.query_store(query.index_id, query.text)
     return {"success": True,
             "response": response}
     
