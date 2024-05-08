@@ -38,3 +38,7 @@ def create_patient(patient: Patient):
 @app.get("/v1/greetings")
 def fetch_greeting():
     return {"success": True, "message": query_handler.create_greeting()}
+
+@app.get("/v1/healthcheck")
+def read_healthcheck():
+     return {"status": "ok"}
