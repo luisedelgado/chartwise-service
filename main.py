@@ -1,11 +1,10 @@
-import base64, os, requests
+import base64, datetime, os, requests, shutil, uuid
 import query as query_handler
 import vector_writer as vector_writer
 from fastapi import FastAPI, File, UploadFile
+from pathlib import Path
 from pydantic import BaseModel
 from PIL import Image
-from pathlib import Path
-import shutil
 
 class SessionReport(BaseModel):
     index_name: str
@@ -51,22 +50,24 @@ def read_healthcheck():
      return {"status": "ok"}
 
 @app.post("/v1/image-files")
-def upload_session_notes_image(file: UploadFile = File(...)):
+def upload_session_notes_image(therapist_id: str = str(uuid.uuid4()),
+                               patient_id: str = str(uuid.uuid4()),
+                               image: UploadFile = File(...)):
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
-    
-    # Write incoming image to our DB for further processing
-    file_name, file_extension = os.path.splitext(file.filename)
+    file_name, file_extension = os.path.splitext(image.filename)
 
-    # TODO: Update file name for saving to be format user_id/date
+    # Format name to be used for image copy with template 'therapist_id-patient_id-timestamp'
     image_data_dir = 'image-data'
-    image_copy_path = image_data_dir + '/' + file.filename
+    image_copy_name = therapist_id + '-' + patient_id + '-' + datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    image_copy_path = image_data_dir + '/' + image_copy_name + file_extension
 
+    # Write incoming image to our DB for further processing
     with open(image_copy_path, 'wb+') as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(image.file, buffer)
 
     pdf_extension = '.pdf'
-    image_as_pdf_path = image_data_dir + '/' + file_name + pdf_extension
+    image_as_pdf_path = image_data_dir + '/' + image_copy_name + pdf_extension
 
     # Convert to PDF if necessary
     if file_extension.lower() != pdf_extension:
