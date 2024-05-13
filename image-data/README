@@ -1,0 +1,3 @@
+Directory for storing images of session notes.
+
+The format for a given file is {therapist_id_from_supa}-{patient_seen}-{current_date}.extension
