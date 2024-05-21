@@ -1,8 +1,7 @@
-import base64, datetime, os, requests, shutil, uuid
+import asyncio, base64, datetime, os, requests, shutil, uuid
 import query as query_handler
 import vector_writer as vector_writer
 from fastapi import FastAPI, File, UploadFile
-from pathlib import Path
 from pydantic import BaseModel
 from PIL import Image
 
@@ -59,27 +58,29 @@ def upload_session_notes_image(therapist_id: str = str(uuid.uuid4()),
 
     # Format name to be used for image copy with template 'therapist_id-patient_id-timestamp'
     image_data_dir = 'image-data'
-    image_copy_name = therapist_id + '-' + patient_id + '-' + datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    image_copy_path = image_data_dir + '/' + image_copy_name + file_extension
+    pdf_extension = '.pdf'
+    image_copy_bare_name = therapist_id + '-' + patient_id + '-' + datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    image_copy_path = image_data_dir + '/' + image_copy_bare_name + file_extension
+    image_copy_pdf_path = image_data_dir + '/' + image_copy_bare_name + pdf_extension
+    files_to_clean = [image_copy_path]
 
     # Write incoming image to our DB for further processing
     with open(image_copy_path, 'wb+') as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    pdf_extension = '.pdf'
-    image_as_pdf_path = image_data_dir + '/' + image_copy_name + pdf_extension
-
     # Convert to PDF if necessary
     if file_extension.lower() != pdf_extension:
-        Image.open(image_copy_path).convert('RGB').save(image_as_pdf_path)
+        Image.open(image_copy_path).convert('RGB').save(image_copy_pdf_path)
+        files_to_clean.append(image_copy_pdf_path)
 
-    if not os.path.exists(image_as_pdf_path):
+    if not os.path.exists(image_copy_pdf_path):
+        os.remove(image_copy_path)
         return {"success": False,
             "message": f"Converting the image format to PDF caused issues"}
     
     # Send to DocuPanda
     payload = {"document": {"file": {
-        "contents": base64.b64encode(open(image_as_pdf_path, 'rb').read()).decode(),
+        "contents": base64.b64encode(open(image_copy_pdf_path, 'rb').read()).decode(),
         "filename": file_name + pdf_extension
     }}}
     headers = {
@@ -89,6 +90,12 @@ def upload_session_notes_image(therapist_id: str = str(uuid.uuid4()),
     }
 
     response = requests.post(url, json=payload, headers=headers)
+
+    # Clean up temp files
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(clean_up_images(files_to_clean))
+
     if response.status_code != 200:
         return {"success": False,
             "message": f"Something went wrong when uploading the image"}
@@ -118,3 +125,9 @@ def extract_text(image_item: ImageItem):
         full_text = full_text + section['text'] + " "
 
     return {"success": True, "extraction": full_text}
+
+# Private funtions 
+
+async def clean_up_images(images):
+    for image in images:
+        os.remove(image)
