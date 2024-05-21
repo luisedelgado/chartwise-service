@@ -8,7 +8,7 @@ from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
-from pinecone import ServerlessSpec
+from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
 def upload_session_vector(index_name, session_text, session_date):
@@ -28,8 +28,11 @@ def upload_session_vector(index_name, session_text, session_date):
 
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+    
+    # Create index if necessary
+    __create_index_if_necessary(index_name)
 
-    # wait for index to be initialized  
+    # wait for index to be initialized
     while not pc.describe_index(index_name).status['ready']:
         print("sleeping")
         time.sleep(1)
@@ -58,13 +61,20 @@ def upload_session_vector(index_name, session_text, session_date):
 
     # Now we run our pipeline!
     pipeline.run(documents=[doc])
+    
+# Private functions
 
-def create_index(index_name: str):
-    pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-    pc.create_index(
-        name=index_name,
-        dimension=1536,
-        spec=ServerlessSpec(
-            cloud='aws',
-            region='us-west-2')
-    )
+def __create_index_if_necessary(index_name: str):
+    try:
+        pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        pc.create_index(
+            name=index_name,
+            dimension=1536,
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-west-2')
+        )
+    except PineconeApiException as e:
+        # We expect HTTPCode 409 if index already exists - ALREADY_EXISTS 
+        print(e.status)
+

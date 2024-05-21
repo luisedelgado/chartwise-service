@@ -6,12 +6,12 @@ from pydantic import BaseModel
 from PIL import Image
 
 class SessionReport(BaseModel):
-    index_name: str
+    patient_id: str
     text: str
     date: str
     
 class AssistantQuery(BaseModel):
-    index_id: str
+    patient_id: str
     text: str
     
 class Patient(BaseModel):
@@ -24,21 +24,16 @@ app = FastAPI()
 
 @app.post("/v1/sessions")
 def upload_new_session(session_report: SessionReport):
-    vector_writer.upload_session_vector(session_report.index_name,
+    vector_writer.upload_session_vector(session_report.patient_id,
                                         session_report.text,
                                         session_report.date)
     return {"success": True}
 
 @app.get("/v1/assistant-queries")
 def execute_assistant_query(query: AssistantQuery):
-    response = query_handler.query_store(query.index_id, query.text)
-    return {"success": True,
-            "response": response}
-    
-@app.post("/v1/patients")
-def create_patient(patient: Patient):
-    response = vector_writer.create_index(patient.id)
-    return {"success": True}
+    response = query_handler.query_store(query.patient_id, query.text)
+    return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
+            "response": response.response_token}
 
 @app.get("/v1/greetings")
 def fetch_greeting():

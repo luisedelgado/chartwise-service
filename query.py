@@ -4,25 +4,41 @@ import os
 import time
 import requests
 
+from enum import Enum
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
+from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
-def query_store(index_id, input):
+class QueryStoreResultReason(Enum):
+    SUCCESS = 1
+    INDEX_DOES_NOT_EXIST = 2
+    UNKNOWN_FAILURE = 3
+
+class QueryStoreResult:
+    def __init__(self, response_token, reason):
+        self.response_token = response_token
+        self.reason = reason
+
+def query_store(index_id, input) -> QueryStoreResult:
     load_dotenv('environment.env')
 
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
 
-    # wait for index to be initialized  
-    while not pc.describe_index(index_id).status['ready']:
-        print("sleeping")
-        time.sleep(1)
-    
-    #check index current stats
-    index = pc.Index(index_id)
+    try:
+        # wait for index to be initialized
+        while not pc.describe_index(index_id).status['ready']:
+            print("sleeping")
+            time.sleep(1)
+
+        index = pc.Index(index_id)
+    except PineconeApiException as e:
+        # We expect HTTPCode 404 if the index does not exist - NOT_FOUND
+        reason = QueryStoreResultReason.INDEX_DOES_NOT_EXIST if e.status == 404 else QueryStoreResultReason.UNKNOWN_FAILURE
+        return QueryStoreResult("", reason)
 
     # Initialize VectorStore
     vector_store = PineconeVectorStore(pinecone_index=index)
@@ -40,7 +56,7 @@ def query_store(index_id, input):
     )
 
     response = query_engine.query(input)
-    return str(response)
+    return QueryStoreResult(str(response), QueryStoreResultReason.SUCCESS)
 
 def create_greeting():
     load_dotenv('environment.env')
