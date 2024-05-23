@@ -3,10 +3,12 @@ import query as query_handler
 import vector_writer as vector_writer
 from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
+from supabase import create_client, Client
 from PIL import Image
 
 class SessionReport(BaseModel):
     patient_id: str
+    therapist_id: str
     text: str
     date: str
     
@@ -27,6 +29,15 @@ def upload_new_session(session_report: SessionReport):
     vector_writer.upload_session_vector(session_report.patient_id,
                                         session_report.text,
                                         session_report.date)
+    
+    # Write full text to supabase
+    # supabase = supabase_admin_instance()
+    # supabase.table('session_reports').insert({
+    #     "session_text": session_report.text,
+    #     "session_date": session_report.date,
+    #     "patient_id": session_report.patient_id,
+    #     "therapist_id": session_report.therapist_id}).execute()
+
     return {"success": True}
 
 @app.get("/v1/assistant-queries")
@@ -44,9 +55,12 @@ def read_healthcheck():
      return {"status": "ok"}
 
 @app.post("/v1/image-files")
-def upload_session_notes_image(therapist_id: str = str(uuid.uuid4()),
-                               patient_id: str = str(uuid.uuid4()),
+def upload_session_notes_image(therapist_id: str = "",
+                               patient_id: str = "",
                                image: UploadFile = File(...)):
+    if therapist_id == "" or patient_id == "":
+        return {"success": False, "error": "Need both a therapist id as well as a patient id"}
+
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
@@ -126,3 +140,13 @@ def extract_text(image_item: ImageItem):
 async def clean_up_images(images):
     for image in images:
         os.remove(image)
+
+def supabase_admin_instance() -> Client:
+    key: str = os.environ.get("SUPABASE_KEY")
+    url: str = os.environ.get("SUPABASE_URL")
+    
+    supabase: Client = create_client(url, key)
+    supabase.auth.sign_in_with_password({"email": os.environ.get("SUPABASE_ADMIN_USERNAME"),
+                                                    "password": os.environ.get("SUPABASE_ADMIN_PASSWORD")})
+
+    return supabase
