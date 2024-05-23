@@ -101,6 +101,7 @@ starlette==0.37.2
 storage3==0.7.4
 StrEnum==0.4.15
 striprtf==0.0.26
+supabase==2.4.5
 supafunc==0.4.5
 sympy==1.12
 tavily-python==0.3.3
