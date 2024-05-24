@@ -91,25 +91,20 @@ def read_healthcheck():
      return {"status": "ok"}
 
 @app.post("/v1/image-files")
-def upload_session_notes_image(therapist_id: str = "",
-                               patient_id: str = "",
-                               image: UploadFile = File(...)):
-    if therapist_id == "" or patient_id == "":
-        return {"success": False, "error": "Need both a therapist id as well as a patient id"}
-
+def upload_session_notes_image(image: UploadFile = File(...)):
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
 
-    # Format name to be used for image copy with template 'therapist_id-patient_id-timestamp'
+    # Format name to be used for image copy using current timestamp
     image_data_dir = 'image-data'
     pdf_extension = '.pdf'
-    image_copy_bare_name = therapist_id + '-' + patient_id + '-' + datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    image_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     image_copy_path = image_data_dir + '/' + image_copy_bare_name + file_extension
     image_copy_pdf_path = image_data_dir + '/' + image_copy_bare_name + pdf_extension
     files_to_clean = [image_copy_path]
 
-    # Write incoming image to our DB for further processing
+    # Write incoming image to our local volume for further processing
     with open(image_copy_path, 'wb+') as buffer:
         shutil.copyfileobj(image.file, buffer)
 
@@ -121,7 +116,7 @@ def upload_session_notes_image(therapist_id: str = "",
     if not os.path.exists(image_copy_pdf_path):
         os.remove(image_copy_path)
         return {"success": False,
-            "message": f"Converting the image format to PDF caused issues"}
+            "message": f"There was an error while converting the image to PDF"}
     
     # Send to DocuPanda
     payload = {"document": {"file": {
