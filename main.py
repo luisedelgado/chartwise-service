@@ -37,8 +37,10 @@ def upload_new_session(session_report: SessionReport):
         supabase = supabase_instance(session_report.therapist_username,
                                     session_report.therapist_password)
     except gotrue.errors.AuthApiError as e:
-        return {"success": False, "error": "Wrong therapist credentials"}
-
+        error_message = "Something went wrong when authenticating user"
+        if e.status == 400:
+            error_message = "Wrong therapist credentials"
+        return {"success": False, "error": error_message}
     try:
         # Write full text to supabase
         supabase.table('session_reports').insert({
@@ -47,8 +49,10 @@ def upload_new_session(session_report: SessionReport):
             "patient_id": session_report.patient_id,
             "therapist_id": session_report.therapist_id}).execute()
     except postgrest.exceptions.APIError as e:
+        error_message = "Something went wrong with the request"
         if e.code == '42501':
-            return {"success": False, "error": "Request violated RLS policy"}
+            error_message = "Request violated RLS policy"
+        return {"success": False, "error": error_message}
     except:
         return {"success": False, "error": "Something went wrong with the request"}
 
@@ -64,7 +68,10 @@ def execute_assistant_query(query: AssistantQuery):
         supabase = supabase_instance(query.therapist_username,
                                     query.therapist_password)
     except gotrue.errors.AuthApiError as e:
-        return {"success": False, "error": "Wrong therapist credentials"}
+        error_message = "Something went wrong when authenticating user"
+        if e.status == 400:
+            error_message = "Wrong therapist credentials"
+        return {"success": False, "error": error_message}
 
     try:
         res = supabase.from_('patients').select('*').eq('therapist_id',
@@ -73,8 +80,10 @@ def execute_assistant_query(query: AssistantQuery):
         if len(res.data) == 0:
             return {"success": False, "error": "This patient/therapist combination does not match"}
     except postgrest.exceptions.APIError as e:
+        error_message = "Something went wrong with the request"
         if e.code == '42501':
-            return {"success": False, "error": "Request violated RLS policy"}
+            error_message = "Request violated RLS policy"
+        return {"success": False, "error": error_message}
     except:
         return {"success": False, "error": "Something went wrong with the request"}
 
