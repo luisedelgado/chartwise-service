@@ -1,4 +1,6 @@
-import asyncio, base64, datetime, os, requests, shutil, uuid
+import asyncio, base64, datetime, os, requests, shutil
+import gotrue.errors
+import postgrest.exceptions
 import query as query_handler
 import vector_writer as vector_writer
 from fastapi import FastAPI, File, UploadFile
@@ -11,10 +13,15 @@ class SessionReport(BaseModel):
     therapist_id: str
     text: str
     date: str
-    
+    therapist_username: str
+    therapist_password: str
+
 class AssistantQuery(BaseModel):
     patient_id: str
+    therapist_id: str
     text: str
+    therapist_username: str
+    therapist_password: str
     
 class Patient(BaseModel):
     id: str
@@ -26,22 +33,51 @@ app = FastAPI()
 
 @app.post("/v1/sessions")
 def upload_new_session(session_report: SessionReport):
+    try:
+        supabase = supabase_instance(session_report.therapist_username,
+                                    session_report.therapist_password)
+    except gotrue.errors.AuthApiError as e:
+        return {"success": False, "error": "Wrong therapist credentials"}
+
+    try:
+        # Write full text to supabase
+        supabase.table('session_reports').insert({
+            "session_text": session_report.text,
+            "session_date": session_report.date,
+            "patient_id": session_report.patient_id,
+            "therapist_id": session_report.therapist_id}).execute()
+    except postgrest.exceptions.APIError as e:
+        if e.code == '42501':
+            return {"success": False, "error": "Request violated RLS policy"}
+    except:
+        return {"success": False, "error": "Something went wrong with the request"}
+
     vector_writer.upload_session_vector(session_report.patient_id,
                                         session_report.text,
                                         session_report.date)
-    
-    # Write full text to supabase
-    # supabase = supabase_admin_instance()
-    # supabase.table('session_reports').insert({
-    #     "session_text": session_report.text,
-    #     "session_date": session_report.date,
-    #     "patient_id": session_report.patient_id,
-    #     "therapist_id": session_report.therapist_id}).execute()
 
     return {"success": True}
 
 @app.get("/v1/assistant-queries")
 def execute_assistant_query(query: AssistantQuery):
+    try:
+        supabase = supabase_instance(query.therapist_username,
+                                    query.therapist_password)
+    except gotrue.errors.AuthApiError as e:
+        return {"success": False, "error": "Wrong therapist credentials"}
+
+    try:
+        res = supabase.from_('patients').select('*').eq('therapist_id',
+                                                  query.therapist_id).eq('id',
+                                                                         query.patient_id).execute()
+        if len(res.data) == 0:
+            return {"success": False, "error": "This patient/therapist combination does not match"}
+    except postgrest.exceptions.APIError as e:
+        if e.code == '42501':
+            return {"success": False, "error": "Request violated RLS policy"}
+    except:
+        return {"success": False, "error": "Something went wrong with the request"}
+
     response = query_handler.query_store(query.patient_id, query.text)
     return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
             "response": response.response_token}
@@ -141,12 +177,11 @@ async def clean_up_images(images):
     for image in images:
         os.remove(image)
 
-def supabase_admin_instance() -> Client:
+def supabase_instance(username, password) -> Client:
     key: str = os.environ.get("SUPABASE_KEY")
     url: str = os.environ.get("SUPABASE_URL")
     
     supabase: Client = create_client(url, key)
-    supabase.auth.sign_in_with_password({"email": os.environ.get("SUPABASE_ADMIN_USERNAME"),
-                                                    "password": os.environ.get("SUPABASE_ADMIN_PASSWORD")})
+    supabase.auth.sign_in_with_password({"email": username, "password": password})
 
     return supabase
