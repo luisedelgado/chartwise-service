@@ -7,7 +7,14 @@ import gotrue.errors
 import postgrest.exceptions
 from pydantic import BaseModel
 import query as query_handler
-from security import ACCESS_TOKEN_EXPIRE_MINUTES, User, Token, authenticate_user, create_access_token, get_current_active_user, users_db
+from security import (ACCESS_TOKEN_EXPIRE_MINUTES,
+                      User,
+                      Token,
+                      authenticate_user,
+                      create_access_token,
+                      get_current_active_user,
+                      users_db,
+                      oauth2_scheme)
 from supabase import create_client, Client
 from typing import Annotated
 from PIL import Image
@@ -37,7 +44,8 @@ class ImageItem(BaseModel):
 app = FastAPI()
 
 @app.post("/v1/sessions")
-def upload_new_session(session_report: SessionReport):
+def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
+                       session_report: SessionReport):
     try:
         supabase = supabase_instance(session_report.therapist_username,
                                     session_report.therapist_password)
@@ -68,7 +76,8 @@ def upload_new_session(session_report: SessionReport):
     return {"success": True}
 
 @app.get("/v1/assistant-queries")
-def execute_assistant_query(query: AssistantQuery):
+def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
+                            query: AssistantQuery):
     try:
         supabase = supabase_instance(query.therapist_username,
                                     query.therapist_password)
@@ -97,15 +106,16 @@ def execute_assistant_query(query: AssistantQuery):
             "response": response.response_token}
 
 @app.get("/v1/greetings")
-def fetch_greeting():
+def fetch_greeting(token: Annotated[str, Depends(oauth2_scheme)]):
     return {"success": True, "message": query_handler.create_greeting()}
 
 @app.get("/v1/healthcheck")
-def read_healthcheck():
+def read_healthcheck(token: Annotated[str, Depends(oauth2_scheme)]):
      return {"status": "ok"}
 
 @app.post("/v1/image-files")
-def upload_session_notes_image(image: UploadFile = File(...)):
+def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
+                               image: UploadFile = File(...)):
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
@@ -159,7 +169,8 @@ def upload_session_notes_image(image: UploadFile = File(...)):
             "document_id": document_id}
 
 @app.get("/v1/text-extractions")
-def extract_text(image_item: ImageItem):
+def extract_text(token: Annotated[str, Depends(oauth2_scheme)],
+                 image_item: ImageItem):
     url = os.getenv("DOCUPANDA_URL") + "/" + image_item.document_id
 
     headers = {
@@ -198,19 +209,6 @@ async def login_for_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
-
-
-@app.get("/users/me/", response_model=User)
-async def read_users_me(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    return current_user
-
-@app.get("/users/me/items/")
-async def read_own_items(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    return [{"item_id": "Foo", "owner": current_user.username}]
 
 # Private funtions 
 
