@@ -1,12 +1,17 @@
 import asyncio, base64, datetime, os, requests, shutil
+from datetime import timedelta
+
+from fastapi import Depends, HTTPException, FastAPI, File, status, UploadFile
+from fastapi.security import OAuth2PasswordRequestForm
 import gotrue.errors
 import postgrest.exceptions
-import query as query_handler
-import vector_writer as vector_writer
-from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
+import query as query_handler
+from security import ACCESS_TOKEN_EXPIRE_MINUTES, User, Token, authenticate_user, create_access_token, get_current_active_user, users_db
 from supabase import create_client, Client
+from typing import Annotated
 from PIL import Image
+import vector_writer as vector_writer
 
 class SessionReport(BaseModel):
     patient_id: str
@@ -174,6 +179,38 @@ def extract_text(image_item: ImageItem):
         full_text = full_text + section['text'] + " "
 
     return {"success": True, "extraction": full_text}
+
+# Security endpoints
+
+@app.post("/token")
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+) -> Token:
+    user = authenticate_user(users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return Token(access_token=access_token, token_type="bearer")
+
+
+@app.get("/users/me/", response_model=User)
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    return current_user
+
+@app.get("/users/me/items/")
+async def read_own_items(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    return [{"item_id": "Foo", "owner": current_user.username}]
 
 # Private funtions 
 
