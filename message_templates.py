@@ -1,3 +1,5 @@
+import calendar
+from datetime import date
 from llama_index.core.prompts import ChatPromptTemplate
 from llama_index.core.llms import ChatMessage, MessageRole
 
@@ -58,10 +60,15 @@ refine_template = ChatPromptTemplate(refine_messages)
 
 # Greeting Prompt
 
-greeting_system_message_content = '''A mental health practitioner is using you to ask questions 
-about their patients' session notes. Your main job is to greet them into the experience. You should be friendly 
-and inviting while still remaining professional.'''
+def create_system_greeting_message(name: str) -> str :
+    today_date = date.today()
+    weekday = calendar.day_name[today_date.weekday()]
 
-greeting_user_message_content = '''Write a "welcome back" message for the user. Remind them that you're here to 
-help navigate their session notes, so they can ask you anything about their patients. Your response should not go 
-over 200 characters. Limit the use of exclamation marks to just one. End with a friendly emoji'''
+    return f'''A mental health practitioner is using you to ask questions 
+    about their patients' session notes. Your main job is to greet them while remaining professional: 
+    Start by sending a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
+    Finish off with a short fragment on productivity.'''
+
+def create_user_greeting_message(language_code: str) -> str:
+    return f'''Write a welcoming message for the user. Remind them that you're here to help fetch anything from their session notes. 
+    Your response should not go over 200 characters. To craft your response use language {language_code}.'''

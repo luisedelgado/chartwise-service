@@ -33,6 +33,10 @@ class AssistantQuery(BaseModel):
     therapist_username: str
     therapist_password: str
 
+class AssistantGreeting(BaseModel):
+    addressing_name: str
+    language_code: str
+
 app = FastAPI()
 
 @app.post("/v1/sessions")
@@ -97,9 +101,9 @@ def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
     return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
             "response": response.response_token}
 
-@app.get("/v1/greetings")
-def fetch_greeting(token: Annotated[str, Depends(oauth2_scheme)]):
-    return {"success": True, "message": query_handler.create_greeting()}
+@app.post("/v1/greetings")
+def fetch_greeting(greeting: AssistantGreeting, token: Annotated[str, Depends(oauth2_scheme)]):
+    return {"success": True, "message": query_handler.create_greeting(greeting.addressing_name, greeting.language_code)}
 
 @app.get("/v1/healthcheck")
 def read_healthcheck(token: Annotated[str, Depends(oauth2_scheme)]):

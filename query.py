@@ -58,7 +58,7 @@ def query_store(index_id, input) -> QueryStoreResult:
     response = query_engine.query(input)
     return QueryStoreResult(str(response), QueryStoreResultReason.SUCCESS)
 
-def create_greeting():
+def create_greeting(name: str, language_code: str):
     load_dotenv('environment.env')
 
     api_key = os.environ.get('OPENAI_API_KEY')
@@ -66,14 +66,14 @@ def create_greeting():
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json',
     }
-
+    
     data = {
         'model': 'gpt-3.5-turbo',
         'messages': [
-            {'role': 'system', 'content': message_templates.greeting_system_message_content},
-            {'role': 'user', 'content': message_templates.greeting_user_message_content}
+            {'role': 'system', 'content': message_templates.create_system_greeting_message(name)},
+            {'role': 'user', 'content': message_templates.create_user_greeting_message(language_code)}
         ],
-        'temperature': 0
+        'temperature': 0.7
     }
 
     response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(data))
