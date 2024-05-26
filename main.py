@@ -8,11 +8,9 @@ import postgrest.exceptions
 from pydantic import BaseModel
 import query as query_handler
 from security import (ACCESS_TOKEN_EXPIRE_MINUTES,
-                      User,
                       Token,
                       authenticate_user,
                       create_access_token,
-                      get_current_active_user,
                       users_db,
                       oauth2_scheme)
 from supabase import create_client, Client
@@ -34,12 +32,6 @@ class AssistantQuery(BaseModel):
     text: str
     therapist_username: str
     therapist_password: str
-    
-class Patient(BaseModel):
-    id: str
-
-class ImageItem(BaseModel):
-    document_id: str
 
 app = FastAPI()
 
@@ -75,7 +67,7 @@ def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
 
     return {"success": True}
 
-@app.get("/v1/assistant-queries")
+@app.post("/v1/assistant-queries")
 def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
                             query: AssistantQuery):
     try:
@@ -170,8 +162,12 @@ def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
 
 @app.get("/v1/text-extractions")
 def extract_text(token: Annotated[str, Depends(oauth2_scheme)],
-                 image_item: ImageItem):
-    url = os.getenv("DOCUPANDA_URL") + "/" + image_item.document_id
+                 document_id: str = None):
+    if document_id == None or document_id == "":
+        return {"success": False,
+            "message": f"Didn't receive a valid document id"}
+
+    url = os.getenv("DOCUPANDA_URL") + "/" + document_id
 
     headers = {
         "accept": "application/json",
