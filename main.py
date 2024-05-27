@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from fastapi import Depends, HTTPException, FastAPI, File, status, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 import gotrue.errors
 import postgrest.exceptions
 from pydantic import BaseModel
@@ -38,6 +39,19 @@ class AssistantGreeting(BaseModel):
     language_code: str
 
 app = FastAPI()
+
+origins = [
+    # Daniel Daza development
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/v1/sessions")
 def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
