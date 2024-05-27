@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Union
 
-import jwt
+import jwt, logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
@@ -30,14 +30,22 @@ class UserInDB(User):
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+logging.getLogger('passlib').setLevel(logging.ERROR)
 
 users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+    "luisdelgado": {
+        "username": "luisdelgado",
+        "full_name": "Luis Delgado",
+        "email": "luis.e.delgado24@gmail.com",
+        "hashed_password": "$2b$12$vUVd7oQPSkfr3xq2KzyAieUWjWwDOCDsKtPK/PPouqPtMHE1h66SO",
         "disabled": False,
+    },
+    "danieldaza": {
+        "username": "danieldaza",
+        "full_name": "Daniel Daza",
+        "email": "danieldaza91@gmail.com",
+        "hashed_password": "$2b$12$xij/dxNEivS1Slp7lex11.Lyu/M7IDdXVNDRHud9JzGs/ndRbE5ce",
+        "disabled": False
     }
 }
 
