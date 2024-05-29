@@ -1,3 +1,4 @@
 .venv/
+.venv12/
 __pycache__/
 storage/index_store.json

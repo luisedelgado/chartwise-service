@@ -19,6 +19,13 @@ from typing import Annotated
 from PIL import Image
 import vector_writer as vector_writer
 
+import aiofiles, json, pathlib
+from deepgram import (
+    DeepgramClient,
+    PrerecordedOptions,
+    FileSource,
+)
+
 class SessionReport(BaseModel):
     patient_id: str
     therapist_id: str
