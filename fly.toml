@@ -9,8 +9,8 @@ primary_region = 'mia'
 [build]
 
 [mounts]
-  source="session_notes_images"
-  destination="/images"
+  source="session_notes_files"
+  destination="/files"
 
 [http_service]
   internal_port = 8080
@@ -23,4 +23,4 @@ primary_region = 'mia'
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2

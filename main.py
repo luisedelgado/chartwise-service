@@ -1,6 +1,10 @@
-import asyncio, base64, datetime, os, requests, shutil
+import asyncio, base64, datetime, httpx, json, os, requests, shutil
 from datetime import timedelta
-
+from deepgram import (
+    DeepgramClient,
+    PrerecordedOptions,
+    FileSource,
+)
 from fastapi import Depends, HTTPException, FastAPI, File, status, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,13 +22,6 @@ from supabase import create_client, Client
 from typing import Annotated
 from PIL import Image
 import vector_writer as vector_writer
-
-import aiofiles, json, pathlib
-from deepgram import (
-    DeepgramClient,
-    PrerecordedOptions,
-    FileSource,
-)
 
 class SessionReport(BaseModel):
     patient_id: str
@@ -44,6 +41,9 @@ class AssistantQuery(BaseModel):
 class AssistantGreeting(BaseModel):
     addressing_name: str
     language_code: str
+    
+class AudioItem(BaseModel):
+    audio_file_url: str
 
 app = FastAPI()
 
@@ -146,11 +146,11 @@ def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
     file_name, file_extension = os.path.splitext(image.filename)
 
     # Format name to be used for image copy using current timestamp
-    image_data_dir = 'image-data'
+    files_dir = 'files'
     pdf_extension = '.pdf'
     image_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    image_copy_path = image_data_dir + '/' + image_copy_bare_name + file_extension
-    image_copy_pdf_path = image_data_dir + '/' + image_copy_bare_name + pdf_extension
+    image_copy_path = files_dir + '/' + image_copy_bare_name + file_extension
+    image_copy_pdf_path = files_dir + '/' + image_copy_bare_name + pdf_extension
     files_to_clean = [image_copy_path]
 
     # Write incoming image to our local volume for further processing
@@ -183,7 +183,7 @@ def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
     # Clean up temp files
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(clean_up_images(files_to_clean))
+    loop.run_until_complete(clean_up_files(files_to_clean))
 
     if response.status_code != 200:
         return {"success": False,
@@ -220,6 +220,68 @@ def extract_text(token: Annotated[str, Depends(oauth2_scheme)],
 
     return {"success": True, "extraction": full_text}
 
+# Audio handling endpoint
+
+@app.post("/v1/audio-transcriptions")
+async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
+                                file: UploadFile = File(...)):
+    file_name, file_extension = os.path.splitext(file.filename)
+    files_dir = 'files'
+    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+
+    try:
+        # Write incoming audio to our local volume for further processing
+        with open(audio_copy_path, 'wb+') as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        if not os.path.exists(audio_copy_path):
+            return {"success": False,
+                "message": f"There was an error while manipulating the incoming file"}
+    except Exception as e:
+        print (e)
+        return {"success":False,
+                "message": "There was an error uploading the file"}
+    finally:
+        await file.close()
+        
+    try:
+        # STEP 1 Create a Deepgram client using the API key
+        deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
+
+        #STEP 2: Configure Deepgram options for audio analysis
+        options = PrerecordedOptions(
+            model="nova-2",
+            smart_format=True,
+            detect_language=True,
+            utterances=True,
+            numerals=True
+        )
+
+        with open(audio_copy_path, "rb") as file:
+            buffer_data = file.read()
+
+        payload: FileSource = {
+            "buffer": buffer_data,
+        }
+
+        # STEP 3: Call the transcribe_file method with the text payload and options
+        # this will increase the timeout to 300 seconds or 5 minutes
+        response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
+                                                                      options,
+                                                                      timeout=httpx.Timeout(300.0, connect=10.0))
+
+        # STEP 4: Extract the transcript and return it
+        json_response = json.loads(response.to_json(indent=4))
+        transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
+    except TimeoutError as e:
+        return {"success": False, "message": "The transcription operation timed out"}
+    except Exception as e:
+        return {"success": False, "message": e}
+
+    clean_up_files([audio_copy_path])
+    return {"success": True, "transcript": transcript}
+
 # Security endpoints
 
 @app.post("/token")
@@ -241,9 +303,9 @@ async def login_for_access_token(
 
 # Private funtions 
 
-async def clean_up_images(images):
-    for image in images:
-        os.remove(image)
+async def clean_up_files(files):
+    for file in files:
+        os.remove(file)
 
 def supabase_instance(access_token, refresh_token) -> Client:
     key: str = os.environ.get("SUPABASE_KEY")
