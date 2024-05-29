@@ -24,15 +24,15 @@ class SessionReport(BaseModel):
     therapist_id: str
     text: str
     date: str
-    therapist_username: str
-    therapist_password: str
+    supabase_access_token: str
+    supabase_refresh_token: str
 
 class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str
     text: str
-    therapist_username: str
-    therapist_password: str
+    supabase_access_token: str
+    supabase_refresh_token: str
 
 class AssistantGreeting(BaseModel):
     addressing_name: str
@@ -57,13 +57,16 @@ app.add_middleware(
 def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
                        session_report: SessionReport):
     try:
-        supabase = supabase_instance(session_report.therapist_username,
-                                    session_report.therapist_password)
+        supabase = supabase_instance(session_report.supabase_access_token,
+                                    session_report.supabase_refresh_token)
     except gotrue.errors.AuthApiError as e:
-        error_message = "Something went wrong when authenticating user"
-        if e.status == 400:
-            error_message = "Wrong therapist credentials"
+        error_message = "Something is wrong with the payload you are sending"
+        if e.status == 403:
+            error_message = "There was an issue with the access and refresh tokens that were sent in"
         return {"success": False, "error": error_message}
+    except:
+        return {"success": False, "error": "Something is wrong with the payload you are sending"}
+    
     try:
         # Write full text to supabase
         supabase.table('session_reports').insert({
@@ -88,15 +91,19 @@ def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
 @app.post("/v1/assistant-queries")
 def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
                             query: AssistantQuery):
+    # Get supabase instance
     try:
-        supabase = supabase_instance(query.therapist_username,
-                                    query.therapist_password)
+        supabase = supabase_instance(query.supabase_access_token,
+                                     query.supabase_refresh_token)
     except gotrue.errors.AuthApiError as e:
-        error_message = "Something went wrong when authenticating user"
-        if e.status == 400:
-            error_message = "Wrong therapist credentials"
+        error_message = "Something is wrong with the payload you are sending"
+        if e.status == 403:
+            error_message = "There was an issue with the access and refresh tokens that were sent in"
         return {"success": False, "error": error_message}
+    except:
+        return {"success": False, "error": "Something is wrong with the payload you are sending"}
 
+    # Confirm that the incoming patient id is associated with the incoming therapist id
     try:
         res = supabase.from_('patients').select('*').eq('therapist_id',
                                                   query.therapist_id).eq('id',
@@ -111,6 +118,7 @@ def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
     except:
         return {"success": False, "error": "Something went wrong with the request"}
 
+    # Go through with the query
     response = query_handler.query_store(query.patient_id, query.text)
     return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
             "response": response.response_token}
@@ -230,11 +238,11 @@ async def clean_up_images(images):
     for image in images:
         os.remove(image)
 
-def supabase_instance(username, password) -> Client:
+def supabase_instance(access_token, refresh_token) -> Client:
     key: str = os.environ.get("SUPABASE_KEY")
     url: str = os.environ.get("SUPABASE_URL")
     
     supabase: Client = create_client(url, key)
-    supabase.auth.sign_in_with_password({"email": username, "password": password})
-
+    supabase.auth.set_session(access_token=access_token,
+                              refresh_token=refresh_token)
     return supabase
