@@ -92,7 +92,7 @@ def upload_new_session(_: Annotated[str, Depends(oauth2_scheme)],
                                         session_report.text,
                                         session_report.date)
 
-    return
+    return {}
 
 """
 Executes a query to our RAG system.
