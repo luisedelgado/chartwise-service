@@ -1,17 +1,28 @@
 import asyncio, base64, datetime, httpx, json, os, requests, shutil
-from datetime import timedelta
+
+import gotrue.errors
+import postgrest.exceptions
 from deepgram import (
     DeepgramClient,
     PrerecordedOptions,
     FileSource,
 )
-from fastapi import Depends, HTTPException, FastAPI, File, status, UploadFile
+from fastapi import (
+    Depends,
+    HTTPException,
+    FastAPI,
+    File,
+    status,
+    UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-import gotrue.errors
 from langcodes import Language
-import postgrest.exceptions
+from supabase import create_client, Client
+from typing import Annotated
+from PIL import Image
+
 import query as query_handler
+import vector_writer
 from models import (AssistantGreeting,
                     AssistantQuery,
                     SessionReport) 
@@ -21,10 +32,6 @@ from security import (ACCESS_TOKEN_EXPIRE_MINUTES,
                       create_access_token,
                       users_db,
                       oauth2_scheme)
-from supabase import create_client, Client
-from typing import Annotated
-from PIL import Image
-import vector_writer as vector_writer
 
 app = FastAPI()
 
@@ -347,7 +354,7 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )

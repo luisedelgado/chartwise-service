@@ -1,8 +1,4 @@
-import json
-import message_templates as message_templates
-import os
-import time
-import requests
+import json, os, time, requests
 
 from enum import Enum
 from dotenv import load_dotenv
@@ -11,6 +7,8 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
+
+import message_templates
 
 class QueryStoreResultReason(Enum):
     SUCCESS = 1

@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta, timezone
-from typing import Annotated, Union
-
 import jwt, logging, os
+
+from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from typing import Annotated, Union
 
 SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
 ALGORITHM = "HS256"

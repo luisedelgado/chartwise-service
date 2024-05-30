@@ -1,6 +1,4 @@
-import data_cleaner as data_cleaner
-import os
-import time
+import os, time
 
 from dotenv import load_dotenv
 from llama_index.core import Document, Settings
@@ -10,6 +8,8 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
+
+import data_cleaner as data_cleaner
 
 def upload_session_vector(index_name, session_text, session_date):
     load_dotenv('environment.env')
