@@ -66,35 +66,33 @@ def upload_new_session(_: Annotated[str, Depends(oauth2_scheme)],
     try:
         supabase = supabase_instance(session_report.supabase_access_token,
                                     session_report.supabase_refresh_token)
-    except gotrue.errors.AuthApiError as e:
-        error_message = "Something is wrong with the payload you are sending"
-        if e.status == 403:
-            error_message = "There was an issue with the access and refresh tokens that were sent in"
-        return {"success": False, "error": error_message}
-    except:
-        return {"success": False, "error": "Something is wrong with the payload you are sending"}
-    
-    try:
+
         # Write full text to supabase
         supabase.table('session_reports').insert({
             "session_text": session_report.text,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "therapist_id": session_report.therapist_id}).execute()
+    except gotrue.errors.AuthApiError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid access and/or refresh tokens.")
     except postgrest.exceptions.APIError as e:
-        error_message = "Something went wrong with the request"
+        # RLS Policy violation
         if e.code == '42501':
-            error_message = "Request violated RLS policy"
-        return {"success": False, "error": error_message}
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="The attempted operation violates constraints.")
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail="The attempted operation was not accepted.")
     except:
-        return {"success": False, "error": "Something went wrong with the request"}
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail="The attempted operation was not accepted.")
 
     # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
                                         session_report.text,
                                         session_report.date)
 
-    return {"success": True}
+    return
 
 """
 Executes a query to our RAG system.
@@ -109,42 +107,51 @@ def execute_assistant_query(_: Annotated[str, Depends(oauth2_scheme)],
                             query: AssistantQuery):
     try:
         if not Language.get(query.response_language_code).is_valid():
-            return {"success": False, "error": "Invalid response language code"}
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Invalid response language code.")
     except:
-        return {"success": False, "error": "Invalid response language code"}
-
-    # Get supabase instance
-    try:
-        supabase = supabase_instance(query.supabase_access_token,
-                                     query.supabase_refresh_token)
-    except gotrue.errors.AuthApiError as e:
-        error_message = "Something is wrong with the payload you are sending"
-        if e.status == 403:
-            error_message = "There was an issue with the access and refresh tokens that were sent in"
-        return {"success": False, "error": error_message}
-    except:
-        return {"success": False, "error": "Something is wrong with the payload you are sending"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Check the language_code you are sending.")
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
+        supabase = supabase_instance(query.supabase_access_token,
+                                     query.supabase_refresh_token)
         res = supabase.from_('patients').select('*').eq('therapist_id',
                                                   query.therapist_id).eq('id',
                                                                          query.patient_id).execute()
         if len(res.data) == 0:
-            return {"success": False, "error": "This patient/therapist combination does not match"}
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="There isn't a match between that patient and therapist.")
+    except gotrue.errors.AuthApiError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid access and/or refresh tokens.")
     except postgrest.exceptions.APIError as e:
-        error_message = "Something went wrong with the request"
+        # RLS Policy violation
         if e.code == '42501':
-            error_message = "Request violated RLS policy"
-        return {"success": False, "error": error_message}
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="The attempted operation violates constraints.")
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail="The attempted operation was not accepted.")
     except:
-        return {"success": False, "error": "Something went wrong with the request"}
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail="The attempted operation was not accepted.")
 
     # Go through with the query
-    response = query_handler.query_store(query.patient_id, query.text, query.response_language_code)
-    return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
-            "response": response.response_token}
+    response = query_handler.query_store(query.patient_id,
+                                         query.text,
+                                         query.response_language_code)
+
+    if response.reason is query_handler.QueryStoreResultReason.INDEX_DOES_NOT_EXIST:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Store does not exist for this patient.")
+    elif response.reason is query_handler.QueryStoreResultReason.UNKNOWN_FAILURE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+    assert response.reason is query_handler.QueryStoreResultReason.SUCCESS
+
+    return {"response": response.response_token}
 
 """
 Returns a new greeting to the user.
@@ -157,11 +164,13 @@ _  – oauth2 token
 def fetch_greeting(greeting_params: AssistantGreeting, _: Annotated[str, Depends(oauth2_scheme)]):
     try:
         if not Language.get(greeting_params.response_language_code).is_valid():
-            return {"success": False, "error": "Invalid response language code"}
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Invalid response language code.")
     except:
-        return {"success": False, "error": "Invalid response language code"}
-    return {"success": True, "message": query_handler.create_greeting(greeting_params.addressing_name,
-                                                                      greeting_params.response_language_code)}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Check the language_code you are sending.")
+    return {"message": query_handler.create_greeting(greeting_params.addressing_name,
+                                                     greeting_params.response_language_code)}
 
 """
 Returns an OK status if the endpoint can be reached.
@@ -208,8 +217,8 @@ def upload_session_notes_image(_: Annotated[str, Depends(oauth2_scheme)],
 
     if not os.path.exists(image_copy_pdf_path):
         os.remove(image_copy_path)
-        return {"success": False,
-            "message": f"There was an error while converting the image to PDF"}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Something went wrong while processing the image.")
     
     # Send to DocuPanda
     payload = {"document": {"file": {
@@ -229,13 +238,12 @@ def upload_session_notes_image(_: Annotated[str, Depends(oauth2_scheme)],
     asyncio.set_event_loop(loop)
     loop.run_until_complete(clean_up_files(files_to_clean))
 
-    if response.status_code != 200:
-        return {"success": False,
-            "message": f"Something went wrong when uploading the image"}
+    if response.status_code != status.HTTP_200_OK:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Something went wrong while uploading the image.")
 
     document_id = response.json()['documentId']
-    return {"success": True,
-            "document_id": document_id}
+    return {"document_id": document_id}
 
 """
 Returns the text extracted from the incoming document_id.
@@ -248,8 +256,8 @@ document_id – the id of the document to be textracted
 def extract_text(_: Annotated[str, Depends(oauth2_scheme)],
                  document_id: str = None):
     if document_id == None or document_id == "":
-        return {"success": False,
-            "message": f"Didn't receive a valid document id"}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Didn't receive a valid document id.")
 
     url = os.getenv("DOCUPANDA_URL") + "/" + document_id
 
@@ -260,16 +268,16 @@ def extract_text(_: Annotated[str, Depends(oauth2_scheme)],
 
     response = requests.get(url, headers=headers)
     
-    if response.status_code != 200:
-        return {"success": False,
-            "message": f"Something went wrong when extracting the text"}
-    
+    if response.status_code != status.HTTP_200_OK:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Something went wrong when extracting the text.")
+
     text_sections = response.json()['result']['pages'][0]['sections']
     full_text = ""
     for section in text_sections:
         full_text = full_text + section['text'] + " "
 
-    return {"success": True, "extraction": full_text}
+    return {"extraction": full_text}
 
 # Audio handling endpoint
 
@@ -294,24 +302,17 @@ async def transcribe_audio_file(_: Annotated[str, Depends(oauth2_scheme)],
             shutil.copyfileobj(audio_file.file, buffer)
 
         if not os.path.exists(audio_copy_path):
-            return {"success": False,
-                "message": f"There was an error while manipulating the incoming file"}
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                detail="Something went wrong while processing the file.")
     except Exception as e:
-        print (e)
-        return {"success":False,
-                "message": "There was an error uploading the file"}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, 
+                            detail="Something went wrong while uploading the file.")
     finally:
         await audio_file.close()
-        
+
+    # Process local copy with DeepgramClient
     try:
         deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
-        options = PrerecordedOptions(
-            model="nova-2",
-            smart_format=True,
-            detect_language=True,
-            utterances=True,
-            numerals=True
-        )
 
         with open(audio_copy_path, "rb") as file:
             buffer_data = file.read()
@@ -319,6 +320,14 @@ async def transcribe_audio_file(_: Annotated[str, Depends(oauth2_scheme)],
         payload: FileSource = {
             "buffer": buffer_data,
         }
+
+        options = PrerecordedOptions(
+            model="nova-2",
+            smart_format=True,
+            detect_language=True,
+            utterances=True,
+            numerals=True
+        )
 
         # Increase the timeout to 300 seconds (5 minutes)
         response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
@@ -328,12 +337,13 @@ async def transcribe_audio_file(_: Annotated[str, Depends(oauth2_scheme)],
         json_response = json.loads(response.to_json(indent=4))
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
     except TimeoutError as e:
-        return {"success": False, "message": "The transcription operation timed out"}
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
     except Exception as e:
-        return {"success": False, "message": e}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="The transcription operation failed.")
 
     clean_up_files([audio_copy_path])
-    return {"success": True, "transcript": transcript}
+    return {"transcript": transcript}
 
 # Security endpoints
 
