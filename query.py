@@ -22,7 +22,7 @@ class QueryStoreResult:
         self.response_token = response_token
         self.reason = reason
 
-def query_store(index_id, input) -> QueryStoreResult:
+def query_store(index_id, input, response_language_code) -> QueryStoreResult:
     load_dotenv('environment.env')
 
     # Initialize connection to Pinecone
@@ -49,8 +49,8 @@ def query_store(index_id, input) -> QueryStoreResult:
     
     llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
     query_engine = vector_index.as_query_engine(
-        text_qa_template=message_templates.qa_template,
-        refine_template=message_templates.refine_template,
+        text_qa_template=message_templates.create_chat_prompt_template(response_language_code),
+        refine_template=message_templates.create_refine_prompt_template(response_language_code),
         llm=llm,
         streaming=True,
     )

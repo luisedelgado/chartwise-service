@@ -5,58 +5,68 @@ from llama_index.core.llms import ChatMessage, MessageRole
 
 # Text QA Prompt
 
-qa_system_message_content = '''A mental health practitioner is using you to ask questions 
-about their patient's session notes. These notes were written by the practitioner themselves, 
-so they just need help freshening up on details that they may not remember. 
-You must act as a professional agent, and support the practitioner in finding relevant data.'''
+def _create_system_qa_message() -> str:
+    return '''A mental health practitioner is using you to ask questions 
+    about their patient's session notes. These notes were written by the practitioner themselves, 
+    so they just need help freshening up on details that they may not remember. 
+    You must act as a professional agent, and support the practitioner by fetching data.'''
 
-qa_user_message_content = (
+def _create_user_qa_message(language_code: str) -> str:
+    message_content = (
     '''We have provided context information below. \n
     ---------------------\n
     {context_str}
     \n---------------------\n
     If the question references a person other than the patient, and they are not mentioned in the session notes, you should 
-    strictly say you can't provide an answer because you don't know who that person is. If you reference session notes, outline 
-    all the respective session dates after your answer. Otherwise do not reference any session dates.\nGiven this information, please answer 
-    the question: {query_str}\n'''
-)
+    strictly say you can't provide an answer because you don't know who that person is. If you do reference session notes, outline 
+    all the respective session dates after your answer. Otherwise do not reference any session dates.''')
+    language_code_requirement = f"\nTo craft your response use language {language_code}."
+    execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
+    return message_content + language_code_requirement + execution_statement
 
-qa_messages = [
-    ChatMessage(
-        role=MessageRole.SYSTEM,
-        content=qa_system_message_content,
-    ),
-    ChatMessage(
-        role=MessageRole.USER,
-        content=qa_user_message_content,
-    ),
-]
-qa_template = ChatPromptTemplate(qa_messages)
+def create_chat_prompt_template(language_code: str) -> ChatPromptTemplate:
+    qa_messages = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=_create_system_qa_message(),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=_create_user_qa_message(language_code),
+        ),
+    ]
+    return ChatPromptTemplate(qa_messages)
 
 # Refine Prompt
 
-refine_system_message_content = '''A mental health practitioner is using you to ask questions 
-about their patient's session notes. When refining an answer you always integrate the new context 
-into the original answer, and provide the resulting response. You should never reference the original 
-answer or context directly in your answer. If you reference session notes, outline all session dates after your answer. 
-Otherwise do not reference any session dates.'''
+def _create_system_refine_message() -> str:
+    return '''A mental health practitioner is using you to ask questions 
+    about their patient's session notes. When refining an answer you always integrate the new context 
+    into the original answer, and provide the resulting response. You should never reference the original 
+    answer or context directly in your answer. If you reference session notes, outline all session dates after your answer. 
+    Otherwise do not reference any session dates.'''
 
-refine_user_message_content = '''The original question is as follows: {query_str}\nWe have provided an 
-existing answer: {existing_answer}\nWe have the opportunity to refine the existing answer (only if needed) 
-with some more context below.\n------------\n{context_msg}\n------------\nUsing both the new context and 
-your own knowledge, update or repeat the existing answer.\n'''
+def _create_user_refine_message(language_code: str):
+    message_content = '''The original question is as follows: {query_str}\nWe have provided an 
+    existing answer: {existing_answer}\nWe have the opportunity to refine the existing answer (only if needed) 
+    with some more context below.\n------------\n{context_msg}\n------------'''
+    language_code_requirement = f"\nTo craft your response use language {language_code}."
+    execution_statement = '''\nUsing both the new context and 
+    your own knowledge, update or repeat the existing answer.\n'''
+    return message_content + language_code_requirement + execution_statement
 
-refine_messages = [
-    ChatMessage(
-        role=MessageRole.SYSTEM,
-        content=(refine_system_message_content),
-    ),
-    ChatMessage(
-        role=MessageRole.USER,
-        content=(refine_user_message_content),
-    ),
-]
-refine_template = ChatPromptTemplate(refine_messages)
+def create_refine_prompt_template(language_code: str) -> ChatPromptTemplate:
+    refine_messages = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=(_create_system_refine_message()),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=(_create_user_refine_message(language_code)),
+        ),
+    ]
+    return ChatPromptTemplate(refine_messages)
 
 # Greeting Prompt
 

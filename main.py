@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, FastAPI, File, status, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 import gotrue.errors
+from langcodes import Language
 import postgrest.exceptions
 from pydantic import BaseModel
 import query as query_handler
@@ -35,12 +36,13 @@ class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str
     text: str
+    response_language_code: str
     supabase_access_token: str
     supabase_refresh_token: str
 
 class AssistantGreeting(BaseModel):
     addressing_name: str
-    language_code: str
+    response_language_code: str
     
 class AudioItem(BaseModel):
     audio_file_url: str
@@ -98,6 +100,12 @@ def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
 @app.post("/v1/assistant-queries")
 def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
                             query: AssistantQuery):
+    try:
+        if not Language.get(query.response_language_code).is_valid():
+            return {"success": False, "error": "Invalid response language code"}
+    except:
+        return {"success": False, "error": "Invalid response language code"}
+
     # Get supabase instance
     try:
         supabase = supabase_instance(query.supabase_access_token,
@@ -126,13 +134,19 @@ def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
         return {"success": False, "error": "Something went wrong with the request"}
 
     # Go through with the query
-    response = query_handler.query_store(query.patient_id, query.text)
+    response = query_handler.query_store(query.patient_id, query.text, query.response_language_code)
     return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
             "response": response.response_token}
 
 @app.post("/v1/greetings")
 def fetch_greeting(greeting: AssistantGreeting, token: Annotated[str, Depends(oauth2_scheme)]):
-    return {"success": True, "message": query_handler.create_greeting(greeting.addressing_name, greeting.language_code)}
+    try:
+        if not Language.get(greeting.response_language_code).is_valid():
+            return {"success": False, "error": "Invalid response language code"}
+    except:
+        return {"success": False, "error": "Invalid response language code"}
+    return {"success": True, "message": query_handler.create_greeting(greeting.addressing_name,
+                                                                      greeting.response_language_code)}
 
 @app.get("/v1/healthcheck")
 def read_healthcheck(token: Annotated[str, Depends(oauth2_scheme)]):

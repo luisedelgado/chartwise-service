@@ -36,6 +36,8 @@ httpx==0.27.0
 idna==3.7
 Jinja2==3.1.4
 joblib==1.4.2
+langcodes==3.4.0
+language_data==1.2.0
 llama-index==0.10.40
 llama-index-agent-openai==0.2.5
 llama-index-cli==0.1.12
@@ -53,6 +55,7 @@ llama-index-vector-stores-pinecone==0.1.7
 llama-parse==0.4.3
 llamaindex-py-client==0.1.19
 lz4==4.3.3
+marisa-trie==1.1.1
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -88,6 +91,7 @@ realtime==1.0.5
 regex==2024.5.15
 requests==2.32.3
 rich==13.7.1
+setuptools==70.0.0
 shellingham==1.5.4
 six==1.16.0
 sniffio==1.3.1
