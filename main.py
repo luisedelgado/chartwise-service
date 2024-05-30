@@ -11,8 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import gotrue.errors
 from langcodes import Language
 import postgrest.exceptions
-from pydantic import BaseModel
 import query as query_handler
+from models import (AssistantGreeting,
+                    AssistantQuery,
+                    SessionReport) 
 from security import (ACCESS_TOKEN_EXPIRE_MINUTES,
                       Token,
                       authenticate_user,
@@ -23,29 +25,6 @@ from supabase import create_client, Client
 from typing import Annotated
 from PIL import Image
 import vector_writer as vector_writer
-
-class SessionReport(BaseModel):
-    patient_id: str
-    therapist_id: str
-    text: str
-    date: str
-    supabase_access_token: str
-    supabase_refresh_token: str
-
-class AssistantQuery(BaseModel):
-    patient_id: str
-    therapist_id: str
-    text: str
-    response_language_code: str
-    supabase_access_token: str
-    supabase_refresh_token: str
-
-class AssistantGreeting(BaseModel):
-    addressing_name: str
-    response_language_code: str
-    
-class AudioItem(BaseModel):
-    audio_file_url: str
 
 app = FastAPI()
 
@@ -62,8 +41,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# RAG Assistant endpoints
+
+"""
+Digests a new session report by:
+1) Uploading the full text to Supabase
+2) Uploading the vector embeddings to Pinecone
+Returns a boolean value representing success.
+
+Arguments:
+_  – oauth2 token
+session_report – the report associated with the new session
+"""
 @app.post("/v1/sessions")
-def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
+def upload_new_session(_: Annotated[str, Depends(oauth2_scheme)],
                        session_report: SessionReport):
     try:
         supabase = supabase_instance(session_report.supabase_access_token,
@@ -91,14 +82,23 @@ def upload_new_session(token: Annotated[str, Depends(oauth2_scheme)],
     except:
         return {"success": False, "error": "Something went wrong with the request"}
 
+    # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
                                         session_report.text,
                                         session_report.date)
 
     return {"success": True}
 
+"""
+Executes a query to our RAG system.
+Returns the query response.
+
+Arguments:
+_  – oauth2 token
+query – the query that will be executed
+"""
 @app.post("/v1/assistant-queries")
-def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
+def execute_assistant_query(_: Annotated[str, Depends(oauth2_scheme)],
                             query: AssistantQuery):
     try:
         if not Language.get(query.response_language_code).is_valid():
@@ -118,7 +118,8 @@ def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
     except:
         return {"success": False, "error": "Something is wrong with the payload you are sending"}
 
-    # Confirm that the incoming patient id is associated with the incoming therapist id
+    # Confirm that the incoming patient id belongs to the incoming therapist id.
+    # We do this to avoid surfacing information to the wrong therapist
     try:
         res = supabase.from_('patients').select('*').eq('therapist_id',
                                                   query.therapist_id).eq('id',
@@ -138,22 +139,44 @@ def execute_assistant_query(token: Annotated[str, Depends(oauth2_scheme)],
     return {"success": True if response.reason == query_handler.QueryStoreResultReason.SUCCESS else False,
             "response": response.response_token}
 
+"""
+Returns a new greeting to the user.
+
+Arguments:
+greeting – the greeting parameters to be used
+_  – oauth2 token
+"""
 @app.post("/v1/greetings")
-def fetch_greeting(greeting: AssistantGreeting, token: Annotated[str, Depends(oauth2_scheme)]):
+def fetch_greeting(greeting_params: AssistantGreeting, _: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        if not Language.get(greeting.response_language_code).is_valid():
+        if not Language.get(greeting_params.response_language_code).is_valid():
             return {"success": False, "error": "Invalid response language code"}
     except:
         return {"success": False, "error": "Invalid response language code"}
-    return {"success": True, "message": query_handler.create_greeting(greeting.addressing_name,
-                                                                      greeting.response_language_code)}
+    return {"success": True, "message": query_handler.create_greeting(greeting_params.addressing_name,
+                                                                      greeting_params.response_language_code)}
 
+"""
+Returns an OK status if the endpoint can be reached.
+
+Arguments:
+_  – oauth2 token
+"""
 @app.get("/v1/healthcheck")
-def read_healthcheck(token: Annotated[str, Depends(oauth2_scheme)]):
+def read_healthcheck(_: Annotated[str, Depends(oauth2_scheme)]):
      return {"status": "ok"}
 
+# Image handling endpoints
+
+"""
+Returns a document_id value associated with the file that was uploaded.
+
+Arguments:
+_  – oauth2 token
+image – the image to be uploaded
+"""
 @app.post("/v1/image-files")
-def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
+def upload_session_notes_image(_: Annotated[str, Depends(oauth2_scheme)],
                                image: UploadFile = File(...)):
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
@@ -207,8 +230,15 @@ def upload_session_notes_image(token: Annotated[str, Depends(oauth2_scheme)],
     return {"success": True,
             "document_id": document_id}
 
+"""
+Returns the text extracted from the incoming document_id.
+
+Arguments:
+_  – oauth2 token
+document_id – the id of the document to be textracted
+"""
 @app.get("/v1/text-extractions")
-def extract_text(token: Annotated[str, Depends(oauth2_scheme)],
+def extract_text(_: Annotated[str, Depends(oauth2_scheme)],
                  document_id: str = None):
     if document_id == None or document_id == "":
         return {"success": False,
@@ -236,10 +266,17 @@ def extract_text(token: Annotated[str, Depends(oauth2_scheme)],
 
 # Audio handling endpoint
 
+"""
+Returns the transcription created from the incoming audio file.
+
+Arguments:
+_  – oauth2 token
+audio_file – the audio file for which the transcription will be created
+"""
 @app.post("/v1/audio-transcriptions")
-async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
-                                file: UploadFile = File(...)):
-    file_name, file_extension = os.path.splitext(file.filename)
+async def transcribe_audio_file(_: Annotated[str, Depends(oauth2_scheme)],
+                                audio_file: UploadFile = File(...)):
+    _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
@@ -247,7 +284,7 @@ async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
     try:
         # Write incoming audio to our local volume for further processing
         with open(audio_copy_path, 'wb+') as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            shutil.copyfileobj(audio_file.file, buffer)
 
         if not os.path.exists(audio_copy_path):
             return {"success": False,
@@ -257,13 +294,10 @@ async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
         return {"success":False,
                 "message": "There was an error uploading the file"}
     finally:
-        await file.close()
+        await audio_file.close()
         
     try:
-        # STEP 1 Create a Deepgram client using the API key
         deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
-
-        #STEP 2: Configure Deepgram options for audio analysis
         options = PrerecordedOptions(
             model="nova-2",
             smart_format=True,
@@ -279,13 +313,11 @@ async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
             "buffer": buffer_data,
         }
 
-        # STEP 3: Call the transcribe_file method with the text payload and options
-        # this will increase the timeout to 300 seconds or 5 minutes
+        # Increase the timeout to 300 seconds (5 minutes)
         response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                       options,
                                                                       timeout=httpx.Timeout(300.0, connect=10.0))
 
-        # STEP 4: Extract the transcript and return it
         json_response = json.loads(response.to_json(indent=4))
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
     except TimeoutError as e:
@@ -298,6 +330,12 @@ async def transcribe_audio_file(token: Annotated[str, Depends(oauth2_scheme)],
 
 # Security endpoints
 
+"""
+Returns an oauth token to be used for invoking the endpoints.
+
+Arguments:
+form_data  – the data required to validate the user
+"""
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -315,12 +353,25 @@ async def login_for_access_token(
     )
     return Token(access_token=access_token, token_type="bearer")
 
-# Private funtions 
+# Helper functions 
 
+"""
+Cleans up the incoming set of files from the local directory.
+
+Arguments:
+files  – the set of files to be cleaned up
+"""
 async def clean_up_files(files):
     for file in files:
         os.remove(file)
 
+"""
+Returns an active supabase instance.
+
+Arguments:
+access_token  – the access_token associated with a live supabase session
+refresh_token  – the refresh_token associated with a live supabase session
+"""
 def supabase_instance(access_token, refresh_token) -> Client:
     key: str = os.environ.get("SUPABASE_KEY")
     url: str = os.environ.get("SUPABASE_URL")
