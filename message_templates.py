@@ -7,10 +7,11 @@ from llama_index.core.llms import ChatMessage, MessageRole
 # Text QA Prompt
 
 def __create_system_qa_message() -> str:
-    return '''A mental health practitioner is using you to ask questions 
-    about their patient's session notes. These notes were written by the practitioner themselves, 
-    so they just need help freshening up on details that they may not remember. 
-    You must act as a professional agent, and support the practitioner by fetching data.'''
+    return '''A therapist is using you to ask questions about their patients' notes. 
+    If the question references a person that is not mentioned anywhere in the session notes, 
+    you should strictly say you can't provide an answer. If you do find valid information from 
+    session notes, please outline all the session dates after your answer. Otherwise, if you 
+    don't find any information in the session notes do not reference any dates.'''
 
 def __create_user_qa_message(language_code: str) -> str:
     message_content = (
@@ -18,10 +19,9 @@ def __create_user_qa_message(language_code: str) -> str:
     ---------------------\n
     {context_str}
     \n---------------------\n
-    If the question references a person other than the patient, and they are not mentioned in the session notes, you should 
-    strictly say you can't provide an answer because you don't know who that person is. If you do reference session notes, outline 
-    all the respective session dates after your answer. Otherwise do not reference any session dates.''')
-    language_code_requirement = f"\nTo craft your response use language {language_code}."
+    Please outline all the session dates if you find information from session notes. If you don't find 
+    information from session notes do not reference dates.''')
+    language_code_requirement = f"To craft your response use language {language_code}."
     execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
     return message_content + language_code_requirement + execution_statement
 
@@ -76,10 +76,10 @@ def create_system_greeting_message(name: str) -> str :
     weekday = calendar.day_name[today_date.weekday()]
 
     return f'''A mental health practitioner is using you to ask questions 
-    about their patients' session notes. Your main job is to greet them while remaining professional: 
+    about their patients' session notes. Your main job is to fetch anything from their session notes. 
     Start by sending a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
     Finish off with a short fragment on productivity.'''
 
 def create_user_greeting_message(language_code: str) -> str:
-    return f'''Write a welcoming message for the user. Remind them that you're here to help fetch anything from their session notes. 
-    Your response should not go over 200 characters. To craft your response use language {language_code}.'''
+    return f'''Write a welcoming message for the user. 
+    Your response should not go over 180 characters. To craft your response use language {language_code}.'''
