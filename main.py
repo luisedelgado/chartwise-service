@@ -1,7 +1,6 @@
 import asyncio, base64, datetime, httpx, json, os, requests, shutil
 
 import gotrue.errors
-import postgrest.exceptions
 from deepgram import (
     DeepgramClient,
     PrerecordedOptions,

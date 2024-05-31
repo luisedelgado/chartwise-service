@@ -4,14 +4,14 @@ from .main import app
 
 client = TestClient(app)
 
-# def test_read_item():
-#     response = client.get("/items/foo", headers={"X-Token": "coneofsilence"})
-#     assert response.status_code == 200
-#     assert response.json() == {
-#         "id": "foo",
-#         "title": "Foo",
-#         "description": "There goes my hero",
-#     }
+def test_upload_session_with_invalid_refresh_tokens():
+    response = client.post("/v1/sessions", json={})
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "foo",
+        "title": "Foo",
+        "description": "There goes my hero",
+    }
 
 
 # def test_read_item_bad_token():
