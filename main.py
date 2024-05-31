@@ -76,13 +76,6 @@ def upload_new_session(_: Annotated[str, Depends(oauth2_scheme)],
     except gotrue.errors.AuthApiError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Invalid access and/or refresh tokens.")
-    except postgrest.exceptions.APIError as e:
-        # RLS Policy violation
-        if e.code == '42501':
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="The attempted operation violates constraints.")
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="The attempted operation was not accepted.")
     except:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
                             detail="The attempted operation was not accepted.")
@@ -113,29 +106,24 @@ def execute_assistant_query(_: Annotated[str, Depends(oauth2_scheme)],
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Check the language code you are sending.")
 
-    try:
-        supabase = supabase_instance(query.supabase_access_token,
-                                     query.supabase_refresh_token)
-    except:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid access and/or refresh tokens.")
-
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
-        res = supabase.from_('patients').select('*').eq('therapist_id',
-                                                  query.therapist_id).eq('id',
-                                                                         query.patient_id).execute()
-        if len(res.data) == 0:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="There isn't a match between that patient and therapist.")
-    except Exception as e:
-        if type(e) is postgrest.exceptions.APIError and e.code == '42501':
-            # RLS Policy violation
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="The attempted operation violates constraints.")
+        supabase = supabase_instance(query.supabase_access_token,
+                                     query.supabase_refresh_token)
+        patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id',
+                                                                            query.therapist_id).eq('id',
+                                                                                                   query.patient_id).execute()
+    except gotrue.errors.AuthApiError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid access and/or refresh tokens.")
+    except:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
                             detail="The attempted operation was not accepted.")
+
+    if len(patient_therapist_check.data) == 0:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="There isn't a match between that patient and therapist.")
 
     # Go through with the query
     response = query_handler.query_store(query.patient_id,
