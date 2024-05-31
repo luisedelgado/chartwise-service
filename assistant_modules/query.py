@@ -8,7 +8,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
-import message_templates
+from . import message_templates
 
 class QueryStoreResultReason(Enum):
     SUCCESS = 1

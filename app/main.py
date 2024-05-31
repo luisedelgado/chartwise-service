@@ -20,17 +20,10 @@ from supabase import create_client, Client
 from typing import Annotated
 from PIL import Image
 
-import query as query_handler
-import vector_writer
-from models import (AssistantGreeting,
-                    AssistantQuery,
-                    SessionReport) 
-from security import (ACCESS_TOKEN_EXPIRE_MINUTES,
-                      Token,
-                      authenticate_user,
-                      create_access_token,
-                      users_db,
-                      oauth2_scheme)
+from ..assistant_modules import query as query_handler
+from ..assistant_modules import vector_writer
+from . import models
+from . import security
 
 app = FastAPI()
 
@@ -60,8 +53,8 @@ _  – oauth2 token
 session_report – the report associated with the new session
 """
 @app.post("/v1/sessions")
-def upload_new_session(_: Annotated[str, Depends(oauth2_scheme)],
-                       session_report: SessionReport):
+def upload_new_session(_: Annotated[str, Depends(security.oauth2_scheme)],
+                       session_report: models.SessionReport):
     try:
         supabase = supabase_instance(session_report.supabase_access_token,
                                     session_report.supabase_refresh_token)
@@ -95,8 +88,8 @@ _  – oauth2 token
 query – the query that will be executed
 """
 @app.post("/v1/assistant-queries")
-def execute_assistant_query(_: Annotated[str, Depends(oauth2_scheme)],
-                            query: AssistantQuery):
+def execute_assistant_query(_: Annotated[str, Depends(security.oauth2_scheme)],
+                            query: models.AssistantQuery):
     try:
         if not Language.get(query.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -147,7 +140,7 @@ greeting – the greeting parameters to be used
 _  – oauth2 token
 """
 @app.post("/v1/greetings")
-def fetch_greeting(greeting_params: AssistantGreeting, _: Annotated[str, Depends(oauth2_scheme)]):
+def fetch_greeting(greeting_params: models.AssistantGreeting, _: Annotated[str, Depends(security.oauth2_scheme)]):
     try:
         if not Language.get(greeting_params.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -165,7 +158,7 @@ Arguments:
 _  – oauth2 token
 """
 @app.get("/v1/healthcheck")
-def read_healthcheck(_: Annotated[str, Depends(oauth2_scheme)]):
+def read_healthcheck(_: Annotated[str, Depends(security.oauth2_scheme)]):
      return {"status": "ok"}
 
 # Image handling endpoints
@@ -178,7 +171,7 @@ _  – oauth2 token
 image – the image to be uploaded
 """
 @app.post("/v1/image-files")
-def upload_session_notes_image(_: Annotated[str, Depends(oauth2_scheme)],
+def upload_session_notes_image(_: Annotated[str, Depends(security.oauth2_scheme)],
                                image: UploadFile = File(...)):
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
@@ -239,7 +232,7 @@ _  – oauth2 token
 document_id – the id of the document to be textracted
 """
 @app.get("/v1/text-extractions")
-def extract_text(_: Annotated[str, Depends(oauth2_scheme)],
+def extract_text(_: Annotated[str, Depends(security.oauth2_scheme)],
                  document_id: str = None):
     if document_id == None or document_id == "":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
@@ -275,7 +268,7 @@ _  – oauth2 token
 audio_file – the audio file for which the transcription will be created
 """
 @app.post("/v1/audio-transcriptions")
-async def transcribe_audio_file(_: Annotated[str, Depends(oauth2_scheme)],
+async def transcribe_audio_file(_: Annotated[str, Depends(security.oauth2_scheme)],
                                 audio_file: UploadFile = File(...)):
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'files'
@@ -342,19 +335,19 @@ form_data  – the data required to validate the user
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Token:
-    user = authenticate_user(users_db, form_data.username, form_data.password)
+) -> security.Token:
+    user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return Token(access_token=access_token, token_type="bearer")
+    return security.Token(access_token=access_token, token_type="bearer")
 
 # Helper functions 
 

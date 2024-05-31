@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
-from .main import app
+from ..app import main
 
-client = TestClient(app)
+client = TestClient(main.app)
 
 def test_upload_session_with_invalid_refresh_tokens():
     response = client.post("/v1/sessions", json={})
