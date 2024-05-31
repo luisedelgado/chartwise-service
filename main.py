@@ -111,30 +111,29 @@ def execute_assistant_query(_: Annotated[str, Depends(oauth2_scheme)],
                                 detail="Invalid response language code.")
     except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Check the language_code you are sending.")
+                            detail="Check the language code you are sending.")
+
+    try:
+        supabase = supabase_instance(query.supabase_access_token,
+                                     query.supabase_refresh_token)
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid access and/or refresh tokens.")
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
-        supabase = supabase_instance(query.supabase_access_token,
-                                     query.supabase_refresh_token)
         res = supabase.from_('patients').select('*').eq('therapist_id',
                                                   query.therapist_id).eq('id',
                                                                          query.patient_id).execute()
         if len(res.data) == 0:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="There isn't a match between that patient and therapist.")
-    except gotrue.errors.AuthApiError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid access and/or refresh tokens.")
-    except postgrest.exceptions.APIError as e:
-        # RLS Policy violation
-        if e.code == '42501':
+    except Exception as e:
+        if type(e) is postgrest.exceptions.APIError and e.code == '42501':
+            # RLS Policy violation
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="The attempted operation violates constraints.")
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="The attempted operation was not accepted.")
-    except:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
                             detail="The attempted operation was not accepted.")
 
@@ -168,7 +167,7 @@ def fetch_greeting(greeting_params: AssistantGreeting, _: Annotated[str, Depends
                                 detail="Invalid response language code.")
     except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Check the language_code you are sending.")
+                            detail="Check the language code you are sending.")
     return {"message": query_handler.create_greeting(greeting_params.addressing_name,
                                                      greeting_params.response_language_code)}
 
