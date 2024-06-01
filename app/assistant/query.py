@@ -1,7 +1,6 @@
 import json, os, time, requests
 
 from enum import Enum
-from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
@@ -21,8 +20,6 @@ class QueryStoreResult:
         self.reason = reason
 
 def query_store(index_id, input, response_language_code) -> QueryStoreResult:
-    load_dotenv('environment.env')
-
     # Initialize connection to Pinecone
     pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
 
@@ -57,8 +54,6 @@ def query_store(index_id, input, response_language_code) -> QueryStoreResult:
     return QueryStoreResult(str(response), QueryStoreResultReason.SUCCESS)
 
 def create_greeting(name: str, language_code: str):
-    load_dotenv('environment.env')
-
     api_key = os.environ.get('OPENAI_API_KEY')
     headers = {
         'Authorization': f'Bearer {api_key}',

@@ -1,6 +1,5 @@
 import os, time
 
-from dotenv import load_dotenv
 from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
@@ -12,8 +11,6 @@ from pinecone.grpc import PineconeGRPC
 from . import data_cleaner
 
 def upload_session_vector(index_name, session_text, session_date):
-    load_dotenv('environment.env')
-
     # Globals
     Settings.embed_model = OpenAIEmbedding()
 
