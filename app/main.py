@@ -20,10 +20,10 @@ from supabase import create_client, Client
 from typing import Annotated
 from PIL import Image
 
-from app import models
-from app import security
-from assistant_modules import query as query_handler
-from assistant_modules import vector_writer
+from .internal import models
+from .internal import security
+from .assistant_modules import query as query_handler
+from .assistant_modules import vector_writer
 
 app = FastAPI()
 
