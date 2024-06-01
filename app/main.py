@@ -326,7 +326,7 @@ Returns an oauth token to be used for invoking the endpoints.
 Arguments:
 form_data  – the data required to validate the user
 """
-@app.post("/v1/token")
+@app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> security.Token:
