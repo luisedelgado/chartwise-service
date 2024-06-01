@@ -65,12 +65,9 @@ def upload_new_session(_: Annotated[str, Depends(security.oauth2_scheme)],
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "therapist_id": session_report.therapist_id}).execute()
-    except gotrue.errors.AuthApiError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid access and/or refresh tokens.")
     except:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="The attempted operation was not accepted.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid tokens.")
 
     # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
@@ -332,7 +329,7 @@ Returns an oauth token to be used for invoking the endpoints.
 Arguments:
 form_data  – the data required to validate the user
 """
-@app.post("/token")
+@app.post("/v1/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> security.Token:
@@ -372,7 +369,12 @@ def supabase_instance(access_token, refresh_token) -> Client:
     key: str = os.environ.get("SUPABASE_KEY")
     url: str = os.environ.get("SUPABASE_URL")
     
-    supabase: Client = create_client(url, key)
-    supabase.auth.set_session(access_token=access_token,
-                              refresh_token=refresh_token)
+    try:
+        supabase: Client = create_client(url, key)
+        supabase.auth.set_session(access_token=access_token,
+                                refresh_token=refresh_token)
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="The incoming tokens are invalid.")
+
     return supabase

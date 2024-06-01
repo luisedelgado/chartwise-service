@@ -46,6 +46,13 @@ users_db = {
         "email": "danieldaza91@gmail.com",
         "hashed_password": "$2b$12$xij/dxNEivS1Slp7lex11.Lyu/M7IDdXVNDRHud9JzGs/ndRbE5ce",
         "disabled": False
+    },
+    "testonly": {
+        "username": "testonly",
+        "full_name": "testonly",
+        "email": "testonly",
+        "hashed_password": "$2b$12$DRj2D.Tsy5gs9SpLVhxAiuGli3O2SJUE2o7W8X.fuQY63szNg8kbK",
+        "disabled": False,
     }
 }
 
