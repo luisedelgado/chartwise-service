@@ -103,12 +103,9 @@ def execute_assistant_query(_: Annotated[str, Depends(security.oauth2_scheme)],
         patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id',
                                                                             query.therapist_id).eq('id',
                                                                                                    query.patient_id).execute()
-    except gotrue.errors.AuthApiError as e:
+    except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Invalid access and/or refresh tokens.")
-    except:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="The attempted operation was not accepted.")
 
     if len(patient_therapist_check.data) == 0:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
