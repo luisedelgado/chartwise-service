@@ -374,6 +374,15 @@ async def login_for_access_token(
     response.set_cookie(key="authorization", value=access_token, httponly=True)
     return security.Token(access_token=access_token, token_type="bearer")
 
+@app.post("/logout")
+async def logout(response: Response,
+                 authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    response.delete_cookie("authorization")
+    return {}
+
 # Helper functions
 
 """
