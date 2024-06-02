@@ -16,7 +16,10 @@ from fastapi import (
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from httpx import HTTPStatusError
 from langcodes import Language
+from speechmatics.models import ConnectionSettings
+from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 from typing import Annotated, Union
 from PIL import Image
@@ -56,8 +59,8 @@ Digests a new session report by:
 Returns a boolean value representing success.
 
 Arguments:
-_  – oauth2 token
-session_report – the report associated with the new session
+session_report – the report associated with the new session.
+authorization – The authorization cookie, if exists.
 """
 @app.post("/v1/sessions")
 def upload_new_session(session_report: models.SessionReport,
@@ -91,8 +94,8 @@ Executes a query to our RAG system.
 Returns the query response.
 
 Arguments:
-_  – oauth2 token
-query – the query that will be executed
+query – the query that will be executed.
+authorization – The authorization cookie, if exists.
 """
 @app.post("/v1/assistant-queries")
 def execute_assistant_query(query: models.AssistantQuery,
@@ -143,8 +146,8 @@ def execute_assistant_query(query: models.AssistantQuery,
 Returns a new greeting to the user.
 
 Arguments:
-greeting – the greeting parameters to be used
-_  – oauth2 token
+greeting – the greeting parameters to be used.
+authorization – The authorization cookie, if exists.
 """
 @app.post("/v1/greetings")
 def fetch_greeting(greeting_params: models.AssistantGreeting,
@@ -166,7 +169,7 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
 Returns an OK status if the endpoint can be reached.
 
 Arguments:
-_  – oauth2 token
+authorization – The authorization cookie, if exists.
 """
 @app.get("/v1/healthcheck")
 def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None):
@@ -175,14 +178,16 @@ def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None
 
     return {"status": "ok"}
 
+
+
 # Image handling endpoints
 
 """
 Returns a document_id value associated with the file that was uploaded.
 
 Arguments:
-_  – oauth2 token
-image – the image to be uploaded
+image – the image to be uploaded.
+authorization – The authorization cookie, if exists.
 """
 @app.post("/v1/image-files")
 def upload_session_notes_image(image: UploadFile = File(...),
@@ -245,8 +250,8 @@ def upload_session_notes_image(image: UploadFile = File(...),
 Returns the text extracted from the incoming document_id.
 
 Arguments:
-_  – oauth2 token
-document_id – the id of the document to be textracted
+document_id – the id of the document to be textracted.
+authorization – The authorization cookie, if exists.
 """
 @app.get("/v1/text-extractions")
 def extract_text(document_id: str = None,
@@ -284,11 +289,11 @@ def extract_text(document_id: str = None,
 Returns the transcription created from the incoming audio file.
 
 Arguments:
-_  – oauth2 token
-audio_file – the audio file for which the transcription will be created
+audio_file – the audio file for which the transcription will be created.
+authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/audio-transcriptions")
-async def transcribe_audio_file(audio_file: UploadFile = File(...),
+@app.post("/v1/notes-transcriptions")
+async def transcribe_notes(audio_file: UploadFile = File(...),
                                 authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
@@ -347,13 +352,89 @@ async def transcribe_audio_file(audio_file: UploadFile = File(...),
     clean_up_files([audio_copy_path])
     return {"transcript": transcript}
 
+"""
+Returns the transcription created from the incoming audio file.
+Meant to be used for diarizing sessions.
+
+Arguments:
+audio_file – the audio file for which the diarized transcription will be created.
+authorization – The authorization cookie, if exists.
+"""
+@app.post("/v1/session-transcriptions")
+async def transcribe_session(audio_file: UploadFile = File(...),
+                             authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    _, file_extension = os.path.splitext(audio_file.filename)
+    files_dir = 'files'
+    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+
+    try:
+        # Write incoming audio to our local volume for further processing
+        with open(audio_copy_path, 'wb+') as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
+
+        if not os.path.exists(audio_copy_path):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                detail="Something went wrong while processing the file.")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Something went wrong while uploading the file.")
+    finally:
+        await audio_file.close()
+
+    # Process local copy with Speechmatics client
+    settings = ConnectionSettings(
+        url=os.getenv("SPEECHMATICS_URL"),
+        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+    )
+
+    conf = {
+        "type": "transcription",
+        "transcription_config": {
+            "language": "auto",
+            "diarization": "speaker",
+            "enable_entities": True,
+        },
+        "language_identification_config": {
+            "expected_languages": ["en", "es"],
+            "low_confidence_action": "allow"
+        },
+        "summarization_config": {
+            "content_type": "conversational",
+            "summary_length": "detailed",
+            "summary_type": "bullets"
+        }
+    }
+
+    with BatchClient(settings) as client:
+        try:
+            job_id = client.submit_job(
+                audio=audio_copy_path,
+                transcription_config=conf,
+            )
+
+            # Note that in production, you should set up notifications instead of polling.
+            # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
+            transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
+            summary = transcript["summary"]["content"]
+            return {"transcript": transcript, "summary": summary}
+        except TimeoutError as e:
+            raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                detail="The transcription operation failed.")
+
 # Security endpoints
 
 """
 Returns an oauth token to be used for invoking the endpoints.
 
 Arguments:
-form_data  – the data required to validate the user
+form_data  – the data required to validate the user.
+response – The response object to be used for creating the final response.
 """
 @app.post("/token")
 async def login_for_access_token(
