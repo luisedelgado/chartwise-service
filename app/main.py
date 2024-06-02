@@ -1,29 +1,36 @@
 import asyncio, base64, datetime, httpx, json, os, requests, shutil
 
-import gotrue.errors
 from deepgram import (
     DeepgramClient,
     PrerecordedOptions,
     FileSource,
 )
 from fastapi import (
+    Cookie,
     Depends,
     HTTPException,
     FastAPI,
     File,
+    Response,
     status,
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from langcodes import Language
 from supabase import create_client, Client
-from typing import Annotated
+from typing import Annotated, Union
 from PIL import Image
 
 from .assistant import query as query_handler
 from .assistant import vector_writer
 from .internal import models
 from .internal import security
+
+TOKEN_EXPIRED_ERROR = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Token missing or expired",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
 app = FastAPI()
 
@@ -53,8 +60,11 @@ _  – oauth2 token
 session_report – the report associated with the new session
 """
 @app.post("/v1/sessions")
-def upload_new_session(_: Annotated[str, Depends(security.oauth2_scheme)],
-                       session_report: models.SessionReport):
+def upload_new_session(session_report: models.SessionReport,
+                       authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     try:
         supabase = supabase_instance(session_report.supabase_access_token,
                                     session_report.supabase_refresh_token)
@@ -85,8 +95,11 @@ _  – oauth2 token
 query – the query that will be executed
 """
 @app.post("/v1/assistant-queries")
-def execute_assistant_query(_: Annotated[str, Depends(security.oauth2_scheme)],
-                            query: models.AssistantQuery):
+def execute_assistant_query(query: models.AssistantQuery,
+                            authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     try:
         if not Language.get(query.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -134,7 +147,11 @@ greeting – the greeting parameters to be used
 _  – oauth2 token
 """
 @app.post("/v1/greetings")
-def fetch_greeting(greeting_params: models.AssistantGreeting, _: Annotated[str, Depends(security.oauth2_scheme)]):
+def fetch_greeting(greeting_params: models.AssistantGreeting,
+                   authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     try:
         if not Language.get(greeting_params.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -152,8 +169,11 @@ Arguments:
 _  – oauth2 token
 """
 @app.get("/v1/healthcheck")
-def read_healthcheck(_: Annotated[str, Depends(security.oauth2_scheme)]):
-     return {"status": "ok"}
+def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    return {"status": "ok"}
 
 # Image handling endpoints
 
@@ -165,8 +185,11 @@ _  – oauth2 token
 image – the image to be uploaded
 """
 @app.post("/v1/image-files")
-def upload_session_notes_image(_: Annotated[str, Depends(security.oauth2_scheme)],
-                               image: UploadFile = File(...)):
+def upload_session_notes_image(image: UploadFile = File(...),
+                               authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
@@ -226,8 +249,11 @@ _  – oauth2 token
 document_id – the id of the document to be textracted
 """
 @app.get("/v1/text-extractions")
-def extract_text(_: Annotated[str, Depends(security.oauth2_scheme)],
-                 document_id: str = None):
+def extract_text(document_id: str = None,
+                 authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     if document_id == None or document_id == "":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Didn't receive a valid document id.")
@@ -262,8 +288,11 @@ _  – oauth2 token
 audio_file – the audio file for which the transcription will be created
 """
 @app.post("/v1/audio-transcriptions")
-async def transcribe_audio_file(_: Annotated[str, Depends(security.oauth2_scheme)],
-                                audio_file: UploadFile = File(...)):
+async def transcribe_audio_file(audio_file: UploadFile = File(...),
+                                authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
@@ -329,6 +358,7 @@ form_data  – the data required to validate the user
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
@@ -341,9 +371,10 @@ async def login_for_access_token(
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    response.set_cookie(key="authorization", value=access_token, httponly=True)
     return security.Token(access_token=access_token, token_type="bearer")
 
-# Helper functions 
+# Helper functions
 
 """
 Cleans up the incoming set of files from the local directory.

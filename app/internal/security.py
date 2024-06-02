@@ -1,4 +1,4 @@
-import jwt, logging, os
+import datetime, jwt, logging, os
 
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
@@ -84,6 +84,24 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def access_token_is_valid(access_token: str) -> bool:
+    try:
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return False
+        token_data = TokenData(username=username)
+    except:
+        return False
+    user = get_user(users_db, username=token_data.username)
+    if user is None or user.disabled is True:
+        return False
+
+    # Check that token hasn't expired
+    token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
+                                                   tz=timezone.utc)
+    return (token_expiration_date > datetime.now(timezone.utc))
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
