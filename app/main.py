@@ -455,7 +455,11 @@ async def login_for_access_token(
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    response.set_cookie(key="authorization", value=access_token, httponly=True)
+    response.set_cookie(key="authorization",
+                        value=access_token,
+                        httponly=True,
+                        secure=True,
+                        samesite=None,)
     return security.Token(access_token=access_token, token_type="bearer")
 
 @app.post("/logout")
