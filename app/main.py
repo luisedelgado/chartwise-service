@@ -74,13 +74,17 @@ def upload_new_session(session_report: models.SessionReport,
 
         # Write full text to supabase
         supabase.table('session_reports').insert({
-            "session_text": session_report.text,
+            "notes_text": session_report.text,
+            "session_transcription": None,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "therapist_id": session_report.therapist_id}).execute()
-    except:
+    except HTTPException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Invalid tokens.")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="The requested operation cannot be executed.")
 
     # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
