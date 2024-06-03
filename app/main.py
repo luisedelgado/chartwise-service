@@ -200,7 +200,7 @@ def upload_session_notes_image(image: UploadFile = File(...),
     file_name, file_extension = os.path.splitext(image.filename)
 
     # Format name to be used for image copy using current timestamp
-    files_dir = 'files'
+    files_dir = 'app/files'
     pdf_extension = '.pdf'
     image_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     image_copy_path = files_dir + '/' + image_copy_bare_name + file_extension
@@ -299,7 +299,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         raise TOKEN_EXPIRED_ERROR
 
     _, file_extension = os.path.splitext(audio_file.filename)
-    files_dir = 'files'
+    files_dir = 'app/files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
@@ -348,8 +348,9 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="The transcription operation failed.")
+    finally:
+        await clean_up_files([audio_copy_path])
 
-    clean_up_files([audio_copy_path])
     return {"transcript": transcript}
 
 """
@@ -367,7 +368,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
         raise TOKEN_EXPIRED_ERROR
 
     _, file_extension = os.path.splitext(audio_file.filename)
-    files_dir = 'files'
+    files_dir = 'app/files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
@@ -426,6 +427,8 @@ async def transcribe_session(audio_file: UploadFile = File(...),
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                                 detail="The transcription operation failed.")
+        finally:
+            await clean_up_files([audio_copy_path])
 
 # Security endpoints
 
