@@ -421,7 +421,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
             # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
             transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
             summary = transcript["summary"]["content"]
-            return {"transcript": transcript, "summary": summary}
+            return {"transcription_id": "<to-be-implemented>", "summary": summary}
         except TimeoutError as e:
             raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
         except Exception as e:
