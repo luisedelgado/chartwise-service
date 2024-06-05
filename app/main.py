@@ -368,71 +368,72 @@ authorization – The authorization cookie, if exists.
 @app.post("/v1/session-transcriptions")
 async def transcribe_session(audio_file: UploadFile = File(...),
                              authorization: Annotated[Union[str, None], Cookie()] = None):
-    if not security.access_token_is_valid(authorization):
-        raise TOKEN_EXPIRED_ERROR
+    # if not security.access_token_is_valid(authorization):
+    #     raise TOKEN_EXPIRED_ERROR
 
-    _, file_extension = os.path.splitext(audio_file.filename)
-    files_dir = 'app/files'
-    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+    # _, file_extension = os.path.splitext(audio_file.filename)
+    # files_dir = 'app/files'
+    # audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    # audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
-    try:
-        # Write incoming audio to our local volume for further processing
-        with open(audio_copy_path, 'wb+') as buffer:
-            shutil.copyfileobj(audio_file.file, buffer)
+    # try:
+    #     # Write incoming audio to our local volume for further processing
+    #     with open(audio_copy_path, 'wb+') as buffer:
+    #         shutil.copyfileobj(audio_file.file, buffer)
 
-        if not os.path.exists(audio_copy_path):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="Something went wrong while processing the file.")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Something went wrong while uploading the file.")
-    finally:
-        await audio_file.close()
+    #     if not os.path.exists(audio_copy_path):
+    #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+    #                             detail="Something went wrong while processing the file.")
+    # except Exception as e:
+    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+    #                         detail="Something went wrong while uploading the file.")
+    # finally:
+    #     await audio_file.close()
 
-    # Process local copy with Speechmatics client
-    settings = ConnectionSettings(
-        url=os.getenv("SPEECHMATICS_URL"),
-        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
-    )
+    # # Process local copy with Speechmatics client
+    # settings = ConnectionSettings(
+    #     url=os.getenv("SPEECHMATICS_URL"),
+    #     auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+    # )
 
-    conf = {
-        "type": "transcription",
-        "transcription_config": {
-            "language": "auto",
-            "diarization": "speaker",
-            "enable_entities": True,
-        },
-        "language_identification_config": {
-            "expected_languages": ["en", "es"],
-            "low_confidence_action": "allow"
-        },
-        "summarization_config": {
-            "content_type": "conversational",
-            "summary_length": "detailed",
-            "summary_type": "bullets"
-        }
-    }
+    # conf = {
+    #     "type": "transcription",
+    #     "transcription_config": {
+    #         "language": "auto",
+    #         "diarization": "speaker",
+    #         "enable_entities": True,
+    #     },
+    #     "language_identification_config": {
+    #         "expected_languages": ["en", "es"],
+    #         "low_confidence_action": "allow"
+    #     },
+    #     "summarization_config": {
+    #         "content_type": "conversational",
+    #         "summary_length": "detailed",
+    #         "summary_type": "bullets"
+    #     }
+    # }
 
-    with BatchClient(settings) as client:
-        try:
-            job_id = client.submit_job(
-                audio=audio_copy_path,
-                transcription_config=conf,
-            )
+    # with BatchClient(settings) as client:
+    #     try:
+    #         job_id = client.submit_job(
+    #             audio=audio_copy_path,
+    #             transcription_config=conf,
+    #         )
 
-            # Note that in production, you should set up notifications instead of polling.
-            # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
-            transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
-            summary = transcript["summary"]["content"]
-            return {"transcription_id": "<to-be-implemented>", "summary": summary}
-        except TimeoutError as e:
-            raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="The transcription operation failed.")
-        finally:
-            await clean_up_files([audio_copy_path])
+    #         # Note that in production, you should set up notifications instead of polling.
+    #         # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
+    #         transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
+    #         summary = transcript["summary"]["content"]
+    #         return {"transcription_id": "<to-be-implemented>", "summary": summary}
+    #     except TimeoutError as e:
+    #         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+    #     except Exception as e:
+    #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+    #                             detail="The transcription operation failed.")
+    #     finally:
+    #         await clean_up_files([audio_copy_path])
+    return {"transcription_id": "", "summary": ""}
 
 # Security endpoints
 
