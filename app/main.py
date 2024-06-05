@@ -1,5 +1,6 @@
-import asyncio, base64, datetime, httpx, json, os, requests, shutil
+import asyncio, base64, datetime, httpx, json, os, requests, shutil, ssl
 
+from dataclasses import field
 from deepgram import (
     DeepgramClient,
     PrerecordedOptions,
@@ -368,8 +369,8 @@ authorization – The authorization cookie, if exists.
 @app.post("/v1/session-transcriptions")
 async def transcribe_session(audio_file: UploadFile = File(...),
                              authorization: Annotated[Union[str, None], Cookie()] = None):
-    # if not security.access_token_is_valid(authorization):
-    #     raise TOKEN_EXPIRED_ERROR
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
 
     # _, file_extension = os.path.splitext(audio_file.filename)
     # files_dir = 'app/files'
@@ -390,10 +391,15 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     # finally:
     #     await audio_file.close()
 
+    # # Temporary workaround until we add our own certificates
+    # ssl_context = ssl._create_unverified_context()
+    # #ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+
     # # Process local copy with Speechmatics client
     # settings = ConnectionSettings(
     #     url=os.getenv("SPEECHMATICS_URL"),
     #     auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+    #     ssl_context=ssl_context,
     # )
 
     # conf = {
@@ -425,15 +431,19 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #         # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
     #         transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
     #         summary = transcript["summary"]["content"]
-    #         return {"transcription_id": "<to-be-implemented>", "summary": summary}
+    #         return {"transcription_id": "", "summary": summary}
     #     except TimeoutError as e:
     #         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
     #     except Exception as e:
+    #         print(e)
     #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
     #                             detail="The transcription operation failed.")
     #     finally:
     #         await clean_up_files([audio_copy_path])
-    return {"transcription_id": "", "summary": ""}
+
+    data = json.load(open('app/files/output.json'))
+    summary = data["summary"]["content"]
+    return {"transcription_id": "", "summary": summary}
 
 # Security endpoints
 
