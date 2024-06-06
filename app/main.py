@@ -27,6 +27,7 @@ from PIL import Image
 
 from .assistant import query as query_handler
 from .assistant import vector_writer
+from .data_processing import diarization_cleaner
 from .internal import models
 from .internal import security
 
@@ -443,7 +444,8 @@ async def transcribe_session(audio_file: UploadFile = File(...),
 
     data = json.load(open('app/files/output.json'))
     summary = data["summary"]["content"]
-    return {"transcription_id": "", "summary": summary}
+    transcript = diarization_cleaner.clean_transcription(data["results"])
+    return {"summary": summary, "transcription": transcript}
 
 # Security endpoints
 
