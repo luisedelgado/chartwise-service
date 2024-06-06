@@ -33,9 +33,8 @@ class DiarizationCleaner:
             skip_space = (len(self._current_speaker_content) == 0) or (has_attaches_to and attaches_to.lower() == "previous")
             
             if speaker != self._current_speaker:
-                # Update current speaker and capture new content
+                # Update current speaker
                 self._current_speaker = speaker
-                self._current_speaker_content = content
 
             # It's the same speaker, check if it's an end of a sentence
             if has_end_of_sentence and end_of_sentence == True:
