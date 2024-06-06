@@ -444,7 +444,9 @@ async def transcribe_session(audio_file: UploadFile = File(...),
 
     data = json.load(open('app/files/output.json'))
     summary = data["summary"]["content"]
-    transcript = diarization_cleaner.clean_transcription(data["results"])
+
+    transcription_cleaner = diarization_cleaner.DiarizationCleaner()
+    transcript = transcription_cleaner.clean_transcription(data["results"])
     return {"summary": summary, "transcription": transcript}
 
 # Security endpoints
