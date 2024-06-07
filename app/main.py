@@ -495,9 +495,11 @@ def sign_up(signup_data: models.SignupData,
         })
 
         json_response = json.loads(res.model_dump_json())
-        if json_response["user"]["role"] != 'authenticated':
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Invalid signup data.")
+
+        assert json_response["user"]["role"] == 'authenticated'
+        assert json_response["session"]["access_token"] 
+        assert json_response["session"]["refresh_token"]
+
         user_id = json_response["user"]["id"]
         supabase.table('therapists').insert({
             "id": user_id,
@@ -509,11 +511,19 @@ def sign_up(signup_data: models.SignupData,
             "email": signup_data.user_email,
             "language_preference": signup_data.language_preference,
         }).execute()
+
+    except AssertionError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=str(e))
 
-    return {}
+    return {
+        "user_id": user_id,
+        "access_token": json_response["session"]["access_token"],
+        "refresh_token": json_response["session"]["refresh_token"]
+    }
 
 @app.post("/logout")
 async def logout(response: Response,
