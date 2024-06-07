@@ -71,8 +71,8 @@ def upload_new_session(session_report: models.SessionReport,
         raise TOKEN_EXPIRED_ERROR
 
     try:
-        supabase = supabase_instance(session_report.supabase_access_token,
-                                    session_report.supabase_refresh_token)
+        supabase = supabase_user_instance(session_report.supabase_access_token,
+                                          session_report.supabase_refresh_token)
 
         # Write full text to supabase
         supabase.table('session_reports').insert({
@@ -120,8 +120,8 @@ def execute_assistant_query(query: models.AssistantQuery,
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
-        supabase = supabase_instance(query.supabase_access_token,
-                                     query.supabase_refresh_token)
+        supabase = supabase_user_instance(query.supabase_access_token,
+                                          query.supabase_refresh_token)
         patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id',
                                                                             query.therapist_id).eq('id',
                                                                                                    query.patient_id).execute()
@@ -300,7 +300,7 @@ authorization – The authorization cookie, if exists.
 """
 @app.post("/v1/notes-transcriptions")
 async def transcribe_notes(audio_file: UploadFile = File(...),
-                                authorization: Annotated[Union[str, None], Cookie()] = None):
+                           authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
@@ -481,6 +481,40 @@ async def login_for_access_token(
                         samesite="none")
     return security.Token(access_token=access_token, token_type="bearer")
 
+@app.post("/sign-up")
+def sign_up(signup_data: models.SignupData,
+            authorization: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    try:
+        supabase:Client = supabase_admin_instance()
+        res = supabase.auth.sign_up({
+            "email": signup_data.user_email,
+            "password": signup_data.user_password,
+        })
+
+        json_response = json.loads(res.model_dump_json())
+        if json_response["user"]["role"] != 'authenticated':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Invalid signup data.")
+        user_id = json_response["user"]["id"]
+        supabase.table('therapists').insert({
+            "id": user_id,
+            "first_name": signup_data.first_name,
+            "middle_name": signup_data.middle_name,
+            "last_name": signup_data.last_name,
+            "birth_date": signup_data.birth_date,
+            "login_mechanism": signup_data.signup_mechanism,
+            "email": signup_data.user_email,
+            "language_preference": signup_data.language_preference,
+        }).execute()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=str(e))
+
+    return {}
+
 @app.post("/logout")
 async def logout(response: Response,
                  authorization: Annotated[Union[str, None], Cookie()] = None):
@@ -503,14 +537,14 @@ async def clean_up_files(files):
         os.remove(file)
 
 """
-Returns an active supabase instance.
+Returns an active supabase instance based on a user's auth tokens.
 
 Arguments:
 access_token  – the access_token associated with a live supabase session
 refresh_token  – the refresh_token associated with a live supabase session
 """
-def supabase_instance(access_token, refresh_token) -> Client:
-    key: str = os.environ.get("SUPABASE_KEY")
+def supabase_user_instance(access_token, refresh_token) -> Client:
+    key: str = os.environ.get("SUPABASE_ANON_KEY")
     url: str = os.environ.get("SUPABASE_URL")
     
     try:
@@ -520,5 +554,20 @@ def supabase_instance(access_token, refresh_token) -> Client:
     except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="The incoming tokens are invalid.")
+
+    return supabase
+
+"""
+Returns an active supabase instance with admin priviledges.
+"""
+def supabase_admin_instance() -> Client:
+    key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    url: str = os.environ.get("SUPABASE_URL")
+
+    try:
+        supabase: Client = create_client(url, key)
+    except:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail="Something went wrong while signing up user.")
 
     return supabase

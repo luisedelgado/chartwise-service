@@ -19,3 +19,13 @@ class AssistantQuery(BaseModel):
 class AssistantGreeting(BaseModel):
     addressing_name: str
     response_language_code: str
+
+class SignupData(BaseModel):
+    user_email: str
+    user_password: str
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    signup_mechanism: str
+    language_preference: str
