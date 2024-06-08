@@ -19,8 +19,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import HTTPStatusError
 from langcodes import Language
-# from speechmatics.models import ConnectionSettings
-# from speechmatics.batch_client import BatchClient
+from speechmatics.models import ConnectionSettings
+from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 from typing import Annotated, Union
 from PIL import Image
