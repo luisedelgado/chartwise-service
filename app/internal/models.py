@@ -2,7 +2,6 @@ from pydantic import BaseModel
 
 class SessionReport(BaseModel):
     patient_id: str
-    therapist_id: str
     text: str
     date: str
     supabase_access_token: str
@@ -10,7 +9,6 @@ class SessionReport(BaseModel):
 
 class AssistantQuery(BaseModel):
     patient_id: str
-    therapist_id: str
     text: str
     response_language_code: str
     supabase_access_token: str

@@ -74,19 +74,21 @@ def upload_new_session(session_report: models.SessionReport,
         supabase = supabase_user_instance(session_report.supabase_access_token,
                                           session_report.supabase_refresh_token)
 
+        user_response = json.loads(supabase.auth.get_user().model_dump_json())
+
         # Write full text to supabase
         supabase.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_transcription": None,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
-            "therapist_id": session_report.therapist_id}).execute()
+            "therapist_id": user_response["user"]["id"]}).execute()
     except HTTPException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid tokens.")
+        raise HTTPException(status_code=e.status_code,
+                            detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="The requested operation cannot be executed.")
+                            detail=str(e))
 
     # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
@@ -113,25 +115,26 @@ def execute_assistant_query(query: models.AssistantQuery,
         if not Language.get(query.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Invalid response language code.")
-    except:
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Check the language code you are sending.")
+                            detail=str(e))
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
         supabase = supabase_user_instance(query.supabase_access_token,
                                           query.supabase_refresh_token)
-        patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id',
-                                                                            query.therapist_id).eq('id',
+        user_response = json.loads(supabase.auth.get_user().model_dump_json())
+        therapist_id = user_response["user"]["id"]
+        patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
                                                                                                    query.patient_id).execute()
-    except:
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid access and/or refresh tokens.")
+                            detail=str(e))
 
     if len(patient_therapist_check.data) == 0:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="There isn't a match between that patient and therapist.")
+                                detail="There isn't a patient-therapist match with those ids.")
 
     # Go through with the query
     response = query_handler.query_store(query.patient_id,
@@ -165,9 +168,9 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
         if not Language.get(greeting_params.response_language_code).is_valid():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Invalid response language code.")
-    except:
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Check the language code you are sending.")
+                            detail=str(e))
     return {"message": query_handler.create_greeting(greeting_params.addressing_name,
                                                      greeting_params.response_language_code)}
 
@@ -319,7 +322,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
                                 detail="Something went wrong while processing the file.")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, 
-                            detail="Something went wrong while uploading the file.")
+                            detail=str(e))
     finally:
         await audio_file.close()
 
@@ -349,8 +352,9 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
 
         json_response = json.loads(response.to_json(indent=4))
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
-    except TimeoutError as e:
-        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code,
+                            detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="The transcription operation failed.")
@@ -388,7 +392,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #                             detail="Something went wrong while processing the file.")
     # except Exception as e:
     #     raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                         detail="Something went wrong while uploading the file.")
+    #                         detail=str(e))
     # finally:
     #     await audio_file.close()
 
@@ -438,7 +442,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #     except Exception as e:
     #         print(e)
     #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                             detail="The transcription operation failed.")
+    #                             detail=str(e))
     #     finally:
     #         await clean_up_files([audio_copy_path])
 
