@@ -1,7 +1,7 @@
 from datetime import datetime
 
-# from llama_index.core.prompts import ChatPromptTemplate
-# from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.prompts import ChatPromptTemplate
+from llama_index.core.llms import ChatMessage, MessageRole
 
 # Text QA Prompt
 
@@ -24,18 +24,18 @@ def __create_user_qa_message(language_code: str) -> str:
     execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
     return message_content + language_code_requirement + execution_statement
 
-# def create_chat_prompt_template(language_code: str) -> ChatPromptTemplate:
-#     qa_messages = [
-#         ChatMessage(
-#             role=MessageRole.SYSTEM,
-#             content=__create_system_qa_message(),
-#         ),
-#         ChatMessage(
-#             role=MessageRole.USER,
-#             content=__create_user_qa_message(language_code),
-#         ),
-#     ]
-#     return ChatPromptTemplate(qa_messages)
+def create_chat_prompt_template(language_code: str) -> ChatPromptTemplate:
+    qa_messages = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=__create_system_qa_message(),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=__create_user_qa_message(language_code),
+        ),
+    ]
+    return ChatPromptTemplate(qa_messages)
 
 # Refine Prompt
 
@@ -55,18 +55,18 @@ def __create_user_refine_message(language_code: str):
     your own knowledge, update or repeat the existing answer.\n'''
     return message_content + language_code_requirement + execution_statement
 
-# def create_refine_prompt_template(language_code: str) -> ChatPromptTemplate:
-#     refine_messages = [
-#         ChatMessage(
-#             role=MessageRole.SYSTEM,
-#             content=(__create_system_refine_message()),
-#         ),
-#         ChatMessage(
-#             role=MessageRole.USER,
-#             content=(__create_user_refine_message(language_code)),
-#         ),
-#     ]
-#     return ChatPromptTemplate(refine_messages)
+def create_refine_prompt_template(language_code: str) -> ChatPromptTemplate:
+    refine_messages = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=(__create_system_refine_message()),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=(__create_user_refine_message(language_code)),
+        ),
+    ]
+    return ChatPromptTemplate(refine_messages)
 
 # Greeting Prompt
 

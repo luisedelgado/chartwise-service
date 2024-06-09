@@ -1,5 +1,6 @@
 .venv/
 .venv12/
+.venv311/
 .venv-current/
 __pycache__/
 .DS_Store
