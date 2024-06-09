@@ -1,4 +1,4 @@
-import asyncio, base64, datetime, httpx, json, os, requests, shutil, ssl
+import asyncio, base64, datetime, json, os, requests, shutil, ssl
 
 from dataclasses import field
 from deepgram import (
@@ -17,7 +17,7 @@ from fastapi import (
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from httpx import HTTPStatusError
+from httpx import HTTPStatusError, Timeout
 from langcodes import Language
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
@@ -348,7 +348,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         # Increase the timeout to 300 seconds (5 minutes)
         response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                       options,
-                                                                      timeout=httpx.Timeout(300.0, connect=10.0))
+                                                                      timeout=Timeout(300.0, connect=10.0))
 
         json_response = json.loads(response.to_json(indent=4))
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
