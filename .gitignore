@@ -4,5 +4,4 @@
 .venv-current/
 __pycache__/
 .DS_Store
-.vscode/
 storage/index_store.json

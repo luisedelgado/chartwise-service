@@ -1,4 +1,4 @@
-import asyncio, base64, datetime, json, os, requests, shutil, ssl
+import asyncio, base64, datetime, json, os, requests, shutil, ssl, uuid
 
 from dataclasses import field
 from deepgram import (
@@ -17,17 +17,19 @@ from fastapi import (
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from httpx import HTTPStatusError, Timeout
+from httpx import Timeout
 from langcodes import Language
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
-from supabase import create_client, Client
+from supabase import Client
 from typing import Annotated, Union
 from PIL import Image
 
 from .assistant import query as query_handler
 from .assistant import vector_writer
 from .data_processing import diarization_cleaner
+from .internal import library_clients
+from .internal import logging
 from .internal import models
 from .internal import security
 
@@ -37,6 +39,19 @@ TOKEN_EXPIRED_ERROR = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+# Keep sorted alphabetically
+__assistant_queries_endpoint_name = "/v1/assistant-queries"
+__greetings_endpoint_name = "/v1/greetings"
+__image_files_endpoint_name = "/v1/image-files"
+__logout_endpoint_name = "/logout"
+__notes_transcriptions_endpoint_name = "/v1/notes-transcriptions"
+__session_transcriptions_endpoint_name = "/v1/session-transcriptions"
+__sessions_endpoint_name = "/v1/sessions"
+__sign_up_endpoint_name = "/sign-up"
+__text_extractions_endpoint_name = "/v1/text-extractions"
+__token_endpoint_name = "/token"
+
+__session_id = None
 app = FastAPI()
 
 origins = [
@@ -64,25 +79,29 @@ Arguments:
 session_report – the report associated with the new session.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/sessions")
+@app.post(__sessions_endpoint_name)
 def upload_new_session(session_report: models.SessionReport,
                        authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    try:
-        supabase = supabase_user_instance(session_report.supabase_access_token,
-                                          session_report.supabase_refresh_token)
+    global __session_id
+    logging.log_api_request(__session_id, __sessions_endpoint_name)
 
-        user_response = json.loads(supabase.auth.get_user().model_dump_json())
+    try:
+        supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
+                                                                 session_report.supabase_refresh_token)
+
+        user_response = json.loads(supabase_client.auth.get_user().json())
+        therapist_id = user_response["user"]["id"]
 
         # Write full text to supabase
-        supabase.table('session_reports').insert({
+        supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_transcription": None,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
-            "therapist_id": user_response["user"]["id"]}).execute()
+            "therapist_id": therapist_id}).execute()
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code,
                             detail=str(e))
@@ -95,6 +114,13 @@ def upload_new_session(session_report: models.SessionReport,
                                         session_report.text,
                                         session_report.date)
 
+    logging.log_api_response(session_id=__session_id,
+                             therapist_id=therapist_id,
+                             patient_id=session_report.patient_id,
+                             endpoint_name=__sessions_endpoint_name,
+                             http_status_code=200,
+                             description=None)
+
     return {}
 
 """
@@ -105,28 +131,27 @@ Arguments:
 query – the query that will be executed.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/assistant-queries")
+@app.post(__assistant_queries_endpoint_name)
 def execute_assistant_query(query: models.AssistantQuery,
                             authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    try:
-        if not Language.get(query.response_language_code).is_valid():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Invalid response language code.")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e))
+    global __session_id
+    logging.log_api_request(__session_id, __assistant_queries_endpoint_name)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
-        supabase = supabase_user_instance(query.supabase_access_token,
-                                          query.supabase_refresh_token)
-        user_response = json.loads(supabase.auth.get_user().model_dump_json())
+        if not Language.get(query.response_language_code).is_valid():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Invalid response language code.")
+
+        supabase_client = library_clients.supabase_user_instance(query.supabase_access_token,
+                                                                 query.supabase_refresh_token)
+        user_response = json.loads(supabase_client.auth.get_user().json())
         therapist_id = user_response["user"]["id"]
-        patient_therapist_check = supabase.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+        patient_therapist_check = supabase_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
                                                                                                    query.patient_id).execute()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -141,13 +166,16 @@ def execute_assistant_query(query: models.AssistantQuery,
                                          query.text,
                                          query.response_language_code)
 
-    if response.reason is query_handler.QueryStoreResultReason.INDEX_DOES_NOT_EXIST:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Store does not exist for this patient.")
-    elif response.reason is query_handler.QueryStoreResultReason.UNKNOWN_FAILURE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code,
+                            detail="Something failed when trying to execute the query")
 
-    assert response.reason is query_handler.QueryStoreResultReason.SUCCESS
+    logging.log_api_response(session_id=__session_id,
+                             therapist_id=therapist_id,
+                             patient_id=query.patient_id,
+                             endpoint_name=__assistant_queries_endpoint_name,
+                             http_status_code=200,
+                             description=None)
 
     return {"response": response.response_token}
 
@@ -158,11 +186,14 @@ Arguments:
 greeting – the greeting parameters to be used.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/greetings")
+@app.post(__greetings_endpoint_name)
 def fetch_greeting(greeting_params: models.AssistantGreeting,
                    authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    global __session_id
+    logging.log_api_request(__session_id, __greetings_endpoint_name)
 
     try:
         if not Language.get(greeting_params.response_language_code).is_valid():
@@ -171,6 +202,16 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=str(e))
+
+    log_description = ''.join(['language_code:',
+                           greeting_params.response_language_code,
+                           'tz_identifier:',
+                           greeting_params.client_tz_identifier])
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__greetings_endpoint_name,
+                             http_status_code=200,
+                             description=log_description)
+
     return {"message": query_handler.create_greeting(greeting_params.addressing_name,
                                                      greeting_params.response_language_code,
                                                      greeting_params.client_tz_identifier)}
@@ -188,8 +229,6 @@ def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None
 
     return {"status": "ok"}
 
-
-
 # Image handling endpoints
 
 """
@@ -199,11 +238,14 @@ Arguments:
 image – the image to be uploaded.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/image-files")
+@app.post(__image_files_endpoint_name)
 def upload_session_notes_image(image: UploadFile = File(...),
                                authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    global __session_id
+    logging.log_api_request(__session_id, __image_files_endpoint_name)
 
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
@@ -254,6 +296,11 @@ def upload_session_notes_image(image: UploadFile = File(...),
                             detail="Something went wrong while uploading the image.")
 
     document_id = response.json()['documentId']
+
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__image_files_endpoint_name,
+                             http_status_code=200)
+
     return {"document_id": document_id}
 
 """
@@ -263,11 +310,14 @@ Arguments:
 document_id – the id of the document to be textracted.
 authorization – The authorization cookie, if exists.
 """
-@app.get("/v1/text-extractions")
+@app.get(__text_extractions_endpoint_name)
 def extract_text(document_id: str = None,
                  authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    global __session_id
+    logging.log_api_request(__session_id, __text_extractions_endpoint_name)
 
     if document_id == None or document_id == "":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
@@ -291,6 +341,10 @@ def extract_text(document_id: str = None,
     for section in text_sections:
         full_text = full_text + section['text'] + " "
 
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__text_extractions_endpoint_name,
+                             http_status_code=200)
+
     return {"extraction": full_text}
 
 # Audio handling endpoint
@@ -302,11 +356,14 @@ Arguments:
 audio_file – the audio file for which the transcription will be created.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/notes-transcriptions")
+@app.post(__notes_transcriptions_endpoint_name)
 async def transcribe_notes(audio_file: UploadFile = File(...),
                            authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    global __session_id
+    logging.log_api_request(__session_id, __notes_transcriptions_endpoint_name)
 
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
@@ -362,6 +419,10 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
     finally:
         await clean_up_files([audio_copy_path])
 
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__notes_transcriptions_endpoint_name,
+                             http_status_code=200)
+
     return {"transcript": transcript}
 
 """
@@ -372,11 +433,14 @@ Arguments:
 audio_file – the audio file for which the diarized transcription will be created.
 authorization – The authorization cookie, if exists.
 """
-@app.post("/v1/session-transcriptions")
+@app.post(__session_transcriptions_endpoint_name)
 async def transcribe_session(audio_file: UploadFile = File(...),
                              authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    global __session_id
+    logging.log_api_request(__session_id, __session_transcriptions_endpoint_name)
 
     # _, file_extension = os.path.splitext(audio_file.filename)
     # files_dir = 'app/files'
@@ -452,6 +516,11 @@ async def transcribe_session(audio_file: UploadFile = File(...),
 
     transcription_cleaner = diarization_cleaner.DiarizationCleaner()
     transcript = transcription_cleaner.clean_transcription(data["results"])
+
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__session_transcriptions_endpoint_name,
+                             http_status_code=200)
+
     return {"summary": summary, "transcription": transcript}
 
 # Security endpoints
@@ -463,7 +532,7 @@ Arguments:
 form_data  – the data required to validate the user.
 response – The response object to be used for creating the final response.
 """
-@app.post("/token")
+@app.post(__token_endpoint_name)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response
@@ -475,6 +544,13 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    global __session_id
+
+    # Log activity if we're refreshing a current session's token
+    if __session_id is not None:
+        logging.log_api_request(__session_id, __token_endpoint_name)
+
     access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
@@ -484,29 +560,44 @@ async def login_for_access_token(
                         httponly=True,
                         secure=True,
                         samesite="none")
-    return security.Token(access_token=access_token, token_type="bearer")
+    token = security.Token(access_token=access_token, token_type="bearer")
 
-@app.post("/sign-up")
+    if __session_id is None:
+        # If a fresh session is starting, assign a __session_id value
+        __session_id = uuid.uuid1()
+
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__token_endpoint_name,
+                             http_status_code=200)
+
+    return token
+
+@app.post(__sign_up_endpoint_name)
 def sign_up(signup_data: models.SignupData,
             authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
+    global __session_id
+    logging.log_api_request(__session_id, __sign_up_endpoint_name)
+
     try:
-        supabase:Client = supabase_admin_instance()
-        res = supabase.auth.sign_up({
+        supabase_client: Client = library_clients.supabase_admin_instance()
+        res = supabase_client.auth.sign_up({
             "email": signup_data.user_email,
             "password": signup_data.user_password,
         })
 
-        json_response = json.loads(res.model_dump_json())
+        json_response = json.loads(res.json())
 
-        assert json_response["user"]["role"] == 'authenticated'
-        assert json_response["session"]["access_token"] 
-        assert json_response["session"]["refresh_token"]
+        if (json_response["user"]["role"] != 'authenticated'
+            or not json_response["session"]["access_token"]
+            or not json_response["session"]["refresh_token"]):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Something went wrong when signing up the user")
 
         user_id = json_response["user"]["id"]
-        supabase.table('therapists').insert({
+        supabase_client.table('therapists').insert({
             "id": user_id,
             "first_name": signup_data.first_name,
             "middle_name": signup_data.middle_name,
@@ -524,22 +615,36 @@ def sign_up(signup_data: models.SignupData,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=str(e))
 
+    logging.log_api_response(therapist_id=user_id,
+                             session_id=__session_id,
+                             endpoint_name=__sign_up_endpoint_name,
+                             http_status_code=200)
+
     return {
         "user_id": user_id,
         "access_token": json_response["session"]["access_token"],
         "refresh_token": json_response["session"]["refresh_token"]
     }
 
-@app.post("/logout")
+@app.post(__logout_endpoint_name)
 async def logout(response: Response,
                  authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
+    global __session_id
+    logging.log_api_request(__session_id, __logout_endpoint_name)
+
     response.delete_cookie("authorization")
+
+    logging.log_api_response(session_id=__session_id,
+                             endpoint_name=__logout_endpoint_name,
+                             http_status_code=200)
+
+    __session_id = None
     return {}
 
-# Helper functions
+# Private - Helper functions
 
 """
 Cleans up the incoming set of files from the local directory.
@@ -550,39 +655,3 @@ files  – the set of files to be cleaned up
 async def clean_up_files(files):
     for file in files:
         os.remove(file)
-
-"""
-Returns an active supabase instance based on a user's auth tokens.
-
-Arguments:
-access_token  – the access_token associated with a live supabase session
-refresh_token  – the refresh_token associated with a live supabase session
-"""
-def supabase_user_instance(access_token, refresh_token) -> Client:
-    key: str = os.environ.get("SUPABASE_ANON_KEY")
-    url: str = os.environ.get("SUPABASE_URL")
-    
-    try:
-        supabase: Client = create_client(url, key)
-        supabase.auth.set_session(access_token=access_token,
-                                refresh_token=refresh_token)
-    except:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="The incoming tokens are invalid.")
-
-    return supabase
-
-"""
-Returns an active supabase instance with admin priviledges.
-"""
-def supabase_admin_instance() -> Client:
-    key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-    url: str = os.environ.get("SUPABASE_URL")
-
-    try:
-        supabase: Client = create_client(url, key)
-    except:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="Something went wrong while signing up user.")
-
-    return supabase

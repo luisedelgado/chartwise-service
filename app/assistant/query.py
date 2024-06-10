@@ -9,15 +9,10 @@ from pinecone.grpc import PineconeGRPC
 
 from . import message_templates
 
-class QueryStoreResultReason(Enum):
-    SUCCESS = 1
-    INDEX_DOES_NOT_EXIST = 2
-    UNKNOWN_FAILURE = 3
-
 class QueryStoreResult:
-    def __init__(self, response_token, reason):
+    def __init__(self, response_token, status_code):
         self.response_token = response_token
-        self.reason = reason
+        self.status_code = status_code
 
 def query_store(index_id, input, response_language_code) -> QueryStoreResult:
     # Initialize connection to Pinecone
@@ -32,8 +27,7 @@ def query_store(index_id, input, response_language_code) -> QueryStoreResult:
         index = pc.Index(index_id)
     except PineconeApiException as e:
         # We expect HTTPCode 404 if the index does not exist - NOT_FOUND
-        reason = QueryStoreResultReason.INDEX_DOES_NOT_EXIST if e.status == 404 else QueryStoreResultReason.UNKNOWN_FAILURE
-        return QueryStoreResult("", reason)
+        return QueryStoreResult(str(e), e.status)
 
     # Initialize VectorStore
     vector_store = PineconeVectorStore(pinecone_index=index)
@@ -51,7 +45,7 @@ def query_store(index_id, input, response_language_code) -> QueryStoreResult:
     )
 
     response = query_engine.query(input)
-    return QueryStoreResult(str(response), QueryStoreResultReason.SUCCESS)
+    return QueryStoreResult(str(response), 200)
 
 def create_greeting(name: str, language_code: str, tz_identifier: str):
     api_key = os.environ.get('OPENAI_API_KEY')
