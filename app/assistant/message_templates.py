@@ -2,6 +2,7 @@ from datetime import datetime
 
 from llama_index.core.prompts import ChatPromptTemplate
 from llama_index.core.llms import ChatMessage, MessageRole
+from pytz import timezone
 
 # Text QA Prompt
 
@@ -70,11 +71,18 @@ def create_refine_prompt_template(language_code: str) -> ChatPromptTemplate:
 
 # Greeting Prompt
 
-def create_system_greeting_message(name: str) -> str:
-    weekday = datetime.now().strftime('%A')
-    return f'''A mental health practitioner is using you to ask questions 
+def create_system_greeting_message(name: str, tz_identifier: str) -> str | None:
+    try:
+        tz = timezone(tz_identifier)
+        weekday = datetime.now(tz).strftime('%A')
+        return f'''A mental health practitioner is using you to ask questions 
     about their patients' session notes. Your main job is to fetch anything from their session notes. 
     Start by sending a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
+    Finish off with a short fragment on productivity.'''
+    except:
+        return f'''A mental health practitioner is using you to ask questions 
+    about their patients' session notes. Your main job is to fetch anything from their session notes. 
+    Start by saying hi, and addressing them by their name, which is {name}. 
     Finish off with a short fragment on productivity.'''
 
 def create_user_greeting_message(language_code: str) -> str:

@@ -172,7 +172,8 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=str(e))
     return {"message": query_handler.create_greeting(greeting_params.addressing_name,
-                                                     greeting_params.response_language_code)}
+                                                     greeting_params.response_language_code,
+                                                     greeting_params.client_tz_identifier)}
 
 """
 Returns an OK status if the endpoint can be reached.
