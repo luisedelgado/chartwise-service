@@ -231,7 +231,15 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
             "content_type": "conversational",
             "summary_length": "detailed",
             "summary_type": "bullets"
-        }
+        },
+        # https://docs.speechmatics.com/features-other/notifications
+        # "notification_config": [
+        #     {
+        #     "url": "https://collector.example.org/callback",
+        #     "contents": ["transcript", "data"],
+        #     "auth_headers": ["Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhb"]
+        #     }
+        # ]
     }
 
     with BatchClient(settings) as client:
@@ -247,16 +255,10 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
             return SessionTranscriptionResult(transcript=transcript, summary=summary)
         except TimeoutError as e:
             raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+        except HTTPException as e:
+            raise HTTPException(status_code=e.status_code, detail=str(e))
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                                 detail=str(e))
         finally:
             await utilities.clean_up_files([audio_copy_path])
-
-    # data = json.load(open('app/files/output.json'))
-    # summary = data["summary"]["content"]
-
-    # transcription_cleaner = diarization_cleaner.DiarizationCleaner()
-    # transcript = transcription_cleaner.clean_transcription(data["results"])
-
-    # return SessionTranscriptionResult(transcript=transcript, summary=summary)
