@@ -212,7 +212,7 @@ def execute_assistant_query(query: models.AssistantQuery,
                              therapist_id=therapist_id,
                              patient_id=query.patient_id,
                              endpoint_name=__assistant_queries_endpoint_name,
-                             http_status_code=200,
+                             http_status_code=status.HTTP_200_OK,
                              description=None)
 
     return {"response": response.response_token}
@@ -257,7 +257,7 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
                            greeting_params.client_tz_identifier])
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__greetings_endpoint_name,
-                             http_status_code=200,
+                             http_status_code=status.HTTP_200_OK,
                              description=log_description)
 
     if result.status_code is not status.HTTP_200_OK:
@@ -321,7 +321,7 @@ def upload_session_notes_image(response: Response,
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__image_files_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"document_id": document_id}
 
@@ -375,7 +375,7 @@ def extract_text(response: Response,
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__text_extractions_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"extraction": full_text}
 
@@ -401,7 +401,7 @@ async def transcribe_notes(response: Response,
     logging.log_api_request(session_id, __notes_transcriptions_endpoint_name)
 
     try:
-        transcript = await library_clients.deepgram_transcribe_audio(audio_file)
+        transcript = await library_clients.deepgram_transcribe_notes(audio_file)
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
@@ -413,7 +413,7 @@ async def transcribe_notes(response: Response,
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__notes_transcriptions_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"transcript": transcript}
 
@@ -437,100 +437,31 @@ async def transcribe_session(response: Response,
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id, __session_transcriptions_endpoint_name)
 
-    # _, file_extension = os.path.splitext(audio_file.filename)
-    # files_dir = 'app/files'
-    # audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    # audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
-
-    # try:
-    #     # Write incoming audio to our local volume for further processing
-    #     with open(audio_copy_path, 'wb+') as buffer:
-    #         shutil.copyfileobj(audio_file.file, buffer)
-    # 
-    #     assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
-    # except Exception as e:
-    #     description = str(e)
-    #     status_code = status.HTTP_409_CONFLICT
-    #     logging.log_error(session_id=session_id,
-    #                       endpoint_name=__session_transcriptions_endpoint_name,
-    #                       error_code=status_code,
-    #                       description=description)
-    #     raise HTTPException(status_code=status_code,
-    #                         detail=description)
-    # finally:
-    #     await audio_file.close()
-
-    # # Temporary workaround until we add our own certificates
-    # ssl_context = ssl._create_unverified_context()
-    # #ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-
-    # # Process local copy with Speechmatics client
-    # settings = ConnectionSettings(
-    #     url=os.getenv("SPEECHMATICS_URL"),
-    #     auth_token=os.getenv("SPEECHMATICS_API_KEY"),
-    #     ssl_context=ssl_context,
-    # )
-
-    # conf = {
-    #     "type": "transcription",
-    #     "transcription_config": {
-    #         "language": "auto",
-    #         "diarization": "speaker",
-    #         "enable_entities": True,
-    #     },
-    #     "language_identification_config": {
-    #         "expected_languages": ["en", "es"],
-    #         "low_confidence_action": "allow"
-    #     },
-    #     "summarization_config": {
-    #         "content_type": "conversational",
-    #         "summary_length": "detailed",
-    #         "summary_type": "bullets"
-    #     }
-    # }
-
-    # with BatchClient(settings) as client:
-    #     try:
-    #         job_id = client.submit_job(
-    #             audio=audio_copy_path,
-    #             transcription_config=conf,
-    #         )
-
-    #         # Note that in production, you should set up notifications instead of polling.
-    #         # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
-    #         transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
-    #         summary = transcript["summary"]["content"]
-    #         return {"transcription_id": "", "summary": summary}
-    #     except TimeoutError as e:
-    #         status_code = status.HTTP_408_REQUEST_TIMEOUT
-    #         logging.log_error(session_id=session_id,
-    #                           endpoint_name=__session_transcriptions_endpoint_name,
-    #                           error_code=status_code,
-    #                           description=str(e))
-    #         raise HTTPException(status_code=status_code)
-    #     except Exception as e:
-    #         status_code = status.HTTP_409_CONFLICT
-    #         description = str(e)
-    #         logging.log_error(session_id=session_id,
-    #                           endpoint_name=__session_transcriptions_endpoint_name,
-    #                           error_code=status_code,
-    #                           description=description)
-    #         raise HTTPException(status_code=status_code,
-    #                             detail=description)
-    #     finally:
-    #         await utilities.clean_up_files([audio_copy_path])
-
-    data = json.load(open('app/files/output.json'))
-    summary = data["summary"]["content"]
-
-    transcription_cleaner = diarization_cleaner.DiarizationCleaner()
-    transcript = transcription_cleaner.clean_transcription(data["results"])
+    try:
+        result = library_clients.speechmatics_transcribe(audio_file)
+    except HTTPException as e:
+        status_code = e.status_code
+        description = str(e)
+        logging.log_error(session_id=session_id,
+                          endpoint_name=__session_transcriptions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code, detail=description)
+    except Exception as e:
+        status_code = status.HTTP_409_CONFLICT
+        description = "Something went wrong while processing the file"
+        logging.log_error(session_id=session_id,
+                          endpoint_name=__session_transcriptions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__session_transcriptions_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
-    return {"summary": summary, "transcription": transcript}
+    return {"summary": result.summary,
+            "transcription": result.transcript}
 
 # Security endpoints
 
@@ -583,7 +514,7 @@ async def login_for_access_token(
 
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=__token_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     return token
 
@@ -642,7 +573,7 @@ def sign_up(signup_data: models.SignupData,
     logging.log_api_response(therapist_id=user_id,
                              session_id=session_id,
                              endpoint_name=__sign_up_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     return {
         "user_id": user_id,
@@ -672,7 +603,7 @@ async def logout(response: Response,
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__logout_endpoint_name,
-                             http_status_code=200)
+                             http_status_code=status.HTTP_200_OK)
 
     session_id = None
     return {}
