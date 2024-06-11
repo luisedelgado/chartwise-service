@@ -1,6 +1,12 @@
-import asyncio, base64, datetime, os, requests, shutil
+import asyncio, base64, datetime, json, os, requests, shutil
 
+from deepgram import (
+    DeepgramClient,
+    PrerecordedOptions,
+    FileSource,
+)
 from fastapi import (File, HTTPException, status, UploadFile)
+from httpx import Timeout
 from PIL import Image
 from supabase import create_client, Client
 
@@ -10,8 +16,8 @@ from . import utilities
 Returns an active supabase instance based on a user's auth tokens.
 
 Arguments:
-access_token  – the access_token associated with a live supabase session
-refresh_token  – the refresh_token associated with a live supabase session
+access_token  – the access_token associated with a live supabase session.
+refresh_token  – the refresh_token associated with a live supabase session.
 """
 def supabase_user_instance(access_token, refresh_token) -> Client:
     key: str = os.environ.get("SUPABASE_ANON_KEY")
@@ -33,7 +39,7 @@ def supabase_admin_instance() -> Client:
 Uploads an image file to the DocuPanda service.
 Returns an ID associated with the uploaded resource.
 Arguments:
-image  – the image to be uploaded
+image  – the image to be uploaded.
 """
 def docupanda_upload_image(image: UploadFile = File(...)) -> str:
     global __session_id
@@ -91,7 +97,7 @@ def docupanda_upload_image(image: UploadFile = File(...)) -> str:
 """
 Returns a textract result based on the incoming id.
 Arguments:
-image  – the image to be uploaded
+image  – the image to be uploaded.
 """
 def docupanda_extract_text(document_id: str) -> str:
     url = os.getenv("DOCUPANDA_URL") + "/" + document_id
@@ -113,3 +119,63 @@ def docupanda_extract_text(document_id: str) -> str:
         full_text = full_text + section['text'] + " "
 
     return full_text
+
+"""
+Returns the incoming audio's transcription.
+Arguments:
+audio_file  – the audio file to be transcribed.
+"""
+async def deepgram_transcribe_audio(audio_file: UploadFile = File(...)) -> str:
+    try:
+        _, file_extension = os.path.splitext(audio_file.filename)
+        files_dir = 'app/files'
+        audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+
+        # Write incoming audio to our local volume for further processing
+        with open(audio_copy_path, 'wb+') as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
+
+        assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=str(e))
+    finally:
+        await audio_file.close()
+
+    # Process local copy with DeepgramClient
+    try:
+        deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
+
+        with open(audio_copy_path, "rb") as file:
+            buffer_data = file.read()
+
+        payload: FileSource = {
+            "buffer": buffer_data,
+        }
+
+        options = PrerecordedOptions(
+            model="nova-2",
+            smart_format=True,
+            detect_language=True,
+            utterances=True,
+            numerals=True
+        )
+
+        # Increase the timeout to 300 seconds (5 minutes)
+        response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
+                                                                      options,
+                                                                      timeout=Timeout(300.0, connect=10.0))
+
+        json_response = json.loads(response.to_json(indent=4))
+        transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code,
+                            detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="The transcription operation failed.")
+    finally:
+        await utilities.clean_up_files([audio_copy_path])
+
+    return transcript

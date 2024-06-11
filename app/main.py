@@ -1,11 +1,6 @@
-import datetime, json, os, requests, shutil, ssl, uuid
+import datetime, json, os, shutil, ssl, uuid
 
 from dataclasses import field
-from deepgram import (
-    DeepgramClient,
-    PrerecordedOptions,
-    FileSource,
-)
 from fastapi import (
     Cookie,
     Depends,
@@ -17,7 +12,6 @@ from fastapi import (
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from httpx import Timeout
 from langcodes import Language
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
@@ -406,74 +400,16 @@ async def transcribe_notes(response: Response,
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id, __notes_transcriptions_endpoint_name)
 
-    _, file_extension = os.path.splitext(audio_file.filename)
-    files_dir = 'app/files'
-    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
-
     try:
-        # Write incoming audio to our local volume for further processing
-        with open(audio_copy_path, 'wb+') as buffer:
-            shutil.copyfileobj(audio_file.file, buffer)
-
-        assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
+        transcript = await library_clients.deepgram_transcribe_audio(audio_file)
     except Exception as e:
-        description = str(e)
         status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=session_id,
-                          endpoint_name=__notes_transcriptions_endpoint_name,
-                          error_code=status_code,
-                          description=description)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
-    finally:
-        await audio_file.close()
-
-    # Process local copy with DeepgramClient
-    try:
-        deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
-
-        with open(audio_copy_path, "rb") as file:
-            buffer_data = file.read()
-
-        payload: FileSource = {
-            "buffer": buffer_data,
-        }
-
-        options = PrerecordedOptions(
-            model="nova-2",
-            smart_format=True,
-            detect_language=True,
-            utterances=True,
-            numerals=True
-        )
-
-        # Increase the timeout to 300 seconds (5 minutes)
-        response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
-                                                                      options,
-                                                                      timeout=Timeout(300.0, connect=10.0))
-
-        json_response = json.loads(response.to_json(indent=4))
-        transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
-    except HTTPException as e:
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__notes_transcriptions_endpoint_name,
-                          error_code=e.status_code,
-                          description=description)
-        raise HTTPException(status_code=e.status_code,
-                            detail=description)
-    except Exception as e:
-        description = "The transcription operation failed."
-        status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=session_id,
-                          endpoint_name=__notes_transcriptions_endpoint_name,
+                          endpoint_name=__text_extractions_endpoint_name,
                           error_code=status_code,
                           description=description)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
-    finally:
-        await utilities.clean_up_files([audio_copy_path])
+        raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=__notes_transcriptions_endpoint_name,
