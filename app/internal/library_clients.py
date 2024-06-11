@@ -1,4 +1,4 @@
-import asyncio, base64, datetime, json, os, requests, shutil
+import asyncio, base64, datetime, json, os, requests, shutil, ssl
 
 from deepgram import (
     DeepgramClient,
@@ -8,10 +8,11 @@ from deepgram import (
 from fastapi import (File, HTTPException, status, UploadFile)
 from httpx import Timeout
 from PIL import Image
+from speechmatics.models import ConnectionSettings
+from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 
 from . import utilities
-from ..data_processing import diarization_cleaner
 
 """
 Returns an active supabase instance based on a user's auth tokens.
@@ -186,77 +187,76 @@ class SessionTranscriptionResult:
         self.transcript = transcript
         self.summary = summary
 
-def speechmatics_transcribe(audio_file: UploadFile = File(...)):
-    # _, file_extension = os.path.splitext(audio_file.filename)
-    # files_dir = 'app/files'
-    # audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    # audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
+    _, file_extension = os.path.splitext(audio_file.filename)
+    files_dir = 'app/files'
+    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
-    # try:
-    #     # Write incoming audio to our local volume for further processing
-    #     with open(audio_copy_path, 'wb+') as buffer:
-    #         shutil.copyfileobj(audio_file.file, buffer)
-    #
-    #     assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
-    # except Exception as e:
-    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                         detail=str(e))
-    # finally:
-    #     await audio_file.close()
+    try:
+        # Write incoming audio to our local volume for further processing
+        with open(audio_copy_path, 'wb+') as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
 
-    # # Temporary workaround until we add our own certificates
+        assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=str(e))
+    finally:
+        await audio_file.close()
+
+    # Temporary workaround until we add our own certificates
     # ssl_context = ssl._create_unverified_context()
-    # #ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    ssl_context = ssl.create_default_context()
 
-    # # Process local copy with Speechmatics client
-    # settings = ConnectionSettings(
-    #     url=os.getenv("SPEECHMATICS_URL"),
-    #     auth_token=os.getenv("SPEECHMATICS_API_KEY"),
-    #     ssl_context=ssl_context,
-    # )
+    # Process local copy with Speechmatics client
+    settings = ConnectionSettings(
+        url=os.getenv("SPEECHMATICS_URL"),
+        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+        ssl_context=ssl_context,
+    )
 
-    # conf = {
-    #     "type": "transcription",
-    #     "transcription_config": {
-    #         "language": "auto",
-    #         "diarization": "speaker",
-    #         "enable_entities": True,
-    #     },
-    #     "language_identification_config": {
-    #         "expected_languages": ["en", "es"],
-    #         "low_confidence_action": "allow"
-    #     },
-    #     "summarization_config": {
-    #         "content_type": "conversational",
-    #         "summary_length": "detailed",
-    #         "summary_type": "bullets"
-    #     }
-    # }
+    conf = {
+        "type": "transcription",
+        "transcription_config": {
+            "language": "auto",
+            "diarization": "speaker",
+            "enable_entities": True,
+        },
+        "language_identification_config": {
+            "expected_languages": ["en", "es"],
+            "low_confidence_action": "allow"
+        },
+        "summarization_config": {
+            "content_type": "conversational",
+            "summary_length": "detailed",
+            "summary_type": "bullets"
+        }
+    }
 
-    # with BatchClient(settings) as client:
-    #     try:
-    #         job_id = client.submit_job(
-    #             audio=audio_copy_path,
-    #             transcription_config=conf,
-    #         )
+    with BatchClient(settings) as client:
+        try:
+            job_id = client.submit_job(
+                audio=audio_copy_path,
+                transcription_config=conf,
+            )
 
-    #         # Note that in production, you should set up notifications instead of polling.
-    #         # Notifications are described here: https://docs.speechmatics.com/features-other/notifications
-    #         transcript = client.wait_for_completion(job_id, transcription_format="json-v2")
-    #         summary = transcript["summary"]["content"]
-    #         return SessionTranscriptionResult(transcript=transcript, summary=summary)
-    #     except TimeoutError as e:
-    #         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
-    #     except Exception as e:
-    #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                             detail=str(e))
-    #     finally:
-    #         await utilities.clean_up_files([audio_copy_path])
+            data = client.wait_for_completion(job_id, transcription_format="json-v2")
+            summary = data["summary"]["content"]
+            transcript = data["results"]
+            return SessionTranscriptionResult(transcript=transcript, summary=summary)
+        except TimeoutError as e:
+            raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                detail=str(e))
+        finally:
+            await utilities.clean_up_files([audio_copy_path])
 
-    data = json.load(open('app/files/output.json'))
-    summary = data["summary"]["content"]
+    # data = json.load(open('app/files/output.json'))
+    # summary = data["summary"]["content"]
 
-    transcription_cleaner = diarization_cleaner.DiarizationCleaner()
-    transcript = transcription_cleaner.clean_transcription(data["results"])
+    # transcription_cleaner = diarization_cleaner.DiarizationCleaner()
+    # transcript = transcription_cleaner.clean_transcription(data["results"])
 
-    return SessionTranscriptionResult(transcript=transcript, summary=summary)
+    # return SessionTranscriptionResult(transcript=transcript, summary=summary)

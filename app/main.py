@@ -1,4 +1,4 @@
-import datetime, json, os, shutil, ssl, uuid
+import datetime, json, uuid
 
 from dataclasses import field
 from fastapi import (
@@ -13,8 +13,6 @@ from fastapi import (
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from langcodes import Language
-from speechmatics.models import ConnectionSettings
-from speechmatics.batch_client import BatchClient
 from supabase import Client
 from typing import Annotated, Union
 
@@ -25,7 +23,6 @@ from .internal import library_clients
 from .internal import logging
 from .internal import models
 from .internal import security
-from .internal import utilities
 
 TOKEN_EXPIRED_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -452,7 +449,10 @@ async def transcribe_session(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        result = library_clients.speechmatics_transcribe(audio_file)
+        result: library_clients.SessionTranscriptionResult = await library_clients.speechmatics_transcribe(audio_file=audio_file)
+        transcript = diarization_cleaner.DiarizationCleaner().clean_transcription(input=result.transcript,
+                                                                                  session_id=session_id,
+                                                                                  invoking_endpoint=__session_transcriptions_endpoint_name)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -475,7 +475,7 @@ async def transcribe_session(response: Response,
                              http_status_code=status.HTTP_200_OK)
 
     return {"summary": result.summary,
-            "transcription": result.transcript}
+            "transcription": transcript}
 
 # Security endpoints
 

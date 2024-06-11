@@ -1,5 +1,9 @@
 import json
+
+from fastapi import status
 from typing import Dict
+
+from ..internal import logging
 
 class DiarizationCleaner:
     def __init__(self):
@@ -8,9 +12,9 @@ class DiarizationCleaner:
         self._transcription = []
         self._entry_start_time = str()
 
-    def clean_transcription(self, output: str) -> str:
-        self._current_speaker = output[0]["alternatives"][0]["speaker"]
-        for obj in output:
+    def clean_transcription(self, input: str, session_id: str, invoking_endpoint: str) -> str:
+        self._current_speaker = input[0]["alternatives"][0]["speaker"]
+        for obj in input:
             speaker = obj["alternatives"][0]["speaker"]
             content = obj["alternatives"][0]["content"]
             start_time = obj["start_time"]
@@ -21,6 +25,11 @@ class DiarizationCleaner:
             if "attaches_to" in obj:
                 has_attaches_to = True
                 attaches_to = obj["attaches_to"]
+                if attaches_to.lower() != "previous":
+                    logging.log_error(session_id=session_id,
+                                      endpoint_name=invoking_endpoint,
+                                      error_code=status.HTTP_417_EXPECTATION_FAILED,
+                                      description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
 
             if "is_eos" in obj:
                 has_end_of_sentence = True
