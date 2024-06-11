@@ -9,11 +9,13 @@ Arguments:
 session_id – the session id associated with the request.
 endpoint_name – the endpoint name associated with the request.
 """
-def log_api_request(session_id: str, endpoint_name: str):
+def log_api_request(session_id: str, endpoint_name: str, **kwargs):
     try:
+        description = None if "description" not in kwargs else kwargs["description"]
         res = supabase_client.table('api_request_logs').insert({
             "session_id": str(session_id),
-            "endpoint_name": endpoint_name}).execute()
+            "endpoint_name": endpoint_name,
+            "description": description}).execute(),
         print(res)
     except Exception as e:
         print(e)

@@ -608,7 +608,8 @@ response – The response object to be used for creating the final response.
 @app.post(__token_endpoint_name)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    response: Response
+    response: Response,
+    old_session_id: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
@@ -617,6 +618,14 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    new_session_id = uuid.uuid1()
+
+    if old_session_id is not None:
+        # We're refreshing a token, let's log this as context
+        logging.log_api_request(old_session_id,
+                                __token_endpoint_name,
+                                f"Refreshing token to {new_session_id}")
 
     access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
@@ -629,14 +638,14 @@ async def login_for_access_token(
                         samesite="none")
     token = security.Token(access_token=access_token, token_type="bearer")
 
-    session_id = uuid.uuid1()
+    response.delete_cookie("session_id")
     response.set_cookie(key="session_id",
-                    value=session_id,
+                    value=new_session_id,
                     httponly=True,
                     secure=True,
                     samesite="lax")
 
-    logging.log_api_response(session_id=session_id,
+    logging.log_api_response(session_id=new_session_id,
                              endpoint_name=__token_endpoint_name,
                              http_status_code=200)
 
