@@ -1,5 +1,6 @@
-import os, time
+import os
 
+from fastapi import HTTPException
 from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
@@ -11,55 +12,46 @@ from pinecone.grpc import PineconeGRPC
 from . import data_cleaner
 
 def upload_session_vector(index_name, session_text, session_date):
-    # Globals
-    Settings.embed_model = OpenAIEmbedding()
+    try:
+        # Globals
+        Settings.embed_model = OpenAIEmbedding()
 
-    doc = Document() 
-    doc.set_content(data_cleaner.clean_up_text(session_text))
+        doc = Document()
+        doc.set_content(data_cleaner.clean_up_text(session_text))
 
-    # Add metadata
-    metadata_additions = {
-        "session_date": session_date
-    }
-    doc.metadata.update(metadata_additions)
+        metadata_additions = {
+            "session_date": session_date
+        }
+        doc.metadata.update(metadata_additions)
 
-    # Initialize connection to Pinecone
-    pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-    
-    # Create index if necessary
-    __create_index_if_necessary(index_name)
+        pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        
+        # If index already exists, this will silently fail so we can continue writing to it
+        __create_index_if_necessary(index_name)
 
-    # wait for index to be initialized
-    while not pc.describe_index(index_name).status['ready']:
-        print("sleeping")
-        time.sleep(1)
+        assert pc.describe_index(index_name).status['ready']
 
-    #check index current stats
-    index = pc.Index(index_name)
+        index = pc.Index(index_name)
+        vector_store = PineconeVectorStore(pinecone_index=index)
+        embed_model = OpenAIEmbedding(api_key=os.environ.get('OPENAI_API_KEY'))
 
-    # Initialize VectorStore
-    vector_store = PineconeVectorStore(pinecone_index=index)
+        pipeline = IngestionPipeline(
+            transformations=[
+                SemanticSplitterNodeParser(
+                    buffer_size=1,
+                    breakpoint_percentile_threshold=95,
+                    embed_model=embed_model,
+                    ),
+                embed_model,
+                ],
+                vector_store=vector_store
+            )
 
-    # This will be the model we use both for Node parsing and for vectorization
-    embed_model = OpenAIEmbedding(api_key=os.environ.get('OPENAI_API_KEY'))
-
-    # Define the initial pipeline
-    pipeline = IngestionPipeline(
-        transformations=[
-            SemanticSplitterNodeParser(
-                buffer_size=1,
-                breakpoint_percentile_threshold=95, 
-                embed_model=embed_model,
-                ),
-            embed_model,
-            ],
-            vector_store=vector_store
-        )
-
-    # Now we run our pipeline!
-    pipeline.run(documents=[doc])
-
-# Private functions
+        pipeline.run(documents=[doc])
+    except PineconeApiException as e:
+        raise HTTPException(status_code=e.status, detail=str(e))
+    except Exception as e:
+        raise Exception(str(e))
 
 def __create_index_if_necessary(index_name: str):
     try:
@@ -73,4 +65,4 @@ def __create_index_if_necessary(index_name: str):
         )
     except PineconeApiException as e:
         # We expect HTTPCode 409 if index already exists - ALREADY_EXISTS 
-        print(e.status)
+        ...

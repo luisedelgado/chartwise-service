@@ -87,3 +87,29 @@ def docupanda_upload_image(image: UploadFile = File(...)) -> str:
                             detail=response.text)
 
     return response.json()['documentId']
+
+"""
+Returns a textract result based on the incoming id.
+Arguments:
+image  – the image to be uploaded
+"""
+def docupanda_extract_text(document_id: str) -> str:
+    url = os.getenv("DOCUPANDA_URL") + "/" + document_id
+
+    headers = {
+        "accept": "application/json",
+        "X-API-Key": os.getenv("DOCUPANDA_API_KEY")
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != status.HTTP_200_OK:
+        raise HTTPException(status_code=response.status_code,
+                            detail=response.text)
+
+    text_sections = response.json()['result']['pages'][0]['sections']
+    full_text = ""
+    for section in text_sections:
+        full_text = full_text + section['text'] + " "
+
+    return full_text

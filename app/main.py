@@ -51,7 +51,6 @@ __sign_up_endpoint_name = "/sign-up"
 __text_extractions_endpoint_name = "/v1/text-extractions"
 __token_endpoint_name = "/token"
 
-__session_id = None
 app = FastAPI()
 
 origins = [
@@ -78,15 +77,18 @@ Returns a boolean value representing success.
 Arguments:
 session_report – the report associated with the new session.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__sessions_endpoint_name)
 def upload_new_session(session_report: models.SessionReport,
-                       authorization: Annotated[Union[str, None], Cookie()] = None):
+                       response: Response,
+                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                       session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __sessions_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __sessions_endpoint_name)
 
     try:
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
@@ -101,11 +103,17 @@ def upload_new_session(session_report: models.SessionReport,
             "session_transcription": None,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
+            "source": session_report.source,
             "therapist_id": therapist_id}).execute()
+
+        # Upload vector embeddings
+        vector_writer.upload_session_vector(session_report.patient_id,
+                                            session_report.text,
+                                            session_report.date)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=session_report.patient_id,
                           endpoint_name=__sessions_endpoint_name,
@@ -116,7 +124,7 @@ def upload_new_session(session_report: models.SessionReport,
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=session_report.patient_id,
                           endpoint_name=__sessions_endpoint_name,
@@ -125,12 +133,7 @@ def upload_new_session(session_report: models.SessionReport,
         raise HTTPException(status_code=status_code,
                             detail=description)
 
-    # Upload vector embeddings
-    vector_writer.upload_session_vector(session_report.patient_id,
-                                        session_report.text,
-                                        session_report.date)
-
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=session_report.patient_id,
                              endpoint_name=__sessions_endpoint_name,
@@ -146,34 +149,36 @@ Returns the query response.
 Arguments:
 query – the query that will be executed.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__assistant_queries_endpoint_name)
 def execute_assistant_query(query: models.AssistantQuery,
-                            authorization: Annotated[Union[str, None], Cookie()] = None):
+                            response: Response,
+                            authorization: Annotated[Union[str, None], Cookie()] = None,
+                            session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __assistant_queries_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __assistant_queries_endpoint_name)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
     try:
-        if not Language.get(query.response_language_code).is_valid():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Invalid response language code.")
-
+        assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
         supabase_client = library_clients.supabase_user_instance(query.supabase_access_token,
                                                                  query.supabase_refresh_token)
         user_response = json.loads(supabase_client.auth.get_user().json())
         therapist_id = user_response["user"]["id"]
-        patient_therapist_check = supabase_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
-                                                                                                   query.patient_id).execute()
+
+        patient_therapist_match = (0 != len(
+            (supabase_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+                                                                                                    query.patient_id).execute()
+        ).data))
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
-        logging.log_error(session_id=__session_id,
-                          therapist_id=therapist_id,
+        logging.log_error(session_id=session_id,
                           patient_id=query.patient_id,
                           endpoint_name=__assistant_queries_endpoint_name,
                           error_code=status_code,
@@ -181,10 +186,10 @@ def execute_assistant_query(query: models.AssistantQuery,
         raise HTTPException(status_code=status_code,
                             detail=description)
 
-    if len(patient_therapist_check.data) == 0:
-        description = "There isn't a patient-therapist match with those ids."
+    if not patient_therapist_match:
+        description = "There isn't a patient-therapist match with the incoming ids."
         status_code = status.HTTP_403_FORBIDDEN
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=query.patient_id,
                           endpoint_name=__assistant_queries_endpoint_name,
@@ -200,7 +205,7 @@ def execute_assistant_query(query: models.AssistantQuery,
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=query.patient_id,
                           endpoint_name=__assistant_queries_endpoint_name,
@@ -209,7 +214,7 @@ def execute_assistant_query(query: models.AssistantQuery,
         raise HTTPException(status_code=response.status_code,
                             detail=description)
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=query.patient_id,
                              endpoint_name=__assistant_queries_endpoint_name,
@@ -224,24 +229,28 @@ Returns a new greeting to the user.
 Arguments:
 greeting – the greeting parameters to be used.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__greetings_endpoint_name)
 def fetch_greeting(greeting_params: models.AssistantGreeting,
-                   authorization: Annotated[Union[str, None], Cookie()] = None):
+                   response: Response,
+                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                   session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __greetings_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __greetings_endpoint_name)
 
     try:
-        if not Language.get(greeting_params.response_language_code).is_valid():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Invalid response language code.")
+        assert Language.get(greeting_params.response_language_code).is_valid(), "Invalid response_language_code parameter"
+        result = query_handler.create_greeting(greeting_params.addressing_name,
+                                               greeting_params.response_language_code,
+                                               greeting_params.client_tz_identifier)
     except Exception as e:
         status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__greetings_endpoint_name,
                           error_code=status_code,
                           description=description)
@@ -252,14 +261,16 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
                            greeting_params.response_language_code,
                            'tz_identifier:',
                            greeting_params.client_tz_identifier])
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__greetings_endpoint_name,
                              http_status_code=200,
                              description=log_description)
 
-    return {"message": query_handler.create_greeting(greeting_params.addressing_name,
-                                                     greeting_params.response_language_code,
-                                                     greeting_params.client_tz_identifier)}
+    if result.status_code is not status.HTTP_200_OK:
+        raise HTTPException(status_code=result.status_code,
+                            detail=result.response_token)
+
+    return {"message": result.response_token}
 
 """
 Returns an OK status if the endpoint can be reached.
@@ -282,22 +293,25 @@ Returns a document_id value associated with the file that was uploaded.
 Arguments:
 image – the image to be uploaded.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__image_files_endpoint_name)
-def upload_session_notes_image(image: UploadFile = File(...),
-                               authorization: Annotated[Union[str, None], Cookie()] = None):
+def upload_session_notes_image(response: Response,
+                               image: UploadFile = File(...),
+                               authorization: Annotated[Union[str, None], Cookie()] = None,
+                               session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __image_files_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __image_files_endpoint_name)
 
     try:
         document_id = library_clients.docupanda_upload_image(image)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__image_files_endpoint_name,
                           error_code=status_code,
                           description=description)
@@ -305,13 +319,13 @@ def upload_session_notes_image(image: UploadFile = File(...),
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__image_files_endpoint_name,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__image_files_endpoint_name,
                              http_status_code=200)
 
@@ -323,49 +337,49 @@ Returns the text extracted from the incoming document_id.
 Arguments:
 document_id – the id of the document to be textracted.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.get(__text_extractions_endpoint_name)
-def extract_text(document_id: str = None,
-                 authorization: Annotated[Union[str, None], Cookie()] = None):
+def extract_text(response: Response,
+                 document_id: str = None,
+                 authorization: Annotated[Union[str, None], Cookie()] = None,
+                 session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __text_extractions_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __text_extractions_endpoint_name)
 
     if document_id == None or document_id == "":
         description = "Didn't receive a valid document id."
         status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__text_extractions_endpoint_name,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
-    url = os.getenv("DOCUPANDA_URL") + "/" + document_id
-
-    headers = {
-        "accept": "application/json",
-        "X-API-Key": os.getenv("DOCUPANDA_API_KEY")
-    }
-
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code != status.HTTP_200_OK:
-        logging.log_error(session_id=__session_id,
+    try:
+        full_text = library_clients.docupanda_extract_text(document_id)
+    except HTTPException as e:
+        status_code = e.status_code
+        description = str(e)
+        logging.log_error(session_id=session_id,
                           endpoint_name=__text_extractions_endpoint_name,
-                          error_code=response.status_code,
-                          description=response.text)
-        raise HTTPException(status_code=response.status_code,
-                            detail=response.text)
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code, detail=description)
+    except Exception as e:
+        status_code = status.HTTP_409_CONFLICT
+        description = str(e)
+        logging.log_error(session_id=session_id,
+                          endpoint_name=__text_extractions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code, detail=description)
 
-    text_sections = response.json()['result']['pages'][0]['sections']
-    full_text = ""
-    for section in text_sections:
-        full_text = full_text + section['text'] + " "
-
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__text_extractions_endpoint_name,
                              http_status_code=200)
 
@@ -379,15 +393,18 @@ Returns the transcription created from the incoming audio file.
 Arguments:
 audio_file – the audio file for which the transcription will be created.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__notes_transcriptions_endpoint_name)
-async def transcribe_notes(audio_file: UploadFile = File(...),
-                           authorization: Annotated[Union[str, None], Cookie()] = None):
+async def transcribe_notes(response: Response,
+                           audio_file: UploadFile = File(...),
+                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                           session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __notes_transcriptions_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __notes_transcriptions_endpoint_name)
 
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
@@ -399,19 +416,11 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         with open(audio_copy_path, 'wb+') as buffer:
             shutil.copyfileobj(audio_file.file, buffer)
 
-        if not os.path.exists(audio_copy_path):
-            description = "Something went wrong while processing the file."
-            status_code = status.HTTP_409_CONFLICT
-            logging.log_error(session_id=__session_id,
-                              endpoint_name=__notes_transcriptions_endpoint_name,
-                              error_code=status_code,
-                              description=description)
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+        assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__notes_transcriptions_endpoint_name,
                           error_code=status_code,
                           description=description)
@@ -448,7 +457,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
     except HTTPException as e:
         description = str(e)
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__notes_transcriptions_endpoint_name,
                           error_code=e.status_code,
                           description=description)
@@ -457,7 +466,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
     except Exception as e:
         description = "The transcription operation failed."
         status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__notes_transcriptions_endpoint_name,
                           error_code=status_code,
                           description=description)
@@ -466,7 +475,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
     finally:
         await utilities.clean_up_files([audio_copy_path])
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__notes_transcriptions_endpoint_name,
                              http_status_code=200)
 
@@ -479,15 +488,18 @@ Meant to be used for diarizing sessions.
 Arguments:
 audio_file – the audio file for which the diarized transcription will be created.
 authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
 """
 @app.post(__session_transcriptions_endpoint_name)
-async def transcribe_session(audio_file: UploadFile = File(...),
-                             authorization: Annotated[Union[str, None], Cookie()] = None):
+async def transcribe_session(response: Response,
+                             audio_file: UploadFile = File(...),
+                             authorization: Annotated[Union[str, None], Cookie()] = None,
+                             session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __session_transcriptions_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __session_transcriptions_endpoint_name)
 
     # _, file_extension = os.path.splitext(audio_file.filename)
     # files_dir = 'app/files'
@@ -498,20 +510,12 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #     # Write incoming audio to our local volume for further processing
     #     with open(audio_copy_path, 'wb+') as buffer:
     #         shutil.copyfileobj(audio_file.file, buffer)
-
-    #     if not os.path.exists(audio_copy_path):
-    #         description = "Something went wrong while processing the file."
-    #         status_code = status.HTTP_409_CONFLICT
-    #         logging.log_error(session_id=__session_id,
-    #                           endpoint_name=__session_transcriptions_endpoint_name,
-    #                           error_code=status_code,
-    #                           description=description)
-    #         raise HTTPException(status_code=status_code,
-    #                             detail=description)
+    # 
+    #     assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
     # except Exception as e:
     #     description = str(e)
     #     status_code = status.HTTP_409_CONFLICT
-    #     logging.log_error(session_id=__session_id,
+    #     logging.log_error(session_id=session_id,
     #                       endpoint_name=__session_transcriptions_endpoint_name,
     #                       error_code=status_code,
     #                       description=description)
@@ -563,7 +567,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #         return {"transcription_id": "", "summary": summary}
     #     except TimeoutError as e:
     #         status_code = status.HTTP_408_REQUEST_TIMEOUT
-    #         logging.log_error(session_id=__session_id,
+    #         logging.log_error(session_id=session_id,
     #                           endpoint_name=__session_transcriptions_endpoint_name,
     #                           error_code=status_code,
     #                           description=str(e))
@@ -571,7 +575,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #     except Exception as e:
     #         status_code = status.HTTP_409_CONFLICT
     #         description = str(e)
-    #         logging.log_error(session_id=__session_id,
+    #         logging.log_error(session_id=session_id,
     #                           endpoint_name=__session_transcriptions_endpoint_name,
     #                           error_code=status_code,
     #                           description=description)
@@ -586,7 +590,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     transcription_cleaner = diarization_cleaner.DiarizationCleaner()
     transcript = transcription_cleaner.clean_transcription(data["results"])
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__session_transcriptions_endpoint_name,
                              http_status_code=200)
 
@@ -614,12 +618,6 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    global __session_id
-
-    # Log activity if we're refreshing a current session's token
-    if __session_id is not None:
-        logging.log_api_request(__session_id, __token_endpoint_name)
-
     access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
@@ -631,24 +629,37 @@ async def login_for_access_token(
                         samesite="none")
     token = security.Token(access_token=access_token, token_type="bearer")
 
-    if __session_id is None:
-        # If a fresh session is starting, assign a __session_id value
-        __session_id = uuid.uuid1()
+    session_id = uuid.uuid1()
+    response.set_cookie(key="session_id",
+                    value=session_id,
+                    httponly=True,
+                    secure=True,
+                    samesite="lax")
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__token_endpoint_name,
                              http_status_code=200)
 
     return token
 
+"""
+Signs up a new user.
+
+Arguments:
+signup_data – the data to be used to sign up the user.
+authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
+"""
 @app.post(__sign_up_endpoint_name)
 def sign_up(signup_data: models.SignupData,
-            authorization: Annotated[Union[str, None], Cookie()] = None):
+            response: Response,
+            authorization: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __sign_up_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __sign_up_endpoint_name)
 
     try:
         supabase_client: Client = library_clients.supabase_admin_instance()
@@ -658,18 +669,9 @@ def sign_up(signup_data: models.SignupData,
         })
 
         json_response = json.loads(res.json())
-
-        if (json_response["user"]["role"] != 'authenticated'
-            or not json_response["session"]["access_token"]
-            or not json_response["session"]["refresh_token"]):
-            description = "Something went wrong when signing up the user"
-            status_code = status.HTTP_400_BAD_REQUEST
-            logging.log_error(session_id=__session_id,
-                              endpoint_name=__sign_up_endpoint_name,
-                              error_code=status_code,
-                              description=description)
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+        assert (json_response["user"]["role"] == 'authenticated'
+            and json_response["session"]["access_token"]
+            and json_response["session"]["refresh_token"]), "Something went wrong when signing up the user"
 
         user_id = json_response["user"]["id"]
         supabase_client.table('therapists').insert({
@@ -685,7 +687,7 @@ def sign_up(signup_data: models.SignupData,
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
-        logging.log_error(session_id=__session_id,
+        logging.log_error(session_id=session_id,
                           endpoint_name=__sign_up_endpoint_name,
                           error_code=status_code,
                           description=description)
@@ -693,7 +695,7 @@ def sign_up(signup_data: models.SignupData,
                             detail=description)
 
     logging.log_api_response(therapist_id=user_id,
-                             session_id=__session_id,
+                             session_id=session_id,
                              endpoint_name=__sign_up_endpoint_name,
                              http_status_code=200)
 
@@ -703,20 +705,50 @@ def sign_up(signup_data: models.SignupData,
         "refresh_token": json_response["session"]["refresh_token"]
     }
 
+"""
+Logs out the user.
+
+Arguments:
+response – the object to be used for constructing the final response.
+authorization – The authorization cookie, if exists.
+session_id – The session_id cookie, if exists.
+"""
 @app.post(__logout_endpoint_name)
 async def logout(response: Response,
-                 authorization: Annotated[Union[str, None], Cookie()] = None):
+                 authorization: Annotated[Union[str, None], Cookie()] = None,
+                 session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    global __session_id
-    logging.log_api_request(__session_id, __logout_endpoint_name)
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id, __logout_endpoint_name)
 
     response.delete_cookie("authorization")
 
-    logging.log_api_response(session_id=__session_id,
+    logging.log_api_response(session_id=session_id,
                              endpoint_name=__logout_endpoint_name,
                              http_status_code=200)
 
-    __session_id = None
+    session_id = None
     return {}
+
+# Private methods
+
+"""
+Validates the incoming session_id cookie.
+
+Arguments:
+cookie – the cookie to be validated, if exists.
+"""
+def validate_session_id_cookie(response: Response,
+                               session_id_cookie: Annotated[Union[str, None], Cookie()] = None) -> uuid.UUID | None:
+    if session_id_cookie is not None:
+        return session_id_cookie
+
+    session_id = uuid.uuid1()
+    response.set_cookie(key="session_id",
+                value=session_id,
+                httponly=True,
+                secure=True,
+                samesite="lax")
+    return session_id

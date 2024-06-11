@@ -6,6 +6,7 @@ class SessionReport(BaseModel):
     date: str
     supabase_access_token: str
     supabase_refresh_token: str
+    source: str
 
 class AssistantQuery(BaseModel):
     patient_id: str
