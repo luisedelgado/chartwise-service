@@ -12,10 +12,12 @@ endpoint_name – the endpoint name associated with the request.
 def log_api_request(session_id: str, endpoint_name: str, **kwargs):
     try:
         description = None if "description" not in kwargs else kwargs["description"]
+        auth_entity = None if "auth_entity" not in kwargs else kwargs["auth_entity"]
         res = supabase_client.table('api_request_logs').insert({
             "session_id": str(session_id),
             "endpoint_name": endpoint_name,
-            "description": description}).execute(),
+            "description": description,
+            "endpoint_auth_entity": auth_entity}).execute(),
         print(res)
     except Exception as e:
         print(e)

@@ -74,7 +74,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(__sessions_endpoint_name)
-def upload_new_session(session_report: models.SessionReport,
+async def upload_new_session(session_report: models.SessionReport,
                        response: Response,
                        authorization: Annotated[Union[str, None], Cookie()] = None,
                        session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -82,7 +82,9 @@ def upload_new_session(session_report: models.SessionReport,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __sessions_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__sessions_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
@@ -146,7 +148,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(__assistant_queries_endpoint_name)
-def execute_assistant_query(query: models.AssistantQuery,
+async def execute_assistant_query(query: models.AssistantQuery,
                             response: Response,
                             authorization: Annotated[Union[str, None], Cookie()] = None,
                             session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -154,7 +156,9 @@ def execute_assistant_query(query: models.AssistantQuery,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __assistant_queries_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__assistant_queries_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
@@ -226,7 +230,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(__greetings_endpoint_name)
-def fetch_greeting(greeting_params: models.AssistantGreeting,
+async def fetch_greeting(greeting_params: models.AssistantGreeting,
                    response: Response,
                    authorization: Annotated[Union[str, None], Cookie()] = None,
                    session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -234,7 +238,9 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __greetings_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__greetings_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         assert Language.get(greeting_params.response_language_code).is_valid(), "Invalid response_language_code parameter"
@@ -290,7 +296,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(__image_files_endpoint_name)
-def upload_session_notes_image(response: Response,
+async def upload_session_notes_image(response: Response,
                                image: UploadFile = File(...),
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -298,7 +304,9 @@ def upload_session_notes_image(response: Response,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __image_files_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__image_files_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         document_id = library_clients.docupanda_upload_image(image)
@@ -334,7 +342,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.get(__text_extractions_endpoint_name)
-def extract_text(response: Response,
+async def extract_text(response: Response,
                  document_id: str = None,
                  authorization: Annotated[Union[str, None], Cookie()] = None,
                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -342,7 +350,9 @@ def extract_text(response: Response,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __text_extractions_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__text_extractions_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     if document_id == None or document_id == "":
         description = "Didn't receive a valid document id."
@@ -398,7 +408,9 @@ async def transcribe_notes(response: Response,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __notes_transcriptions_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__notes_transcriptions_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         transcript = await library_clients.deepgram_transcribe_notes(audio_file)
@@ -435,7 +447,9 @@ async def transcribe_session(response: Response,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __session_transcriptions_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__session_transcriptions_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         result = library_clients.speechmatics_transcribe(audio_file)
@@ -490,9 +504,10 @@ async def login_for_access_token(
 
     if old_session_id is not None:
         # We're refreshing a token, let's log this as context
-        logging.log_api_request(old_session_id,
-                                __token_endpoint_name,
-                                f"Refreshing token to {new_session_id}")
+        logging.log_api_request(session_id=old_session_id,
+                                endpoint_name=__token_endpoint_name,
+                                auth_entity=(await (security.get_current_user(authorization))).username,
+                                description=f"Refreshing token to {new_session_id}")
 
     access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
@@ -527,7 +542,7 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(__sign_up_endpoint_name)
-def sign_up(signup_data: models.SignupData,
+async def sign_up(signup_data: models.SignupData,
             response: Response,
             authorization: Annotated[Union[str, None], Cookie()] = None,
             session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -535,7 +550,9 @@ def sign_up(signup_data: models.SignupData,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __sign_up_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__sign_up_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         supabase_client: Client = library_clients.supabase_admin_instance()
@@ -597,7 +614,9 @@ async def logout(response: Response,
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
-    logging.log_api_request(session_id, __logout_endpoint_name)
+    logging.log_api_request(session_id=session_id,
+                            endpoint_name=__logout_endpoint_name,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     response.delete_cookie("authorization")
 
