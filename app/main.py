@@ -67,7 +67,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# RAG Assistant endpoints
+# Assistant endpoints
 
 """
 Digests a new session report by:
@@ -103,11 +103,27 @@ def upload_new_session(session_report: models.SessionReport,
             "patient_id": session_report.patient_id,
             "therapist_id": therapist_id}).execute()
     except HTTPException as e:
-        raise HTTPException(status_code=e.status_code,
-                            detail=str(e))
+        status_code = e.status_code
+        description = str(e)
+        logging.log_error(session_id=__session_id,
+                          therapist_id=therapist_id,
+                          patient_id=session_report.patient_id,
+                          endpoint_name=__sessions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e))
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        logging.log_error(session_id=__session_id,
+                          therapist_id=therapist_id,
+                          patient_id=session_report.patient_id,
+                          endpoint_name=__sessions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     # Upload vector embeddings
     vector_writer.upload_session_vector(session_report.patient_id,
@@ -118,7 +134,7 @@ def upload_new_session(session_report: models.SessionReport,
                              therapist_id=therapist_id,
                              patient_id=session_report.patient_id,
                              endpoint_name=__sessions_endpoint_name,
-                             http_status_code=200,
+                             http_status_code=status.HTTP_200_OK,
                              description=None)
 
     return {}
@@ -154,21 +170,44 @@ def execute_assistant_query(query: models.AssistantQuery,
         patient_therapist_check = supabase_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
                                                                                                    query.patient_id).execute()
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e))
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        logging.log_error(session_id=__session_id,
+                          therapist_id=therapist_id,
+                          patient_id=query.patient_id,
+                          endpoint_name=__assistant_queries_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     if len(patient_therapist_check.data) == 0:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="There isn't a patient-therapist match with those ids.")
+        description = "There isn't a patient-therapist match with those ids."
+        status_code = status.HTTP_403_FORBIDDEN
+        logging.log_error(session_id=__session_id,
+                          therapist_id=therapist_id,
+                          patient_id=query.patient_id,
+                          endpoint_name=__assistant_queries_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     # Go through with the query
     response = query_handler.query_store(query.patient_id,
                                          query.text,
                                          query.response_language_code)
 
-    if response.status_code != 200:
+    if response.status_code != status.HTTP_200_OK:
+        description = "Something failed when trying to execute the query"
+        logging.log_error(session_id=__session_id,
+                          therapist_id=therapist_id,
+                          patient_id=query.patient_id,
+                          endpoint_name=__assistant_queries_endpoint_name,
+                          error_code=response.status_code,
+                          description=description)
         raise HTTPException(status_code=response.status_code,
-                            detail="Something failed when trying to execute the query")
+                            detail=description)
 
     logging.log_api_response(session_id=__session_id,
                              therapist_id=therapist_id,
@@ -200,8 +239,14 @@ def fetch_greeting(greeting_params: models.AssistantGreeting,
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Invalid response language code.")
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e))
+        status_code = status.HTTP_400_BAD_REQUEST
+        description = str(e)
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__greetings_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     log_description = ''.join(['language_code:',
                            greeting_params.response_language_code,
@@ -270,8 +315,14 @@ def upload_session_notes_image(image: UploadFile = File(...),
 
     if not os.path.exists(image_copy_pdf_path):
         os.remove(image_copy_path)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Something went wrong while processing the image.")
+        status_code = status.HTTP_409_CONFLICT
+        description = "Something went wrong while processing the image."
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__image_files_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
     
     # Send to DocuPanda
     payload = {"document": {"file": {
@@ -292,8 +343,12 @@ def upload_session_notes_image(image: UploadFile = File(...),
     loop.run_until_complete(clean_up_files(files_to_clean))
 
     if response.status_code != status.HTTP_200_OK:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Something went wrong while uploading the image.")
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__image_files_endpoint_name,
+                          error_code=response.status_code,
+                          description=response.text)
+        raise HTTPException(status_code=response.status_code,
+                            detail=response.text)
 
     document_id = response.json()['documentId']
 
@@ -320,8 +375,14 @@ def extract_text(document_id: str = None,
     logging.log_api_request(__session_id, __text_extractions_endpoint_name)
 
     if document_id == None or document_id == "":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Didn't receive a valid document id.")
+        description = "Didn't receive a valid document id."
+        status_code = status.HTTP_409_CONFLICT
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__text_extractions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     url = os.getenv("DOCUPANDA_URL") + "/" + document_id
 
@@ -333,8 +394,12 @@ def extract_text(document_id: str = None,
     response = requests.get(url, headers=headers)
     
     if response.status_code != status.HTTP_200_OK:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Something went wrong when extracting the text.")
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__text_extractions_endpoint_name,
+                          error_code=response.status_code,
+                          description=response.text)
+        raise HTTPException(status_code=response.status_code,
+                            detail=response.text)
 
     text_sections = response.json()['result']['pages'][0]['sections']
     full_text = ""
@@ -376,11 +441,23 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
             shutil.copyfileobj(audio_file.file, buffer)
 
         if not os.path.exists(audio_copy_path):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="Something went wrong while processing the file.")
+            description = "Something went wrong while processing the file."
+            status_code = status.HTTP_409_CONFLICT
+            logging.log_error(session_id=__session_id,
+                              endpoint_name=__notes_transcriptions_endpoint_name,
+                              error_code=status_code,
+                              description=description)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, 
-                            detail=str(e))
+        description = str(e)
+        status_code = status.HTTP_409_CONFLICT
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__notes_transcriptions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
     finally:
         await audio_file.close()
 
@@ -411,11 +488,22 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         json_response = json.loads(response.to_json(indent=4))
         transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
     except HTTPException as e:
+        description = str(e)
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__notes_transcriptions_endpoint_name,
+                          error_code=e.status_code,
+                          description=description)
         raise HTTPException(status_code=e.status_code,
-                            detail=str(e))
+                            detail=description)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="The transcription operation failed.")
+        description = "The transcription operation failed."
+        status_code = status.HTTP_409_CONFLICT
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__notes_transcriptions_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
     finally:
         await clean_up_files([audio_copy_path])
 
@@ -453,11 +541,23 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #         shutil.copyfileobj(audio_file.file, buffer)
 
     #     if not os.path.exists(audio_copy_path):
-    #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                             detail="Something went wrong while processing the file.")
+    #         description = "Something went wrong while processing the file."
+    #         status_code = status.HTTP_409_CONFLICT
+    #         logging.log_error(session_id=__session_id,
+    #                           endpoint_name=__session_transcriptions_endpoint_name,
+    #                           error_code=status_code,
+    #                           description=description)
+    #         raise HTTPException(status_code=status_code,
+    #                             detail=description)
     # except Exception as e:
-    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                         detail=str(e))
+    #     description = str(e)
+    #     status_code = status.HTTP_409_CONFLICT
+    #     logging.log_error(session_id=__session_id,
+    #                       endpoint_name=__session_transcriptions_endpoint_name,
+    #                       error_code=status_code,
+    #                       description=description)
+    #     raise HTTPException(status_code=status_code,
+    #                         detail=description)
     # finally:
     #     await audio_file.close()
 
@@ -503,11 +603,21 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #         summary = transcript["summary"]["content"]
     #         return {"transcription_id": "", "summary": summary}
     #     except TimeoutError as e:
-    #         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+    #         status_code = status.HTTP_408_REQUEST_TIMEOUT
+    #         logging.log_error(session_id=__session_id,
+    #                           endpoint_name=__session_transcriptions_endpoint_name,
+    #                           error_code=status_code,
+    #                           description=str(e))
+    #         raise HTTPException(status_code=status_code)
     #     except Exception as e:
-    #         print(e)
-    #         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-    #                             detail=str(e))
+    #         status_code = status.HTTP_409_CONFLICT
+    #         description = str(e)
+    #         logging.log_error(session_id=__session_id,
+    #                           endpoint_name=__session_transcriptions_endpoint_name,
+    #                           error_code=status_code,
+    #                           description=description)
+    #         raise HTTPException(status_code=status_code,
+    #                             detail=description)
     #     finally:
     #         await clean_up_files([audio_copy_path])
 
@@ -593,8 +703,14 @@ def sign_up(signup_data: models.SignupData,
         if (json_response["user"]["role"] != 'authenticated'
             or not json_response["session"]["access_token"]
             or not json_response["session"]["refresh_token"]):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Something went wrong when signing up the user")
+            description = "Something went wrong when signing up the user"
+            status_code = status.HTTP_400_BAD_REQUEST
+            logging.log_error(session_id=__session_id,
+                              endpoint_name=__sign_up_endpoint_name,
+                              error_code=status_code,
+                              description=description)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
 
         user_id = json_response["user"]["id"]
         supabase_client.table('therapists').insert({
@@ -607,13 +723,15 @@ def sign_up(signup_data: models.SignupData,
             "email": signup_data.user_email,
             "language_preference": signup_data.language_preference,
         }).execute()
-
-    except AssertionError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e))
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        logging.log_error(session_id=__session_id,
+                          endpoint_name=__sign_up_endpoint_name,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
 
     logging.log_api_response(therapist_id=user_id,
                              session_id=__session_id,
