@@ -1,4 +1,4 @@
-import asyncio, base64, datetime, json, os, requests, shutil, ssl, uuid
+import datetime, json, os, requests, shutil, ssl, uuid
 
 from dataclasses import field
 from deepgram import (
@@ -23,7 +23,6 @@ from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 from supabase import Client
 from typing import Annotated, Union
-from PIL import Image
 
 from .assistant import query as query_handler
 from .assistant import vector_writer
@@ -32,6 +31,7 @@ from .internal import library_clients
 from .internal import logging
 from .internal import models
 from .internal import security
+from .internal import utilities
 
 TOKEN_EXPIRED_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -292,65 +292,24 @@ def upload_session_notes_image(image: UploadFile = File(...),
     global __session_id
     logging.log_api_request(__session_id, __image_files_endpoint_name)
 
-    url = os.getenv("DOCUPANDA_URL")
-    api_key = os.getenv("DOCUPANDA_API_KEY")
-    file_name, file_extension = os.path.splitext(image.filename)
-
-    # Format name to be used for image copy using current timestamp
-    files_dir = 'app/files'
-    pdf_extension = '.pdf'
-    image_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    image_copy_path = files_dir + '/' + image_copy_bare_name + file_extension
-    image_copy_pdf_path = files_dir + '/' + image_copy_bare_name + pdf_extension
-    files_to_clean = [image_copy_path]
-
-    # Write incoming image to our local volume for further processing
-    with open(image_copy_path, 'wb+') as buffer:
-        shutil.copyfileobj(image.file, buffer)
-
-    # Convert to PDF if necessary
-    if file_extension.lower() != pdf_extension:
-        Image.open(image_copy_path).convert('RGB').save(image_copy_pdf_path)
-        files_to_clean.append(image_copy_pdf_path)
-
-    if not os.path.exists(image_copy_pdf_path):
-        os.remove(image_copy_path)
-        status_code = status.HTTP_409_CONFLICT
-        description = "Something went wrong while processing the image."
+    try:
+        document_id = library_clients.docupanda_upload_image(image)
+    except HTTPException as e:
+        status_code = e.status_code
+        description = str(e)
         logging.log_error(session_id=__session_id,
                           endpoint_name=__image_files_endpoint_name,
                           error_code=status_code,
                           description=description)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
-    
-    # Send to DocuPanda
-    payload = {"document": {"file": {
-        "contents": base64.b64encode(open(image_copy_pdf_path, 'rb').read()).decode(),
-        "filename": file_name + pdf_extension
-    }}}
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "X-API-Key": api_key
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-
-    # Clean up temp files
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(clean_up_files(files_to_clean))
-
-    if response.status_code != status.HTTP_200_OK:
+        raise HTTPException(status_code=status_code, detail=description)
+    except Exception as e:
+        status_code = status.HTTP_409_CONFLICT
+        description = str(e)
         logging.log_error(session_id=__session_id,
                           endpoint_name=__image_files_endpoint_name,
-                          error_code=response.status_code,
-                          description=response.text)
-        raise HTTPException(status_code=response.status_code,
-                            detail=response.text)
-
-    document_id = response.json()['documentId']
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=__session_id,
                              endpoint_name=__image_files_endpoint_name,
@@ -505,7 +464,7 @@ async def transcribe_notes(audio_file: UploadFile = File(...),
         raise HTTPException(status_code=status_code,
                             detail=description)
     finally:
-        await clean_up_files([audio_copy_path])
+        await utilities.clean_up_files([audio_copy_path])
 
     logging.log_api_response(session_id=__session_id,
                              endpoint_name=__notes_transcriptions_endpoint_name,
@@ -619,7 +578,7 @@ async def transcribe_session(audio_file: UploadFile = File(...),
     #         raise HTTPException(status_code=status_code,
     #                             detail=description)
     #     finally:
-    #         await clean_up_files([audio_copy_path])
+    #         await utilities.clean_up_files([audio_copy_path])
 
     data = json.load(open('app/files/output.json'))
     summary = data["summary"]["content"]
@@ -761,15 +720,3 @@ async def logout(response: Response,
 
     __session_id = None
     return {}
-
-# Private - Helper functions
-
-"""
-Cleans up the incoming set of files from the local directory.
-
-Arguments:
-files  – the set of files to be cleaned up
-"""
-async def clean_up_files(files):
-    for file in files:
-        os.remove(file)
