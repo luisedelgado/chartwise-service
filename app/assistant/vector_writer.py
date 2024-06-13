@@ -11,6 +11,14 @@ from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
 
+"""
+Uploads a new record to the datastore leveraging the incoming data.
+
+Arguments:
+index_name  – the index name that should be used to insert the data.
+session_text  – the text to be inserted in the record.
+session_date  – the session_date to be used as metadata.
+"""
 def upload_session_vector(index_name, session_text, session_date):
     try:
         # Globals
@@ -53,6 +61,14 @@ def upload_session_vector(index_name, session_text, session_date):
     except Exception as e:
         raise Exception(str(e))
 
+# Private
+
+"""
+Creates an index in the datastore. If index name already exists, the method will fail silently.
+
+Arguments:
+index_name  – the name that should be used to create the index.
+"""
 def __create_index_if_necessary(index_name: str):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))

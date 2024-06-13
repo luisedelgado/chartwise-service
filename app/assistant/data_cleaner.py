@@ -1,14 +1,13 @@
 import re 
 
+"""
+Removes unwanted characters and patterns in text input.
+Returnes the cleaned content.
+
+Arguments:
+content  – text input.
+"""
 def clean_up_text(content: str) -> str:
-    """
-    Remove unwanted characters and patterns in text input.
-
-    :param content: Text input.
-    
-    :return: Cleaned version of original text input.
-    """
-
     # Fix hyphenated words broken by newline
     content = re.sub(r'(\w+)-\n(\w+)', r'\1\2', content)
 

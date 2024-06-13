@@ -5,6 +5,9 @@ from typing import Dict
 
 from ..internal import logging
 
+"""
+Class meant to be used for cleaning diarization records.
+"""
 class DiarizationCleaner:
     def __init__(self):
         self._current_speaker_content = str()
@@ -12,6 +15,14 @@ class DiarizationCleaner:
         self._transcription = []
         self._entry_start_time = str()
 
+    """
+    Returns a JSON representation of the transcription after having been transformed for easier manipulation.
+
+    Arguments:
+    input  – the diarization input.
+    session_id – the current session id.
+    invoking_endpoint – the endpoint that invoked this codepath.
+    """
     def clean_transcription(self, input: str, session_id: str, invoking_endpoint: str) -> str:
         self._current_speaker = input[0]["alternatives"][0]["speaker"]
         for obj in input:
@@ -60,6 +71,13 @@ class DiarizationCleaner:
 
         return json.dumps(self._transcription)
 
+    """
+    Helper method for appending data to the current speaker's run-on content.
+
+    Arguments:
+    content  – the content to be appended.
+    prepend_space – flag determining if we prepend the content with a space character.
+    """
     def __append_speaker_content(self, content: str, prepend_space: bool):
         content_list = [self._current_speaker_content, content]
         if prepend_space:
@@ -68,6 +86,12 @@ class DiarizationCleaner:
 
         self._current_speaker_content = "".join(str(item) for item in content_list)
 
+    """
+    Helper method for getting a Dict entry containing the current speaker's at-hand content.
+
+    Arguments:
+    entry_end_time  – the time at which the speaker's intervention finished.
+    """
     def __get_entry_node(self, entry_end_time: str) -> Dict:
         return {
             "content": self._current_speaker_content,
