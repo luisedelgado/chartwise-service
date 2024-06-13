@@ -1,16 +1,15 @@
-import os, requests, uuid
+import os
 
 from datetime import datetime
 from fastapi import status
 from llama_index.core import VectorStoreIndex
-from llama_index.llms.openai import OpenAI as llama_index_openai
+from llama_index.llms.openai import OpenAI as llama_index_OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
 from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
-from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
-from pytz import timezone
 
+from ..internal import library_clients, utilities
 from . import message_templates
 
 __llm_model = "gpt-3.5-turbo"
@@ -20,52 +19,18 @@ class QueryResult:
         self.response_token = response_token
         self.status_code = status_code
 
-def __get_current_environment():
-    return "prod"
+"""
+Queries the respective datastore with the incoming parameters.
+Returns a QueryResult object with the query result.
 
-def __is_portkey_reachable() -> bool:
-    try:
-        return requests.get(PORTKEY_GATEWAY_URL).status_code < status.HTTP_500_INTERNAL_SERVER_ERROR
-    except:
-        return False
-
-def __create_portkey_config(cache_max_age):
-    return {
-        "provider": "openai",
-        "virtual_key": os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
-        "cache": {
-            "mode": "semantic",
-            "max_age": cache_max_age,
-        },
-        "retry": {
-            "attempts": 2,
-        },
-        "override_params": {
-            "model": __llm_model,
-            "temperature": 0,
-        }
-    }
-
-def __create_portkey_headers(**kwargs):
-    environment = None if "environment" not in kwargs else kwargs["environment"]
-    session_id = None if "session_id" not in kwargs else kwargs["session_id"]
-    user = None if "user" not in kwargs else kwargs["user"]
-    caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
-    cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
-    endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
-    return createHeaders(trace_id=uuid.uuid4(),
-                         api_key=os.environ.get("PORTKEY_API_KEY"),
-                         config=__create_portkey_config(cache_max_age),
-                         cache_namespace=caching_shard_key,
-                         debug=False, # Prevents prompts and responses from being logged.
-                         metadata={
-                            "environment": environment,
-                            "user": user,
-                            "vector_index": caching_shard_key,
-                            "session_id": session_id,
-                            "endpoint_name": endpoint_name,
-                        })
-
+Arguments:
+index_id  – the index id that should be queried inside the datastore.
+input  – the input for the query.
+response_language_code  – the language code to be used in the response.
+querying_user – the user that triggered the query.
+session_id  – the session id.
+endpoint_name  – the endpoint that was invoked.
+"""
 def query_store(index_id,
                 input,
                 response_language_code,
@@ -81,16 +46,17 @@ def query_store(index_id,
         vector_store = PineconeVectorStore(pinecone_index=index)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
 
-        is_portkey_reachable = __is_portkey_reachable()
-        api_base = PORTKEY_GATEWAY_URL if is_portkey_reachable else None
-        headers = __create_portkey_headers(environment=__get_current_environment(),
-                                           session_id=session_id,
-                                           user=querying_user,
-                                           cache_max_age=3600, # 1 hour
-                                           caching_shard_key=index_id,
-                                           endpoint_name=endpoint_name) if is_portkey_reachable else None
+        is_portkey_reachable = library_clients.is_portkey_reachable()
+        api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
+        headers = library_clients.create_portkey_headers(environment=utilities.get_current_environment(),
+                                                         session_id=session_id,
+                                                         user=querying_user,
+                                                         llm_model=__llm_model,
+                                                         cache_max_age=3600, # 1 hour
+                                                         caching_shard_key=index_id,
+                                                         endpoint_name=endpoint_name) if is_portkey_reachable else None
 
-        llm = llama_index_openai(model=__llm_model,
+        llm = llama_index_OpenAI(model=__llm_model,
                                  temperature=0,
                                  api_base=api_base,
                                  default_headers=headers)
@@ -109,6 +75,17 @@ def query_store(index_id,
     except Exception as e:
         return QueryResult(str(e), status.HTTP_409_CONFLICT)
 
+"""
+Creates a greeting with the incoming values.
+Returns a QueryResult object with the greeting result.
+
+Arguments:
+name  – the addressing name to be used in the greeting.
+language_code  – the language_code to be used in the greeting.
+tz_identifier  – the timezone identifier to be used for calculating the client's current time.
+session_id  – the session id.
+endpoint_name  – the endpoint that was invoked.
+"""
 def create_greeting(name: str,
                     language_code: str,
                     tz_identifier: str,
@@ -116,14 +93,15 @@ def create_greeting(name: str,
                     endpoint_name: str,
                     ) -> QueryResult:
     try:
-        is_portkey_reachable = __is_portkey_reachable()
-        api_base = PORTKEY_GATEWAY_URL if is_portkey_reachable else None
+        is_portkey_reachable = library_clients.is_portkey_reachable()
+        api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
         caching_shard_key = (session_id + "-" + datetime.now().strftime("%d-%m-%Y"))
-        headers = __create_portkey_headers(environment=__get_current_environment(),
-                                           session_id=session_id,
-                                           cache_max_age=86400, # 24 hours
-                                           caching_shard_key=caching_shard_key,
-                                           endpoint_name=endpoint_name) if is_portkey_reachable else None
+        headers = library_clients.create_portkey_headers(environment=utilities.get_current_environment(),
+                                                         session_id=session_id,
+                                                         llm_model=__llm_model,
+                                                         cache_max_age=86400, # 24 hours
+                                                         caching_shard_key=caching_shard_key,
+                                                         endpoint_name=endpoint_name) if is_portkey_reachable else None
 
         llm = OpenAI(base_url=api_base,
                      default_headers=headers)

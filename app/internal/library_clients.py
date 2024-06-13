@@ -1,4 +1,4 @@
-import asyncio, base64, datetime, json, os, requests, shutil, ssl
+import asyncio, base64, datetime, json, os, requests, shutil, ssl, uuid
 
 from deepgram import (
     DeepgramClient,
@@ -8,11 +8,15 @@ from deepgram import (
 from fastapi import (File, HTTPException, status, UploadFile)
 from httpx import Timeout
 from PIL import Image
+from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
+from pytz import timezone
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 
 from . import utilities
+
+# Supabase
 
 """
 Returns an active supabase instance based on a user's auth tokens.
@@ -36,6 +40,8 @@ def supabase_admin_instance() -> Client:
     key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     url: str = os.environ.get("SUPABASE_URL")
     return create_client(url, key)
+
+# Docupanda
 
 """
 Uploads an image file to the DocuPanda service.
@@ -122,6 +128,8 @@ def docupanda_extract_text(document_id: str) -> str:
 
     return full_text
 
+# Deepgram
+
 """
 Returns the incoming audio's transcription.
 Arguments:
@@ -181,6 +189,8 @@ async def deepgram_transcribe_notes(audio_file: UploadFile = File(...)) -> str:
         await utilities.clean_up_files([audio_copy_path])
 
     return transcript
+
+# Speechmatics
 
 class SessionTranscriptionResult:
     def __init__(self, transcript, summary):
@@ -262,3 +272,64 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
                                 detail=str(e))
         finally:
             await utilities.clean_up_files([audio_copy_path])
+
+# Portkey
+
+"""
+Returns whether or not the Portkey service is reachable.
+"""
+def is_portkey_reachable() -> bool:
+    try:
+        return requests.get(PORTKEY_GATEWAY_URL).status_code < status.HTTP_500_INTERNAL_SERVER_ERROR
+    except:
+        return False
+
+"""
+Returns a Portkey config to be used for their service.
+
+Arguments:
+cache_max_age  – the ttl of the cache.
+"""
+def create_portkey_config(cache_max_age, llm_model):
+    return {
+        "provider": "openai",
+        "virtual_key": os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
+        "cache": {
+            "mode": "semantic",
+            "max_age": cache_max_age,
+        },
+        "retry": {
+            "attempts": 2,
+        },
+        "override_params": {
+            "model": llm_model,
+            "temperature": 0,
+        }
+    }
+
+"""
+Returns a set of Portkey headers to be used for their service.
+
+Arguments:
+kwargs  – the set of optional arguments.
+"""
+def create_portkey_headers(**kwargs):
+    environment = None if "environment" not in kwargs else kwargs["environment"]
+    session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+    user = None if "user" not in kwargs else kwargs["user"]
+    caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
+    cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
+    endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
+    llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
+    return createHeaders(trace_id=uuid.uuid4(),
+                         api_key=os.environ.get("PORTKEY_API_KEY"),
+                         config=create_portkey_config(cache_max_age, llm_model),
+                         cache_namespace=caching_shard_key,
+                         debug=False, # Prevents prompts and responses from being logged.
+                         metadata={
+                            "environment": environment,
+                            "user": user,
+                            "vector_index": caching_shard_key,
+                            "session_id": session_id,
+                            "endpoint_name": endpoint_name,
+                        })

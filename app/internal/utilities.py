@@ -9,3 +9,9 @@ files  – the set of files to be cleaned up
 async def clean_up_files(files):
     for file in files:
         os.remove(file)
+
+"""
+Returns the current environment as a string.
+"""
+def get_current_environment():
+    return "prod"
