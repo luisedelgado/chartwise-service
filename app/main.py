@@ -4,9 +4,11 @@ from dataclasses import field
 from fastapi import (
     Cookie,
     Depends,
+    Header,
     HTTPException,
     FastAPI,
     File,
+    Request,
     Response,
     status,
     UploadFile)
@@ -19,6 +21,7 @@ from typing import Annotated, Union
 from .assistant import query as query_handler
 from .assistant import vector_writer
 from .data_processing import diarization_cleaner
+from .internal import endpoints
 from .internal import library_clients
 from .internal import logging
 from .internal import models
@@ -29,18 +32,6 @@ TOKEN_EXPIRED_ERROR = HTTPException(
     detail="Token missing or expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-# Keep sorted alphabetically
-__assistant_queries_endpoint_name = "/v1/assistant-queries"
-__greetings_endpoint_name = "/v1/greetings"
-__image_files_endpoint_name = "/v1/image-files"
-__logout_endpoint_name = "/logout"
-__notes_transcriptions_endpoint_name = "/v1/notes-transcriptions"
-__session_transcriptions_endpoint_name = "/v1/session-transcriptions"
-__sessions_endpoint_name = "/v1/sessions"
-__sign_up_endpoint_name = "/sign-up"
-__text_extractions_endpoint_name = "/v1/text-extractions"
-__token_endpoint_name = "/token"
 
 app = FastAPI()
 
@@ -70,7 +61,7 @@ session_report – the report associated with the new session.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__sessions_endpoint_name)
+@app.post(endpoints.SESSION_UPLOAD_ENDPOINT)
 async def upload_new_session(session_report: models.SessionReport,
                        response: Response,
                        authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -80,7 +71,7 @@ async def upload_new_session(session_report: models.SessionReport,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__sessions_endpoint_name,
+                            endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
@@ -109,7 +100,7 @@ async def upload_new_session(session_report: models.SessionReport,
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=session_report.patient_id,
-                          endpoint_name=__sessions_endpoint_name,
+                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -120,7 +111,7 @@ async def upload_new_session(session_report: models.SessionReport,
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=session_report.patient_id,
-                          endpoint_name=__sessions_endpoint_name,
+                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -129,7 +120,7 @@ async def upload_new_session(session_report: models.SessionReport,
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=session_report.patient_id,
-                             endpoint_name=__sessions_endpoint_name,
+                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=None)
 
@@ -144,7 +135,7 @@ query – the query that will be executed.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__assistant_queries_endpoint_name)
+@app.post(endpoints.QUERIES_ENDPOINT)
 async def execute_assistant_query(query: models.AssistantQuery,
                             response: Response,
                             authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -154,7 +145,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__assistant_queries_endpoint_name,
+                            endpoint_name=endpoints.QUERIES_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
@@ -175,7 +166,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
         status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
                           patient_id=query.patient_id,
-                          endpoint_name=__assistant_queries_endpoint_name,
+                          endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -187,7 +178,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=query.patient_id,
-                          endpoint_name=__assistant_queries_endpoint_name,
+                          endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -199,14 +190,14 @@ async def execute_assistant_query(query: models.AssistantQuery,
                                          response_language_code=query.response_language_code,
                                          querying_user=therapist_id,
                                          session_id=session_id,
-                                         endpoint_name=__assistant_queries_endpoint_name)
+                                         endpoint_name=endpoints.QUERIES_ENDPOINT)
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=query.patient_id,
-                          endpoint_name=__assistant_queries_endpoint_name,
+                          endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=response.status_code,
                           description=description)
         raise HTTPException(status_code=response.status_code,
@@ -215,7 +206,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=query.patient_id,
-                             endpoint_name=__assistant_queries_endpoint_name,
+                             endpoint_name=endpoints.QUERIES_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=None)
 
@@ -229,7 +220,7 @@ greeting – the greeting parameters to be used.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__greetings_endpoint_name)
+@app.post(endpoints.GREETINGS_ENDPOINT)
 async def fetch_greeting(greeting_params: models.AssistantGreeting,
                    response: Response,
                    authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -239,7 +230,7 @@ async def fetch_greeting(greeting_params: models.AssistantGreeting,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__greetings_endpoint_name,
+                            endpoint_name=endpoints.GREETINGS_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
@@ -248,12 +239,12 @@ async def fetch_greeting(greeting_params: models.AssistantGreeting,
                                                language_code=greeting_params.response_language_code,
                                                tz_identifier=greeting_params.client_tz_identifier,
                                                session_id=session_id,
-                                               endpoint_name=__greetings_endpoint_name,)
+                                               endpoint_name=endpoints.GREETINGS_ENDPOINT,)
     except Exception as e:
         status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__greetings_endpoint_name,
+                          endpoint_name=endpoints.GREETINGS_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -264,7 +255,7 @@ async def fetch_greeting(greeting_params: models.AssistantGreeting,
                            'tz_identifier:',
                            greeting_params.client_tz_identifier])
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__greetings_endpoint_name,
+                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=log_description)
 
@@ -280,7 +271,7 @@ Returns an OK status if the endpoint can be reached.
 Arguments:
 authorization – The authorization cookie, if exists.
 """
-@app.get("/v1/healthcheck")
+@app.get(endpoints.HEALTHCHECK_ENDPOINT)
 def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
@@ -297,7 +288,7 @@ image – the image to be uploaded.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__image_files_endpoint_name)
+@app.post(endpoints.IMAGE_UPLOAD_ENDPOINT)
 async def upload_session_notes_image(response: Response,
                                image: UploadFile = File(...),
                                authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -307,7 +298,7 @@ async def upload_session_notes_image(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__image_files_endpoint_name,
+                            endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
@@ -316,7 +307,7 @@ async def upload_session_notes_image(response: Response,
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__image_files_endpoint_name,
+                          endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
@@ -324,13 +315,13 @@ async def upload_session_notes_image(response: Response,
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__image_files_endpoint_name,
+                          endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__image_files_endpoint_name,
+                             endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     return {"document_id": document_id}
@@ -343,7 +334,7 @@ document_id – the id of the document to be textracted.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.get(__text_extractions_endpoint_name)
+@app.get(endpoints.TEXT_EXTRACTION_ENDPOINT)
 async def extract_text(response: Response,
                  document_id: str = None,
                  authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -353,14 +344,14 @@ async def extract_text(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__text_extractions_endpoint_name,
+                            endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     if document_id == None or document_id == "":
         description = "Didn't receive a valid document id."
         status_code = status.HTTP_409_CONFLICT
         logging.log_error(session_id=session_id,
-                          endpoint_name=__text_extractions_endpoint_name,
+                          endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -372,7 +363,7 @@ async def extract_text(response: Response,
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__text_extractions_endpoint_name,
+                          endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
@@ -380,13 +371,13 @@ async def extract_text(response: Response,
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__text_extractions_endpoint_name,
+                          endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__text_extractions_endpoint_name,
+                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     return {"extraction": full_text}
@@ -401,7 +392,7 @@ audio_file – the audio file for which the transcription will be created.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__notes_transcriptions_endpoint_name)
+@app.post(endpoints.NOTES_TRANSCRIPTION_ENDPOINT)
 async def transcribe_notes(response: Response,
                            audio_file: UploadFile = File(...),
                            authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -411,7 +402,7 @@ async def transcribe_notes(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__notes_transcriptions_endpoint_name,
+                            endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
@@ -420,13 +411,13 @@ async def transcribe_notes(response: Response,
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__text_extractions_endpoint_name,
+                          endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__notes_transcriptions_endpoint_name,
+                             endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     return {"transcript": transcript}
@@ -440,7 +431,7 @@ audio_file – the audio file for which the diarized transcription will be creat
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__session_transcriptions_endpoint_name)
+@app.post(endpoints.DIARIZATION_ENDPOINT)
 async def transcribe_session(response: Response,
                              audio_file: UploadFile = File(...),
                              authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -450,37 +441,57 @@ async def transcribe_session(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__session_transcriptions_endpoint_name,
+                            endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        result: library_clients.SessionTranscriptionResult = await library_clients.speechmatics_transcribe(audio_file=audio_file)
+        result: library_clients.SessionTranscriptionResult = await library_clients.speechmatics_transcribe(auth_token=authorization,
+                                                                                                           audio_file=audio_file)
         transcript = diarization_cleaner.DiarizationCleaner().clean_transcription(input=result.transcript,
                                                                                   session_id=session_id,
-                                                                                  invoking_endpoint=__session_transcriptions_endpoint_name)
+                                                                                  invoking_endpoint=endpoints.DIARIZATION_ENDPOINT)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__session_transcriptions_endpoint_name,
+                          endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
-        description = "Something went wrong while processing the file"
+        description = str(e)
         logging.log_error(session_id=session_id,
-                          endpoint_name=__session_transcriptions_endpoint_name,
+                          endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__session_transcriptions_endpoint_name,
+                             endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     return {"summary": result.summary,
             "transcription": transcript}
+
+@app.post(endpoints.DIARIZATION_NOTIFICATION_ENDPOINT)
+def consume_notification(request: Request,
+                         authorization: Annotated[Union[str, None], Cookie()] = None,
+                         request_entity_ip: str = Header(None, alias='x-forwarded-for')):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    # ip = str(request.client.host)
+
+    # # Check if IP is allowed
+    # if ip not in WHITELISTED_IPS:
+    #     data = {
+    #         'message': f'IP {ip} is not allowed to access this resource.'
+    #     }
+    #     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=data)
+
+    # # Proceed if IP is allowed
+    # return await call_next(request)
 
 # Security endpoints
 
@@ -491,12 +502,11 @@ Arguments:
 form_data  – the data required to validate the user.
 response – The response object to be used for creating the final response.
 """
-@app.post(__token_endpoint_name)
+@app.post(endpoints.TOKEN_ENDPOINT)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
     session_id: Annotated[Union[str, None], Cookie()] = None,
-    authorization: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
@@ -527,7 +537,7 @@ async def login_for_access_token(
                     samesite="lax")
 
     logging.log_api_response(session_id=new_session_id,
-                             endpoint_name=__token_endpoint_name,
+                             endpoint_name=endpoints.TOKEN_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=f"Refreshing token from {session_id} to {new_session_id}")
 
@@ -541,7 +551,7 @@ signup_data – the data to be used to sign up the user.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__sign_up_endpoint_name)
+@app.post(endpoints.SIGN_UP_ENDPOINT)
 async def sign_up(signup_data: models.SignupData,
             response: Response,
             authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -551,7 +561,7 @@ async def sign_up(signup_data: models.SignupData,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__sign_up_endpoint_name,
+                            endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
@@ -581,7 +591,7 @@ async def sign_up(signup_data: models.SignupData,
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
-                          endpoint_name=__sign_up_endpoint_name,
+                          endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -589,7 +599,7 @@ async def sign_up(signup_data: models.SignupData,
 
     logging.log_api_response(therapist_id=user_id,
                              session_id=session_id,
-                             endpoint_name=__sign_up_endpoint_name,
+                             endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     return {
@@ -606,7 +616,7 @@ response – the object to be used for constructing the final response.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
-@app.post(__logout_endpoint_name)
+@app.post(endpoints.LOGOUT_ENDPOINT)
 async def logout(response: Response,
                  authorization: Annotated[Union[str, None], Cookie()] = None,
                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -615,13 +625,13 @@ async def logout(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            endpoint_name=__logout_endpoint_name,
+                            endpoint_name=endpoints.LOGOUT_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     response.delete_cookie("authorization")
 
     logging.log_api_response(session_id=session_id,
-                             endpoint_name=__logout_endpoint_name,
+                             endpoint_name=endpoints.LOGOUT_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
     session_id = None

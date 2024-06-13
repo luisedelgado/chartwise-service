@@ -14,6 +14,7 @@ from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 
+from . import endpoints
 from . import utilities
 
 # Supabase
@@ -190,14 +191,41 @@ async def deepgram_transcribe_notes(audio_file: UploadFile = File(...)) -> str:
 
     return transcript
 
-# Speechmatics
+SPEECHMATICS_NOTIFICATION_IPS = [
+    "40.74.41.91",
+    "52.236.157.154",
+    "40.74.37.0",
+    "20.73.209.153",
+    "20.73.142.44",
+    "20.105.89.153",
+    "20.105.89.173",
+    "20.105.89.184",
+    "20.105.89.98",
+    "20.105.88.228",
+    "52.149.21.32",
+    "52.149.21.10",
+    "52.137.102.83",
+    "40.64.107.92",
+    "40.64.107.99",
+    "52.146.58.224",
+    "52.146.58.159",
+    "52.146.59.242",
+    "52.146.59.213",
+    "52.146.58.64",
+    "20.248.249.20",
+    "20.248.249.47",
+    "20.248.249.181",
+    "20.248.249.119",
+    "20.248.249.164",
+]
 
 class SessionTranscriptionResult:
     def __init__(self, transcript, summary):
         self.transcript = transcript
         self.summary = summary
 
-async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
+async def speechmatics_transcribe(auth_token: str,
+                                  audio_file: UploadFile = File(...)):
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
@@ -216,13 +244,13 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
         await audio_file.close()
 
     # Temporary workaround until we add our own certificates
-    # ssl_context = ssl._create_unverified_context()
-    ssl_context = ssl.create_default_context()
+    ssl_context = ssl._create_unverified_context()
+    # ssl_context = ssl.create_default_context()
 
     # Process local copy with Speechmatics client
     settings = ConnectionSettings(
         url=os.getenv("SPEECHMATICS_URL"),
-        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+        auth_token="3AXgRyesR5UjubhoAfy4fRc4Ywl3QfCk",#os.getenv("SPEECHMATICS_API_KEY"),
         ssl_context=ssl_context,
     )
 
@@ -230,9 +258,18 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
         "type": "transcription",
         "transcription_config": {
             "language": "auto",
+            "operating_point": "enhanced",
             "diarization": "speaker",
             "enable_entities": True,
         },
+        "notification_config": [
+            {
+            "url": os.environ.get("ENVIRONMENT_URL") + endpoints.DIARIZATION_NOTIFICATION_ENDPOINT,
+            "method": "post",
+            "contents": ["transcript"],
+            "auth_headers": [f"Authorization: Bearer {auth_token}"]
+            }
+        ],
         "language_identification_config": {
             "expected_languages": ["en", "es"],
             "low_confidence_action": "allow"
@@ -242,14 +279,6 @@ async def speechmatics_transcribe(audio_file: UploadFile = File(...)):
             "summary_length": "detailed",
             "summary_type": "bullets"
         },
-        # https://docs.speechmatics.com/features-other/notifications
-        # "notification_config": [
-        #     {
-        #     "url": "https://collector.example.org/callback",
-        #     "contents": ["transcript", "data"],
-        #     "auth_headers": ["Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhb"]
-        #     }
-        # ]
     }
 
     with BatchClient(settings) as client:

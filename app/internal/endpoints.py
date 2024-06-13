@@ -1,0 +1,13 @@
+# Keep sorted alphabetically
+DIARIZATION_ENDPOINT = "/v1/diarization"
+DIARIZATION_NOTIFICATION_ENDPOINT = "/v1/diarization-notification"
+GREETINGS_ENDPOINT = "/v1/greetings"
+HEALTHCHECK_ENDPOINT = "/v1/healthcheck"
+IMAGE_UPLOAD_ENDPOINT = "/v1/image-uploads"
+LOGOUT_ENDPOINT = "/logout"
+NOTES_TRANSCRIPTION_ENDPOINT = "/v1/transcriptions"
+SESSION_UPLOAD_ENDPOINT = "/v1/sessions"
+SIGN_UP_ENDPOINT = "/sign-up"
+TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
+TOKEN_ENDPOINT = "/token"
+QUERIES_ENDPOINT = "/v1/queries"
