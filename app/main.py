@@ -196,7 +196,9 @@ async def execute_assistant_query(query: models.AssistantQuery,
     # Go through with the query
     response = query_handler.query_store(query.patient_id,
                                          query.text,
-                                         query.response_language_code)
+                                         query.response_language_code,
+                                         therapist_id,
+                                         session_id,)
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
