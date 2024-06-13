@@ -18,9 +18,8 @@ def log_api_request(session_id: str, endpoint_name: str, **kwargs):
             "endpoint_name": endpoint_name,
             "description": description,
             "endpoint_auth_entity": auth_entity}).execute(),
-        print(res)
     except Exception as e:
-        print(e)
+        print(f"Silently failing when trying to log request - Error: {str(e)}")
 
 """
 Logs data about an API response.
@@ -44,9 +43,8 @@ def log_api_response(**kwargs):
             "endpoint_name": endpoint_name,
             "http_status_code": http_status_code,
             "description": description}).execute()
-        print(res)
     except Exception as e:
-        print(e)
+        print(f"Silently failing when trying to log response - Error: {str(e)}")
 
 """
 Logs an error that happened during an API invocation.
@@ -70,6 +68,5 @@ def log_error(**kwargs):
             "endpoint_name": endpoint_name,
             "error_code": error_code,
             "description": description}).execute()
-        print(res)
     except Exception as e:
-        print(e)
+        print(f"Silently failing when trying to log response - Error: {str(e)}")
