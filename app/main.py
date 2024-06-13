@@ -194,11 +194,12 @@ async def execute_assistant_query(query: models.AssistantQuery,
                             detail=description)
 
     # Go through with the query
-    response = query_handler.query_store(query.patient_id,
-                                         query.text,
-                                         query.response_language_code,
-                                         therapist_id,
-                                         session_id,)
+    response = query_handler.query_store(index_id=query.patient_id,
+                                         input=query.text,
+                                         response_language_code=query.response_language_code,
+                                         querying_user=therapist_id,
+                                         session_id=session_id,
+                                         endpoint_name=__assistant_queries_endpoint_name)
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
@@ -243,9 +244,11 @@ async def fetch_greeting(greeting_params: models.AssistantGreeting,
 
     try:
         assert Language.get(greeting_params.response_language_code).is_valid(), "Invalid response_language_code parameter"
-        result = query_handler.create_greeting(greeting_params.addressing_name,
-                                               greeting_params.response_language_code,
-                                               greeting_params.client_tz_identifier)
+        result = query_handler.create_greeting(name=greeting_params.addressing_name,
+                                               language_code=greeting_params.response_language_code,
+                                               tz_identifier=greeting_params.client_tz_identifier,
+                                               session_id=session_id,
+                                               endpoint_name=__greetings_endpoint_name,)
     except Exception as e:
         status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
@@ -492,7 +495,8 @@ response – The response object to be used for creating the final response.
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
-    old_session_id: Annotated[Union[str, None], Cookie()] = None,
+    session_id: Annotated[Union[str, None], Cookie()] = None,
+    authorization: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
@@ -502,19 +506,11 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    new_session_id = uuid.uuid1()
-
-    if old_session_id is not None:
-        # We're refreshing a token, let's log this as context
-        logging.log_api_request(session_id=old_session_id,
-                                endpoint_name=__token_endpoint_name,
-                                auth_entity=(await (security.get_current_user(authorization))).username,
-                                description=f"Refreshing token to {new_session_id}")
-
     access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    response.delete_cookie("authorization")
     response.set_cookie(key="authorization",
                         value=access_token,
                         httponly=True,
@@ -522,6 +518,7 @@ async def login_for_access_token(
                         samesite="none")
     token = security.Token(access_token=access_token, token_type="bearer")
 
+    new_session_id = uuid.uuid1()
     response.delete_cookie("session_id")
     response.set_cookie(key="session_id",
                     value=new_session_id,
@@ -531,7 +528,8 @@ async def login_for_access_token(
 
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=__token_endpoint_name,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             description=f"Refreshing token from {session_id} to {new_session_id}")
 
     return token
 

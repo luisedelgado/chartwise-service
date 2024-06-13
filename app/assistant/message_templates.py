@@ -71,20 +71,16 @@ def create_refine_prompt_template(language_code: str) -> ChatPromptTemplate:
 
 # Greeting Prompt
 
-def create_system_greeting_message(name: str, tz_identifier: str) -> str | None:
+def create_system_greeting_message(name: str, tz_identifier: str, language_code: str) -> str | None:
     try:
         tz = timezone(tz_identifier)
         weekday = datetime.now(tz).strftime('%A')
-        return f'''A mental health practitioner is using you to ask questions 
-    about their patients' session notes. Your main job is to fetch anything from their session notes. 
-    Start by sending a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
-    Finish off with a short fragment on productivity.'''
+        return f'''A mental health practitioner is entering our Practice Management Platform. Your job is to greet them into the experience.
+        \nSend a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
+        \nTo craft your response use language {language_code}. Finish off with a short fragment on productivity.'''
     except:
-        return f'''A mental health practitioner is using you to ask questions 
-    about their patients' session notes. Your main job is to fetch anything from their session notes. 
-    Start by saying hi, and addressing them by their name, which is {name}. 
-    Finish off with a short fragment on productivity.'''
+        return f'''A mental health practitioner is entering our Practice Management Platform. Your job is to greet them into the experience.
+        \nSay hi, and address them by their name, which is {name}. Finish off with a short fragment on productivity.'''
 
-def create_user_greeting_message(language_code: str) -> str:
-    return f'''Write a welcoming message for the user. 
-    Your response should not go over 180 characters. To craft your response use language {language_code}.'''
+def create_user_greeting_message() -> str:
+    return f'''Write a welcoming message for the user. Your response should not go over 180 characters.'''
