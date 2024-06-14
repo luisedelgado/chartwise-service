@@ -610,7 +610,7 @@ async def login_for_access_token(
                     value=new_session_id,
                     httponly=True,
                     secure=True,
-                    samesite="lax")
+                    samesite="none")
 
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=endpoints.TOKEN_ENDPOINT,
@@ -737,5 +737,5 @@ def validate_session_id_cookie(response: Response,
                 value=session_id,
                 httponly=True,
                 secure=True,
-                samesite="lax")
+                samesite="none")
     return session_id
