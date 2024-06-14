@@ -55,14 +55,14 @@ app.add_middleware(
 
 """
 Digests a new session report by:
-1) Uploading the full text to Supabase
-2) Uploading the vector embeddings to Pinecone
-Returns a boolean value representing success.
+1) Uploading the full text to Supabase.
+2) Uploading the vector embeddings to Pinecone.
 
 Arguments:
 session_report – the report associated with the new session.
-authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+response – the response model with which to create the final response.
+authorization – the authorization cookie, if exists.
+session_id – the session_id cookie, if exists.
 """
 @app.post(endpoints.SESSION_UPLOAD_ENDPOINT)
 async def upload_new_session(session_report: models.SessionReport,
@@ -128,19 +128,20 @@ async def upload_new_session(session_report: models.SessionReport,
     return {}
 
 """
-Executes a query to our RAG system.
+Executes a query to our assistant system.
 Returns the query response.
 
 Arguments:
 query – the query that will be executed.
+response – the response model with which to create the final response.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.QUERIES_ENDPOINT)
 async def execute_assistant_query(query: models.AssistantQuery,
-                            response: Response,
-                            authorization: Annotated[Union[str, None], Cookie()] = None,
-                            session_id: Annotated[Union[str, None], Cookie()] = None):
+                                  response: Response,
+                                  authorization: Annotated[Union[str, None], Cookie()] = None,
+                                  session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
@@ -294,6 +295,9 @@ def read_healthcheck(authorization: Annotated[Union[str, None], Cookie()] = None
 Returns a document_id value associated with the file that was uploaded.
 
 Arguments:
+response – the response model with which to create the final response.
+therapist_id – the id of the therapist associated with the session notes.
+patient_id – the id of the patient associated with the session notes.
 image – the image to be uploaded.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
@@ -419,6 +423,9 @@ async def extract_text(response: Response,
 Returns the transcription created from the incoming audio file.
 
 Arguments:
+response – the response model with which to create the final response.
+therapist_id – the id of the therapist associated with the session notes.
+patient_id – the id of the patient associated with the session notes.
 audio_file – the audio file for which the transcription will be created.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
@@ -464,6 +471,9 @@ Returns the transcription created from the incoming audio file.
 Meant to be used for diarizing sessions.
 
 Arguments:
+response – the response model with which to create the final response.
+therapist_id – the id of the therapist associated with the session notes.
+patient_id – the id of the patient associated with the session notes.
 audio_file – the audio file for which the diarized transcription will be created.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
@@ -522,6 +532,12 @@ async def diarize_session(response: Response,
 
     return {"job_id": job_id}
 
+"""
+Meant to be used as a webhook so Speechmatics can notify us when a diarization operation is ready.
+
+Arguments:
+request – the incoming request.
+"""
 @app.post(endpoints.DIARIZATION_NOTIFICATION_ENDPOINT)
 async def consume_notification(request: Request,):
     try:
@@ -560,6 +576,7 @@ Returns an oauth token to be used for invoking the endpoints.
 Arguments:
 form_data  – the data required to validate the user.
 response – The response object to be used for creating the final response.
+session_id  – the id of the current user session.
 """
 @app.post(endpoints.TOKEN_ENDPOINT)
 async def login_for_access_token(
@@ -607,6 +624,7 @@ Signs up a new user.
 
 Arguments:
 signup_data – the data to be used to sign up the user.
+response – the response model to be used for creating the final response.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
@@ -672,6 +690,7 @@ Logs out the user.
 
 Arguments:
 response – the object to be used for constructing the final response.
+therapist_id – The therapist id associated with the operation.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
@@ -705,6 +724,7 @@ async def logout(response: Response,
 Validates the incoming session_id cookie.
 
 Arguments:
+response – the response object where we can update cookies.
 cookie – the cookie to be validated, if exists.
 """
 def validate_session_id_cookie(response: Response,
