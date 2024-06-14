@@ -1,5 +1,7 @@
 import os
 
+from datetime import datetime
+
 """
 Cleans up the incoming set of files from the local directory.
 
@@ -11,7 +13,12 @@ async def clean_up_files(files):
         os.remove(file)
 
 """
-Returns the current environment as a string.
+Returns a flag representing whether or not the incoming date is valid.
+The valid format is considered to be mm/dd/yyyy
 """
-def get_current_environment():
-    return "prod"
+def is_valid_date(date_input: str) -> bool:
+    try:
+        datetime.strptime(date_input, '%m/%d/%Y')
+        return True
+    except:
+        return False

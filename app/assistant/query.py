@@ -9,7 +9,7 @@ from openai import OpenAI
 from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
-from ..internal import library_clients, utilities
+from ..internal import library_clients
 from . import message_templates
 
 __llm_model = "gpt-3.5-turbo"
@@ -48,7 +48,7 @@ def query_store(index_id,
 
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
-        headers = library_clients.create_portkey_headers(environment=utilities.get_current_environment(),
+        headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
                                                          session_id=session_id,
                                                          user=querying_user,
                                                          llm_model=__llm_model,
@@ -96,7 +96,7 @@ def create_greeting(name: str,
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
         caching_shard_key = (session_id + "-" + datetime.now().strftime("%d-%m-%Y"))
-        headers = library_clients.create_portkey_headers(environment=utilities.get_current_environment(),
+        headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
                                                          session_id=session_id,
                                                          llm_model=__llm_model,
                                                          cache_max_age=86400, # 24 hours

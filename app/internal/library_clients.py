@@ -191,6 +191,9 @@ async def deepgram_transcribe_notes(audio_file: UploadFile = File(...)) -> str:
 
     return transcript
 
+"""
+The set of IPs that Speechmatics may use to trigger a notification to our service.
+"""
 SPEECHMATICS_NOTIFICATION_IPS = [
     "40.74.41.91",
     "52.236.157.154",
@@ -219,13 +222,16 @@ SPEECHMATICS_NOTIFICATION_IPS = [
     "20.248.249.164",
 ]
 
-class SessionTranscriptionResult:
-    def __init__(self, transcript, summary):
-        self.transcript = transcript
-        self.summary = summary
+"""
+Queues a new job for a diarization transcription using the incoming audio file.
+Returns the Speechmatics job id that is processing.
 
+Arguments:
+auth_token  – the access_token associated with the current server session.
+audio_file  – the audio file to be diarized.
+"""
 async def speechmatics_transcribe(auth_token: str,
-                                  audio_file: UploadFile = File(...)):
+                                  audio_file: UploadFile = File(...)) -> str:
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
@@ -250,7 +256,7 @@ async def speechmatics_transcribe(auth_token: str,
     # Process local copy with Speechmatics client
     settings = ConnectionSettings(
         url=os.getenv("SPEECHMATICS_URL"),
-        auth_token="3AXgRyesR5UjubhoAfy4fRc4Ywl3QfCk",#os.getenv("SPEECHMATICS_API_KEY"),
+        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
         ssl_context=ssl_context,
     )
 
@@ -283,15 +289,10 @@ async def speechmatics_transcribe(auth_token: str,
 
     with BatchClient(settings) as client:
         try:
-            job_id = client.submit_job(
+            return client.submit_job(
                 audio=audio_copy_path,
                 transcription_config=conf,
             )
-
-            data = client.wait_for_completion(job_id, transcription_format="json-v2")
-            summary = data["summary"]["content"]
-            transcript = data["results"]
-            return SessionTranscriptionResult(transcript=transcript, summary=summary)
         except TimeoutError as e:
             raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
         except HTTPException as e:

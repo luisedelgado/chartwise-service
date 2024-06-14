@@ -84,3 +84,24 @@ def log_error(**kwargs):
             "description": description}).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
+
+"""
+Logs an event associated with a diarization operation.
+
+Arguments:
+kwargs – the set of associated optional args.
+"""
+def log_diarization_event(**kwargs):
+    # We don't want to log if we're in staging or dev
+    if os.environ.get("ENVIRONMENT").lower() != "prod":
+        return
+
+    error_code = None if "error_code" not in kwargs else kwargs["error_code"]
+    description = None if "description" not in kwargs else kwargs["description"]
+
+    try:
+        res = supabase_client.table('diarization_logs').insert({
+            "error_code": error_code,
+            "description": description}).execute()
+    except Exception as e:
+        print(f"Silently failing when trying to log response - Error: {str(e)}")

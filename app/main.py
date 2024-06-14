@@ -8,6 +8,7 @@ from fastapi import (
     HTTPException,
     FastAPI,
     File,
+    Form,
     Request,
     Response,
     status,
@@ -20,12 +21,13 @@ from typing import Annotated, Union
 
 from .assistant import query as query_handler
 from .assistant import vector_writer
-from .data_processing import diarization_cleaner
-from .internal import endpoints
-from .internal import library_clients
-from .internal import logging
-from .internal import models
-from .internal import security
+from .data_processing.diarization_cleaner import DiarizationCleaner
+from .internal import (endpoints,
+                       library_clients,
+                       logging,
+                       models,
+                       security,
+                       utilities,)
 
 TOKEN_EXPIRED_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -38,6 +40,7 @@ app = FastAPI()
 origins = [
     # Daniel Daza development
     "https://localhost:5173",
+    library_clients.SPEECHMATICS_NOTIFICATION_IPS,
 ]
 
 app.add_middleware(
@@ -84,7 +87,6 @@ async def upload_new_session(session_report: models.SessionReport,
         # Write full text to supabase
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
-            "session_transcription": None,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "source": session_report.source,
@@ -432,10 +434,13 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.DIARIZATION_ENDPOINT)
-async def transcribe_session(response: Response,
-                             audio_file: UploadFile = File(...),
-                             authorization: Annotated[Union[str, None], Cookie()] = None,
-                             session_id: Annotated[Union[str, None], Cookie()] = None):
+async def diarize_session(response: Response,
+                          session_date: Annotated[str, Form()],
+                          therapist_id: Annotated[str, Form()],
+                          patient_id: Annotated[str, Form()],
+                          audio_file: UploadFile = File(...),
+                          authorization: Annotated[Union[str, None], Cookie()] = None,
+                          session_id: Annotated[Union[str, None], Cookie()] = None,):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
@@ -445,11 +450,20 @@ async def transcribe_session(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        result: library_clients.SessionTranscriptionResult = await library_clients.speechmatics_transcribe(auth_token=authorization,
-                                                                                                           audio_file=audio_file)
-        transcript = diarization_cleaner.DiarizationCleaner().clean_transcription(input=result.transcript,
-                                                                                  session_id=session_id,
-                                                                                  invoking_endpoint=endpoints.DIARIZATION_ENDPOINT)
+        assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm/dd/yyyy"
+
+        supabase_client = library_clients.supabase_admin_instance()
+        job_id: str = await library_clients.speechmatics_transcribe(auth_token=authorization,
+                                                                    audio_file=audio_file)
+
+        # Write full text to supabase
+        supabase_client.table('session_reports').insert({
+            "session_diarization_job_id": job_id,
+            "session_date": session_date,
+            "therapist_id": therapist_id,
+            "patient_id": patient_id,
+            "source": "full_session_recording",
+        }).execute()
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -471,27 +485,37 @@ async def transcribe_session(response: Response,
                              endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
-    return {"summary": result.summary,
-            "transcription": transcript}
+    return {"job_id": job_id}
 
 @app.post(endpoints.DIARIZATION_NOTIFICATION_ENDPOINT)
-def consume_notification(request: Request,
-                         authorization: Annotated[Union[str, None], Cookie()] = None,
-                         request_entity_ip: str = Header(None, alias='x-forwarded-for')):
-    if not security.access_token_is_valid(authorization):
+async def consume_notification(request: Request,):
+    try:
+        authorization = request.headers["authorization"].split()[-1]
+        if not security.access_token_is_valid(authorization):
+            raise TOKEN_EXPIRED_ERROR
+    except:
         raise TOKEN_EXPIRED_ERROR
 
-    # ip = str(request.client.host)
+    try:
+        supabase_client = library_clients.supabase_admin_instance()
 
-    # # Check if IP is allowed
-    # if ip not in WHITELISTED_IPS:
-    #     data = {
-    #         'message': f'IP {ip} is not allowed to access this resource.'
-    #     }
-    #     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=data)
+        raw_data = await request.json()
+        json_data = json.loads(json.dumps(raw_data))
+        job_id = json_data["job"]["id"]
+        summary = json_data["summary"]["content"]
+        diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
-    # # Proceed if IP is allowed
-    # return await call_next(request)
+        supabase_client.table('session_reports').update({
+            "notes_text": summary,
+            "session_diarization": diarization,
+        }).eq('session_diarization_job_id', job_id).execute()
+
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    return {}
 
 # Security endpoints
 
