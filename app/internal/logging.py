@@ -1,3 +1,5 @@
+import os
+
 from . import library_clients
 
 supabase_client = library_clients.supabase_admin_instance()
@@ -10,6 +12,10 @@ session_id – the session id associated with the request.
 endpoint_name – the endpoint name associated with the request.
 """
 def log_api_request(session_id: str, endpoint_name: str, **kwargs):
+    # We don't want to log if we're in staging or dev
+    if os.environ.get("ENVIRONMENT").lower() != "prod":
+        return
+
     try:
         description = None if "description" not in kwargs else kwargs["description"]
         auth_entity = None if "auth_entity" not in kwargs else kwargs["auth_entity"]
@@ -28,6 +34,10 @@ Arguments:
 kwargs – the set of associated optional args.
 """
 def log_api_response(**kwargs):
+    # We don't want to log if we're in staging or dev
+    if os.environ.get("ENVIRONMENT").lower() != "prod":
+        return
+
     session_id = None if "session_id" not in kwargs else kwargs["session_id"]
     therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
     patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
@@ -53,6 +63,10 @@ Arguments:
 kwargs – the set of associated optional args.
 """
 def log_error(**kwargs):
+    # We don't want to log if we're in staging or dev
+    if os.environ.get("ENVIRONMENT").lower() != "prod":
+        return
+
     session_id = None if "session_id" not in kwargs else kwargs["session_id"]
     therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
     patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
