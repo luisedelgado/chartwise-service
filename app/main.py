@@ -66,14 +66,16 @@ session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.SESSION_UPLOAD_ENDPOINT)
 async def upload_new_session(session_report: models.SessionReport,
-                       response: Response,
-                       authorization: Annotated[Union[str, None], Cookie()] = None,
-                       session_id: Annotated[Union[str, None], Cookie()] = None):
+                             response: Response,
+                             authorization: Annotated[Union[str, None], Cookie()] = None,
+                             session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            patient_id=session_report.patient_id,
+                            therapist_id=session_report.therapist_id,
                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -81,16 +83,13 @@ async def upload_new_session(session_report: models.SessionReport,
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
                                                                  session_report.supabase_refresh_token)
 
-        user_response = json.loads(supabase_client.auth.get_user().json())
-        therapist_id = user_response["user"]["id"]
-
         # Write full text to supabase
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "source": session_report.source,
-            "therapist_id": therapist_id}).execute()
+            "therapist_id": session_report.therapist_id}).execute()
 
         # Upload vector embeddings
         vector_writer.upload_session_vector(session_report.patient_id,
@@ -100,7 +99,7 @@ async def upload_new_session(session_report: models.SessionReport,
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
+                          therapist_id=session_report.therapist_id,
                           patient_id=session_report.patient_id,
                           endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                           error_code=status_code,
@@ -111,7 +110,7 @@ async def upload_new_session(session_report: models.SessionReport,
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
+                          therapist_id=session_report.therapist_id,
                           patient_id=session_report.patient_id,
                           endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                           error_code=status_code,
@@ -120,7 +119,7 @@ async def upload_new_session(session_report: models.SessionReport,
                             detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             therapist_id=therapist_id,
+                             therapist_id=session_report.therapist_id,
                              patient_id=session_report.patient_id,
                              endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
@@ -218,28 +217,36 @@ async def execute_assistant_query(query: models.AssistantQuery,
 Returns a new greeting to the user.
 
 Arguments:
-greeting – the greeting parameters to be used.
+response – the response model used for the final response that will be returned.
+addressing_name – the name to be used for addressing the user in the greeting.
+response_language_code – the language code to be used for creating the greeting.
+client_tz_identifier – the timezone identifier used to fetch the client's weekday.
+therapist_id – the id of the therapist for which the greeting is being created.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.GREETINGS_ENDPOINT)
-async def fetch_greeting(greeting_params: models.AssistantGreeting,
-                   response: Response,
-                   authorization: Annotated[Union[str, None], Cookie()] = None,
-                   session_id: Annotated[Union[str, None], Cookie()] = None):
+async def fetch_greeting(response: Response,
+                         addressing_name: Annotated[str, Form()],
+                         response_language_code: Annotated[str, Form()],
+                         client_tz_identifier: Annotated[str, Form()],
+                         therapist_id: Annotated[str, Form()],
+                         authorization: Annotated[Union[str, None], Cookie()] = None,
+                         session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            therapist_id=therapist_id,
                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        assert Language.get(greeting_params.response_language_code).is_valid(), "Invalid response_language_code parameter"
-        result = query_handler.create_greeting(name=greeting_params.addressing_name,
-                                               language_code=greeting_params.response_language_code,
-                                               tz_identifier=greeting_params.client_tz_identifier,
+        assert Language.get(response_language_code).is_valid(), "Invalid response_language_code parameter"
+        result = query_handler.create_greeting(name=addressing_name,
+                                               language_code=response_language_code,
+                                               tz_identifier=client_tz_identifier,
                                                session_id=session_id,
                                                endpoint_name=endpoints.GREETINGS_ENDPOINT,)
     except Exception as e:
@@ -253,11 +260,12 @@ async def fetch_greeting(greeting_params: models.AssistantGreeting,
                             detail=description)
 
     log_description = ''.join(['language_code:',
-                           greeting_params.response_language_code,
+                           response_language_code,
                            'tz_identifier:',
-                           greeting_params.client_tz_identifier])
+                           client_tz_identifier])
     logging.log_api_response(session_id=session_id,
                              endpoint_name=endpoints.GREETINGS_ENDPOINT,
+                             therapist_id=therapist_id,
                              http_status_code=status.HTTP_200_OK,
                              description=log_description)
 
@@ -292,14 +300,18 @@ session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.IMAGE_UPLOAD_ENDPOINT)
 async def upload_session_notes_image(response: Response,
-                               image: UploadFile = File(...),
-                               authorization: Annotated[Union[str, None], Cookie()] = None,
-                               session_id: Annotated[Union[str, None], Cookie()] = None):
+                                     patient_id: Annotated[str, Form()],
+                                     therapist_id: Annotated[str, Form()],
+                                     image: UploadFile = File(...),
+                                     authorization: Annotated[Union[str, None], Cookie()] = None,
+                                     session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            patient_id=patient_id,
+                            therapist_id=therapist_id,
                             endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -323,6 +335,8 @@ async def upload_session_notes_image(response: Response,
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
                              endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
@@ -332,20 +346,27 @@ async def upload_session_notes_image(response: Response,
 Returns the text extracted from the incoming document_id.
 
 Arguments:
+response – the response model to be used for crafting the final response.
+therapist_id – the therapist_id for the operation.
+patient_id – the patient_id for the operation.
 document_id – the id of the document to be textracted.
 authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.get(endpoints.TEXT_EXTRACTION_ENDPOINT)
 async def extract_text(response: Response,
-                 document_id: str = None,
-                 authorization: Annotated[Union[str, None], Cookie()] = None,
-                 session_id: Annotated[Union[str, None], Cookie()] = None):
+                       therapist_id: Annotated[str, Form()],
+                       patient_id: Annotated[str, Form()],
+                       document_id: str = None,
+                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                       session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            therapist_id=therapist_id,
+                            patient_id=patient_id,
                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -353,6 +374,8 @@ async def extract_text(response: Response,
         description = "Didn't receive a valid document id."
         status_code = status.HTTP_409_CONFLICT
         logging.log_error(session_id=session_id,
+                          therapist_id=therapist_id,
+                          patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
@@ -365,6 +388,8 @@ async def extract_text(response: Response,
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
+                          therapist_id=therapist_id,
+                          patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
@@ -373,12 +398,16 @@ async def extract_text(response: Response,
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
+                          therapist_id=therapist_id,
+                          patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
                              endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
@@ -395,7 +424,9 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.NOTES_TRANSCRIPTION_ENDPOINT)
-async def transcribe_notes(response: Response,
+async def transcribe_notes(response: Response,                          
+                           therapist_id: Annotated[str, Form()],
+                           patient_id: Annotated[str, Form()],
                            audio_file: UploadFile = File(...),
                            authorization: Annotated[Union[str, None], Cookie()] = None,
                            session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -404,6 +435,8 @@ async def transcribe_notes(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            therapist_id=therapist_id,
+                            patient_id=patient_id,
                             endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -419,6 +452,8 @@ async def transcribe_notes(response: Response,
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
                              endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 
@@ -577,9 +612,9 @@ session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.SIGN_UP_ENDPOINT)
 async def sign_up(signup_data: models.SignupData,
-            response: Response,
-            authorization: Annotated[Union[str, None], Cookie()] = None,
-            session_id: Annotated[Union[str, None], Cookie()] = None):
+                  response: Response,
+                  authorization: Annotated[Union[str, None], Cookie()] = None,
+                  session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
@@ -642,6 +677,7 @@ session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.LOGOUT_ENDPOINT)
 async def logout(response: Response,
+                 therapist_id: Annotated[str, Form()],
                  authorization: Annotated[Union[str, None], Cookie()] = None,
                  session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
@@ -649,12 +685,14 @@ async def logout(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            therapist_id=therapist_id,
                             endpoint_name=endpoints.LOGOUT_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     response.delete_cookie("authorization")
 
     logging.log_api_response(session_id=session_id,
+                             therapist_id=therapist_id,
                              endpoint_name=endpoints.LOGOUT_ENDPOINT,
                              http_status_code=status.HTTP_200_OK)
 

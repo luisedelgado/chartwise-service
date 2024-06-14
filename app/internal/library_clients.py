@@ -355,7 +355,6 @@ def create_portkey_headers(**kwargs):
                          api_key=os.environ.get("PORTKEY_API_KEY"),
                          config=create_portkey_config(cache_max_age, llm_model),
                          cache_namespace=caching_shard_key,
-                         debug=False, # Prevents prompts and responses from being logged.
                          metadata={
                             "environment": environment,
                             "user": user,
