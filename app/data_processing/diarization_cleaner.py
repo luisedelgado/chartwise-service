@@ -54,7 +54,7 @@ class DiarizationCleaner:
                 # Update current speaker
                 self._current_speaker = speaker
 
-            # It's the same speaker, check if it's an end of a sentence
+            # Check if it's an end of a sentence
             if has_end_of_sentence and end_of_sentence == True:
                 # Register current content as a standalone paragraph
                 self.__append_speaker_content(content,
@@ -64,7 +64,7 @@ class DiarizationCleaner:
                 self._entry_start_time = str()
                 continue
 
-            # Speaker remains the same, we're just appending run-on content
+            # Append run-on content
             self.__append_speaker_content(content, prepend_space=(not skip_space))
 
         return json.dumps(self._transcription)

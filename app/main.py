@@ -249,7 +249,8 @@ async def fetch_greeting(response: Response,
                                                language_code=response_language_code,
                                                tz_identifier=client_tz_identifier,
                                                session_id=session_id,
-                                               endpoint_name=endpoints.GREETINGS_ENDPOINT,)
+                                               endpoint_name=endpoints.GREETINGS_ENDPOINT,
+                                               therapist_id=therapist_id)
     except Exception as e:
         status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)

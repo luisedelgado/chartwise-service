@@ -91,11 +91,12 @@ def create_greeting(name: str,
                     tz_identifier: str,
                     session_id: str,
                     endpoint_name: str,
+                    therapist_id: str,
                     ) -> QueryResult:
     try:
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
-        caching_shard_key = (session_id + "-" + datetime.now().strftime("%d-%m-%Y"))
+        caching_shard_key = (therapist_id + "-" + datetime.now().strftime("%d-%m-%Y"))
         headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
                                                          session_id=session_id,
                                                          llm_model=__llm_model,
