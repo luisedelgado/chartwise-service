@@ -641,9 +641,11 @@ async def consume_notification(request: Request,):
         summary = json_data["summary"]["content"]
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
+        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
         supabase_client.table('session_reports').update({
             "notes_text": summary,
             "session_diarization": diarization,
+            "last_updated": now_timestamp,
         }).eq('session_diarization_job_id', job_id).execute()
 
     except HTTPException as e:
