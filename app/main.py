@@ -82,11 +82,13 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
     try:
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
                                                                  session_report.supabase_refresh_token)
+        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_date": session_report.date,
             "patient_id": session_report.patient_id,
             "source": session_report.source,
+            "last_updated": now_timestamp,
             "therapist_id": session_report.therapist_id}).execute()
 
         # Upload vector embeddings
@@ -586,12 +588,13 @@ async def diarize_session(response: Response,
         job_id: str = await library_clients.speechmatics_transcribe(auth_token=authorization,
                                                                     audio_file=audio_file)
 
-        # Write full text to supabase
+        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
         supabase_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
             "session_date": session_date,
             "therapist_id": therapist_id,
             "patient_id": patient_id,
+            "last_updated": now_timestamp,
             "source": "full_session_recording",
         }).execute()
     except HTTPException as e:
