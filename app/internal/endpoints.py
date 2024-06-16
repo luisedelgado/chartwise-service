@@ -11,3 +11,8 @@ SIGN_UP_ENDPOINT = "/sign-up"
 TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
 TOKEN_ENDPOINT = "/token"
 QUERIES_ENDPOINT = "/v1/queries"
+
+API_METHOD_POST = "post"
+API_METHOD_PUT = "put"
+API_METHOD_GET = "get"
+API_METHOD_DELETE = "delete"

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-class SessionReport(BaseModel):
+class SessionNotesInsert(BaseModel):
     patient_id: str
     therapist_id: str
     text: str
@@ -9,8 +9,19 @@ class SessionReport(BaseModel):
     supabase_refresh_token: str
     source: str
 
+class SessionNotesUpdate(BaseModel):
+    patient_id: str
+    therapist_id: str
+    session_notes_id: str
+    diarization: str = None
+    text: str
+    date: str
+    supabase_access_token: str
+    supabase_refresh_token: str
+
 class AssistantQuery(BaseModel):
     patient_id: str
+    therapist_id: str
     text: str
     response_language_code: str
     supabase_access_token: str

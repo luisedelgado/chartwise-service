@@ -30,13 +30,15 @@ response_language_code  – the language code to be used in the response.
 querying_user – the user that triggered the query.
 session_id  – the session id.
 endpoint_name  – the endpoint that was invoked.
+method – the API method that was invoked.
 """
 def query_store(index_id,
                 input,
                 response_language_code,
                 querying_user,
                 session_id,
-                endpoint_name,) -> QueryResult:
+                endpoint_name,
+                method,) -> QueryResult:
     try:
         # Initialize connection to Pinecone
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -54,7 +56,8 @@ def query_store(index_id,
                                                          llm_model=__llm_model,
                                                          cache_max_age=3600, # 1 hour
                                                          caching_shard_key=index_id,
-                                                         endpoint_name=endpoint_name) if is_portkey_reachable else None
+                                                         endpoint_name=endpoint_name,
+                                                         method=method,) if is_portkey_reachable else None
 
         llm = llama_index_OpenAI(model=__llm_model,
                                  temperature=0,
@@ -85,6 +88,7 @@ language_code  – the language_code to be used in the greeting.
 tz_identifier  – the timezone identifier to be used for calculating the client's current time.
 session_id  – the session id.
 endpoint_name  – the endpoint that was invoked.
+method – the API method that was invoked.
 """
 def create_greeting(name: str,
                     language_code: str,
@@ -92,6 +96,7 @@ def create_greeting(name: str,
                     session_id: str,
                     endpoint_name: str,
                     therapist_id: str,
+                    method,
                     ) -> QueryResult:
     try:
         is_portkey_reachable = library_clients.is_portkey_reachable()
@@ -102,7 +107,8 @@ def create_greeting(name: str,
                                                          llm_model=__llm_model,
                                                          cache_max_age=86400, # 24 hours
                                                          caching_shard_key=caching_shard_key,
-                                                         endpoint_name=endpoint_name) if is_portkey_reachable else None
+                                                         endpoint_name=endpoint_name,
+                                                         method=method,) if is_portkey_reachable else None
 
         llm = OpenAI(base_url=api_base,
                      default_headers=headers)

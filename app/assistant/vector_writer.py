@@ -12,16 +12,15 @@ from pinecone.grpc import PineconeGRPC
 from . import data_cleaner
 
 """
-Uploads a new record to the datastore leveraging the incoming data.
+Inserts a new record to the datastore leveraging the incoming data.
 
 Arguments:
 index_name  – the index name that should be used to insert the data.
 session_text  – the text to be inserted in the record.
 session_date  – the session_date to be used as metadata.
 """
-def upload_session_vector(index_name, session_text, session_date):
+def insert_session_vector(index_name, session_text, session_date):
     try:
-        # Globals
         Settings.embed_model = OpenAIEmbedding()
 
         doc = Document()
@@ -60,6 +59,17 @@ def upload_session_vector(index_name, session_text, session_date):
         raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:
         raise Exception(str(e))
+
+"""
+Updates a session record leveraging the incoming data.
+
+Arguments:
+index_name  – the index name that should be used to insert the data.
+session_text  – the text to be inserted in the record.
+session_date  – the session_date to be used as metadata.
+"""
+def update_session_vector(index_name, session_text, session_date):
+    ...
 
 # Private
 

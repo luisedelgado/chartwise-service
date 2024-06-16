@@ -8,8 +8,6 @@ supabase_client = library_clients.supabase_admin_instance()
 Logs data about an API request.
 
 Arguments:
-session_id – the session id associated with the request.
-endpoint_name – the endpoint name associated with the request.
 kwargs – the set of optional parameters to be sent into the method.
 """
 def log_api_request(session_id: str, endpoint_name: str, **kwargs):
@@ -18,16 +16,20 @@ def log_api_request(session_id: str, endpoint_name: str, **kwargs):
         return
 
     try:
+        session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+        endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
         description = None if "description" not in kwargs else kwargs["description"]
         auth_entity = None if "auth_entity" not in kwargs else kwargs["auth_entity"]
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
         patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
+        method = None if "method" not in kwargs else kwargs["method"]
         supabase_client.table('api_request_logs').insert({
             "session_id": str(session_id),
             "endpoint_name": endpoint_name,
             "description": description,
             "therapist_id": therapist_id,
             "patient_id": patient_id,
+            "method": method,
             "endpoint_auth_entity": auth_entity}).execute(),
     except Exception as e:
         print(f"Silently failing when trying to log request - Error: {str(e)}")
@@ -98,7 +100,8 @@ kwargs – the set of associated optional args.
 """
 def log_diarization_event(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
+    env = os.environ.get("ENVIRONMENT").lower()
+    if env != "prod" and env != "staging":
         return
 
     error_code = None if "error_code" not in kwargs else kwargs["error_code"]

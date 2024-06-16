@@ -351,6 +351,7 @@ def create_portkey_headers(**kwargs):
     cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
     endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
     llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
+    method = None if "method" not in kwargs else kwargs["method"]
     return createHeaders(trace_id=uuid.uuid4(),
                          api_key=os.environ.get("PORTKEY_API_KEY"),
                          config=create_portkey_config(cache_max_age, llm_model),
@@ -361,4 +362,5 @@ def create_portkey_headers(**kwargs):
                             "vector_index": caching_shard_key,
                             "session_id": session_id,
                             "endpoint_name": endpoint_name,
+                            "method": method,
                         })

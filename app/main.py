@@ -1,5 +1,6 @@
-import datetime, json, uuid
+import json, uuid
 
+from datetime import datetime, timedelta
 from dataclasses import field
 from fastapi import (
     Cookie,
@@ -54,18 +55,16 @@ app.add_middleware(
 # Assistant endpoints
 
 """
-Digests a new session report by:
-1) Uploading the full text to Supabase.
-2) Uploading the vector embeddings to Pinecone.
+Stores a new session report.
 
 Arguments:
-session_report – the report associated with the new session.
+session_notes – the report associated with the new session.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
 session_id – the session_id cookie, if exists.
 """
 @app.post(endpoints.SESSION_UPLOAD_ENDPOINT)
-async def upload_new_session(session_report: models.SessionReport,
+async def insert_new_session(session_report: models.SessionNotesInsert,
                              response: Response,
                              authorization: Annotated[Union[str, None], Cookie()] = None,
                              session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -77,13 +76,12 @@ async def upload_new_session(session_report: models.SessionReport,
                             patient_id=session_report.patient_id,
                             therapist_id=session_report.therapist_id,
                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                            method=endpoints.API_METHOD_POST,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
                                                                  session_report.supabase_refresh_token)
-
-        # Write full text to supabase
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_date": session_report.date,
@@ -92,7 +90,7 @@ async def upload_new_session(session_report: models.SessionReport,
             "therapist_id": session_report.therapist_id}).execute()
 
         # Upload vector embeddings
-        vector_writer.upload_session_vector(session_report.patient_id,
+        vector_writer.insert_session_vector(session_report.patient_id,
                                             session_report.text,
                                             session_report.date)
     except HTTPException as e:
@@ -128,6 +126,80 @@ async def upload_new_session(session_report: models.SessionReport,
     return {}
 
 """
+Updates a session report.
+
+Arguments:
+session_notes – the report associated with the new session.
+response – the response model with which to create the final response.
+authorization – the authorization cookie, if exists.
+session_id – the session_id cookie, if exists.
+"""
+@app.put(endpoints.SESSION_UPLOAD_ENDPOINT)
+async def update_session(session_notes: models.SessionNotesUpdate,
+                         response: Response,
+                         authorization: Annotated[Union[str, None], Cookie()] = None,
+                         session_id: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id=session_id,
+                            patient_id=session_notes.patient_id,
+                            therapist_id=session_notes.therapist_id,
+                            endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                            method=endpoints.API_METHOD_PUT,
+                            auth_entity=(await (security.get_current_user(authorization))).username,
+                            description=f"Updated session with id {session_notes.session_notes_id}")
+
+    try:
+        supabase_client = library_clients.supabase_user_instance(session_notes.supabase_access_token,
+                                                                 session_notes.supabase_refresh_token)
+
+        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        supabase_client.table('session_reports').update({
+            "notes_text": session_notes.text,
+            "session_date": session_notes.date,
+            "last_updated": now_timestamp,
+            "session_diarization": session_notes.diarization,
+        }).eq('id', session_notes.session_notes_id).execute()
+
+        # Upload vector embeddings
+        vector_writer.update_session_vector(session_notes.patient_id,
+                                            session_notes.text,
+                                            session_notes.date)
+    except HTTPException as e:
+        status_code = e.status_code
+        description = str(e)
+        logging.log_error(session_id=session_id,
+                          therapist_id=session_notes.therapist_id,
+                          patient_id=session_notes.patient_id,
+                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
+    except Exception as e:
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        logging.log_error(session_id=session_id,
+                          therapist_id=session_notes.therapist_id,
+                          patient_id=session_notes.patient_id,
+                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
+
+    logging.log_api_response(session_id=session_id,
+                             therapist_id=session_notes.therapist_id,
+                             patient_id=session_notes.patient_id,
+                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             description=None)
+
+    return {}
+
+"""
 Executes a query to our assistant system.
 Returns the query response.
 
@@ -147,7 +219,10 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            therapist_id=query.therapist_id,
+                            patient_id=query.patient_id,
                             endpoint_name=endpoints.QUERIES_ENDPOINT,
+                            method=endpoints.API_METHOD_POST,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
@@ -192,7 +267,8 @@ async def execute_assistant_query(query: models.AssistantQuery,
                                          response_language_code=query.response_language_code,
                                          querying_user=therapist_id,
                                          session_id=session_id,
-                                         endpoint_name=endpoints.QUERIES_ENDPOINT)
+                                         endpoint_name=endpoints.QUERIES_ENDPOINT,
+                                         method=endpoints.API_METHOD_POST)
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
@@ -239,6 +315,7 @@ async def fetch_greeting(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            method=endpoints.API_METHOD_POST,
                             therapist_id=therapist_id,
                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
@@ -250,7 +327,8 @@ async def fetch_greeting(response: Response,
                                                tz_identifier=client_tz_identifier,
                                                session_id=session_id,
                                                endpoint_name=endpoints.GREETINGS_ENDPOINT,
-                                               therapist_id=therapist_id)
+                                               therapist_id=therapist_id,
+                                               method=endpoints.API_METHOD_POST)
     except Exception as e:
         status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
@@ -315,6 +393,7 @@ async def upload_session_notes_image(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            method=endpoints.API_METHOD_POST,
                             patient_id=patient_id,
                             therapist_id=therapist_id,
                             endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
@@ -370,6 +449,7 @@ async def extract_text(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            method=endpoints.API_METHOD_GET,
                             therapist_id=therapist_id,
                             patient_id=patient_id,
                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
@@ -432,17 +512,18 @@ authorization – The authorization cookie, if exists.
 session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.NOTES_TRANSCRIPTION_ENDPOINT)
-async def transcribe_notes(response: Response,                          
-                           therapist_id: Annotated[str, Form()],
-                           patient_id: Annotated[str, Form()],
-                           audio_file: UploadFile = File(...),
-                           authorization: Annotated[Union[str, None], Cookie()] = None,
-                           session_id: Annotated[Union[str, None], Cookie()] = None):
+async def transcribe_session_notes(response: Response,
+                                   therapist_id: Annotated[str, Form()],
+                                   patient_id: Annotated[str, Form()],
+                                   audio_file: UploadFile = File(...),
+                                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                                   session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            method=endpoints.API_METHOD_POST,
                             therapist_id=therapist_id,
                             patient_id=patient_id,
                             endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
@@ -492,6 +573,9 @@ async def diarize_session(response: Response,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            patient_id=patient_id,
+                            therapist_id=therapist_id,
+                            method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -593,7 +677,7 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = datetime.timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
@@ -639,6 +723,7 @@ async def sign_up(signup_data: models.SignupData,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
+                            method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
@@ -706,6 +791,7 @@ async def logout(response: Response,
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
                             therapist_id=therapist_id,
+                            method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.LOGOUT_ENDPOINT,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
