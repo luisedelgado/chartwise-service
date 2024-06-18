@@ -119,7 +119,13 @@ def extract_text(document_id: str) -> str:
         raise HTTPException(status_code=response.status_code,
                             detail=response.text)
 
-    text_sections = response.json()['result']['pages'][0]['sections']
+    json_response = response.json()
+
+    if json_response['status'] == 'processing':
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,
+                            detail="Image textraction is still being processed")
+
+    text_sections = json_response['result']['pages'][0]['sections']
     full_text = ""
     for section in text_sections:
         full_text = full_text + section['text'] + " "
