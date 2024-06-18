@@ -5,7 +5,7 @@ from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.openai import (OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
+from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
