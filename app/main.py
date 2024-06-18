@@ -36,6 +36,8 @@ TOKEN_EXPIRED_ERROR = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+DATE_TIME_TIMESTAMP = "%m-%d-%Y %H:%M:%S"
+
 app = FastAPI()
 
 origins = [
@@ -82,7 +84,7 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
     try:
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
                                                                  session_report.supabase_refresh_token)
-        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_date": session_report.date,
@@ -157,7 +159,7 @@ async def update_session(session_notes: models.SessionNotesUpdate,
         supabase_client = library_clients.supabase_user_instance(session_notes.supabase_access_token,
                                                                  session_notes.supabase_refresh_token)
 
-        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
         supabase_client.table('session_reports').update({
             "notes_text": session_notes.text,
             "session_date": session_notes.date,
@@ -588,7 +590,7 @@ async def diarize_session(response: Response,
         job_id: str = await library_clients.speechmatics_transcribe(auth_token=authorization,
                                                                     audio_file=audio_file)
 
-        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
         supabase_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
             "session_date": session_date,
@@ -644,7 +646,7 @@ async def consume_notification(request: Request,):
         summary = json_data["summary"]["content"]
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
-        now_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
         supabase_client.table('session_reports').update({
             "notes_text": summary,
             "session_diarization": diarization,

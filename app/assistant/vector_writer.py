@@ -5,7 +5,7 @@ from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings.openai import (OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
@@ -21,8 +21,6 @@ session_date  – the session_date to be used as metadata.
 """
 def insert_session_vector(index_name, session_text, session_date):
     try:
-        Settings.embed_model = OpenAIEmbedding()
-
         doc = Document()
         doc.set_content(data_cleaner.clean_up_text(session_text))
 
@@ -40,7 +38,9 @@ def insert_session_vector(index_name, session_text, session_date):
 
         index = pc.Index(index_name)
         vector_store = PineconeVectorStore(pinecone_index=index)
-        embed_model = OpenAIEmbedding(api_key=os.environ.get('OPENAI_API_KEY'))
+        embed_model = OpenAIEmbedding(mode=OpenAIEmbeddingMode.SIMILARITY_MODE,
+                                      model=OpenAIEmbeddingModelType.TEXT_EMBED_3_SMALL,
+                                      api_key=os.environ.get('OPENAI_API_KEY'))
 
         pipeline = IngestionPipeline(
             transformations=[

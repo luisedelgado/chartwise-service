@@ -51,9 +51,6 @@ Arguments:
 image  – the image to be uploaded.
 """
 def docupanda_upload_image(image: UploadFile = File(...)) -> str:
-    global __session_id
-    global __image_files_endpoint_name
-
     url = os.getenv("DOCUPANDA_URL")
     api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
