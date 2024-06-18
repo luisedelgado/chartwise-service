@@ -50,9 +50,9 @@ Returns an ID associated with the uploaded resource.
 Arguments:
 image  – the image to be uploaded.
 """
-def docupanda_upload_image(image: UploadFile = File(...)) -> str:
+def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
     url = os.getenv("DOCUPANDA_URL")
-    api_key = os.getenv("DOCUPANDA_API_KEY")
+    docupanda_api_key = os.getenv("DOCUPANDA_API_KEY")
     file_name, file_extension = os.path.splitext(image.filename)
 
     # Format name to be used for image copy using current timestamp
@@ -84,7 +84,7 @@ def docupanda_upload_image(image: UploadFile = File(...)) -> str:
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "X-API-Key": api_key
+        "X-API-Key": docupanda_api_key
     }
 
     response = requests.post(url, json=payload, headers=headers)
@@ -105,7 +105,7 @@ Returns a textract result based on the incoming id.
 Arguments:
 image  – the image to be uploaded.
 """
-def docupanda_extract_text(document_id: str) -> str:
+def extract_text(document_id: str) -> str:
     url = os.getenv("DOCUPANDA_URL") + "/" + document_id
 
     headers = {
@@ -133,7 +133,7 @@ Returns the incoming audio's transcription.
 Arguments:
 audio_file  – the audio file to be transcribed.
 """
-async def deepgram_transcribe_notes(audio_file: UploadFile = File(...)) -> str:
+async def transcribe_audio_file(audio_file: UploadFile = File(...)) -> str:
     try:
         _, file_extension = os.path.splitext(audio_file.filename)
         files_dir = 'app/files'
@@ -221,14 +221,14 @@ SPEECHMATICS_NOTIFICATION_IPS = [
 
 """
 Queues a new job for a diarization transcription using the incoming audio file.
-Returns the Speechmatics job id that is processing.
+Returns the job id that is processing.
 
 Arguments:
 auth_token  – the access_token associated with the current server session.
 audio_file  – the audio file to be diarized.
 """
-async def speechmatics_transcribe(auth_token: str,
-                                  audio_file: UploadFile = File(...)) -> str:
+async def diarize_audio_file(auth_token: str,
+                             audio_file: UploadFile = File(...)) -> str:
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
     audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")

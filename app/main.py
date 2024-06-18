@@ -404,7 +404,7 @@ async def upload_session_notes_image(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        document_id = library_clients.docupanda_upload_image(image)
+        document_id = library_clients.upload_image_for_textraction(image)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -472,7 +472,7 @@ async def extract_text(response: Response,
                             detail=description)
 
     try:
-        full_text = library_clients.docupanda_extract_text(document_id)
+        full_text = library_clients.extract_text(document_id)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -534,7 +534,7 @@ async def transcribe_session_notes(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        transcript = await library_clients.deepgram_transcribe_notes(audio_file)
+        transcript = await library_clients.transcribe_audio_file(audio_file)
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
         description = str(e)
@@ -587,8 +587,8 @@ async def diarize_session(response: Response,
         assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm/dd/yyyy"
 
         supabase_client = library_clients.supabase_admin_instance()
-        job_id: str = await library_clients.speechmatics_transcribe(auth_token=authorization,
-                                                                    audio_file=audio_file)
+        job_id: str = await library_clients.diarize_audio_file(auth_token=authorization,
+                                                               audio_file=audio_file)
 
         now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
         supabase_client.table('session_reports').insert({
