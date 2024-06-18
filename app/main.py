@@ -404,7 +404,7 @@ async def upload_session_notes_image(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        document_id = library_clients.upload_image_for_textraction(image)
+        document_id = await library_clients.upload_image_for_textraction(image)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)

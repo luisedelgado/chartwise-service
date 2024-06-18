@@ -1,4 +1,6 @@
-import asyncio, base64, datetime, json, os, requests, shutil, ssl, uuid
+import base64, json, os, requests, shutil, ssl, uuid
+
+from datetime import datetime
 
 from deepgram import (
     DeepgramClient,
@@ -7,8 +9,7 @@ from deepgram import (
 )
 from fastapi import (File, HTTPException, status, UploadFile)
 from httpx import Timeout
-from PIL import Image
-from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
+from portkey_ai import Portkey, PORTKEY_GATEWAY_URL, createHeaders
 from pytz import timezone
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
@@ -50,55 +51,60 @@ Returns an ID associated with the uploaded resource.
 Arguments:
 image  – the image to be uploaded.
 """
-def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
-    url = os.getenv("DOCUPANDA_URL")
-    docupanda_api_key = os.getenv("DOCUPANDA_API_KEY")
-    file_name, file_extension = os.path.splitext(image.filename)
+async def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
+    try:
+        base_url = os.getenv("DOCUPANDA_BASE_URL")
+        document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
+        docupanda_api_key = os.getenv("DOCUPANDA_API_KEY")
+        pdf_extension = "pdf"
+        file_name, _ = os.path.splitext(image.filename)
 
-    # Format name to be used for image copy using current timestamp
-    files_dir = 'app/files'
-    pdf_extension = '.pdf'
-    image_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    image_copy_path = files_dir + '/' + image_copy_bare_name + file_extension
-    image_copy_pdf_path = files_dir + '/' + image_copy_bare_name + pdf_extension
-    files_to_clean = [image_copy_path]
+        image_copy_result = utilities.make_image_pdf_copy(image)
+        image_copy_path = image_copy_result.image_copy_path
+        files_to_clean = image_copy_result.file_copies
 
-    # Write incoming image to our local volume for further processing
-    with open(image_copy_path, 'wb+') as buffer:
-        shutil.copyfileobj(image.file, buffer)
+        if not os.path.exists(image_copy_path):
+            await utilities.clean_up_files(files_to_clean)
+            raise Exception("Something went wrong while processing the image.")
 
-    # Convert to PDF if necessary
-    if file_extension.lower() != pdf_extension:
-        Image.open(image_copy_path).convert('RGB').save(image_copy_pdf_path)
-        files_to_clean.append(image_copy_pdf_path)
+        # Send to DocuPanda
+        payload = {"document": {"file": {
+            "contents": base64.b64encode(open(image_copy_path, 'rb').read()).decode(),
+            "filename": file_name + pdf_extension
+        }}}
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "X-API-Key": docupanda_api_key
+        }
 
-    if not os.path.exists(image_copy_pdf_path):
-        os.remove(image_copy_path)
-        raise Exception("Something went wrong while processing the image.")
+        if is_portkey_reachable():
+            portkey = Portkey(
+                api_key=os.environ.get("PORTKEY_API_KEY"),
+                virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),
+                custom_host=base_url
+            )
+            payload = {"file": {
+                "contents": base64.b64encode(open(image_copy_path, 'rb').read()).decode(),
+                "filename": file_name + pdf_extension
+            }}
+            response = portkey.post('/document', document=payload)
+            response_as_dict = response.dict()
+            doc_id = response_as_dict["documentId"]
+            assert response_as_dict['status'].lower() == "processing"
+        else:
+            url = base_url + document_endpoint
+            response = requests.post(url, json=payload, headers=headers)
+            assert response.status_code == 200, "Something went wrong while uploading the image"
+            doc_id = response.json()['documentId']
 
-    # Send to DocuPanda
-    payload = {"document": {"file": {
-        "contents": base64.b64encode(open(image_copy_pdf_path, 'rb').read()).decode(),
-        "filename": file_name + pdf_extension
-    }}}
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "X-API-Key": docupanda_api_key
-    }
+        # Clean up the image copies we used for processing.
+        await utilities.clean_up_files(files_to_clean)
 
-    response = requests.post(url, json=payload, headers=headers)
-
-    # Clean up temp files
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(utilities.clean_up_files(files_to_clean))
-
-    if response.status_code != status.HTTP_200_OK:
-        raise HTTPException(status_code=response.status_code,
-                            detail=response.text)
-
-    return response.json()['documentId']
+        return doc_id
+    except Exception as e:
+        await utilities.clean_up_files(files_to_clean)
+        raise Exception(str(e))
 
 """
 Returns a textract result based on the incoming id.
