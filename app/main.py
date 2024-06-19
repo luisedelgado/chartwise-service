@@ -1,6 +1,6 @@
 import json, uuid
 
-from datetime import datetime, timedelta
+from datetime import (date, datetime, timedelta)
 from dataclasses import field
 from fastapi import (
     Cookie,
@@ -35,8 +35,6 @@ TOKEN_EXPIRED_ERROR = HTTPException(
     detail="Token missing or expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-DATE_TIME_TIMESTAMP = "%m-%d-%Y %H:%M:%S"
 
 app = FastAPI()
 
@@ -82,9 +80,11 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
+        assert utilities.is_valid_date(session_report.date), "Invalid date. The expected format is mm/dd/yyyy"
+
         supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
                                                                  session_report.supabase_refresh_token)
-        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
+        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         supabase_client.table('session_reports').insert({
             "notes_text": session_report.text,
             "session_date": session_report.date,
@@ -94,9 +94,10 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
             "therapist_id": session_report.therapist_id}).execute()
 
         # Upload vector embeddings
-        vector_writer.insert_session_vector(session_report.patient_id,
-                                            session_report.text,
-                                            session_report.date)
+        vector_writer.insert_session_vector(index_id=session_report.therapist_id,
+                                            namespace=session_report.patient_id,
+                                            text=session_report.text,
+                                            date=session_report.date)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -159,18 +160,21 @@ async def update_session(session_notes: models.SessionNotesUpdate,
         supabase_client = library_clients.supabase_user_instance(session_notes.supabase_access_token,
                                                                  session_notes.supabase_refresh_token)
 
-        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
-        supabase_client.table('session_reports').update({
+        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        update_result = supabase_client.table('session_reports').update({
             "notes_text": session_notes.text,
-            "session_date": session_notes.date,
             "last_updated": now_timestamp,
             "session_diarization": session_notes.diarization,
         }).eq('id', session_notes.session_notes_id).execute()
 
+        session_date_raw = update_result.dict()['data'][0]['session_date']
+        session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
+
         # Upload vector embeddings
-        vector_writer.update_session_vector(session_notes.patient_id,
-                                            session_notes.text,
-                                            session_notes.date)
+        vector_writer.update_session_vector(index_id=session_notes.therapist_id,
+                                            namespace=session_notes.patient_id,
+                                            text=session_notes.text,
+                                            date=session_date_formatted)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
@@ -235,11 +239,8 @@ async def execute_assistant_query(query: models.AssistantQuery,
         assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
         supabase_client = library_clients.supabase_user_instance(query.supabase_access_token,
                                                                  query.supabase_refresh_token)
-        user_response = json.loads(supabase_client.auth.get_user().json())
-        therapist_id = user_response["user"]["id"]
-
         patient_therapist_match = (0 != len(
-            (supabase_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+            (supabase_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
                                                                                                     query.patient_id).execute()
         ).data))
     except Exception as e:
@@ -257,7 +258,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
         description = "There isn't a patient-therapist match with the incoming ids."
         status_code = status.HTTP_403_FORBIDDEN
         logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
+                          therapist_id=query.therapist_id,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=status_code,
@@ -266,10 +267,10 @@ async def execute_assistant_query(query: models.AssistantQuery,
                             detail=description)
 
     # Go through with the query
-    response = query_handler.query_store(index_id=query.patient_id,
+    response = query_handler.query_store(index_id=query.therapist_id,
+                                         namespace=query.patient_id,
                                          input=query.text,
                                          response_language_code=query.response_language_code,
-                                         querying_user=therapist_id,
                                          session_id=session_id,
                                          endpoint_name=endpoints.QUERIES_ENDPOINT,
                                          method=endpoints.API_METHOD_POST)
@@ -277,7 +278,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
         logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
+                          therapist_id=query.therapist_id,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=response.status_code,
@@ -286,7 +287,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
                             detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             therapist_id=therapist_id,
+                             therapist_id=query.therapist_id,
                              patient_id=query.patient_id,
                              endpoint_name=endpoints.QUERIES_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
@@ -590,7 +591,7 @@ async def diarize_session(response: Response,
         job_id: str = await library_clients.diarize_audio_file(auth_token=authorization,
                                                                audio_file=audio_file)
 
-        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
+        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         supabase_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
             "session_date": session_date,
@@ -650,7 +651,7 @@ async def consume_notification(request: Request):
         summary = json_data["summary"]["content"]
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
-        now_timestamp = datetime.now().strftime(DATE_TIME_TIMESTAMP)
+        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         supabase_client.table('session_reports').update({
             "notes_text": summary,
             "session_diarization": diarization,

@@ -24,18 +24,18 @@ Queries the respective datastore with the incoming parameters.
 Returns a QueryResult object with the query result.
 
 Arguments:
-index_id  – the index id that should be queried inside the datastore.
-input  – the input for the query.
-response_language_code  – the language code to be used in the response.
-querying_user – the user that triggered the query.
-session_id  – the session id.
-endpoint_name  – the endpoint that was invoked.
+index_id – the index id that should be queried inside the datastore.
+namespace – the namespace within the index that should be queried.
+input – the input for the query.
+response_language_code – the language code to be used in the response.
+session_id – the session id.
+endpoint_name – the endpoint that was invoked.
 method – the API method that was invoked.
 """
 def query_store(index_id,
+                namespace,
                 input,
                 response_language_code,
-                querying_user,
                 session_id,
                 endpoint_name,
                 method,) -> QueryResult:
@@ -45,16 +45,16 @@ def query_store(index_id,
         assert pc.describe_index(index_id).status['ready']
 
         index = pc.Index(index_id)
-        vector_store = PineconeVectorStore(pinecone_index=index)
+        vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
 
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
         headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
                                                          session_id=session_id,
-                                                         user=querying_user,
+                                                         user=index_id,
                                                          llm_model=__llm_model,
-                                                         cache_max_age=3600, # 1 hour
+                                                         cache_max_age=300, # 5 minutes
                                                          caching_shard_key=index_id,
                                                          endpoint_name=endpoint_name,
                                                          method=method,) if is_portkey_reachable else None

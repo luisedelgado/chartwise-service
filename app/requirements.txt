@@ -103,7 +103,7 @@ pytz==2024.1
 PyYAML==6.0.1
 rapidfuzz==3.9.3
 realtime==1.0.5
-regex==2024.5.15
+regex==2023.12.25
 requests==2.32.3
 rich==13.7.1
 scipy==1.13.1

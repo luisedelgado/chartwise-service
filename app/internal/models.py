@@ -15,7 +15,6 @@ class SessionNotesUpdate(BaseModel):
     session_notes_id: str
     diarization: str = None
     text: str
-    date: str
     supabase_access_token: str
     supabase_refresh_token: str
 

@@ -4,57 +4,63 @@ from fastapi import HTTPException
 from llama_index.core import Document, Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SemanticSplitterNodeParser
+from llama_index.core.schema import TextNode
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
+from ..internal import utilities
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
 
 Arguments:
-index_name  – the index name that should be used to insert the data.
-session_text  – the text to be inserted in the record.
-session_date  – the session_date to be used as metadata.
+index_id – the index name that should be used to insert the data.
+namespace – the namespace that should be used for manipulating the index.
+text – the text to be inserted in the record.
+date – the session_date to be used as metadata.
 """
-def insert_session_vector(index_name, session_text, session_date):
+def insert_session_vector(index_id, namespace, text, date):
     try:
+        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+
         doc = Document()
-        doc.set_content(data_cleaner.clean_up_text(session_text))
+        doc.set_content(data_cleaner.clean_up_text(text))
 
         metadata_additions = {
-            "session_date": session_date
+            "session_date": date
         }
         doc.metadata.update(metadata_additions)
 
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         
         # If index already exists, this will silently fail so we can continue writing to it
-        __create_index_if_necessary(index_name)
+        __create_index_if_necessary(index_id)
 
-        assert pc.describe_index(index_name).status['ready']
+        assert pc.describe_index(index_id).status['ready']
 
-        index = pc.Index(index_name)
+        index = pc.Index(index_id)
         vector_store = PineconeVectorStore(pinecone_index=index)
+        vector_store.namespace = namespace
         embed_model = OpenAIEmbedding(mode=OpenAIEmbeddingMode.SIMILARITY_MODE,
                                       model=OpenAIEmbeddingModelType.TEXT_EMBED_3_SMALL,
                                       api_key=os.environ.get('OPENAI_API_KEY'))
 
-        pipeline = IngestionPipeline(
-            transformations=[
-                SemanticSplitterNodeParser(
-                    buffer_size=1,
-                    breakpoint_percentile_threshold=95,
-                    embed_model=embed_model,
-                    ),
-                embed_model,
-                ],
-                vector_store=vector_store
-            )
+        semantic_splitter = SemanticSplitterNodeParser(
+            buffer_size=1,
+            breakpoint_percentile_threshold=95,
+            embed_model=embed_model,
+        )
+        semantic_nodes = semantic_splitter.get_nodes_from_documents([doc])
 
-        pipeline.run(documents=[doc])
+        for index, node in enumerate(semantic_nodes):
+            node.id_ = f"{date}-{index}"
+            node.embedding = embed_model.get_text_embedding(node.get_content())
+
+        vector_store.add(semantic_nodes)
+
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:
@@ -64,12 +70,32 @@ def insert_session_vector(index_name, session_text, session_date):
 Updates a session record leveraging the incoming data.
 
 Arguments:
-index_name  – the index name that should be used to insert the data.
-session_text  – the text to be inserted in the record.
-session_date  – the session_date to be used as metadata.
+index_id – the index that should be used to update the data.
+namespace – the namespace that should be used for manipulating the index.
+text – the text to be inserted in the record.
+date – the session_date to be used as metadata.
 """
-def update_session_vector(index_name, session_text, session_date):
-    ...
+def update_session_vector(index_id, namespace, text, date):
+    try:
+        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+
+        pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        index = pc.Index(index_id)
+        assert pc.describe_index(index_id).status['ready']
+
+        # Delete the outdated data
+        list_generator = index.list(prefix=date, namespace=namespace)
+        ids_to_delete = list(list_generator)[0]
+
+        if len(ids_to_delete) > 0:
+            index.delete(ids=ids_to_delete, namespace=namespace)
+
+        # Insert the fresh data
+        insert_session_vector(index_id, namespace, text, date)
+    except PineconeApiException as e:
+        raise HTTPException(status_code=e.status, detail=str(e))
+    except Exception as e:
+        raise Exception(str(e))
 
 # Private
 
