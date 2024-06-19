@@ -12,7 +12,7 @@ from fastapi import (
     Form,
     Request,
     Response,
-    status as status_code,
+    status,
     UploadFile)
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,7 +31,7 @@ from .internal import (endpoints,
                        utilities,)
 
 TOKEN_EXPIRED_ERROR = HTTPException(
-    status_code=status_code.HTTP_401_UNAUTHORIZED,
+    status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Token missing or expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
@@ -110,7 +110,7 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
                             detail=description)
     except Exception as e:
         description = str(e)
-        status_code = status_code.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
                           therapist_id=session_report.therapist_id,
                           patient_id=session_report.patient_id,
@@ -124,7 +124,7 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
                              therapist_id=session_report.therapist_id,
                              patient_id=session_report.patient_id,
                              endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK,
+                             http_status_code=status.HTTP_200_OK,
                              description=None)
 
     return {}
@@ -184,7 +184,7 @@ async def update_session(session_notes: models.SessionNotesUpdate,
                             detail=description)
     except Exception as e:
         description = str(e)
-        status_code = status_code.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
                           therapist_id=session_notes.therapist_id,
                           patient_id=session_notes.patient_id,
@@ -198,7 +198,7 @@ async def update_session(session_notes: models.SessionNotesUpdate,
                              therapist_id=session_notes.therapist_id,
                              patient_id=session_notes.patient_id,
                              endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK,
+                             http_status_code=status.HTTP_200_OK,
                              description=None)
 
     return {}
@@ -244,7 +244,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
         ).data))
     except Exception as e:
         description = str(e)
-        status_code = status_code.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
@@ -255,7 +255,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     if not patient_therapist_match:
         description = "There isn't a patient-therapist match with the incoming ids."
-        status_code = status_code.HTTP_403_FORBIDDEN
+        status_code = status.HTTP_403_FORBIDDEN
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=query.patient_id,
@@ -274,7 +274,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
                                          endpoint_name=endpoints.QUERIES_ENDPOINT,
                                          method=endpoints.API_METHOD_POST)
 
-    if response.status_code != status_code.HTTP_200_OK:
+    if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
@@ -289,7 +289,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
                              therapist_id=therapist_id,
                              patient_id=query.patient_id,
                              endpoint_name=endpoints.QUERIES_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK,
+                             http_status_code=status.HTTP_200_OK,
                              description=None)
 
     return {"response": response.response_token}
@@ -334,7 +334,7 @@ async def fetch_greeting(response: Response,
                                                therapist_id=therapist_id,
                                                method=endpoints.API_METHOD_POST)
     except Exception as e:
-        status_code = status_code.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.GREETINGS_ENDPOINT,
@@ -350,10 +350,10 @@ async def fetch_greeting(response: Response,
     logging.log_api_response(session_id=session_id,
                              endpoint_name=endpoints.GREETINGS_ENDPOINT,
                              therapist_id=therapist_id,
-                             http_status_code=status_code.HTTP_200_OK,
+                             http_status_code=status.HTTP_200_OK,
                              description=log_description)
 
-    if result.status_code is not status_code.HTTP_200_OK:
+    if result.status_code is not status.HTTP_200_OK:
         raise HTTPException(status_code=result.status_code,
                             detail=result.response_token)
 
@@ -414,7 +414,7 @@ async def upload_session_notes_image(response: Response,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
     except Exception as e:
-        status_code = status_code.HTTP_409_CONFLICT
+        status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
@@ -426,7 +426,7 @@ async def upload_session_notes_image(response: Response,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"document_id": document_id}
 
@@ -461,7 +461,7 @@ async def extract_text(response: Response,
 
     if document_id == None or document_id == "":
         description = "Didn't receive a valid document id."
-        status_code = status_code.HTTP_409_CONFLICT
+        status_code = status.HTTP_409_CONFLICT
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=patient_id,
@@ -484,7 +484,7 @@ async def extract_text(response: Response,
                           description=description)
         raise HTTPException(status_code=status_code, detail=description)
     except Exception as e:
-        status_code = status_code.HTTP_409_CONFLICT
+        status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
@@ -498,7 +498,7 @@ async def extract_text(response: Response,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"extraction": full_text}
 
@@ -536,7 +536,7 @@ async def transcribe_session_notes(response: Response,
     try:
         transcript = await library_clients.transcribe_audio_file(audio_file)
     except Exception as e:
-        status_code = status_code.HTTP_409_CONFLICT
+        status_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
@@ -548,7 +548,7 @@ async def transcribe_session_notes(response: Response,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"transcript": transcript}
 
@@ -608,7 +608,7 @@ async def diarize_session(response: Response,
                           description=description)
         raise HTTPException(status_code=resulting_code, detail=description)
     except Exception as e:
-        resulting_code = status_code.HTTP_409_CONFLICT
+        resulting_code = status.HTTP_409_CONFLICT
         description = str(e)
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.DIARIZATION_ENDPOINT,
@@ -618,7 +618,7 @@ async def diarize_session(response: Response,
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     return {"job_id": job_id}
 
@@ -638,9 +638,9 @@ async def consume_notification(request: Request):
         raise TOKEN_EXPIRED_ERROR
 
     try:
-        status = request.query_params["status"]
+        status_code = request.query_params["status"]
         id = request.query_params["id"]
-        assert status.lower() == "success", f"Diarization failed for job ID {id}"
+        assert status_code.lower() == "success", f"Diarization failed for job ID {id}"
 
         supabase_client = library_clients.supabase_admin_instance()
 
@@ -663,7 +663,7 @@ async def consume_notification(request: Request):
         raise HTTPException(status_code=e.status_code, detail=description)
     except Exception as e:
         description = str(e)
-        resulting_code = status_code.HTTP_417_EXPECTATION_FAILED
+        resulting_code = status.HTTP_417_EXPECTATION_FAILED
         logging.log_diarization_event(error_code=resulting_code, description=description)
         raise HTTPException(status_code=resulting_code, detail=description)
 
@@ -688,7 +688,7 @@ async def login_for_access_token(
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
-            status_code=status_code.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -715,7 +715,7 @@ async def login_for_access_token(
 
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=endpoints.TOKEN_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK,
+                             http_status_code=status.HTTP_200_OK,
                              description=f"Refreshing token from {session_id} to {new_session_id}")
 
     return token
@@ -768,7 +768,7 @@ async def sign_up(signup_data: models.SignupData,
         }).execute()
     except Exception as e:
         description = str(e)
-        status_code = status_code.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                           error_code=status_code,
@@ -779,7 +779,7 @@ async def sign_up(signup_data: models.SignupData,
     logging.log_api_response(therapist_id=user_id,
                              session_id=session_id,
                              endpoint_name=endpoints.SIGN_UP_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     return {
         "user_id": user_id,
@@ -816,7 +816,7 @@ async def logout(response: Response,
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              endpoint_name=endpoints.LOGOUT_ENDPOINT,
-                             http_status_code=status_code.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK)
 
     session_id = None
     return {}

@@ -32,7 +32,7 @@ def supabase_user_instance(access_token, refresh_token) -> Client:
     url: str = os.environ.get("SUPABASE_URL")
     supabase: Client = create_client(url, key)
     supabase.auth.set_session(access_token=access_token,
-                            refresh_token=refresh_token)
+                              refresh_token=refresh_token)
     return supabase
 
 """
@@ -55,7 +55,6 @@ async def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
     try:
         base_url = os.getenv("DOCUPANDA_BASE_URL")
         document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
-        docupanda_api_key = os.getenv("DOCUPANDA_API_KEY")
         pdf_extension = "pdf"
         file_name, _ = os.path.splitext(image.filename)
 
@@ -68,15 +67,10 @@ async def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
             raise Exception("Something went wrong while processing the image.")
 
         # Send to DocuPanda
-        payload = {"document": {"file": {
+        payload = {"file": {
             "contents": base64.b64encode(open(image_copy_path, 'rb').read()).decode(),
             "filename": file_name + pdf_extension
-        }}}
-        headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "X-API-Key": docupanda_api_key
-        }
+        }}
 
         if is_portkey_reachable():
             portkey = Portkey(
@@ -84,18 +78,19 @@ async def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
                 virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),
                 custom_host=base_url
             )
-            payload = {"file": {
-                "contents": base64.b64encode(open(image_copy_path, 'rb').read()).decode(),
-                "filename": file_name + pdf_extension
-            }}
             response = portkey.post('/document', document=payload)
             response_as_dict = response.dict()
             doc_id = response_as_dict["documentId"]
             assert response_as_dict['status'].lower() == "processing"
         else:
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "X-API-Key": os.getenv("DOCUPANDA_API_KEY"),
+            }
             url = base_url + document_endpoint
-            response = requests.post(url, json=payload, headers=headers)
-            assert response.status_code == 200, "Something went wrong while uploading the image"
+            response = requests.post(url, json={"document": payload}, headers=headers)
+            assert response.status_code == 200, f"Got HTTP code {response.status} while uploading the image"
             doc_id = response.json()['documentId']
 
         # Clean up the image copies we used for processing.
