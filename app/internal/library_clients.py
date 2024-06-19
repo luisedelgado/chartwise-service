@@ -149,7 +149,7 @@ async def transcribe_audio_file(audio_file: UploadFile = File(...)) -> str:
     try:
         _, file_extension = os.path.splitext(audio_file.filename)
         files_dir = 'app/files'
-        audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        audio_copy_bare_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
         audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
         # Write incoming audio to our local volume for further processing
@@ -243,7 +243,7 @@ async def diarize_audio_file(auth_token: str,
                              audio_file: UploadFile = File(...)) -> str:
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
-    audio_copy_bare_name = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+    audio_copy_bare_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
     audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
 
     try:
@@ -258,9 +258,10 @@ async def diarize_audio_file(auth_token: str,
     finally:
         await audio_file.close()
 
-    # Temporary workaround until we add our own certificates
-    ssl_context = ssl._create_unverified_context()
-    # ssl_context = ssl.create_default_context()
+    if os.environ.get("ENVIRONMENT").lower() == "prod":
+        ssl_context = ssl.create_default_context()
+    else:
+        ssl_context = ssl._create_unverified_context()
 
     # Process local copy with Speechmatics client
     settings = ConnectionSettings(
