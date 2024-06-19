@@ -18,6 +18,13 @@ class SessionNotesUpdate(BaseModel):
     supabase_access_token: str
     supabase_refresh_token: str
 
+class SessionNotesDelete(BaseModel):
+    patient_id: str
+    therapist_id: str
+    session_notes_id: str
+    supabase_access_token: str
+    supabase_refresh_token: str
+
 class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str

@@ -22,7 +22,7 @@ namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 date – the session_date to be used as metadata.
 """
-def insert_session_vector(index_id, namespace, text, date):
+def insert_session_vectors(index_id, namespace, text, date):
     try:
         assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
 
@@ -67,15 +67,14 @@ def insert_session_vector(index_id, namespace, text, date):
         raise Exception(str(e))
 
 """
-Updates a session record leveraging the incoming data.
+Deletes the set of vectors that match the incoming data.
 
 Arguments:
-index_id – the index that should be used to update the data.
-namespace – the namespace that should be used for manipulating the index.
-text – the text to be inserted in the record.
-date – the session_date to be used as metadata.
+index_id – the index where vectors will be deleted.
+namespace – the specific namespace where vectors will be deleted.
+date – the session_date to be used as metadata filtering.
 """
-def update_session_vector(index_id, namespace, text, date):
+def delete_session_vectors(index_id, namespace, date):
     try:
         assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
 
@@ -89,9 +88,29 @@ def update_session_vector(index_id, namespace, text, date):
 
         if len(ids_to_delete) > 0:
             index.delete(ids=ids_to_delete, namespace=namespace)
+    except PineconeApiException as e:
+        raise HTTPException(status_code=e.status, detail=str(e))
+    except Exception as e:
+        raise Exception(str(e))
+
+"""
+Updates a session record leveraging the incoming data.
+
+Arguments:
+index_id – the index that should be used to update the data.
+namespace – the namespace that should be used for manipulating the index.
+text – the text to be inserted in the record.
+date – the session_date to be used as metadata.
+"""
+def update_session_vectors(index_id, namespace, text, date):
+    try:
+        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+
+        # Delete the outdated data
+        delete_session_vectors(index_id, namespace, date)
 
         # Insert the fresh data
-        insert_session_vector(index_id, namespace, text, date)
+        insert_session_vectors(index_id, namespace, text, date)
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:

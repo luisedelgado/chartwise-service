@@ -58,13 +58,13 @@ app.add_middleware(
 Stores a new session report.
 
 Arguments:
-session_notes – the report associated with the new session.
+body – the incoming request body.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
 session_id – the session_id cookie, if exists.
 """
-@app.post(endpoints.SESSION_UPLOAD_ENDPOINT)
-async def insert_new_session(session_report: models.SessionNotesInsert,
+@app.post(endpoints.SESSIONS_ENDPOINT)
+async def insert_new_session(body: models.SessionNotesInsert,
                              response: Response,
                              authorization: Annotated[Union[str, None], Cookie()] = None,
                              session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -73,38 +73,38 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            patient_id=session_report.patient_id,
-                            therapist_id=session_report.therapist_id,
-                            endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                            patient_id=body.patient_id,
+                            therapist_id=body.therapist_id,
+                            endpoint_name=endpoints.SESSIONS_ENDPOINT,
                             method=endpoints.API_METHOD_POST,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        assert utilities.is_valid_date(session_report.date), "Invalid date. The expected format is mm/dd/yyyy"
+        assert utilities.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
 
-        supabase_client = library_clients.supabase_user_instance(session_report.supabase_access_token,
-                                                                 session_report.supabase_refresh_token)
+        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
+                                                                 body.supabase_refresh_token)
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         supabase_client.table('session_reports').insert({
-            "notes_text": session_report.text,
-            "session_date": session_report.date,
-            "patient_id": session_report.patient_id,
-            "source": session_report.source,
+            "notes_text": body.text,
+            "session_date": body.date,
+            "patient_id": body.patient_id,
+            "source": body.source,
             "last_updated": now_timestamp,
-            "therapist_id": session_report.therapist_id}).execute()
+            "therapist_id": body.therapist_id}).execute()
 
         # Upload vector embeddings
-        vector_writer.insert_session_vector(index_id=session_report.therapist_id,
-                                            namespace=session_report.patient_id,
-                                            text=session_report.text,
-                                            date=session_report.date)
+        vector_writer.insert_session_vectors(index_id=body.therapist_id,
+                                             namespace=body.patient_id,
+                                             text=body.text,
+                                             date=body.date)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          therapist_id=session_report.therapist_id,
-                          patient_id=session_report.patient_id,
-                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -113,18 +113,18 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
-                          therapist_id=session_report.therapist_id,
-                          patient_id=session_report.patient_id,
-                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             therapist_id=session_report.therapist_id,
-                             patient_id=session_report.patient_id,
-                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                             therapist_id=body.therapist_id,
+                             patient_id=body.patient_id,
+                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=None)
 
@@ -134,13 +134,13 @@ async def insert_new_session(session_report: models.SessionNotesInsert,
 Updates a session report.
 
 Arguments:
-session_notes – the report associated with the new session.
+body – the incoming request body.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
 session_id – the session_id cookie, if exists.
 """
-@app.put(endpoints.SESSION_UPLOAD_ENDPOINT)
-async def update_session(session_notes: models.SessionNotesUpdate,
+@app.put(endpoints.SESSIONS_ENDPOINT)
+async def update_session(body: models.SessionNotesUpdate,
                          response: Response,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -149,39 +149,38 @@ async def update_session(session_notes: models.SessionNotesUpdate,
 
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
-                            patient_id=session_notes.patient_id,
-                            therapist_id=session_notes.therapist_id,
-                            endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                            patient_id=body.patient_id,
+                            therapist_id=body.therapist_id,
+                            endpoint_name=endpoints.SESSIONS_ENDPOINT,
                             method=endpoints.API_METHOD_PUT,
-                            auth_entity=(await (security.get_current_user(authorization))).username,
-                            description=f"Updated session with id {session_notes.session_notes_id}")
+                            auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        supabase_client = library_clients.supabase_user_instance(session_notes.supabase_access_token,
-                                                                 session_notes.supabase_refresh_token)
+        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
+                                                                 body.supabase_refresh_token)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         update_result = supabase_client.table('session_reports').update({
-            "notes_text": session_notes.text,
+            "notes_text": body.text,
             "last_updated": now_timestamp,
-            "session_diarization": session_notes.diarization,
-        }).eq('id', session_notes.session_notes_id).execute()
+            "session_diarization": body.diarization,
+        }).eq('id', body.session_notes_id).execute()
 
         session_date_raw = update_result.dict()['data'][0]['session_date']
         session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
 
         # Upload vector embeddings
-        vector_writer.update_session_vector(index_id=session_notes.therapist_id,
-                                            namespace=session_notes.patient_id,
-                                            text=session_notes.text,
-                                            date=session_date_formatted)
+        vector_writer.update_session_vectors(index_id=body.therapist_id,
+                                             namespace=body.patient_id,
+                                             text=body.text,
+                                             date=session_date_formatted)
     except HTTPException as e:
         status_code = e.status_code
         description = str(e)
         logging.log_error(session_id=session_id,
-                          therapist_id=session_notes.therapist_id,
-                          patient_id=session_notes.patient_id,
-                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
@@ -190,18 +189,88 @@ async def update_session(session_notes: models.SessionNotesUpdate,
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
         logging.log_error(session_id=session_id,
-                          therapist_id=session_notes.therapist_id,
-                          patient_id=session_notes.patient_id,
-                          endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
                           description=description)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
     logging.log_api_response(session_id=session_id,
-                             therapist_id=session_notes.therapist_id,
-                             patient_id=session_notes.patient_id,
-                             endpoint_name=endpoints.SESSION_UPLOAD_ENDPOINT,
+                             therapist_id=body.therapist_id,
+                             patient_id=body.patient_id,
+                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             description=None)
+
+    return {}
+
+"""
+Deletes a session report.
+
+Arguments:
+body – the incoming request body.
+response – the response model with which to create the final response.
+authorization – the authorization cookie, if exists.
+session_id – the session_id cookie, if exists.
+"""
+@app.delete(endpoints.SESSIONS_ENDPOINT)
+async def delete_session(body: models.SessionNotesDelete,
+                         response: Response,
+                         authorization: Annotated[Union[str, None], Cookie()] = None,
+                         session_id: Annotated[Union[str, None], Cookie()] = None,):
+    if not security.access_token_is_valid(authorization):
+        raise TOKEN_EXPIRED_ERROR
+
+    session_id = validate_session_id_cookie(response, session_id)
+    logging.log_api_request(session_id=session_id,
+                            patient_id=body.patient_id,
+                            therapist_id=body.therapist_id,
+                            endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                            method=endpoints.API_METHOD_DELETE,
+                            auth_entity=(await (security.get_current_user(authorization))).username)
+
+    try:
+        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
+                                                                 body.supabase_refresh_token)
+
+        delete_result = supabase_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
+
+        session_date_raw = delete_result.dict()['data'][0]['session_date']
+        session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
+
+        # Delete vector embeddings
+        vector_writer.delete_session_vectors(index_id=body.therapist_id,
+                                             namespace=body.patient_id,
+                                             date=session_date_formatted)
+    except HTTPException as e:
+        status_code = e.status_code
+        description = str(e)
+        logging.log_error(session_id=session_id,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
+    except Exception as e:
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        logging.log_error(session_id=session_id,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
+                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                          error_code=status_code,
+                          description=description)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
+
+    logging.log_api_response(session_id=session_id,
+                             therapist_id=body.therapist_id,
+                             patient_id=body.patient_id,
+                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              description=None)
 
@@ -585,7 +654,7 @@ async def diarize_session(response: Response,
                             auth_entity=(await (security.get_current_user(authorization))).username)
 
     try:
-        assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm/dd/yyyy"
+        assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
 
         supabase_client = library_clients.supabase_admin_instance()
         job_id: str = await library_clients.diarize_audio_file(auth_token=authorization,
