@@ -30,7 +30,8 @@ def log_api_request(session_id: str, endpoint_name: str, **kwargs):
             "therapist_id": therapist_id,
             "patient_id": patient_id,
             "method": method,
-            "endpoint_auth_entity": auth_entity}).execute(),
+            "endpoint_auth_entity": auth_entity,
+        }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log request - Error: {str(e)}")
 
@@ -51,6 +52,7 @@ def log_api_response(**kwargs):
     endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
     http_status_code = None if "http_status_code" not in kwargs else kwargs["http_status_code"]
     description = None if "description" not in kwargs else kwargs["description"]
+    method = None if "method" not in kwargs else kwargs["method"]
 
     try:
         supabase_client.table('api_response_logs').insert({
@@ -59,7 +61,9 @@ def log_api_response(**kwargs):
             "patient_id": patient_id,
             "endpoint_name": endpoint_name,
             "http_status_code": http_status_code,
-            "description": description}).execute()
+            "description": description,
+            "method": method,
+        }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
 
@@ -80,6 +84,7 @@ def log_error(**kwargs):
     endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
     error_code = None if "error_code" not in kwargs else kwargs["error_code"]
     description = None if "description" not in kwargs else kwargs["description"]
+    method = None if "method" not in kwargs else kwargs["method"]
 
     try:
         supabase_client.table('error_logs').insert({
@@ -88,7 +93,9 @@ def log_error(**kwargs):
             "patient_id": patient_id,
             "endpoint_name": endpoint_name,
             "error_code": error_code,
-            "description": description}).execute()
+            "description": description,
+            "method": method,
+        }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
 

@@ -106,7 +106,8 @@ async def insert_new_session(body: models.SessionNotesInsert,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
     except Exception as e:
@@ -117,7 +118,8 @@ async def insert_new_session(body: models.SessionNotesInsert,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -126,7 +128,7 @@ async def insert_new_session(body: models.SessionNotesInsert,
                              patient_id=body.patient_id,
                              endpoint_name=endpoints.SESSIONS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
-                             description=None)
+                             method=endpoints.API_METHOD_POST)
 
     return {}
 
@@ -182,7 +184,8 @@ async def update_session(body: models.SessionNotesUpdate,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_PUT)
         raise HTTPException(status_code=status_code,
                             detail=description)
     except Exception as e:
@@ -193,7 +196,8 @@ async def update_session(body: models.SessionNotesUpdate,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_PUT)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -202,7 +206,7 @@ async def update_session(body: models.SessionNotesUpdate,
                              patient_id=body.patient_id,
                              endpoint_name=endpoints.SESSIONS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
-                             description=None)
+                             method=endpoints.API_METHOD_PUT)
 
     return {}
 
@@ -252,7 +256,8 @@ async def delete_session(body: models.SessionNotesDelete,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_DELETE)
         raise HTTPException(status_code=status_code,
                             detail=description)
     except Exception as e:
@@ -263,7 +268,8 @@ async def delete_session(body: models.SessionNotesDelete,
                           patient_id=body.patient_id,
                           endpoint_name=endpoints.SESSIONS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_DELETE)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -272,7 +278,7 @@ async def delete_session(body: models.SessionNotesDelete,
                              patient_id=body.patient_id,
                              endpoint_name=endpoints.SESSIONS_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
-                             description=None)
+                             method=endpoints.API_METHOD_DELETE)
 
     return {}
 
@@ -319,7 +325,8 @@ async def execute_assistant_query(query: models.AssistantQuery,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -331,7 +338,8 @@ async def execute_assistant_query(query: models.AssistantQuery,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -351,7 +359,8 @@ async def execute_assistant_query(query: models.AssistantQuery,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
                           error_code=response.status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=response.status_code,
                             detail=description)
 
@@ -360,7 +369,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
                              patient_id=query.patient_id,
                              endpoint_name=endpoints.QUERIES_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
-                             description=None)
+                             method=endpoints.API_METHOD_POST)
 
     return {"response": response.response_token}
 
@@ -409,7 +418,8 @@ async def fetch_greeting(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.GREETINGS_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -421,7 +431,8 @@ async def fetch_greeting(response: Response,
                              endpoint_name=endpoints.GREETINGS_ENDPOINT,
                              therapist_id=therapist_id,
                              http_status_code=status.HTTP_200_OK,
-                             description=log_description)
+                             description=log_description,
+                             method=endpoints.API_METHOD_POST)
 
     if result.status_code is not status.HTTP_200_OK:
         raise HTTPException(status_code=result.status_code,
@@ -481,7 +492,8 @@ async def upload_session_notes_image(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code, detail=description)
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
@@ -489,14 +501,16 @@ async def upload_session_notes_image(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST)
 
     return {"document_id": document_id}
 
@@ -537,7 +551,8 @@ async def extract_text(response: Response,
                           patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_GET)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
@@ -551,7 +566,8 @@ async def extract_text(response: Response,
                           patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_GET)
         raise HTTPException(status_code=status_code, detail=description)
     except Exception as e:
         status_code = status.HTTP_409_CONFLICT
@@ -561,14 +577,16 @@ async def extract_text(response: Response,
                           patient_id=patient_id,
                           endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_GET)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_GET)
 
     return {"extraction": full_text}
 
@@ -611,14 +629,16 @@ async def transcribe_session_notes(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              patient_id=patient_id,
                              endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST)
 
     return {"transcript": transcript}
 
@@ -675,7 +695,8 @@ async def diarize_session(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                           error_code=resulting_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=resulting_code, detail=description)
     except Exception as e:
         resulting_code = status.HTTP_409_CONFLICT
@@ -683,12 +704,14 @@ async def diarize_session(response: Response,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.DIARIZATION_ENDPOINT,
                           error_code=resulting_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=resulting_code, detail=description)
 
     logging.log_api_response(session_id=session_id,
                              endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST)
 
     return {"job_id": job_id}
 
@@ -786,6 +809,7 @@ async def login_for_access_token(
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=endpoints.TOKEN_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST,
                              description=f"Refreshing token from {session_id} to {new_session_id}")
 
     return token
@@ -842,14 +866,16 @@ async def sign_up(signup_data: models.SignupData,
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.SIGN_UP_ENDPOINT,
                           error_code=status_code,
-                          description=description)
+                          description=description,
+                          method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
 
     logging.log_api_response(therapist_id=user_id,
                              session_id=session_id,
                              endpoint_name=endpoints.SIGN_UP_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST)
 
     return {
         "user_id": user_id,
@@ -886,7 +912,8 @@ async def logout(response: Response,
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
                              endpoint_name=endpoints.LOGOUT_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK)
+                             http_status_code=status.HTTP_200_OK,
+                             method=endpoints.API_METHOD_POST)
 
     session_id = None
     return {}
