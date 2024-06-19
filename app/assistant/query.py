@@ -105,6 +105,7 @@ def create_greeting(name: str,
         headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
                                                          session_id=session_id,
                                                          llm_model=__llm_model,
+                                                         user=therapist_id,
                                                          cache_max_age=86400, # 24 hours
                                                          caching_shard_key=caching_shard_key,
                                                          endpoint_name=endpoint_name,
