@@ -8,10 +8,8 @@ from pytz import timezone
 
 def __create_system_qa_message() -> str:
     return '''A therapist is using you to ask questions about their patients' notes. 
-    If the question references a person that is not mentioned anywhere in the session notes, 
-    you should strictly say you can't provide an answer. If you do find valid information from 
-    session notes, please outline all the session dates after your answer. Otherwise, if you 
-    don't find any information in the session notes do not reference any dates.'''
+If the question references a person that is not mentioned anywhere in the session notes, 
+you should strictly say you can't provide an answer. For any information you reference, always outline the session date found in the metadata.'''
 
 def __create_user_qa_message(language_code: str) -> str:
     message_content = (
@@ -19,9 +17,8 @@ def __create_user_qa_message(language_code: str) -> str:
     ---------------------\n
     {context_str}
     \n---------------------\n
-    Please outline all the session dates if you find information from session notes. If you don't find 
-    information from session notes do not reference dates.''')
-    language_code_requirement = f"To craft your response use language {language_code}."
+    For any information you reference, please outline the session date found in the metadata. If you cannot provide an answer do not reference session dates.''')
+    language_code_requirement = f"\nTo craft your response use language {language_code}."
     execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
     return message_content + language_code_requirement + execution_statement
 
