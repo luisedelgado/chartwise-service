@@ -349,23 +349,12 @@ Arguments:
 kwargs  – the set of optional arguments.
 """
 def create_portkey_headers(**kwargs):
-    environment = None if "environment" not in kwargs else kwargs["environment"]
-    session_id = None if "session_id" not in kwargs else kwargs["session_id"]
-    user = None if "user" not in kwargs else kwargs["user"]
     caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
     cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
-    endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
     llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
-    method = None if "method" not in kwargs else kwargs["method"]
+    metadata = None if "metadata" not in kwargs else kwargs["metadata"]
     return createHeaders(trace_id=uuid.uuid4(),
                          api_key=os.environ.get("PORTKEY_API_KEY"),
                          config=create_portkey_config(cache_max_age, llm_model),
                          cache_namespace=caching_shard_key,
-                         metadata={
-                            "environment": environment,
-                            "user": user,
-                            "vector_index": caching_shard_key,
-                            "session_id": session_id,
-                            "endpoint_name": endpoint_name,
-                            "method": method,
-                        })
+                         metadata=metadata)

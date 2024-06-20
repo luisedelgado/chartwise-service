@@ -396,15 +396,23 @@ async def fetch_greeting(response: Response,
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
+    logs_description = ''.join(['language_code:',
+                                response_language_code,
+                                ';tz_identifier:',
+                                client_tz_identifier])
+
     session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_POST,
                             therapist_id=therapist_id,
                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=(await (security.get_current_user(authorization))).username,
+                            description=logs_description)
 
     try:
+        assert utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
         assert Language.get(response_language_code).is_valid(), "Invalid response_language_code parameter"
+
         result = query_handler.create_greeting(name=addressing_name,
                                                language_code=response_language_code,
                                                tz_identifier=client_tz_identifier,
@@ -423,15 +431,11 @@ async def fetch_greeting(response: Response,
         raise HTTPException(status_code=status_code,
                             detail=description)
 
-    log_description = ''.join(['language_code:',
-                           response_language_code,
-                           'tz_identifier:',
-                           client_tz_identifier])
     logging.log_api_response(session_id=session_id,
                              endpoint_name=endpoints.GREETINGS_ENDPOINT,
                              therapist_id=therapist_id,
                              http_status_code=status.HTTP_200_OK,
-                             description=log_description,
+                             description=logs_description,
                              method=endpoints.API_METHOD_POST)
 
     if result.status_code is not status.HTTP_200_OK:

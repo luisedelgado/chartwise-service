@@ -78,9 +78,8 @@ def create_system_greeting_message(name: str, tz_identifier: str, language_code:
         return f'''A mental health practitioner is entering our Practice Management Platform. Your job is to greet them into the experience.
         \nSend a cheerful message about today being {weekday}, and address them by their name, which is {name}. 
         \nTo craft your response use language {language_code}. Finish off with a short fragment on productivity.'''
-    except:
-        return f'''A mental health practitioner is entering our Practice Management Platform. Your job is to greet them into the experience.
-        \nSay hi, and address them by their name, which is {name}. Finish off with a short fragment on productivity.'''
+    except Exception as e:
+        raise Exception(str(e))
 
 def create_user_greeting_message() -> str:
     return f'''Write a welcoming message for the user. Your response should not go over 180 characters.'''

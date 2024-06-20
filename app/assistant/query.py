@@ -9,8 +9,9 @@ from openai import OpenAI
 from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
-from ..internal import library_clients
 from . import message_templates
+from ..internal import library_clients
+from ..internal import utilities
 
 __llm_model = "gpt-3.5-turbo"
 
@@ -50,14 +51,23 @@ def query_store(index_id,
 
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
-        headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
-                                                         session_id=session_id,
-                                                         user=index_id,
-                                                         llm_model=__llm_model,
-                                                         cache_max_age=300, # 5 minutes
+
+        metadata = {
+            "environment": os.environ.get("ENVIRONMENT"),
+            "user": index_id,
+            "vector_index": index_id,
+            "namespace": namespace,
+            "response_language_code": response_language_code,
+            "session_id": session_id,
+            "endpoint_name": endpoint_name,
+            "method": method,
+        }
+
+        cache_ttl = 300 # 5 minutes
+        headers = library_clients.create_portkey_headers(metadata=metadata,
                                                          caching_shard_key=index_id,
-                                                         endpoint_name=endpoint_name,
-                                                         method=method,) if is_portkey_reachable else None
+                                                         llm_model=__llm_model,
+                                                         cache_max_age=cache_ttl) if is_portkey_reachable else None
 
         llm = llama_index_OpenAI(model=__llm_model,
                                  temperature=0,
@@ -101,15 +111,24 @@ def create_greeting(name: str,
     try:
         is_portkey_reachable = library_clients.is_portkey_reachable()
         api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
-        caching_shard_key = (therapist_id + "-" + datetime.now().strftime("%d-%m-%Y"))
-        headers = library_clients.create_portkey_headers(environment=os.environ.get("ENVIRONMENT"),
-                                                         session_id=session_id,
-                                                         llm_model=__llm_model,
-                                                         user=therapist_id,
-                                                         cache_max_age=86400, # 24 hours
+        caching_shard_key = (therapist_id + "-" + datetime.now().strftime(utilities.DATE_FORMAT))
+
+        metadata = {
+            "environment": os.environ.get("ENVIRONMENT"),
+            "user": therapist_id,
+            "session_id": session_id,
+            "caching_shard_key": caching_shard_key,
+            "endpoint_name": endpoint_name,
+            "method": method,
+            "tz_identifier": tz_identifier,
+            "language_code": language_code,
+        }
+
+        cache_ttl = 86400 # 24 hours
+        headers = library_clients.create_portkey_headers(metadata=metadata,
                                                          caching_shard_key=caching_shard_key,
-                                                         endpoint_name=endpoint_name,
-                                                         method=method,) if is_portkey_reachable else None
+                                                         llm_model=__llm_model,
+                                                         cache_max_age=cache_ttl) if is_portkey_reachable else None
 
         llm = OpenAI(base_url=api_base,
                      default_headers=headers)

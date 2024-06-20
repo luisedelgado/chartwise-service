@@ -10,10 +10,10 @@ Logs data about an API request.
 Arguments:
 kwargs – the set of optional parameters to be sent into the method.
 """
-def log_api_request(session_id: str, endpoint_name: str, **kwargs):
+def log_api_request(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
-        return
+    # if os.environ.get("ENVIRONMENT").lower() != "prod":
+    #     return
 
     try:
         session_id = None if "session_id" not in kwargs else kwargs["session_id"]
