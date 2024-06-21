@@ -681,7 +681,7 @@ async def diarize_session(response: Response,
         assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
 
         supabase_client = library_clients.supabase_admin_instance()
-        job_id: str = await library_clients.diarize_audio_file(auth_token=authorization,
+        job_id: str = await library_clients.diarize_audio_file(session_auth_token=authorization,
                                                                audio_file=audio_file)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
