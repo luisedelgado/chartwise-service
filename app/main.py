@@ -61,23 +61,31 @@ Arguments:
 body – the incoming request body.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
-session_id – the session_id cookie, if exists.
+current_session_id – the session_id cookie, if exists.
 """
 @app.post(endpoints.SESSIONS_ENDPOINT)
 async def insert_new_session(body: models.SessionNotesInsert,
                              response: Response,
                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                             session_id: Annotated[Union[str, None], Cookie()] = None):
+                             current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             patient_id=body.patient_id,
                             therapist_id=body.therapist_id,
                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
                             method=endpoints.API_METHOD_POST,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         assert utilities.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
@@ -139,23 +147,31 @@ Arguments:
 body – the incoming request body.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
-session_id – the session_id cookie, if exists.
+current_session_id – the session_id cookie, if exists.
 """
 @app.put(endpoints.SESSIONS_ENDPOINT)
 async def update_session(body: models.SessionNotesUpdate,
                          response: Response,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                         session_id: Annotated[Union[str, None], Cookie()] = None):
+                         current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             patient_id=body.patient_id,
                             therapist_id=body.therapist_id,
                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
                             method=endpoints.API_METHOD_PUT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
@@ -217,23 +233,31 @@ Arguments:
 body – the incoming request body.
 response – the response model with which to create the final response.
 authorization – the authorization cookie, if exists.
-session_id – the session_id cookie, if exists.
+current_session_id – the session_id cookie, if exists.
 """
 @app.delete(endpoints.SESSIONS_ENDPOINT)
 async def delete_session(body: models.SessionNotesDelete,
                          response: Response,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                         session_id: Annotated[Union[str, None], Cookie()] = None,):
+                         current_session_id: Annotated[Union[str, None], Cookie()] = None,):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             patient_id=body.patient_id,
                             therapist_id=body.therapist_id,
                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
                             method=endpoints.API_METHOD_DELETE,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
@@ -290,23 +314,31 @@ Arguments:
 query – the query that will be executed.
 response – the response model with which to create the final response.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.QUERIES_ENDPOINT)
 async def execute_assistant_query(query: models.AssistantQuery,
                                   response: Response,
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
-                                  session_id: Annotated[Union[str, None], Cookie()] = None):
+                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             therapist_id=query.therapist_id,
                             patient_id=query.patient_id,
                             endpoint_name=endpoints.QUERIES_ENDPOINT,
                             method=endpoints.API_METHOD_POST,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     # Confirm that the incoming patient id belongs to the incoming therapist id.
     # We do this to avoid surfacing information to the wrong therapist
@@ -344,13 +376,13 @@ async def execute_assistant_query(query: models.AssistantQuery,
                             detail=description)
 
     # Go through with the query
-    response = query_handler.query_store(index_id=query.therapist_id,
-                                         namespace=query.patient_id,
-                                         input=query.text,
-                                         response_language_code=query.response_language_code,
-                                         session_id=session_id,
-                                         endpoint_name=endpoints.QUERIES_ENDPOINT,
-                                         method=endpoints.API_METHOD_POST)
+    response: query_handler.QueryResult = query_handler.query_store(index_id=query.therapist_id,
+                                                                    namespace=query.patient_id,
+                                                                    input=query.text,
+                                                                    response_language_code=query.response_language_code,
+                                                                    session_id=session_id,
+                                                                    endpoint_name=endpoints.QUERIES_ENDPOINT,
+                                                                    method=endpoints.API_METHOD_POST)
 
     if response.status_code != status.HTTP_200_OK:
         description = "Something failed when trying to execute the query"
@@ -383,7 +415,7 @@ response_language_code – the language code to be used for creating the greetin
 client_tz_identifier – the timezone identifier used to fetch the client's weekday.
 therapist_id – the id of the therapist for which the greeting is being created.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.GREETINGS_ENDPOINT)
 async def fetch_greeting(response: Response,
@@ -392,21 +424,28 @@ async def fetch_greeting(response: Response,
                          client_tz_identifier: Annotated[str, Form()],
                          therapist_id: Annotated[str, Form()],
                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                         session_id: Annotated[Union[str, None], Cookie()] = None):
+                         current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
+
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
     logs_description = ''.join(['language_code:',
                                 response_language_code,
                                 ';tz_identifier:',
                                 client_tz_identifier])
-
-    session_id = validate_session_id_cookie(response, session_id)
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_POST,
                             therapist_id=therapist_id,
                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username,
+                            auth_entity=current_user.username,
                             description=logs_description)
 
     try:
@@ -468,7 +507,7 @@ therapist_id – the id of the therapist associated with the session notes.
 patient_id – the id of the patient associated with the session notes.
 image – the image to be uploaded.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.IMAGE_UPLOAD_ENDPOINT)
 async def upload_session_notes_image(response: Response,
@@ -476,17 +515,25 @@ async def upload_session_notes_image(response: Response,
                                      therapist_id: Annotated[str, Form()],
                                      image: UploadFile = File(...),
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
-                                     session_id: Annotated[Union[str, None], Cookie()] = None):
+                                     current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_POST,
                             patient_id=patient_id,
                             therapist_id=therapist_id,
                             endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         document_id = await library_clients.upload_image_for_textraction(image)
@@ -527,7 +574,7 @@ therapist_id – the therapist_id for the operation.
 patient_id – the patient_id for the operation.
 document_id – the id of the document to be textracted.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.get(endpoints.TEXT_EXTRACTION_ENDPOINT)
 async def extract_text(response: Response,
@@ -535,17 +582,25 @@ async def extract_text(response: Response,
                        patient_id: Annotated[str, Form()],
                        document_id: str = None,
                        authorization: Annotated[Union[str, None], Cookie()] = None,
-                       session_id: Annotated[Union[str, None], Cookie()] = None):
+                       current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_GET,
                             therapist_id=therapist_id,
                             patient_id=patient_id,
                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     if document_id == None or document_id == "":
         description = "Didn't receive a valid document id."
@@ -605,7 +660,7 @@ therapist_id – the id of the therapist associated with the session notes.
 patient_id – the id of the patient associated with the session notes.
 audio_file – the audio file for which the transcription will be created.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.NOTES_TRANSCRIPTION_ENDPOINT)
 async def transcribe_session_notes(response: Response,
@@ -613,17 +668,25 @@ async def transcribe_session_notes(response: Response,
                                    patient_id: Annotated[str, Form()],
                                    audio_file: UploadFile = File(...),
                                    authorization: Annotated[Union[str, None], Cookie()] = None,
-                                   session_id: Annotated[Union[str, None], Cookie()] = None):
+                                   current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_POST,
                             therapist_id=therapist_id,
                             patient_id=patient_id,
                             endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         transcript = await library_clients.transcribe_audio_file(audio_file)
@@ -656,7 +719,7 @@ therapist_id – the id of the therapist associated with the session notes.
 patient_id – the id of the patient associated with the session notes.
 audio_file – the audio file for which the diarized transcription will be created.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.DIARIZATION_ENDPOINT)
 async def diarize_session(response: Response,
@@ -665,17 +728,25 @@ async def diarize_session(response: Response,
                           patient_id: Annotated[str, Form()],
                           audio_file: UploadFile = File(...),
                           authorization: Annotated[Union[str, None], Cookie()] = None,
-                          session_id: Annotated[Union[str, None], Cookie()] = None,):
+                          current_session_id: Annotated[Union[str, None], Cookie()] = None,):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             patient_id=patient_id,
                             therapist_id=therapist_id,
                             method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
@@ -769,20 +840,13 @@ async def consume_notification(request: Request):
 # Security endpoints
 
 """
-Returns an oauth token to be used for invoking the endpoints.
+Refreshes the user's auth token for a continued session experience.
 
 Arguments:
-form_data  – the data required to validate the user.
-response – The response object to be used for creating the final response.
-session_id  – the id of the current user session.
+user – The user for whom to refresh the session.
+response  – the model with which to build the API response.
 """
-@app.post(endpoints.TOKEN_ENDPOINT)
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    response: Response,
-    session_id: Annotated[Union[str, None], Cookie()] = None,
-) -> security.Token:
-    user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
+def update_auth_token_for_user(user: security.User, response: Response):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -800,23 +864,34 @@ async def login_for_access_token(
                         httponly=True,
                         secure=True,
                         samesite="none")
-    token = security.Token(access_token=access_token, token_type="bearer")
+    return security.Token(access_token=access_token, token_type="bearer")
 
-    new_session_id = uuid.uuid1()
-    response.delete_cookie("session_id")
-    response.set_cookie(key="session_id",
-                    value=new_session_id,
-                    httponly=True,
-                    secure=True,
-                    samesite="none")
+"""
+Returns an oauth token to be used for invoking the endpoints.
 
+Arguments:
+form_data  – the data required to validate the user.
+response – The response object to be used for creating the final response.
+session_id  – the id of the current user session.
+"""
+@app.post(endpoints.TOKEN_ENDPOINT)
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response,
+    session_id: Annotated[Union[str, None], Cookie()] = None,
+) -> security.Token:
+    user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
+    session_refresh_data: models.SessionRefreshData = await refresh_session(user=user,
+                                                                            response=response,
+                                                                            session_id=session_id)
+    new_session_id = session_refresh_data._session_id
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=endpoints.TOKEN_ENDPOINT,
                              http_status_code=status.HTTP_200_OK,
                              method=endpoints.API_METHOD_POST,
                              description=f"Refreshing token from {session_id} to {new_session_id}")
 
-    return token
+    return session_refresh_data._auth_token
 
 """
 Signs up a new user.
@@ -825,21 +900,29 @@ Arguments:
 signup_data – the data to be used to sign up the user.
 response – the response model to be used for creating the final response.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.SIGN_UP_ENDPOINT)
 async def sign_up(signup_data: models.SignupData,
                   response: Response,
                   authorization: Annotated[Union[str, None], Cookie()] = None,
-                  session_id: Annotated[Union[str, None], Cookie()] = None):
+                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.SIGN_UP_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     try:
         supabase_client: Client = library_clients.supabase_admin_instance()
@@ -894,24 +977,33 @@ Arguments:
 response – the object to be used for constructing the final response.
 therapist_id – The therapist id associated with the operation.
 authorization – The authorization cookie, if exists.
-session_id – The session_id cookie, if exists.
+current_session_id – The session_id cookie, if exists.
 """
 @app.post(endpoints.LOGOUT_ENDPOINT)
 async def logout(response: Response,
                  therapist_id: Annotated[str, Form()],
                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                 session_id: Annotated[Union[str, None], Cookie()] = None):
+                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
         raise TOKEN_EXPIRED_ERROR
 
-    session_id = validate_session_id_cookie(response, session_id)
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
+                                                                                response=response,
+                                                                                session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
     logging.log_api_request(session_id=session_id,
                             therapist_id=therapist_id,
                             method=endpoints.API_METHOD_POST,
                             endpoint_name=endpoints.LOGOUT_ENDPOINT,
-                            auth_entity=(await (security.get_current_user(authorization))).username)
+                            auth_entity=current_user.username)
 
     response.delete_cookie("authorization")
+    response.delete_cookie("session_id")
 
     logging.log_api_response(session_id=session_id,
                              therapist_id=therapist_id,
@@ -919,27 +1011,36 @@ async def logout(response: Response,
                              http_status_code=status.HTTP_200_OK,
                              method=endpoints.API_METHOD_POST)
 
-    session_id = None
     return {}
 
 # Private methods
 
 """
-Validates the incoming session_id cookie.
+Validates the incoming session cookies.
 
 Arguments:
+user – the user for whom to refresh the current session.
 response – the response object where we can update cookies.
-cookie – the cookie to be validated, if exists.
+current_session_id – the session_id cookie to be validated, if exists.
 """
-def validate_session_id_cookie(response: Response,
-                               session_id_cookie: Annotated[Union[str, None], Cookie()] = None) -> uuid.UUID | None:
-    if session_id_cookie is not None:
-        return session_id_cookie
+async def refresh_session(user: security.User,
+                          response: Response,
+                          session_id: Annotated[Union[str, None], Cookie()] = None) -> models.SessionRefreshData | None:
+    try:
+        token = update_auth_token_for_user(user, response)
 
-    session_id = uuid.uuid1()
-    response.set_cookie(key="session_id",
-                value=session_id,
-                httponly=True,
-                secure=True,
-                samesite="none")
-    return session_id
+        if session_id is not None:
+            return models.SessionRefreshData(session_id=session_id,
+                                             auth_token=token)
+
+        new_session_id = uuid.uuid1()
+        response.delete_cookie("session_id")
+        response.set_cookie(key="session_id",
+                    value=new_session_id,
+                    httponly=True,
+                    secure=True,
+                    samesite="none")
+        return models.SessionRefreshData(session_id=new_session_id,
+                                        auth_token=token)
+    except Exception as e:
+        raise Exception(str(e))

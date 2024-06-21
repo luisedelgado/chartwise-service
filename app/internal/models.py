@@ -42,3 +42,8 @@ class SignupData(BaseModel):
     birth_date: str
     signup_mechanism: str
     language_preference: str
+
+class SessionRefreshData():
+    def __init__(self, session_id, auth_token):
+        self._session_id = session_id
+        self._auth_token = auth_token
