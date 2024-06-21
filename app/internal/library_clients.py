@@ -234,7 +234,7 @@ Arguments:
 auth_token  – the access_token associated with the current server session.
 audio_file  – the audio file to be diarized.
 """
-async def diarize_audio_file(auth_token: str,
+async def diarize_audio_file(session_auth_token: str,
                              audio_file: UploadFile = File(...)) -> str:
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
@@ -278,7 +278,7 @@ async def diarize_audio_file(auth_token: str,
             "url": os.environ.get("ENVIRONMENT_URL") + endpoints.DIARIZATION_NOTIFICATION_ENDPOINT,
             "method": "post",
             "contents": ["transcript"],
-            "auth_headers": [f"Authorization: Bearer {auth_token}"]
+            "auth_headers": [f"Authorization: Bearer {session_auth_token}"]
             }
         ],
         "language_identification_config": {
