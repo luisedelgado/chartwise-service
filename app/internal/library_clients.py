@@ -226,46 +226,8 @@ SPEECHMATICS_NOTIFICATION_IPS = [
     "20.248.249.164",
 ]
 
-"""
-Queues a new job for a diarization transcription using the incoming audio file.
-Returns the job id that is processing.
-
-Arguments:
-auth_token  – the access_token associated with the current server session.
-audio_file  – the audio file to be diarized.
-"""
-async def diarize_audio_file(session_auth_token: str,
-                             audio_file: UploadFile = File(...)) -> str:
-    _, file_extension = os.path.splitext(audio_file.filename)
-    files_dir = 'app/files'
-    audio_copy_bare_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
-
-    try:
-        # Write incoming audio to our local volume for further processing
-        with open(audio_copy_path, 'wb+') as buffer:
-            shutil.copyfileobj(audio_file.file, buffer)
-
-        assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=str(e))
-    finally:
-        await audio_file.close()
-
-    if os.environ.get("ENVIRONMENT").lower() == "prod":
-        ssl_context = ssl.create_default_context()
-    else:
-        ssl_context = ssl._create_unverified_context()
-
-    # Process local copy with Speechmatics client
-    settings = ConnectionSettings(
-        url=os.getenv("SPEECHMATICS_URL"),
-        auth_token=os.getenv("SPEECHMATICS_API_KEY"),
-        ssl_context=ssl_context,
-    )
-
-    conf = {
+def speechmatics_config(auth_token: str):
+    return {
         "type": "transcription",
         "transcription_config": {
             "language": "auto",
@@ -278,7 +240,7 @@ async def diarize_audio_file(session_auth_token: str,
             "url": os.environ.get("ENVIRONMENT_URL") + endpoints.DIARIZATION_NOTIFICATION_ENDPOINT,
             "method": "post",
             "contents": ["transcript"],
-            "auth_headers": [f"Authorization: Bearer {session_auth_token}"]
+            "auth_headers": [f"Authorization: Bearer {auth_token}"]
             }
         ],
         "language_identification_config": {
@@ -292,21 +254,82 @@ async def diarize_audio_file(session_auth_token: str,
         },
     }
 
-    with BatchClient(settings) as client:
+"""
+Queues a new job for a diarization transcription using the incoming audio file.
+Returns the job id that is processing.
+
+Arguments:
+auth_token  – the access_token associated with the current server session.
+audio_file  – the audio file to be diarized.
+"""
+async def diarize_audio_file(session_auth_token: str,
+                             audio_file: UploadFile = File(...)) -> str:
+    _, file_extension = os.path.splitext(audio_file.filename)
+    files_dir = 'app/files'
+    audio_copy_file_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S") + file_extension
+    audio_copy_full_path = files_dir + '/' + audio_copy_file_name
+
+    try:
+        # Write incoming audio to our local volume for further processing
+        with open(audio_copy_full_path, 'wb+') as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
+
+        assert os.path.exists(audio_copy_full_path), "Something went wrong while processing the file."
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=str(e))
+    finally:
+        await audio_file.close()
+
+    config = speechmatics_config(session_auth_token)
+
+    if False:#is_portkey_reachable():
         try:
-            return client.submit_job(
-                audio=audio_copy_path,
-                transcription_config=conf,
-            )
-        except TimeoutError as e:
-            raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
-        except HTTPException as e:
-            raise HTTPException(status_code=e.status_code, detail=str(e))
+            base_url = os.environ.get("SPEECHMATICS_URL")
+            document_endpoint = os.environ.get("SPEECHMATICS_JOBS_ENDPOINT")
+
+            headers = {
+                "Authorization": "Bearer " + os.environ.get("SPEECHMATICS_API_KEY"),
+                "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
+                "x-portkey-custom-host": base_url + document_endpoint,
+                "x-portkey-virtual-key": os.environ.get("PORTKEY_SPEECHMATICS_VIRTUAL_KEY"),
+            }
+
+            file = {"data_file": (audio_copy_file_name, open(audio_copy_full_path, 'rb'))}
+            response = requests.post(PORTKEY_GATEWAY_URL, headers=headers, data={"config": json.dumps(config)}, files=file)
+
+            assert response.status_code == 201, f"Got HTTP code {response.status} while uploading the audio file"
+            json_response = response.json()
+            job_id = json_response['id']
+            return job_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail=str(e))
+            raise Exception(str(e))
         finally:
-            await utilities.clean_up_files([audio_copy_path])
+            await utilities.clean_up_files([audio_copy_full_path])
+    else:
+        ssl_context = (ssl.create_default_context()
+                    if os.environ.get("ENVIRONMENT").lower() == "prod"
+                    else ssl._create_unverified_context())
+        settings = ConnectionSettings(
+            url=os.getenv("SPEECHMATICS_URL"),
+            auth_token=os.getenv("SPEECHMATICS_API_KEY"),
+            ssl_context=ssl_context,
+        )
+        with BatchClient(settings) as client:
+            try:
+                return client.submit_job(
+                    audio=audio_copy_full_path,
+                    transcription_config=config,
+                )
+            except TimeoutError as e:
+                raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
+            except HTTPException as e:
+                raise HTTPException(status_code=e.status_code, detail=str(e))
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail=str(e))
+            finally:
+                await utilities.clean_up_files([audio_copy_full_path])
 
 # Portkey
 
