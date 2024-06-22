@@ -20,7 +20,7 @@ from langcodes import Language
 from supabase import Client
 from typing import Annotated, Union
 
-from .assistant import query as query_handler
+from .assistant import vector_query
 from .assistant import vector_writer
 from .data_processing.diarization_cleaner import DiarizationCleaner
 from .internal import (endpoints,
@@ -329,13 +329,13 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     try:
         # Go through with the query
-        response: query_handler.QueryResult = query_handler.query_store(index_id=query.therapist_id,
-                                                                        namespace=query.patient_id,
-                                                                        input=query.text,
-                                                                        response_language_code=query.response_language_code,
-                                                                        session_id=session_id,
-                                                                        endpoint_name=endpoints.QUERIES_ENDPOINT,
-                                                                        method=endpoints.API_METHOD_POST)
+        response: vector_query.QueryResult = vector_query.query_store(index_id=query.therapist_id,
+                                                                      namespace=query.patient_id,
+                                                                      input=query.text,
+                                                                      response_language_code=query.response_language_code,
+                                                                      session_id=session_id,
+                                                                      endpoint_name=endpoints.QUERIES_ENDPOINT,
+                                                                      method=endpoints.API_METHOD_POST)
 
         assert response.status_code != status.HTTP_200_OK, "Something went wrong when executing the query"
 
@@ -407,13 +407,13 @@ async def fetch_greeting(response: Response,
         assert utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
         assert Language.get(response_language_code).is_valid(), "Invalid response_language_code parameter"
 
-        result = query_handler.create_greeting(name=addressing_name,
-                                               language_code=response_language_code,
-                                               tz_identifier=client_tz_identifier,
-                                               session_id=session_id,
-                                               endpoint_name=endpoints.GREETINGS_ENDPOINT,
-                                               therapist_id=therapist_id,
-                                               method=endpoints.API_METHOD_POST)
+        result = vector_query.create_greeting(name=addressing_name,
+                                              language_code=response_language_code,
+                                              tz_identifier=client_tz_identifier,
+                                              session_id=session_id,
+                                              endpoint_name=endpoints.GREETINGS_ENDPOINT,
+                                              therapist_id=therapist_id,
+                                              method=endpoints.API_METHOD_POST)
         assert result.status_code == status.HTTP_200_OK
 
         logging.log_api_response(session_id=session_id,
