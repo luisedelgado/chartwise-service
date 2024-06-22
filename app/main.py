@@ -20,8 +20,6 @@ from langcodes import Language
 from supabase import Client
 from typing import Annotated, Union
 
-from .assistant import vector_query
-from .assistant import vector_writer
 from .data_processing.diarization_cleaner import DiarizationCleaner
 from .internal import (endpoints,
                        library_clients,
@@ -29,6 +27,8 @@ from .internal import (endpoints,
                        models,
                        security,
                        utilities,)
+from .vectors import vector_query
+from .vectors import vector_writer
 
 TOKEN_EXPIRED_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
