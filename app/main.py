@@ -106,21 +106,17 @@ async def insert_new_session(body: models.SessionNotesInsert,
                                              namespace=body.patient_id,
                                              text=body.text,
                                              date=body.date)
-    except HTTPException as e:
-        status_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          therapist_id=body.therapist_id,
-                          patient_id=body.patient_id,
-                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_POST)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.patient_id,
+                                endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {}
     except Exception as e:
         description = str(e)
-        status_code = status.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           therapist_id=body.therapist_id,
                           patient_id=body.patient_id,
@@ -130,15 +126,6 @@ async def insert_new_session(body: models.SessionNotesInsert,
                           method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=body.therapist_id,
-                             patient_id=body.patient_id,
-                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {}
 
 """
 Updates a session report.
@@ -192,21 +179,18 @@ async def update_session(body: models.SessionNotesUpdate,
                                              namespace=body.patient_id,
                                              text=body.text,
                                              date=session_date_formatted)
-    except HTTPException as e:
-        status_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          therapist_id=body.therapist_id,
-                          patient_id=body.patient_id,
-                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_PUT)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.patient_id,
+                                endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_PUT)
+
+        return {}
     except Exception as e:
         description = str(e)
-        status_code = status.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           therapist_id=body.therapist_id,
                           patient_id=body.patient_id,
@@ -216,15 +200,6 @@ async def update_session(body: models.SessionNotesUpdate,
                           method=endpoints.API_METHOD_PUT)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=body.therapist_id,
-                             patient_id=body.patient_id,
-                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_PUT)
-
-    return {}
 
 """
 Deletes a session report.
@@ -272,21 +247,18 @@ async def delete_session(body: models.SessionNotesDelete,
         vector_writer.delete_session_vectors(index_id=body.therapist_id,
                                              namespace=body.patient_id,
                                              date=session_date_formatted)
-    except HTTPException as e:
-        status_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          therapist_id=body.therapist_id,
-                          patient_id=body.patient_id,
-                          endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_DELETE)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.patient_id,
+                                endpoint_name=endpoints.SESSIONS_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_DELETE)
+
+        return {}
     except Exception as e:
         description = str(e)
-        status_code = status.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           therapist_id=body.therapist_id,
                           patient_id=body.patient_id,
@@ -296,15 +268,6 @@ async def delete_session(body: models.SessionNotesDelete,
                           method=endpoints.API_METHOD_DELETE)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=body.therapist_id,
-                             patient_id=body.patient_id,
-                             endpoint_name=endpoints.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_DELETE)
-
-    return {}
 
 """
 Executes a query to our assistant system.
@@ -340,19 +303,21 @@ async def execute_assistant_query(query: models.AssistantQuery,
                             method=endpoints.API_METHOD_POST,
                             auth_entity=current_user.username)
 
-    # Confirm that the incoming patient id belongs to the incoming therapist id.
-    # We do this to avoid surfacing information to the wrong therapist
     try:
         assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
         supabase_client = library_clients.supabase_user_instance(query.supabase_access_token,
                                                                  query.supabase_refresh_token)
+
+        # Confirm that the incoming patient id is assigned to the incoming therapist id.
         patient_therapist_match = (0 != len(
             (supabase_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
                                                                                                     query.patient_id).execute()
         ).data))
+
+        assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
     except Exception as e:
         description = str(e)
-        status_code = status.HTTP_400_BAD_REQUEST
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           patient_id=query.patient_id,
                           endpoint_name=endpoints.QUERIES_ENDPOINT,
@@ -362,48 +327,38 @@ async def execute_assistant_query(query: models.AssistantQuery,
         raise HTTPException(status_code=status_code,
                             detail=description)
 
-    if not patient_therapist_match:
-        description = "There isn't a patient-therapist match with the incoming ids."
-        status_code = status.HTTP_403_FORBIDDEN
+    try:
+        # Go through with the query
+        response: query_handler.QueryResult = query_handler.query_store(index_id=query.therapist_id,
+                                                                        namespace=query.patient_id,
+                                                                        input=query.text,
+                                                                        response_language_code=query.response_language_code,
+                                                                        session_id=session_id,
+                                                                        endpoint_name=endpoints.QUERIES_ENDPOINT,
+                                                                        method=endpoints.API_METHOD_POST)
+
+        assert response.status_code != status.HTTP_200_OK, "Something went wrong when executing the query"
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=query.therapist_id,
+                                patient_id=query.patient_id,
+                                endpoint_name=endpoints.QUERIES_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {"response": response.response_token}
+    except Exception as e:
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
-                          therapist_id=query.therapist_id,
-                          patient_id=query.patient_id,
-                          endpoint_name=endpoints.QUERIES_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_POST)
+                        therapist_id=query.therapist_id,
+                        patient_id=query.patient_id,
+                        endpoint_name=endpoints.QUERIES_ENDPOINT,
+                        error_code=status_code,
+                        description=description,
+                        method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    # Go through with the query
-    response: query_handler.QueryResult = query_handler.query_store(index_id=query.therapist_id,
-                                                                    namespace=query.patient_id,
-                                                                    input=query.text,
-                                                                    response_language_code=query.response_language_code,
-                                                                    session_id=session_id,
-                                                                    endpoint_name=endpoints.QUERIES_ENDPOINT,
-                                                                    method=endpoints.API_METHOD_POST)
-
-    if response.status_code != status.HTTP_200_OK:
-        description = "Something failed when trying to execute the query"
-        logging.log_error(session_id=session_id,
-                          therapist_id=query.therapist_id,
-                          patient_id=query.patient_id,
-                          endpoint_name=endpoints.QUERIES_ENDPOINT,
-                          error_code=response.status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_POST)
-        raise HTTPException(status_code=response.status_code,
-                            detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=query.therapist_id,
-                             patient_id=query.patient_id,
-                             endpoint_name=endpoints.QUERIES_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {"response": response.response_token}
 
 """
 Returns a new greeting to the user.
@@ -459,9 +414,19 @@ async def fetch_greeting(response: Response,
                                                endpoint_name=endpoints.GREETINGS_ENDPOINT,
                                                therapist_id=therapist_id,
                                                method=endpoints.API_METHOD_POST)
+        assert result.status_code == status.HTTP_200_OK
+
+        logging.log_api_response(session_id=session_id,
+                                endpoint_name=endpoints.GREETINGS_ENDPOINT,
+                                therapist_id=therapist_id,
+                                http_status_code=status.HTTP_200_OK,
+                                description=logs_description,
+                                method=endpoints.API_METHOD_POST)
+
+        return {"message": result.response_token}
     except Exception as e:
-        status_code = status.HTTP_400_BAD_REQUEST
         description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.GREETINGS_ENDPOINT,
                           error_code=status_code,
@@ -469,19 +434,6 @@ async def fetch_greeting(response: Response,
                           method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             endpoint_name=endpoints.GREETINGS_ENDPOINT,
-                             therapist_id=therapist_id,
-                             http_status_code=status.HTTP_200_OK,
-                             description=logs_description,
-                             method=endpoints.API_METHOD_POST)
-
-    if result.status_code is not status.HTTP_200_OK:
-        raise HTTPException(status_code=result.status_code,
-                            detail=result.response_token)
-
-    return {"message": result.response_token}
 
 """
 Returns an OK status if the endpoint can be reached.
@@ -537,33 +489,24 @@ async def upload_session_notes_image(response: Response,
 
     try:
         document_id = await library_clients.upload_image_for_textraction(image)
-    except HTTPException as e:
-        status_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_POST)
-        raise HTTPException(status_code=status_code, detail=description)
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
+                                endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {"document_id": document_id}
     except Exception as e:
-        status_code = status.HTTP_409_CONFLICT
         description = str(e)
+        status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
                           error_code=status_code,
                           description=description,
                           method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code, detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=therapist_id,
-                             patient_id=patient_id,
-                             endpoint_name=endpoints.IMAGE_UPLOAD_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {"document_id": document_id}
 
 """
 Returns the text extracted from the incoming document_id.
@@ -602,35 +545,21 @@ async def extract_text(response: Response,
                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
                             auth_entity=current_user.username)
 
-    if document_id == None or document_id == "":
-        description = "Didn't receive a valid document id."
-        status_code = status.HTTP_409_CONFLICT
-        logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
-                          patient_id=patient_id,
-                          endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_GET)
-        raise HTTPException(status_code=status_code,
-                            detail=description)
-
     try:
+        assert len(document_id) > 0, "Didn't receive a valid document id."
         full_text = library_clients.extract_text(document_id)
-    except HTTPException as e:
-        status_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
-                          patient_id=patient_id,
-                          endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                          error_code=status_code,
-                          description=description,
-                          method=endpoints.API_METHOD_GET)
-        raise HTTPException(status_code=status_code, detail=description)
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
+                                endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_GET)
+
+        return {"extraction": full_text}
     except Exception as e:
-        status_code = status.HTTP_409_CONFLICT
         description = str(e)
+        status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           therapist_id=therapist_id,
                           patient_id=patient_id,
@@ -639,15 +568,6 @@ async def extract_text(response: Response,
                           description=description,
                           method=endpoints.API_METHOD_GET)
         raise HTTPException(status_code=status_code, detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=therapist_id,
-                             patient_id=patient_id,
-                             endpoint_name=endpoints.TEXT_EXTRACTION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_GET)
-
-    return {"extraction": full_text}
 
 # Audio handling endpoint
 
@@ -690,24 +610,24 @@ async def transcribe_session_notes(response: Response,
 
     try:
         transcript = await library_clients.transcribe_audio_file(audio_file)
+
+        logging.log_api_response(session_id=session_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
+                                endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {"transcript": transcript}
     except Exception as e:
-        status_code = status.HTTP_409_CONFLICT
         description = str(e)
+        status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
                           error_code=status_code,
                           description=description,
                           method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code, detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             therapist_id=therapist_id,
-                             patient_id=patient_id,
-                             endpoint_name=endpoints.NOTES_TRANSCRIPTION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {"transcript": transcript}
 
 """
 Returns the transcription created from the incoming audio file.
@@ -764,31 +684,22 @@ async def diarize_session(response: Response,
             "last_updated": now_timestamp,
             "source": "full_session_recording",
         }).execute()
-    except HTTPException as e:
-        resulting_code = e.status_code
-        description = str(e)
-        logging.log_error(session_id=session_id,
-                          endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                          error_code=resulting_code,
-                          description=description,
-                          method=endpoints.API_METHOD_POST)
-        raise HTTPException(status_code=resulting_code, detail=description)
+
+        logging.log_api_response(session_id=session_id,
+                                endpoint_name=endpoints.DIARIZATION_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {"job_id": job_id}
     except Exception as e:
-        resulting_code = status.HTTP_409_CONFLICT
         description = str(e)
+        status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
                           endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                          error_code=resulting_code,
+                          error_code=status_code,
                           description=description,
                           method=endpoints.API_METHOD_POST)
-        raise HTTPException(status_code=resulting_code, detail=description)
-
-    logging.log_api_response(session_id=session_id,
-                             endpoint_name=endpoints.DIARIZATION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {"job_id": job_id}
+        raise HTTPException(status_code=status_code, detail=description)
 
 """
 Meant to be used as a webhook so Speechmatics can notify us when a diarization operation is ready.
@@ -825,15 +736,11 @@ async def consume_notification(request: Request):
             "last_updated": now_timestamp,
         }).eq('session_diarization_job_id', job_id).execute()
 
-    except HTTPException as e:
-        description = str(e)
-        logging.log_diarization_event(error_code=e.status_code, description=description)
-        raise HTTPException(status_code=e.status_code, detail=description)
     except Exception as e:
         description = str(e)
-        resulting_code = status.HTTP_417_EXPECTATION_FAILED
-        logging.log_diarization_event(error_code=resulting_code, description=description)
-        raise HTTPException(status_code=resulting_code, detail=description)
+        status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+        logging.log_diarization_event(error_code=status_code, description=description)
+        raise HTTPException(status_code=status_code, detail=description)
 
     return {}
 
@@ -947,6 +854,18 @@ async def sign_up(signup_data: models.SignupData,
             "email": signup_data.user_email,
             "language_preference": signup_data.language_preference,
         }).execute()
+
+        logging.log_api_response(therapist_id=user_id,
+                                session_id=session_id,
+                                endpoint_name=endpoints.SIGN_UP_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=endpoints.API_METHOD_POST)
+
+        return {
+            "user_id": user_id,
+            "access_token": json_response["session"]["access_token"],
+            "refresh_token": json_response["session"]["refresh_token"]
+        }
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST
@@ -957,18 +876,6 @@ async def sign_up(signup_data: models.SignupData,
                           method=endpoints.API_METHOD_POST)
         raise HTTPException(status_code=status_code,
                             detail=description)
-
-    logging.log_api_response(therapist_id=user_id,
-                             session_id=session_id,
-                             endpoint_name=endpoints.SIGN_UP_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=endpoints.API_METHOD_POST)
-
-    return {
-        "user_id": user_id,
-        "access_token": json_response["session"]["access_token"],
-        "refresh_token": json_response["session"]["refresh_token"]
-    }
 
 """
 Logs out the user.
