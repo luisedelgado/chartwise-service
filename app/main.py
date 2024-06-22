@@ -1,6 +1,6 @@
-import json, uuid
+import json
 
-from datetime import (date, datetime, timedelta)
+from datetime import datetime
 from dataclasses import field
 from fastapi import (
     Cookie,
@@ -73,9 +73,9 @@ async def insert_new_session(body: models.SessionNotesInsert,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -146,9 +146,9 @@ async def update_session(body: models.SessionNotesUpdate,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -220,9 +220,9 @@ async def delete_session(body: models.SessionNotesDelete,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -289,9 +289,9 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -385,9 +385,9 @@ async def fetch_greeting(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -473,9 +473,9 @@ async def upload_session_notes_image(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -531,9 +531,9 @@ async def extract_text(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -594,9 +594,9 @@ async def transcribe_session_notes(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -654,9 +654,9 @@ async def diarize_session(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -747,33 +747,6 @@ async def consume_notification(request: Request):
 # Security endpoints
 
 """
-Refreshes the user's auth token for a continued session experience.
-
-Arguments:
-user – The user for whom to refresh the session.
-response  – the model with which to build the API response.
-"""
-def update_auth_token_for_user(user: security.User, response: Response):
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = security.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    response.delete_cookie("authorization")
-    response.set_cookie(key="authorization",
-                        value=access_token,
-                        httponly=True,
-                        secure=True,
-                        samesite="none")
-    return security.Token(access_token=access_token, token_type="bearer")
-
-"""
 Returns an oauth token to be used for invoking the endpoints.
 
 Arguments:
@@ -788,9 +761,9 @@ async def login_for_access_token(
     session_id: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
-    session_refresh_data: models.SessionRefreshData = await refresh_session(user=user,
-                                                                            response=response,
-                                                                            session_id=session_id)
+    session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=user,
+                                                                                     response=response,
+                                                                                     session_id=session_id)
     new_session_id = session_refresh_data._session_id
     logging.log_api_response(session_id=new_session_id,
                              endpoint_name=endpoints.TOKEN_ENDPOINT,
@@ -819,9 +792,9 @@ async def sign_up(signup_data: models.SignupData,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -896,9 +869,9 @@ async def logout(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await refresh_session(user=current_user,
-                                                                                response=response,
-                                                                                session_id=current_session_id)
+        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -919,35 +892,3 @@ async def logout(response: Response,
                              method=endpoints.API_METHOD_POST)
 
     return {}
-
-# Private methods
-
-"""
-Validates the incoming session cookies.
-
-Arguments:
-user – the user for whom to refresh the current session.
-response – the response object where we can update cookies.
-current_session_id – the session_id cookie to be validated, if exists.
-"""
-async def refresh_session(user: security.User,
-                          response: Response,
-                          session_id: Annotated[Union[str, None], Cookie()] = None) -> models.SessionRefreshData | None:
-    try:
-        token = update_auth_token_for_user(user, response)
-
-        if session_id is not None:
-            return models.SessionRefreshData(session_id=session_id,
-                                             auth_token=token)
-
-        new_session_id = uuid.uuid1()
-        response.delete_cookie("session_id")
-        response.set_cookie(key="session_id",
-                    value=new_session_id,
-                    httponly=True,
-                    secure=True,
-                    samesite="none")
-        return models.SessionRefreshData(session_id=new_session_id,
-                                        auth_token=token)
-    except Exception as e:
-        raise Exception(str(e))
