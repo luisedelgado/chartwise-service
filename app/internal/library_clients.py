@@ -15,7 +15,6 @@ from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 from supabase import create_client, Client
 
-from . import endpoints
 from . import utilities
 
 # Supabase
