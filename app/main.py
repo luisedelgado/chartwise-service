@@ -5,13 +5,15 @@ from typing import Annotated, Union
 from .internal import (library_clients, security)
 from .routers import (assistant_router,
                       audio_processing_router,
-                      image_processing_router)
+                      image_processing_router,
+                      security_router)
 
 app = FastAPI()
 
 app.include_router(assistant_router.router)
 app.include_router(audio_processing_router.router)
 app.include_router(image_processing_router.router)
+app.include_router(security_router.router)
 
 origins = [
     # Daniel Daza development
