@@ -1,23 +1,8 @@
-import json
-
-from fastapi import (
-    Cookie,
-    Depends,
-    HTTPException,
-    FastAPI,
-    Form,
-    Response,
-    status)
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import (Cookie, FastAPI)
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import Client
 from typing import Annotated, Union
 
-from .internal import (endpoints,
-                       library_clients,
-                       logging,
-                       models,
-                       security,)
+from .internal import (library_clients, security)
 from .routers import (assistant_router,
                       audio_processing_router,
                       image_processing_router)
