@@ -13,7 +13,7 @@ from typing import Annotated, Union
 
 from ..internal import (library_clients,
                         logging,
-                        models,
+                        model,
                         security,)
 
 LOGOUT_ENDPOINT = "/logout"
@@ -37,7 +37,7 @@ async def login_for_access_token(
     session_id: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
     user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
-    session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=user,
+    session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=user,
                                                                                      response=response,
                                                                                      session_id=session_id)
     new_session_id = session_refresh_data._session_id
@@ -59,7 +59,7 @@ authorization – The authorization cookie, if exists.
 current_session_id – The session_id cookie, if exists.
 """
 @router.post(SIGN_UP_ENDPOINT, tags=["security"])
-async def sign_up(signup_data: models.SignupData,
+async def sign_up(signup_data: model.SignupData,
                   response: Response,
                   authorization: Annotated[Union[str, None], Cookie()] = None,
                   current_session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -68,7 +68,7 @@ async def sign_up(signup_data: models.SignupData,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -145,7 +145,7 @@ async def logout(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id

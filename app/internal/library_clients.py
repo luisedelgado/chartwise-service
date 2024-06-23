@@ -225,7 +225,7 @@ SPEECHMATICS_NOTIFICATION_IPS = [
     "20.248.249.164",
 ]
 
-def speechmatics_config(auth_token: str):
+def speechmatics_config(auth_token: str, speechmatics_url: str):
     return {
         "type": "transcription",
         "transcription_config": {
@@ -236,7 +236,7 @@ def speechmatics_config(auth_token: str):
         },
         "notification_config": [
             {
-            "url": os.environ.get("ENVIRONMENT_URL") + endpoints.DIARIZATION_NOTIFICATION_ENDPOINT,
+            "url": speechmatics_url,
             "method": "post",
             "contents": ["transcript"],
             "auth_headers": [f"Authorization: Bearer {auth_token}"]
@@ -262,6 +262,7 @@ auth_token  – the access_token associated with the current server session.
 audio_file  – the audio file to be diarized.
 """
 async def diarize_audio_file(session_auth_token: str,
+                             endpoint_url: str,
                              audio_file: UploadFile = File(...)) -> str:
     _, file_extension = os.path.splitext(audio_file.filename)
     files_dir = 'app/files'
@@ -280,7 +281,8 @@ async def diarize_audio_file(session_auth_token: str,
     finally:
         await audio_file.close()
 
-    config = speechmatics_config(session_auth_token)
+    config = speechmatics_config(auth_token=session_auth_token,
+                                 speechmatics_url=endpoint_url)
 
     if False:#is_portkey_reachable():
         try:

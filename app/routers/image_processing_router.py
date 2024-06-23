@@ -8,7 +8,7 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
-from ..internal import library_clients, logging, models, security
+from ..internal import library_clients, logging, model, security
 
 IMAGE_UPLOAD_ENDPOINT = "/v1/image-uploads"
 TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
@@ -38,7 +38,7 @@ async def upload_session_notes_image(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -96,7 +96,7 @@ async def extract_text(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id

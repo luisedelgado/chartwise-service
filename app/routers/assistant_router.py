@@ -9,7 +9,7 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..internal import library_clients, logging, models, security, utilities
+from ..internal import library_clients, logging, model, security, utilities
 from ..vectors import vector_query, vector_writer
 
 GREETINGS_ENDPOINT = "/v1/greetings"
@@ -28,7 +28,7 @@ authorization – the authorization cookie, if exists.
 current_session_id – the session_id cookie, if exists.
 """
 @router.post(SESSIONS_ENDPOINT, tags=["assistant"])
-async def insert_new_session(body: models.SessionNotesInsert,
+async def insert_new_session(body: model.SessionNotesInsert,
                              response: Response,
                              authorization: Annotated[Union[str, None], Cookie()] = None,
                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -37,7 +37,7 @@ async def insert_new_session(body: models.SessionNotesInsert,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -101,7 +101,7 @@ authorization – the authorization cookie, if exists.
 current_session_id – the session_id cookie, if exists.
 """
 @router.put(SESSIONS_ENDPOINT, tags=["assistant"])
-async def update_session(body: models.SessionNotesUpdate,
+async def update_session(body: model.SessionNotesUpdate,
                          response: Response,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          current_session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -110,7 +110,7 @@ async def update_session(body: models.SessionNotesUpdate,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -175,7 +175,7 @@ authorization – the authorization cookie, if exists.
 current_session_id – the session_id cookie, if exists.
 """
 @router.delete(SESSIONS_ENDPOINT, tags=["assistant"])
-async def delete_session(body: models.SessionNotesDelete,
+async def delete_session(body: model.SessionNotesDelete,
                          response: Response,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          current_session_id: Annotated[Union[str, None], Cookie()] = None,):
@@ -184,7 +184,7 @@ async def delete_session(body: models.SessionNotesDelete,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -244,7 +244,7 @@ authorization – The authorization cookie, if exists.
 current_session_id – The session_id cookie, if exists.
 """
 @router.post(QUERIES_ENDPOINT, tags=["assistant"])
-async def execute_assistant_query(query: models.AssistantQuery,
+async def execute_assistant_query(query: model.AssistantQuery,
                                   response: Response,
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                   current_session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -253,7 +253,7 @@ async def execute_assistant_query(query: models.AssistantQuery,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -349,7 +349,7 @@ async def fetch_greeting(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id

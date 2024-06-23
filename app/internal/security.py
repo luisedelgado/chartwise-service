@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from typing import Annotated, Union
 
-from .models import SessionRefreshData
+from .model import SessionRefreshData
 
 SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
 ALGORITHM = "HS256"

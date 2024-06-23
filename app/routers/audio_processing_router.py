@@ -1,4 +1,4 @@
-import json
+import json, os
 
 from datetime import datetime
 
@@ -14,7 +14,7 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal import library_clients, logging, models, security, utilities
+from ..internal import library_clients, logging, model, security, utilities
 
 DIARIZATION_ENDPOINT = "/v1/diarization"
 DIARIZATION_NOTIFICATION_ENDPOINT = "/v1/diarization-notification"
@@ -45,7 +45,7 @@ async def transcribe_session_notes(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -105,7 +105,7 @@ async def diarize_session(response: Response,
 
     try:
         current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: models.SessionRefreshData = await security.refresh_session(user=current_user,
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
                                                                                          response=response,
                                                                                          session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -122,11 +122,13 @@ async def diarize_session(response: Response,
     try:
         assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
 
-        supabase_client = library_clients.supabase_admin_instance()
+        endpoint_url = os.environ.get("ENVIRONMENT_URL") + DIARIZATION_NOTIFICATION_ENDPOINT
         job_id: str = await library_clients.diarize_audio_file(session_auth_token=authorization,
-                                                               audio_file=audio_file)
+                                                               audio_file=audio_file,
+                                                               endpoint_url=endpoint_url)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        supabase_client = library_clients.supabase_admin_instance()
         supabase_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
             "session_date": session_date,
