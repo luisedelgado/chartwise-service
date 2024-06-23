@@ -14,6 +14,12 @@ SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+TOKEN_EXPIRED_ERROR = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Token missing or expired",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
 class Token(BaseModel):
     access_token: str
     token_type: str

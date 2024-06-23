@@ -2,6 +2,11 @@ import os
 
 from . import library_clients
 
+API_METHOD_POST = "post"
+API_METHOD_PUT = "put"
+API_METHOD_GET = "get"
+API_METHOD_DELETE = "delete"
+
 supabase_client = library_clients.supabase_admin_instance()
 
 """
