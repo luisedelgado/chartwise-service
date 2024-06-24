@@ -160,7 +160,8 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         config = self.diarization_config(auth_token=session_auth_token,
                                     endpoint_url=endpoint_url)
 
-        if AuthManager().is_monitoring_proxy_reachable():
+        auth_manager = AuthManager()
+        if auth_manager.is_monitoring_proxy_reachable():
             try:
                 base_url = os.environ.get("SPEECHMATICS_URL")
                 document_endpoint = os.environ.get("SPEECHMATICS_JOBS_ENDPOINT")
@@ -173,7 +174,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                 }
 
                 file = {"data_file": (audio_copy_file_name, open(audio_copy_full_path, 'rb'))}
-                response = requests.post(self.get_monitoring_proxy_url(), headers=headers, data={"config": json.dumps(config)}, files=file)
+                response = requests.post(auth_manager.get_monitoring_proxy_url(), headers=headers, data={"config": json.dumps(config)}, files=file)
 
                 assert response.status_code == 201, f"Got HTTP code {response.status} while uploading the audio file"
                 json_response = response.json()
