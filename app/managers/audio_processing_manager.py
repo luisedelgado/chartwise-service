@@ -163,13 +163,13 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         auth_manager = AuthManager()
         if auth_manager.is_monitoring_proxy_reachable():
             try:
-                base_url = os.environ.get("SPEECHMATICS_URL")
+                custom_host_url = os.environ.get("SPEECHMATICS_URL")
                 document_endpoint = os.environ.get("SPEECHMATICS_JOBS_ENDPOINT")
 
                 headers = {
                     "Authorization": "Bearer " + os.environ.get("SPEECHMATICS_API_KEY"),
                     "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
-                    "x-portkey-custom-host": base_url + document_endpoint,
+                    "x-portkey-custom-host": custom_host_url + document_endpoint,
                     "x-portkey-virtual-key": os.environ.get("PORTKEY_SPEECHMATICS_VIRTUAL_KEY"),
                 }
 
