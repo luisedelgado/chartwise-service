@@ -2,7 +2,8 @@ from fastapi import (Cookie, FastAPI)
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated, Union
 
-from .internal import (library_clients, security)
+from .internal import security
+from .managers.audio_processing_manager import AudioProcessingManager
 from .routers import (assistant_router,
                       audio_processing_router,
                       image_processing_router,
@@ -18,7 +19,7 @@ app.include_router(security_router.router)
 origins = [
     # Daniel Daza development
     "https://localhost:5173",
-    library_clients.SPEECHMATICS_NOTIFICATION_IPS,
+    AudioProcessingManager().get_diarization_notifications_ips(),
 ]
 
 app.add_middleware(

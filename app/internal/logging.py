@@ -1,13 +1,13 @@
 import os
 
-from . import library_clients
+from ..managers.auth_manager import AuthManager
 
 API_METHOD_POST = "post"
 API_METHOD_PUT = "put"
 API_METHOD_GET = "get"
 API_METHOD_DELETE = "delete"
 
-supabase_client = library_clients.supabase_admin_instance()
+datastore_client = AuthManager().datastore_admin_instance()
 
 """
 Logs data about an API request.
@@ -28,7 +28,7 @@ def log_api_request(**kwargs):
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
         patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
         method = None if "method" not in kwargs else kwargs["method"]
-        supabase_client.table('api_request_logs').insert({
+        datastore_client.table('api_request_logs').insert({
             "session_id": str(session_id),
             "endpoint_name": endpoint_name,
             "description": description,
@@ -60,7 +60,7 @@ def log_api_response(**kwargs):
     method = None if "method" not in kwargs else kwargs["method"]
 
     try:
-        supabase_client.table('api_response_logs').insert({
+        datastore_client.table('api_response_logs').insert({
             "session_id": str(session_id),
             "therapist_id": therapist_id,
             "patient_id": patient_id,
@@ -92,7 +92,7 @@ def log_error(**kwargs):
     method = None if "method" not in kwargs else kwargs["method"]
 
     try:
-        supabase_client.table('error_logs').insert({
+        datastore_client.table('error_logs').insert({
             "session_id": str(session_id),
             "therapist_id": therapist_id,
             "patient_id": patient_id,
@@ -120,7 +120,7 @@ def log_diarization_event(**kwargs):
     description = None if "description" not in kwargs else kwargs["description"]
 
     try:
-        supabase_client.table('diarization_logs').insert({
+        datastore_client.table('diarization_logs').insert({
             "error_code": error_code,
             "description": description}).execute()
     except Exception as e:

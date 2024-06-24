@@ -11,10 +11,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from supabase import Client
 from typing import Annotated, Union
 
-from ..internal import (library_clients,
-                        logging,
-                        model,
-                        security,)
+from ..internal import logging, model, security
+from ..managers.auth_manager import AuthManager
 
 LOGOUT_ENDPOINT = "/logout"
 SIGN_UP_ENDPOINT = "/sign-up"
@@ -81,8 +79,8 @@ async def sign_up(signup_data: model.SignupData,
                             auth_entity=current_user.username)
 
     try:
-        supabase_client: Client = library_clients.supabase_admin_instance()
-        res = supabase_client.auth.sign_up({
+        datastore_client: Client = AuthManager().datastore_admin_instance()
+        res = datastore_client.auth.sign_up({
             "email": signup_data.user_email,
             "password": signup_data.user_password,
         })
@@ -93,7 +91,7 @@ async def sign_up(signup_data: model.SignupData,
             and json_response["session"]["refresh_token"]), "Something went wrong when signing up the user"
 
         user_id = json_response["user"]["id"]
-        supabase_client.table('therapists').insert({
+        datastore_client.table('therapists').insert({
             "id": user_id,
             "first_name": signup_data.first_name,
             "middle_name": signup_data.middle_name,

@@ -14,7 +14,9 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal import library_clients, logging, model, security, utilities
+from ..internal import logging, model, security, utilities
+from ..managers.audio_processing_manager import AudioProcessingManager
+from ..managers.auth_manager import AuthManager
 
 DIARIZATION_ENDPOINT = "/v1/diarization"
 DIARIZATION_NOTIFICATION_ENDPOINT = "/v1/diarization-notification"
@@ -60,7 +62,7 @@ async def transcribe_session_notes(response: Response,
                             auth_entity=current_user.username)
 
     try:
-        transcript = await library_clients.transcribe_audio_file(audio_file)
+        transcript = await AudioProcessingManager().transcribe_audio_file(audio_file)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,
@@ -123,13 +125,13 @@ async def diarize_session(response: Response,
         assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
 
         endpoint_url = os.environ.get("ENVIRONMENT_URL") + DIARIZATION_NOTIFICATION_ENDPOINT
-        job_id: str = await library_clients.diarize_audio_file(session_auth_token=authorization,
+        job_id: str = await AudioProcessingManager().diarize_audio_file(session_auth_token=authorization,
                                                                audio_file=audio_file,
                                                                endpoint_url=endpoint_url)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
-        supabase_client = library_clients.supabase_admin_instance()
-        supabase_client.table('session_reports').insert({
+        datastore_client = AuthManager().datastore_admin_instance()
+        datastore_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
             "session_date": session_date,
             "therapist_id": therapist_id,
@@ -174,7 +176,7 @@ async def consume_notification(request: Request):
         id = request.query_params["id"]
         assert status_code.lower() == "success", f"Diarization failed for job ID {id}"
 
-        supabase_client = library_clients.supabase_admin_instance()
+        datastore_client = AuthManager().datastore_admin_instance()
 
         raw_data = await request.json()
         json_data = json.loads(json.dumps(raw_data))
@@ -183,7 +185,7 @@ async def consume_notification(request: Request):
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
-        supabase_client.table('session_reports').update({
+        datastore_client.table('session_reports').update({
             "notes_text": summary,
             "session_diarization": diarization,
             "last_updated": now_timestamp,

@@ -5,8 +5,8 @@ class SessionNotesInsert(BaseModel):
     therapist_id: str
     text: str
     date: str
-    supabase_access_token: str
-    supabase_refresh_token: str
+    datastore_access_token: str
+    datastore_refresh_token: str
     source: str
 
 class SessionNotesUpdate(BaseModel):
@@ -15,23 +15,23 @@ class SessionNotesUpdate(BaseModel):
     session_notes_id: str
     diarization: str = None
     text: str
-    supabase_access_token: str
-    supabase_refresh_token: str
+    datastore_access_token: str
+    datastore_refresh_token: str
 
 class SessionNotesDelete(BaseModel):
     patient_id: str
     therapist_id: str
     session_notes_id: str
-    supabase_access_token: str
-    supabase_refresh_token: str
+    datastore_access_token: str
+    datastore_refresh_token: str
 
 class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str
     text: str
     response_language_code: str
-    supabase_access_token: str
-    supabase_refresh_token: str
+    datastore_access_token: str
+    datastore_refresh_token: str
 
 class SignupData(BaseModel):
     user_email: str

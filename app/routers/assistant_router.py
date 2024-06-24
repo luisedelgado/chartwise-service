@@ -9,7 +9,8 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..internal import library_clients, logging, model, security, utilities
+from ..internal import logging, model, security, utilities
+from ..managers.auth_manager import AuthManager
 from ..vectors import vector_query, vector_writer
 
 GREETINGS_ENDPOINT = "/v1/greetings"
@@ -54,10 +55,10 @@ async def insert_new_session(body: model.SessionNotesInsert,
     try:
         assert utilities.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
 
-        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
-                                                                 body.supabase_refresh_token)
+        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
+                                                                 body.datastore_refresh_token)
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
-        supabase_client.table('session_reports').insert({
+        datastore_client.table('session_reports').insert({
             "notes_text": body.text,
             "session_date": body.date,
             "patient_id": body.patient_id,
@@ -125,11 +126,11 @@ async def update_session(body: model.SessionNotesUpdate,
                             auth_entity=current_user.username)
 
     try:
-        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
-                                                                 body.supabase_refresh_token)
+        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
+                                                                 body.datastore_refresh_token)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
-        update_result = supabase_client.table('session_reports').update({
+        update_result = datastore_client.table('session_reports').update({
             "notes_text": body.text,
             "last_updated": now_timestamp,
             "session_diarization": body.diarization,
@@ -199,10 +200,10 @@ async def delete_session(body: model.SessionNotesDelete,
                             auth_entity=current_user.username)
 
     try:
-        supabase_client = library_clients.supabase_user_instance(body.supabase_access_token,
-                                                                 body.supabase_refresh_token)
+        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
+                                                                 body.datastore_refresh_token)
 
-        delete_result = supabase_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
+        delete_result = datastore_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
 
         session_date_raw = delete_result.dict()['data'][0]['session_date']
         session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
@@ -269,13 +270,13 @@ async def execute_assistant_query(query: model.AssistantQuery,
 
     try:
         assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
-        supabase_client = library_clients.supabase_user_instance(query.supabase_access_token,
-                                                                 query.supabase_refresh_token)
+        datastore_client = AuthManager().datastore_user_instance(query.datastore_access_token,
+                                                                 query.datastore_refresh_token)
 
         # Confirm that the incoming patient id is assigned to the incoming therapist id.
         patient_therapist_match = (0 != len(
-            (supabase_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
-                                                                                                    query.patient_id).execute()
+            (datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
+                                                                                                     query.patient_id).execute()
         ).data))
 
         assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
@@ -301,7 +302,7 @@ async def execute_assistant_query(query: model.AssistantQuery,
                                                                       endpoint_name=QUERIES_ENDPOINT,
                                                                       method=logging.API_METHOD_POST)
 
-        assert response.status_code != status.HTTP_200_OK, "Something went wrong when executing the query"
+        assert response.status_code == status.HTTP_200_OK, "Something went wrong when executing the query"
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=query.therapist_id,

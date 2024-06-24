@@ -8,7 +8,8 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
-from ..internal import library_clients, logging, model, security
+from ..internal import logging, model, security
+from ..managers.image_processing_manager import ImageProcessingManager
 
 IMAGE_UPLOAD_ENDPOINT = "/v1/image-uploads"
 TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
@@ -39,8 +40,8 @@ async def upload_session_notes_image(response: Response,
     try:
         current_user: security.User = await security.get_current_user(authorization)
         session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -53,7 +54,7 @@ async def upload_session_notes_image(response: Response,
                             auth_entity=current_user.username)
 
     try:
-        document_id = await library_clients.upload_image_for_textraction(image)
+        document_id = await ImageProcessingManager().upload_image_for_textraction(image)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,
@@ -112,7 +113,7 @@ async def extract_text(response: Response,
 
     try:
         assert len(document_id) > 0, "Didn't receive a valid document id."
-        full_text = library_clients.extract_text(document_id)
+        full_text = ImageProcessingManager().extract_text(document_id)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,

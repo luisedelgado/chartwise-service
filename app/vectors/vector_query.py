@@ -10,8 +10,8 @@ from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
 from . import message_templates
-from ..internal import library_clients
 from ..internal import utilities
+from ..managers.auth_manager import AuthManager
 
 __llm_model = "gpt-3.5-turbo"
 
@@ -49,8 +49,9 @@ def query_store(index_id,
         vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
         vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
 
-        is_portkey_reachable = library_clients.is_portkey_reachable()
-        api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
+        auth_manager = AuthManager()
+        is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+        api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
 
         metadata = {
             "environment": os.environ.get("ENVIRONMENT"),
@@ -64,10 +65,10 @@ def query_store(index_id,
         }
 
         cache_ttl = 300 # 5 minutes
-        headers = library_clients.create_portkey_headers(metadata=metadata,
-                                                         caching_shard_key=index_id,
-                                                         llm_model=__llm_model,
-                                                         cache_max_age=cache_ttl) if is_portkey_reachable else None
+        headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                               caching_shard_key=index_id,
+                                                               llm_model=__llm_model,
+                                                               cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
         llm = llama_index_OpenAI(model=__llm_model,
                                  temperature=0,
@@ -109,8 +110,9 @@ def create_greeting(name: str,
                     method,
                     ) -> QueryResult:
     try:
-        is_portkey_reachable = library_clients.is_portkey_reachable()
-        api_base = library_clients.PORTKEY_GATEWAY_URL if is_portkey_reachable else None
+        auth_manager = AuthManager()
+        is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+        api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
         caching_shard_key = (therapist_id + "-" + datetime.now().strftime(utilities.DATE_FORMAT))
 
         metadata = {
@@ -125,10 +127,10 @@ def create_greeting(name: str,
         }
 
         cache_ttl = 86400 # 24 hours
-        headers = library_clients.create_portkey_headers(metadata=metadata,
-                                                         caching_shard_key=caching_shard_key,
-                                                         llm_model=__llm_model,
-                                                         cache_max_age=cache_ttl) if is_portkey_reachable else None
+        headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                               caching_shard_key=caching_shard_key,
+                                                               llm_model=__llm_model,
+                                                               cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
         llm = OpenAI(base_url=api_base,
                      default_headers=headers)
