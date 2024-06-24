@@ -165,21 +165,27 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             try:
                 custom_host_url = os.environ.get("SPEECHMATICS_URL")
                 document_endpoint = os.environ.get("SPEECHMATICS_JOBS_ENDPOINT")
+                portkey_gateway_url = auth_manager.get_monitoring_proxy_url()
 
                 headers = {
+                    "x-portkey-forward-headers": "[\"authorization\"]",
                     "Authorization": "Bearer " + os.environ.get("SPEECHMATICS_API_KEY"),
                     "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
-                    "x-portkey-custom-host": custom_host_url + document_endpoint,
-                    "x-portkey-virtual-key": os.environ.get("PORTKEY_SPEECHMATICS_VIRTUAL_KEY"),
+                    "x-portkey-custom-host": custom_host_url,
+                    "x-portkey-provider": "openai",
+                    "x-portkey-metadata": json.dumps({"hidden_provider": "speechmatics"})
                 }
 
                 file = {"data_file": (audio_copy_file_name, open(audio_copy_full_path, 'rb'))}
-                response = requests.post(auth_manager.get_monitoring_proxy_url(), headers=headers, data={"config": json.dumps(config)}, files=file)
+
+                response = requests.post(portkey_gateway_url + document_endpoint,
+                                         headers=headers,
+                                         data={"config": json.dumps(config)},
+                                         files=file)
 
                 assert response.status_code == 201, f"Got HTTP code {response.status} while uploading the audio file"
                 json_response = response.json()
-                job_id = json_response['id']
-                return job_id
+                return json_response['id']
             except Exception as e:
                 raise Exception(str(e))
             finally:
