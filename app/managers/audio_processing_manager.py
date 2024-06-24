@@ -12,6 +12,7 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
+from .auth_manager import AuthManager
 from ..internal import utilities
 from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 
@@ -159,7 +160,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         config = self.diarization_config(auth_token=session_auth_token,
                                     endpoint_url=endpoint_url)
 
-        if False:#is_monitoring_proxy_reachable():
+        if AuthManager().is_monitoring_proxy_reachable():
             try:
                 base_url = os.environ.get("SPEECHMATICS_URL")
                 document_endpoint = os.environ.get("SPEECHMATICS_JOBS_ENDPOINT")
