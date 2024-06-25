@@ -1,6 +1,4 @@
-import json, os, requests, shutil, ssl
-
-from datetime import datetime
+import json, os, requests, ssl
 
 from deepgram import (
     DeepgramClient,
@@ -20,59 +18,81 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def transcribe_audio_file(self,
                                     audio_file: UploadFile = File(...)) -> str:
-        try:
-            _, file_extension = os.path.splitext(audio_file.filename)
-            files_dir = 'app/files'
-            audio_copy_bare_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-            audio_copy_path = files_dir + '/' + audio_copy_bare_name + file_extension
+        audio_copy_result: utilities.FileCopyResult = await utilities.make_file_copy(audio_file)
 
-            # Write incoming audio to our local volume for further processing
-            with open(audio_copy_path, 'wb+') as buffer:
-                shutil.copyfileobj(audio_file.file, buffer)
+        auth_manager = AuthManager()
+        if auth_manager.is_monitoring_proxy_reachable():
+            try:
+                custom_host_url = os.environ.get("DG_URL")
+                listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
+                portkey_gateway_url = auth_manager.get_monitoring_proxy_url()
 
-            assert os.path.exists(audio_copy_path), "Something went wrong while processing the file."
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail=str(e))
-        finally:
-            await audio_file.close()
+                headers = {
+                    "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
+                    "Authorization": "Token " + os.environ.get("SPEECHMATICS_API_KEY"),
+                    # "Content-type": "audio/wav",
+                    "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
+                    "x-portkey-custom-host": custom_host_url,
+                    "x-portkey-provider": "openai",
+                    "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
+                }
 
-        # Process local copy with DeepgramClient
-        try:
-            deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
+                file = {"data_file": (audio_copy_result.file_copy_name,
+                                      open(audio_copy_result.file_copy_full_path,'rb'))}
 
-            with open(audio_copy_path, "rb") as file:
-                buffer_data = file.read()
+                options = "&".join(["model=nova-2",
+                                    "smart_format=true",
+                                    "detect_language=true",
+                                    "utterances=true",
+                                    "numerals=true"])
+                endpoint_configuration = listen_endpoint + "?" + options
+                response = requests.post(portkey_gateway_url + endpoint_configuration,
+                                         headers=headers,
+                                         files=file)
 
-            payload: FileSource = {
-                "buffer": buffer_data,
-            }
+                assert response.status_code == 200, f"{response.status_code}: {response.text}"
+                json_response = response.json()
+            except Exception as e:
+                status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+                raise HTTPException(status_code=status_code,
+                                    detail=str(e))
+            finally:
+                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+        else:
+            # Process local copy with DeepgramClient
+            try:
+                deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
 
-            options = PrerecordedOptions(
-                model="nova-2",
-                smart_format=True,
-                detect_language=True,
-                utterances=True,
-                numerals=True
-            )
+                with open(audio_copy_result.file_copy_full_path, "rb") as file:
+                    buffer_data = file.read()
 
-            # Increase the timeout to 300 seconds (5 minutes)
-            response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
-                                                                        options,
-                                                                        timeout=Timeout(300.0, connect=10.0))
+                payload: FileSource = {
+                    "buffer": buffer_data,
+                }
 
-            json_response = json.loads(response.to_json(indent=4))
-            transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
-        except HTTPException as e:
-            raise HTTPException(status_code=e.status_code,
-                                detail=str(e))
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="The transcription operation failed.")
-        finally:
-            await utilities.clean_up_files([audio_copy_path])
+                options = PrerecordedOptions(
+                    model="nova-2",
+                    smart_format=True,
+                    detect_language=True,
+                    utterances=True,
+                    numerals=True
+                )
 
-        return transcript
+                # Increase the timeout to 300 seconds (5 minutes)
+                response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
+                                                                              options,
+                                                                              timeout=Timeout(300.0, connect=10.0))
+
+                json_response = json.loads(response.to_json(indent=4))
+                transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
+            except Exception as e:
+                status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+                raise HTTPException(status_code=status_code,
+                                    detail=str(e))
+            finally:
+                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+
+            return transcript
 
     # Speechmatics
 
@@ -140,25 +160,9 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  audio_file: UploadFile = File(...)) -> str:
-        _, file_extension = os.path.splitext(audio_file.filename)
-        files_dir = 'app/files'
-        audio_copy_file_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S") + file_extension
-        audio_copy_full_path = files_dir + '/' + audio_copy_file_name
-
-        try:
-            # Write incoming audio to our local volume for further processing
-            with open(audio_copy_full_path, 'wb+') as buffer:
-                shutil.copyfileobj(audio_file.file, buffer)
-
-            assert os.path.exists(audio_copy_full_path), "Something went wrong while processing the file."
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail=str(e))
-        finally:
-            await audio_file.close()
-
+        audio_copy_result: utilities.FileCopyResult = await utilities.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
-                                    endpoint_url=endpoint_url)
+                                         endpoint_url=endpoint_url)
 
         auth_manager = AuthManager()
         if auth_manager.is_monitoring_proxy_reachable():
@@ -176,20 +180,23 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                     "x-portkey-metadata": json.dumps({"hidden_provider": "speechmatics"})
                 }
 
-                file = {"data_file": (audio_copy_file_name, open(audio_copy_full_path, 'rb'))}
+                file = {"data_file": (audio_copy_result.file_copy_name,
+                                      open(audio_copy_result.file_copy_full_path, 'rb'))}
 
                 response = requests.post(portkey_gateway_url + document_endpoint,
                                          headers=headers,
                                          data={"config": json.dumps(config)},
                                          files=file)
 
-                assert response.status_code == 201, f"Got HTTP code {response.status} while uploading the audio file"
+                assert response.status_code == 201, f"Got HTTP code {response.status_code} while uploading the audio file"
                 json_response = response.json()
                 return json_response['id']
             except Exception as e:
-                raise Exception(str(e))
+                status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+                raise HTTPException(status_code=status_code,
+                                    detail=str(e))
             finally:
-                await utilities.clean_up_files([audio_copy_full_path])
+                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
         else:
             ssl_context = (ssl.create_default_context()
                         if os.environ.get("ENVIRONMENT").lower() == "prod"
@@ -202,15 +209,12 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             with BatchClient(settings) as client:
                 try:
                     return client.submit_job(
-                        audio=audio_copy_full_path,
+                        audio=audio_copy_result.file_copy_full_path,
                         transcription_config=config,
                     )
-                except TimeoutError as e:
-                    raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT)
-                except HTTPException as e:
-                    raise HTTPException(status_code=e.status_code, detail=str(e))
                 except Exception as e:
-                    raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                    status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+                    raise HTTPException(status_code=status_code,
                                         detail=str(e))
                 finally:
-                    await utilities.clean_up_files([audio_copy_full_path])
+                    await utilities.clean_up_files([audio_copy_result.file_copy_full_path])

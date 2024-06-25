@@ -16,8 +16,8 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
             pdf_extension = "pdf"
             file_name, _ = os.path.splitext(image.filename)
 
-            image_copy_result = utilities.make_image_pdf_copy(image)
-            image_copy_path = image_copy_result.image_copy_path
+            image_copy_result: utilities.FileCopyResult = await utilities.make_image_pdf_copy(image)
+            image_copy_path = image_copy_result.file_copy_full_path
             files_to_clean = image_copy_result.file_copies
 
             if not os.path.exists(image_copy_path):
