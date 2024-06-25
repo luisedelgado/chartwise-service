@@ -3,13 +3,16 @@ import base64, os, requests
 from fastapi import (File, HTTPException, status, UploadFile)
 from portkey_ai import Portkey
 
-from .auth_manager import AuthManager
-from ..api.image_processing_base_class import ImageProcessingManagerBaseClass
-from ..internal import utilities
+from ...api.image_processing_base_class import ImageProcessingManagerBaseClass
+from ...api.auth_base_class import AuthManagerBaseClass
+from ...internal import utilities
 
 class ImageProcessingManager(ImageProcessingManagerBaseClass):
 
-    async def upload_image_for_textraction(self, image: UploadFile = File(...)) -> str:
+    async def upload_image_for_textraction(self,
+                                           auth_manager: AuthManagerBaseClass,
+                                           image: UploadFile = File(...)) -> str:
+        files_to_clean = None
         try:
             base_url = os.getenv("DOCUPANDA_BASE_URL")
             document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
@@ -30,7 +33,7 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
                 "filename": file_name + pdf_extension
             }}
 
-            if AuthManager().is_monitoring_proxy_reachable():
+            if auth_manager.is_monitoring_proxy_reachable():
                 portkey = Portkey(
                     api_key=os.environ.get("PORTKEY_API_KEY"),
                     virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),

@@ -30,12 +30,12 @@ async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
         copy_file_result: FileCopyResult = await make_file_copy(image)
         copy_bare_name, copy_extension = os.path.splitext(copy_file_result.file_copy_name)
 
+        pdf_extension = '.pdf'
         if copy_extension.lower() == pdf_extension:
             # It's already a PDF, we can return as is.
             return copy_file_result
 
         # We need to make a PDF copy.
-        pdf_extension = '.pdf'
         image_copy_pdf_path = FILES_DIR + '/' + copy_bare_name + pdf_extension
         file_copies = copy_file_result.file_copies
 

@@ -1,6 +1,6 @@
 import os
 
-from ..managers.auth_manager import AuthManager
+from ..managers.implementations.auth_manager import AuthManager
 
 API_METHOD_POST = "post"
 API_METHOD_PUT = "put"

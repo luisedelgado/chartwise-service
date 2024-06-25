@@ -1,3 +1,5 @@
+import os
+
 from fastapi import (APIRouter,
                      Cookie,
                      File,
@@ -9,12 +11,13 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..internal import logging, model, security
-from ..managers.image_processing_manager import ImageProcessingManager
+from ..managers.manager_factory import ManagerFactory
 
 IMAGE_UPLOAD_ENDPOINT = "/v1/image-uploads"
 TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
 
 router = APIRouter()
+environment = ...
 
 """
 Returns a document_id value associated with the file that was uploaded.
@@ -54,7 +57,10 @@ async def upload_session_notes_image(response: Response,
                             auth_entity=current_user.username)
 
     try:
-        document_id = await ImageProcessingManager().upload_image_for_textraction(image)
+        image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        document_id = await image_processing_manager.upload_image_for_textraction(auth_manager=auth_manager,
+                                                                                  image=image)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,
@@ -113,7 +119,8 @@ async def extract_text(response: Response,
 
     try:
         assert len(document_id) > 0, "Didn't receive a valid document id."
-        full_text = ImageProcessingManager().extract_text(document_id)
+        image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
+        full_text = image_processing_manager.extract_text(document_id)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,

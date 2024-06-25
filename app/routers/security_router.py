@@ -12,13 +12,14 @@ from supabase import Client
 from typing import Annotated, Union
 
 from ..internal import logging, model, security
-from ..managers.auth_manager import AuthManager
+from ..managers.manager_factory import ManagerFactory
 
 LOGOUT_ENDPOINT = "/logout"
 SIGN_UP_ENDPOINT = "/sign-up"
 TOKEN_ENDPOINT = "/token"
 
 router = APIRouter()
+environment = ...
 
 """
 Returns an oauth token to be used for invoking the endpoints.
@@ -79,7 +80,8 @@ async def sign_up(signup_data: model.SignupData,
                             auth_entity=current_user.username)
 
     try:
-        datastore_client: Client = AuthManager().datastore_admin_instance()
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        datastore_client: Client = auth_manager.datastore_admin_instance()
         res = datastore_client.auth.sign_up({
             "email": signup_data.user_email,
             "password": signup_data.user_password,

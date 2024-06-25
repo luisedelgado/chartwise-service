@@ -10,18 +10,18 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
-from .auth_manager import AuthManager
-from ..internal import utilities
-from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
+from ...internal import utilities
+from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
+from ...api.auth_base_class import AuthManagerBaseClass
 
 class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def transcribe_audio_file(self,
+                                    auth_manager: AuthManagerBaseClass,
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: utilities.FileCopyResult = await utilities.make_file_copy(audio_file)
 
-        auth_manager = AuthManager()
-        if auth_manager.is_monitoring_proxy_reachable():
+        if not auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
@@ -157,6 +157,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         }
 
     async def diarize_audio_file(self,
+                                 auth_manager: AuthManagerBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  audio_file: UploadFile = File(...)) -> str:
@@ -164,7 +165,6 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)
 
-        auth_manager = AuthManager()
         if auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("SPEECHMATICS_URL")

@@ -1,6 +1,6 @@
 from fastapi import File, UploadFile
 
-from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
+from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 
 class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
     async def transcribe_audio_file(audio_file: UploadFile = File(...)) -> str:

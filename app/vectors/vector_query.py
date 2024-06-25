@@ -11,7 +11,7 @@ from pinecone.grpc import PineconeGRPC
 
 from . import message_templates
 from ..internal import utilities
-from ..managers.auth_manager import AuthManager
+from ..managers.implementations.auth_manager import AuthManager
 
 __llm_model = "gpt-3.5-turbo"
 

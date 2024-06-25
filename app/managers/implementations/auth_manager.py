@@ -4,7 +4,7 @@ from fastapi import status
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 from supabase import create_client, Client
 
-from ..api.auth_base_class import AuthManagerBaseClass
+from ...api.auth_base_class import AuthManagerBaseClass
 
 class AuthManager(AuthManagerBaseClass):
 

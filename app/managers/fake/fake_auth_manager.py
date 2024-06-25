@@ -1,6 +1,6 @@
 from supabase import Client
 
-from ..api.auth_base_class import AuthManagerBaseClass
+from ...api.auth_base_class import AuthManagerBaseClass
 
 class FakeAuthManager(AuthManagerBaseClass):
     def datastore_user_instance(access_token, refresh_token) -> Client:

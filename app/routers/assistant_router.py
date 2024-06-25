@@ -10,7 +10,7 @@ from langcodes import Language
 from typing import Annotated, Union
 
 from ..internal import logging, model, security, utilities
-from ..managers.auth_manager import AuthManager
+from ..managers.manager_factory import ManagerFactory
 from ..vectors import vector_query, vector_writer
 
 GREETINGS_ENDPOINT = "/v1/greetings"
@@ -18,6 +18,7 @@ SESSIONS_ENDPOINT = "/v1/sessions"
 QUERIES_ENDPOINT = "/v1/queries"
 
 router = APIRouter()
+environment = ...
 
 """
 Stores a new session report.
@@ -55,8 +56,9 @@ async def insert_new_session(body: model.SessionNotesInsert,
     try:
         assert utilities.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
 
-        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
-                                                                 body.datastore_refresh_token)
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                body.datastore_refresh_token)
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         datastore_client.table('session_reports').insert({
             "notes_text": body.text,
@@ -126,8 +128,9 @@ async def update_session(body: model.SessionNotesUpdate,
                             auth_entity=current_user.username)
 
     try:
-        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
-                                                                 body.datastore_refresh_token)
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                body.datastore_refresh_token)
 
         now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
         update_result = datastore_client.table('session_reports').update({
@@ -200,8 +203,9 @@ async def delete_session(body: model.SessionNotesDelete,
                             auth_entity=current_user.username)
 
     try:
-        datastore_client = AuthManager().datastore_user_instance(body.datastore_access_token,
-                                                                 body.datastore_refresh_token)
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                body.datastore_refresh_token)
 
         delete_result = datastore_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
 
@@ -270,8 +274,10 @@ async def execute_assistant_query(query: model.AssistantQuery,
 
     try:
         assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
-        datastore_client = AuthManager().datastore_user_instance(query.datastore_access_token,
-                                                                 query.datastore_refresh_token)
+
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        datastore_client = auth_manager.datastore_user_instance(query.datastore_access_token,
+                                                                query.datastore_refresh_token)
 
         # Confirm that the incoming patient id is assigned to the incoming therapist id.
         patient_therapist_match = (0 != len(

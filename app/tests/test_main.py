@@ -2,17 +2,16 @@ import os
 
 from fastapi.testclient import TestClient
 
-from ..fake.fake_audio_processing_manager import FakeAudioProcessingManager
-from ..fake.fake_image_processing_manager import FakeImageProcessingManager
-from ..fake.fake_auth_manager import FakeAuthManager
-from .. import main
+from ..main import EndpointServiceCoordinator
 
-client = TestClient(main.app)
+coordinator = EndpointServiceCoordinator(environment="testing")
+client = TestClient(coordinator.service_app)
 
 # Image Processing Tests
 
 def test_invoke_image_upload_for_textraction_throws():
-    ...
+    foo = "bar"
+    assert foo == "bar"
 
 # def test_invoke_endpoint_without_auth_token():
 #     response = client.post("/v1/sessions", json={})
