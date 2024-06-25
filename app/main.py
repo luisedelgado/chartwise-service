@@ -44,7 +44,7 @@ class EndpointServiceCoordinator():
     Arguments:
     environment – The new environment to be set.
     """
-    def update_service_environment(environment):
+    def update_service_environment(self, environment):
         for router in [assistant_router, audio_processing_router, image_processing_router, security_router]:
             router.environment = environment
 
