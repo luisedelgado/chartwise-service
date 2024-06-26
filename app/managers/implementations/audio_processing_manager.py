@@ -21,7 +21,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
-        if not auth_manager.is_monitoring_proxy_reachable():
+        if auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")

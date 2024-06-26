@@ -18,7 +18,7 @@ class EndpointServiceCoordinator:
 
     def __init__(self, environment=os.environ.get("ENVIRONMENT"), app=service_app):
 
-        self._service_environment = environment
+        self.update_routers_environment(environment)
 
         app.include_router(assistant_router.router)
         app.include_router(audio_processing_router.router)
@@ -40,21 +40,12 @@ class EndpointServiceCoordinator:
         )
 
     """
-    Returns the current environment variable for all routers.
-    """
-    @property
-    def service_environment(self):
-        return self._service_environment
-
-    """
     Updates the current environment variable for all routers.
 
     Arguments:
     environment – The new environment to be set.
     """
-    @service_environment.setter
-    def value(self, new_value):
-        """The setter for the property 'value'"""
+    def update_routers_environment(self, new_value):
         if isinstance(new_value, str):
             self._service_environment = new_value
             for router in [assistant_router, audio_processing_router, image_processing_router, security_router]:
