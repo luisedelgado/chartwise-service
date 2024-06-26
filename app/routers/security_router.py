@@ -19,7 +19,7 @@ SIGN_UP_ENDPOINT = "/sign-up"
 TOKEN_ENDPOINT = "/token"
 
 router = APIRouter()
-environment = ...
+environment = ""
 
 """
 Returns an oauth token to be used for invoking the endpoints.

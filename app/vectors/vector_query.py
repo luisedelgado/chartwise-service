@@ -10,7 +10,7 @@ from pinecone import PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
 from . import message_templates
-from ..internal import utilities
+from ..internal.utilities import datetime_handler
 from ..managers.implementations.auth_manager import AuthManager
 
 __llm_model = "gpt-3.5-turbo"
@@ -113,7 +113,7 @@ def create_greeting(name: str,
         auth_manager = AuthManager()
         is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
         api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
-        caching_shard_key = (therapist_id + "-" + datetime.now().strftime(utilities.DATE_FORMAT))
+        caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
 
         metadata = {
             "environment": os.environ.get("ENVIRONMENT"),

@@ -17,7 +17,7 @@ IMAGE_UPLOAD_ENDPOINT = "/v1/image-uploads"
 TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
 
 router = APIRouter()
-environment = ...
+environment = ""
 
 """
 Returns a document_id value associated with the file that was uploaded.

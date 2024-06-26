@@ -23,7 +23,7 @@ DIARIZATION_NOTIFICATION_ENDPOINT = "/v1/diarization-notification"
 NOTES_TRANSCRIPTION_ENDPOINT = "/v1/transcriptions"
 
 router = APIRouter()
-environment = ...
+environment = ""
 
 """
 Returns the transcription created from the incoming audio file.

@@ -1,13 +1,11 @@
 import os
 
-from ..managers.implementations.auth_manager import AuthManager
+from ..managers.manager_factory import ManagerFactory
 
 API_METHOD_POST = "post"
 API_METHOD_PUT = "put"
 API_METHOD_GET = "get"
 API_METHOD_DELETE = "delete"
-
-datastore_client = AuthManager().datastore_admin_instance()
 
 """
 Logs data about an API request.
@@ -17,10 +15,12 @@ kwargs – the set of optional parameters to be sent into the method.
 """
 def log_api_request(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
         return
 
     try:
+        datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
         session_id = None if "session_id" not in kwargs else kwargs["session_id"]
         endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
         description = None if "description" not in kwargs else kwargs["description"]
@@ -48,7 +48,8 @@ kwargs – the set of associated optional args.
 """
 def log_api_response(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
         return
 
     session_id = None if "session_id" not in kwargs else kwargs["session_id"]
@@ -60,6 +61,7 @@ def log_api_response(**kwargs):
     method = None if "method" not in kwargs else kwargs["method"]
 
     try:
+        datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
         datastore_client.table('api_response_logs').insert({
             "session_id": str(session_id),
             "therapist_id": therapist_id,
@@ -80,7 +82,8 @@ kwargs – the set of associated optional args.
 """
 def log_error(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
         return
 
     session_id = None if "session_id" not in kwargs else kwargs["session_id"]
@@ -92,6 +95,7 @@ def log_error(**kwargs):
     method = None if "method" not in kwargs else kwargs["method"]
 
     try:
+        datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
         datastore_client.table('error_logs').insert({
             "session_id": str(session_id),
             "therapist_id": therapist_id,
@@ -112,13 +116,15 @@ kwargs – the set of associated optional args.
 """
 def log_diarization_event(**kwargs):
     # We don't want to log if we're in staging or dev
-    if os.environ.get("ENVIRONMENT").lower() != "prod":
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
         return
 
     error_code = None if "error_code" not in kwargs else kwargs["error_code"]
     description = None if "description" not in kwargs else kwargs["description"]
 
     try:
+        datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
         datastore_client.table('diarization_logs').insert({
             "error_code": error_code,
             "description": description}).execute()

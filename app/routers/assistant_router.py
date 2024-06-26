@@ -19,7 +19,7 @@ SESSIONS_ENDPOINT = "/v1/sessions"
 QUERIES_ENDPOINT = "/v1/queries"
 
 router = APIRouter()
-environment = ...
+environment = ""
 
 """
 Stores a new session report.
