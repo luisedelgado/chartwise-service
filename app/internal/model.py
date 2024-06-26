@@ -43,6 +43,22 @@ class SignupData(BaseModel):
     signup_mechanism: str
     language_preference: str
 
+class TextractionData(BaseModel):
+    therapist_id: str
+    patient_id: str
+    document_id: str
+
+class Greeting(BaseModel):
+    addressing_name: str
+    response_language_code: str
+    client_tz_identifier: str
+    therapist_id: str
+
+class PreSessionTray(BaseModel):
+    response_language_code: str
+    therapist_id: str
+    patient_id: str
+
 class SessionRefreshData():
     def __init__(self, session_id, auth_token):
         self._session_id = session_id

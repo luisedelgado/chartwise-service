@@ -93,9 +93,7 @@ current_session_id – The session_id cookie, if exists.
 """
 @router.post(TEXT_EXTRACTION_ENDPOINT, tags=["image-files"])
 async def extract_text(response: Response,
-                       therapist_id: Annotated[str, Form()],
-                       patient_id: Annotated[str, Form()],
-                       document_id: str = None,
+                       body: model.TextractionData,
                        authorization: Annotated[Union[str, None], Cookie()] = None,
                        current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
@@ -112,19 +110,19 @@ async def extract_text(response: Response,
 
     logging.log_api_request(session_id=session_id,
                             method=logging.API_METHOD_GET,
-                            therapist_id=therapist_id,
-                            patient_id=patient_id,
+                            therapist_id=body.therapist_id,
+                            patient_id=body.patient_id,
                             endpoint_name=TEXT_EXTRACTION_ENDPOINT,
                             auth_entity=current_user.username)
 
     try:
-        assert len(document_id) > 0, "Didn't receive a valid document id."
+        assert len(body.document_id) > 0, "Didn't receive a valid document id."
         image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
-        full_text = image_processing_manager.extract_text(document_id)
+        full_text = image_processing_manager.extract_text(body.document_id)
 
         logging.log_api_response(session_id=session_id,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.patient_id,
                                 endpoint_name=TEXT_EXTRACTION_ENDPOINT,
                                 http_status_code=status.HTTP_200_OK,
                                 method=logging.API_METHOD_GET)
@@ -134,8 +132,8 @@ async def extract_text(response: Response,
         description = str(e)
         status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
         logging.log_error(session_id=session_id,
-                          therapist_id=therapist_id,
-                          patient_id=patient_id,
+                          therapist_id=body.therapist_id,
+                          patient_id=body.patient_id,
                           endpoint_name=TEXT_EXTRACTION_ENDPOINT,
                           error_code=status_code,
                           description=description,

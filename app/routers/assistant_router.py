@@ -17,6 +17,7 @@ from ..vectors import vector_query, vector_writer
 GREETINGS_ENDPOINT = "/v1/greetings"
 SESSIONS_ENDPOINT = "/v1/sessions"
 QUERIES_ENDPOINT = "/v1/queries"
+PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
 
 router = APIRouter()
 environment = ""
@@ -337,19 +338,13 @@ Returns a new greeting to the user.
 
 Arguments:
 response – the response model used for the final response that will be returned.
-addressing_name – the name to be used for addressing the user in the greeting.
-response_language_code – the language code to be used for creating the greeting.
-client_tz_identifier – the timezone identifier used to fetch the client's weekday.
-therapist_id – the id of the therapist for which the greeting is being created.
+body – the json body associated with the request.
 authorization – The authorization cookie, if exists.
 current_session_id – The session_id cookie, if exists.
 """
 @router.post(GREETINGS_ENDPOINT, tags=["assistant"])
 async def fetch_greeting(response: Response,
-                         addressing_name: Annotated[str, Form()],
-                         response_language_code: Annotated[str, Form()],
-                         client_tz_identifier: Annotated[str, Form()],
-                         therapist_id: Annotated[str, Form()],
+                         body: model.Greeting,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
@@ -365,37 +360,97 @@ async def fetch_greeting(response: Response,
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
     logs_description = ''.join(['language_code:',
-                                response_language_code,
+                                body.response_language_code,
                                 ';tz_identifier:',
-                                client_tz_identifier])
+                                body.client_tz_identifier])
     logging.log_api_request(session_id=session_id,
                             method=logging.API_METHOD_POST,
-                            therapist_id=therapist_id,
+                            therapist_id=body.therapist_id,
                             endpoint_name=GREETINGS_ENDPOINT,
                             auth_entity=current_user.username,
                             description=logs_description)
 
     try:
-        assert datetime_handler.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
-        assert Language.get(response_language_code).is_valid(), "Invalid response_language_code parameter"
+        assert datetime_handler.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
+        assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
 
-        result = vector_query.create_greeting(name=addressing_name,
-                                              language_code=response_language_code,
-                                              tz_identifier=client_tz_identifier,
+        result = vector_query.create_greeting(name=body.addressing_name,
+                                              language_code=body.response_language_code,
+                                              tz_identifier=body.client_tz_identifier,
                                               session_id=session_id,
                                               endpoint_name=GREETINGS_ENDPOINT,
-                                              therapist_id=therapist_id,
+                                              therapist_id=body.therapist_id,
                                               method=logging.API_METHOD_POST)
         assert result.status_code == status.HTTP_200_OK
 
         logging.log_api_response(session_id=session_id,
                                 endpoint_name=GREETINGS_ENDPOINT,
-                                therapist_id=therapist_id,
+                                therapist_id=body.therapist_id,
                                 http_status_code=status.HTTP_200_OK,
                                 description=logs_description,
                                 method=logging.API_METHOD_POST)
 
         return {"message": result.response_token}
+    except Exception as e:
+        description = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+        logging.log_error(session_id=session_id,
+                          endpoint_name=GREETINGS_ENDPOINT,
+                          error_code=status_code,
+                          description=description,
+                          method=logging.API_METHOD_POST)
+        raise HTTPException(status_code=status_code,
+                            detail=description)
+
+"""
+Returns a pre-session tray.
+
+Arguments:
+response – the response model used for the final response that will be returned.
+body – the json body associated with the request.
+authorization – The authorization cookie, if exists.
+current_session_id – The session_id cookie, if exists.
+"""
+@router.post(PRESESSION_TRAY_ENDPOINT, tags=["assistant"])
+async def fetch_presession_tray(response: Response,
+                                body: model.PreSessionTray,
+                                authorization: Annotated[Union[str, None], Cookie()] = None,
+                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
+    if not security.access_token_is_valid(authorization):
+        raise security.TOKEN_EXPIRED_ERROR
+
+    try:
+        current_user: security.User = await security.get_current_user(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
+                                                                                         response=response,
+                                                                                         session_id=current_session_id)
+        session_id = session_refresh_data._session_id
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    logs_description = ''.join(['language_code:',
+                                body.response_language_code])
+    logging.log_api_request(session_id=session_id,
+                            method=logging.API_METHOD_POST,
+                            therapist_id=body.therapist_id,
+                            patient_id=body.patient_id,
+                            endpoint_name=PRESESSION_TRAY_ENDPOINT,
+                            auth_entity=current_user.username,
+                            description=logs_description)
+
+    try:
+        assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
+
+        # TODO: Fetch pre-session tray...
+
+        logging.log_api_response(session_id=session_id,
+                                 endpoint_name=PRESESSION_TRAY_ENDPOINT,
+                                 therapist_id=body.therapist_id,
+                                 patient_id=body.patient_id,
+                                 http_status_code=status.HTTP_200_OK,
+                                 method=logging.API_METHOD_POST)
+
+        return {"tray": "this is my tray"}
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code

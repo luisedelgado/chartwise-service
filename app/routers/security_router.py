@@ -137,7 +137,7 @@ current_session_id – The session_id cookie, if exists.
 """
 @router.post(LOGOUT_ENDPOINT, tags=["security"])
 async def logout(response: Response,
-                 therapist_id: Annotated[str, Form()],
+                 therapist_id: str,
                  authorization: Annotated[Union[str, None], Cookie()] = None,
                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
