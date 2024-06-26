@@ -5,7 +5,7 @@ from portkey_ai import Portkey
 
 from ...api.image_processing_base_class import ImageProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
-from ...internal import utilities
+from ...internal.utilities import file_copiers
 
 class ImageProcessingManager(ImageProcessingManagerBaseClass):
 
@@ -19,12 +19,12 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
             pdf_extension = "pdf"
             file_name, _ = os.path.splitext(image.filename)
 
-            image_copy_result: utilities.FileCopyResult = await utilities.make_image_pdf_copy(image)
+            image_copy_result: file_copiers.FileCopyResult = await file_copiers.make_image_pdf_copy(image)
             image_copy_path = image_copy_result.file_copy_full_path
             files_to_clean = image_copy_result.file_copies
 
             if not os.path.exists(image_copy_path):
-                await utilities.clean_up_files(files_to_clean)
+                await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
             # Send to DocuPanda
@@ -55,11 +55,11 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
                 doc_id = response.json()['documentId']
 
             # Clean up the image copies we used for processing.
-            await utilities.clean_up_files(files_to_clean)
+            await file_copiers.clean_up_files(files_to_clean)
 
             return doc_id
         except Exception as e:
-            await utilities.clean_up_files(files_to_clean)
+            await file_copiers.clean_up_files(files_to_clean)
             raise Exception(str(e))
 
     def extract_text(self, document_id: str) -> str:

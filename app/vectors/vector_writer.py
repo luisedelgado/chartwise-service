@@ -11,7 +11,7 @@ from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
-from ..internal import utilities
+from ..internal.utilities import datetime_handler
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
@@ -24,7 +24,7 @@ date – the session_date to be used as metadata.
 """
 def insert_session_vectors(index_id, namespace, text, date):
     try:
-        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
         doc = Document()
         doc.set_content(data_cleaner.clean_up_text(text))
@@ -76,7 +76,7 @@ date – the session_date to be used as metadata filtering.
 """
 def delete_session_vectors(index_id, namespace, date):
     try:
-        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         index = pc.Index(index_id)
@@ -104,7 +104,7 @@ date – the session_date to be used as metadata.
 """
 def update_session_vectors(index_id, namespace, text, date):
     try:
-        assert utilities.is_valid_date(date), "The incoming date is not in a valid format."
+        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
         # Delete the outdated data
         delete_session_vectors(index_id, namespace, date)

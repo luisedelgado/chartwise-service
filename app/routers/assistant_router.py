@@ -9,7 +9,8 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..internal import logging, model, security, utilities
+from ..internal import logging, model, security
+from ..internal.utilities import datetime_handler
 from ..managers.manager_factory import ManagerFactory
 from ..vectors import vector_query, vector_writer
 
@@ -54,12 +55,12 @@ async def insert_new_session(body: model.SessionNotesInsert,
                             auth_entity=current_user.username)
 
     try:
-        assert utilities.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
+        assert datetime_handler.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
 
         auth_manager = ManagerFactory.create_auth_manager(environment)
         datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                 body.datastore_refresh_token)
-        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
         datastore_client.table('session_reports').insert({
             "notes_text": body.text,
             "session_date": body.date,
@@ -132,7 +133,7 @@ async def update_session(body: model.SessionNotesUpdate,
         datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                 body.datastore_refresh_token)
 
-        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
         update_result = datastore_client.table('session_reports').update({
             "notes_text": body.text,
             "last_updated": now_timestamp,
@@ -140,7 +141,7 @@ async def update_session(body: model.SessionNotesUpdate,
         }).eq('id', body.session_notes_id).execute()
 
         session_date_raw = update_result.dict()['data'][0]['session_date']
-        session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
+        session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
         # Upload vector embeddings
         vector_writer.update_session_vectors(index_id=body.therapist_id,
@@ -210,7 +211,7 @@ async def delete_session(body: model.SessionNotesDelete,
         delete_result = datastore_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
 
         session_date_raw = delete_result.dict()['data'][0]['session_date']
-        session_date_formatted = utilities.convert_to_internal_date_format(session_date_raw)
+        session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
         # Delete vector embeddings
         vector_writer.delete_session_vectors(index_id=body.therapist_id,
@@ -375,7 +376,7 @@ async def fetch_greeting(response: Response,
                             description=logs_description)
 
     try:
-        assert utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
+        assert datetime_handler.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
         assert Language.get(response_language_code).is_valid(), "Invalid response_language_code parameter"
 
         result = vector_query.create_greeting(name=addressing_name,

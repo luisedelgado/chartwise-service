@@ -14,7 +14,8 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal import logging, model, security, utilities
+from ..internal import logging, model, security
+from ..internal.utilities import datetime_handler
 from ..managers.manager_factory import ManagerFactory
 
 DIARIZATION_ENDPOINT = "/v1/diarization"
@@ -125,7 +126,7 @@ async def diarize_session(response: Response,
                             auth_entity=current_user.username)
 
     try:
-        assert utilities.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
+        assert datetime_handler.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
 
         endpoint_url = os.environ.get("ENVIRONMENT_URL") + DIARIZATION_NOTIFICATION_ENDPOINT
         audio_processing_manager = ManagerFactory.create_audio_processing_manager(environment)
@@ -135,7 +136,7 @@ async def diarize_session(response: Response,
                                                                         audio_file=audio_file,
                                                                         endpoint_url=endpoint_url)
 
-        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
         datastore_client = auth_manager.datastore_admin_instance()
         datastore_client.table('session_reports').insert({
             "session_diarization_job_id": job_id,
@@ -190,7 +191,7 @@ async def consume_notification(request: Request):
         summary = json_data["summary"]["content"]
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
-        now_timestamp = datetime.now().strftime(utilities.DATE_TIME_FORMAT)
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
         datastore_client.table('session_reports').update({
             "notes_text": summary,
             "session_diarization": diarization,

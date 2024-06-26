@@ -10,7 +10,7 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
-from ...internal import utilities
+from ...internal.utilities import file_copiers
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 
@@ -19,7 +19,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
     async def transcribe_audio_file(self,
                                     auth_manager: AuthManagerBaseClass,
                                     audio_file: UploadFile = File(...)) -> str:
-        audio_copy_result: utilities.FileCopyResult = await utilities.make_file_copy(audio_file)
+        audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
         if not auth_manager.is_monitoring_proxy_reachable():
             try:
@@ -57,7 +57,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
             finally:
-                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+                await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
         else:
             # Process local copy with DeepgramClient
             try:
@@ -90,7 +90,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
             finally:
-                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+                await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
 
             return transcript
 
@@ -161,7 +161,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  audio_file: UploadFile = File(...)) -> str:
-        audio_copy_result: utilities.FileCopyResult = await utilities.make_file_copy(audio_file)
+        audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)
 
@@ -196,7 +196,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
             finally:
-                await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+                await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
         else:
             ssl_context = (ssl.create_default_context()
                         if os.environ.get("ENVIRONMENT").lower() == "prod"
@@ -217,4 +217,4 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                     raise HTTPException(status_code=status_code,
                                         detail=str(e))
                 finally:
-                    await utilities.clean_up_files([audio_copy_result.file_copy_full_path])
+                    await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
