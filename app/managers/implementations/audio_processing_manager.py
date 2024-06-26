@@ -29,26 +29,23 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
                 headers = {
                     "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
-                    "Authorization": "Token " + os.environ.get("SPEECHMATICS_API_KEY"),
-                    # "Content-type": "audio/wav",
+                    "Authorization": "Token " + os.environ.get("DG_API_KEY"),
+                    "Content-type": "audio/wav",
                     "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
                     "x-portkey-custom-host": custom_host_url,
                     "x-portkey-provider": "openai",
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                file = {"data_file": (audio_copy_result.file_copy_name,
-                                      open(audio_copy_result.file_copy_full_path,'rb'))}
-
                 options = "&".join(["model=nova-2",
                                     "smart_format=true",
                                     "detect_language=true",
                                     "utterances=true",
                                     "numerals=true"])
-                endpoint_configuration = listen_endpoint + "?" + options
-                response = requests.post(portkey_gateway_url + endpoint_configuration,
-                                         headers=headers,
-                                         files=file)
+                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
+
+                with open(audio_copy_result.file_copy_full_path, 'rb') as audio_file:
+                    response = requests.post(endpoint_configuration, headers=headers, data=audio_file)
 
                 assert response.status_code == 200, f"{response.status_code}: {response.text}"
                 json_response = response.json()
