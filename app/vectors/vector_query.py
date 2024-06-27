@@ -14,16 +14,11 @@ from ..internal.utilities import datetime_handler
 
 LLM_MODEL = "gpt-3.5-turbo"
 
-class QueryResult:
-    def __init__(self, response_token, status_code):
-        self.response_token = response_token
-        self.status_code = status_code
-
 class VectorQueryWorker:
 
     """
     Queries the respective datastore with the incoming parameters.
-    Returns a QueryResult object with the query result.
+    Returns the query result.
 
     Arguments:
     index_id – the index id that should be queried inside the datastore.
@@ -45,7 +40,7 @@ class VectorQueryWorker:
                     endpoint_name: str,
                     method: str,
                     environment: str,
-                    auth_manager: AuthManagerBaseClass) -> QueryResult:
+                    auth_manager: AuthManagerBaseClass) -> str:
         try:
             # Initialize connection to Pinecone
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -87,13 +82,13 @@ class VectorQueryWorker:
             )
 
             response = query_engine.query(input)
-            return QueryResult(str(response), status.HTTP_200_OK)
+            return str(response)
         except Exception as e:
-            return QueryResult(str(e), status.HTTP_409_CONFLICT)
+            raise Exception(e)
 
     """
     Creates a greeting with the incoming values.
-    Returns a QueryResult object with the greeting result.
+    Returns the greeting result.
 
     Arguments:
     name  – the addressing name to be used in the greeting.
@@ -115,7 +110,7 @@ class VectorQueryWorker:
                         method: str,
                         environment: str,
                         auth_manager: AuthManagerBaseClass
-                        ) -> QueryResult:
+                        ) -> str:
         try:
             caching_shard_key = caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -143,10 +138,10 @@ class VectorQueryWorker:
                                                      messages=messages,
                                                      auth_manager=auth_manager)
         except Exception as e:
-            return QueryResult(str(e), status.HTTP_409_CONFLICT)
+            raise Exception(e)
 
     """
-    Creates a brief summary on the incoming patient id's data.
+    Creates and returns a brief summary on the incoming patient id's data.
 
     Arguments:
     therapist_id – the therapist that is requesting a summary.
@@ -172,7 +167,7 @@ class VectorQueryWorker:
                        therapist_name: str,
                        patient_name: str,
                        session_number: int,
-                       auth_manager: AuthManagerBaseClass):
+                       auth_manager: AuthManagerBaseClass) -> str:
         try:
             caching_shard_key = caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -207,6 +202,7 @@ class VectorQueryWorker:
 
     """
     Invokes OpenAI's Completion API with the incoming parameters.
+    Returns the completion result.
 
     Arguments:
     caching_shard_key – the shard key to be used for caching purposes.
@@ -220,7 +216,7 @@ class VectorQueryWorker:
                                      metadata: dict,
                                      cache_ttl: int,
                                      messages: list,
-                                     auth_manager: AuthManagerBaseClass) -> QueryResult:
+                                     auth_manager: AuthManagerBaseClass) -> str:
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
@@ -238,7 +234,6 @@ class VectorQueryWorker:
                 messages=messages
             )
 
-            result = completion.choices[0].message
-            return QueryResult(result, status.HTTP_200_OK)
+            return completion.choices[0].message
         except Exception as e:
-            return QueryResult(str(e), status.HTTP_409_CONFLICT)
+            raise Exception(e)

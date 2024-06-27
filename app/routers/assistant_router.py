@@ -322,7 +322,7 @@ async def fetch_greeting(response: Response,
                                 description=logs_description,
                                 method=logging.API_METHOD_POST)
 
-        return {"message": result.response_token}
+        return {"message": result}
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
@@ -389,7 +389,7 @@ async def fetch_presession_tray(response: Response,
                                  http_status_code=status.HTTP_200_OK,
                                  method=logging.API_METHOD_POST)
 
-        return {"summary": response.response_token}
+        return {"summary": response}
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code

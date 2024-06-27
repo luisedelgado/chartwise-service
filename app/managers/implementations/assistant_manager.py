@@ -12,7 +12,7 @@ from ...internal.model import (AssistantQuery,
                                SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
-from ...vectors.vector_query import QueryResult, VectorQueryWorker
+from ...vectors.vector_query import VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
 
@@ -101,21 +101,19 @@ class AssistantManager(AssistantManagerBaseClass):
             ).data))
 
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
-            
+
             # Go through with the query
-            response: QueryResult = VectorQueryWorker().query_store(index_id=query.therapist_id,
-                                                                    namespace=query.patient_id,
-                                                                    input=query.text,
-                                                                    response_language_code=query.response_language_code,
-                                                                    session_id=session_id,
-                                                                    endpoint_name=endpoint_name,
-                                                                    method=api_method,
-                                                                    environment=environment,
-                                                                    auth_manager=auth_manager)
+            response = VectorQueryWorker().query_store(index_id=query.therapist_id,
+                                                       namespace=query.patient_id,
+                                                       input=query.text,
+                                                       response_language_code=query.response_language_code,
+                                                       session_id=session_id,
+                                                       endpoint_name=endpoint_name,
+                                                       method=api_method,
+                                                       environment=environment,
+                                                       auth_manager=auth_manager)
 
-            assert response.status_code == status.HTTP_200_OK, "Something went wrong when executing the query"
-
-            return {"response": response.response_token}
+            return {"response": response}
         except Exception as e:
             raise Exception(e)
 
@@ -125,7 +123,7 @@ class AssistantManager(AssistantManagerBaseClass):
                               endpoint_name: str,
                               api_method: str,
                               environment: str,
-                              auth_manager: AuthManagerBaseClass):
+                              auth_manager: AuthManagerBaseClass) -> str:
         try:
             result = VectorQueryWorker().create_greeting(name=body.addressing_name,
                                                          language_code=body.response_language_code,
@@ -136,7 +134,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                                          method=api_method,
                                                          environment=environment,
                                                          auth_manager=auth_manager)
-            assert result.status_code == status.HTTP_200_OK
             return result
         except Exception as e:
             raise Exception(e)
@@ -171,8 +168,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         patient_name=patient_name,
                                                         session_number=session_number,
                                                         auth_manager=auth_manager)
-
-            assert result.status_code == status.HTTP_200_OK
             return result
         except Exception as e:
             raise Exception(e)
