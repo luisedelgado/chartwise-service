@@ -2,6 +2,7 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
+                               SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate)
@@ -25,12 +26,24 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                       query: AssistantQuery,
                       session_id: str,
                       api_method: str,
-                      endpoint_name: str):
+                      endpoint_name: str,
+                      environment: str):
         ...
 
     def fetch_todays_greeting(self,
                               body: Greeting,
                               session_id: str,
                               endpoint_name: str,
-                              api_method: str):
+                              api_method: str,
+                              environment: str,
+                              auth_manager: AuthManagerBaseClass):
+        ...
+
+    def create_patient_summary(self,
+                               body: SessionHistorySummary,
+                               auth_manager: AuthManagerBaseClass,
+                               environment: str,
+                               session_id: str,
+                               endpoint_name: str,
+                               api_method: str):
         ...

@@ -12,7 +12,6 @@ from typing import Annotated, Union
 from ..internal import logging, model, security
 from ..internal.utilities import datetime_handler
 from ..managers.manager_factory import ManagerFactory
-from ..vectors import vector_query, vector_writer
 
 GREETINGS_ENDPOINT = "/v1/greetings"
 SESSIONS_ENDPOINT = "/v1/sessions"
@@ -244,7 +243,8 @@ async def execute_assistant_query(query: model.AssistantQuery,
                                                    query=query,
                                                    session_id=session_id,
                                                    api_method=logging.API_METHOD_POST,
-                                                   endpoint_name=QUERIES_ENDPOINT)
+                                                   endpoint_name=QUERIES_ENDPOINT,
+                                                   environment=environment)
 
         logging.log_api_response(session_id=session_id,
                         therapist_id=query.therapist_id,
@@ -306,11 +306,14 @@ async def fetch_greeting(response: Response,
         assert datetime_handler.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
         assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
 
+        auth_manager = ManagerFactory.create_auth_manager(environment)
         assistant_manager = ManagerFactory.create_assistant_manager(environment)
         result = assistant_manager.fetch_todays_greeting(body=body,
                                                          session_id=session_id,
                                                          endpoint_name=GREETINGS_ENDPOINT,
-                                                         api_method=logging.API_METHOD_POST)
+                                                         api_method=logging.API_METHOD_POST,
+                                                         environment=environment,
+                                                         auth_manager=auth_manager)
 
         logging.log_api_response(session_id=session_id,
                                 endpoint_name=GREETINGS_ENDPOINT,
@@ -342,7 +345,7 @@ current_session_id – The session_id cookie, if exists.
 """
 @router.post(PRESESSION_TRAY_ENDPOINT, tags=["assistant"])
 async def fetch_presession_tray(response: Response,
-                                body: model.PreSessionTray,
+                                body: model.SessionHistorySummary,
                                 authorization: Annotated[Union[str, None], Cookie()] = None,
                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
     if not security.access_token_is_valid(authorization):
@@ -370,7 +373,14 @@ async def fetch_presession_tray(response: Response,
     try:
         assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
 
-        # TODO: Fetch pre-session tray...
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        assistant_manager = ManagerFactory.create_assistant_manager(environment)
+        response = assistant_manager.create_patient_summary(body=body,
+                                                            environment=environment,
+                                                            session_id=session_id,
+                                                            endpoint_name=PRESESSION_TRAY_ENDPOINT,
+                                                            api_method=logging.API_METHOD_POST,
+                                                            auth_manager=auth_manager)
 
         logging.log_api_response(session_id=session_id,
                                  endpoint_name=PRESESSION_TRAY_ENDPOINT,
@@ -379,7 +389,7 @@ async def fetch_presession_tray(response: Response,
                                  http_status_code=status.HTTP_200_OK,
                                  method=logging.API_METHOD_POST)
 
-        return {"tray": "this is my tray"}
+        return {"summary": response.response_token}
     except Exception as e:
         description = str(e)
         status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code

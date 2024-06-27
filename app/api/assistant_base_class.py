@@ -3,6 +3,7 @@ from abc import ABC
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               Greeting,
+                              SessionHistorySummary,
                               SessionNotesDelete,
                               SessionNotesInsert,
                               SessionNotesUpdate)
@@ -47,13 +48,15 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     api_method – the api method that triggered this query.
     endpoint_name – the endpoint name that triggered this query.
+    environment – the current running environment.
     """
     def query_session(self,
                       auth_manager: AuthManagerBaseClass,
                       query: AssistantQuery,
                       session_id: str,
                       api_method: str,
-                      endpoint_name: str):
+                      endpoint_name: str,
+                      environment: str):
         pass
 
     """
@@ -63,10 +66,33 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
+    environment – the current running environment.
+    auth_manager – the auth_manager to be leveraged.
     """
     def fetch_todays_greeting(self,
                               body: Greeting,
                               session_id: str,
                               endpoint_name: str,
-                              api_method: str):
+                              api_method: str,
+                              environment: str,
+                              auth_manager: AuthManagerBaseClass):
+        pass
+
+    """
+    Creates a summary about the given patient's session history.
+    Arguments:
+    body – the data associated with the summary.
+    auth_manager – the auth_manager to be leveraged.
+    environment – the current running environment.
+    session_id – the current session id.
+    endpoint_name – the endpoint name that triggered this query.
+    api_method – the api method that triggered this query.
+    """
+    def create_patient_summary(self,
+                               body: SessionHistorySummary,
+                               auth_manager: AuthManagerBaseClass,
+                               environment: str,
+                               session_id: str,
+                               endpoint_name: str,
+                               api_method: str):
         pass

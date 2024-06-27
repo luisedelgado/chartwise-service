@@ -54,10 +54,12 @@ class Greeting(BaseModel):
     client_tz_identifier: str
     therapist_id: str
 
-class PreSessionTray(BaseModel):
-    response_language_code: str
+class SessionHistorySummary(BaseModel):
     therapist_id: str
     patient_id: str
+    response_language_code: str
+    datastore_access_token: str
+    datastore_refresh_token: str
 
 class SessionRefreshData():
     def __init__(self, session_id, auth_token):

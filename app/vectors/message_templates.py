@@ -2,6 +2,7 @@ from datetime import datetime
 
 from llama_index.core.prompts import ChatPromptTemplate
 from llama_index.core.llms import ChatMessage, MessageRole
+from num2words import num2words
 from pytz import timezone
 
 # Text QA Prompt
@@ -80,3 +81,24 @@ def create_system_greeting_message(name: str, tz_identifier: str, language_code:
 
 def create_user_greeting_message() -> str:
     return f'''Write a welcoming message for the user. Your response should not go over 180 characters.'''
+
+# Summary Prompt
+
+def create_system_summary_message() -> str | None:
+    return f'''A mental health practitioner is entering our Practice Management Platform.
+    They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
+    Your job is to provide a useful summary of the patient's most recent sessions, as well as big themes that have come up historically during sessions.
+    You may use the session date found in the metadata for navigating through the sessions' data. The output should be structured in bullet points.'''
+
+def create_user_summary_message(therapist_name: str,
+                                patient_name: str,
+                                language_code: str,
+                                session_number: int) -> str:
+    try:
+        ordinal_session_number = num2words(session_number, to='ordinal_num')
+        return f'''Write a summary about the patient's session history.
+        Address the therapist by their name, {therapist_name}, and the patient by their name, {patient_name}.
+        Start by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time.
+        To craft your response use language {language_code}. Your response should not go over 600 characters.'''
+    except Exception as e:
+        raise Exception(e)

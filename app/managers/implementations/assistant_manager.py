@@ -6,11 +6,13 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
+                               SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
-from ...vectors import vector_query, vector_writer
+from ...vectors import vector_writer
+from ...vectors.vector_query import QueryResult, VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
 
@@ -86,7 +88,8 @@ class AssistantManager(AssistantManagerBaseClass):
                       query: AssistantQuery,
                       session_id: str,
                       api_method: str,
-                      endpoint_name: str):
+                      endpoint_name: str,
+                      environment: str):
         try:
             datastore_client = auth_manager.datastore_user_instance(query.datastore_access_token,
                                                                     query.datastore_refresh_token)
@@ -100,13 +103,15 @@ class AssistantManager(AssistantManagerBaseClass):
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
             
             # Go through with the query
-            response: vector_query.QueryResult = vector_query.query_store(index_id=query.therapist_id,
-                                                                        namespace=query.patient_id,
-                                                                        input=query.text,
-                                                                        response_language_code=query.response_language_code,
-                                                                        session_id=session_id,
-                                                                        endpoint_name=endpoint_name,
-                                                                        method=api_method)
+            response: QueryResult = VectorQueryWorker().query_store(index_id=query.therapist_id,
+                                                                    namespace=query.patient_id,
+                                                                    input=query.text,
+                                                                    response_language_code=query.response_language_code,
+                                                                    session_id=session_id,
+                                                                    endpoint_name=endpoint_name,
+                                                                    method=api_method,
+                                                                    environment=environment,
+                                                                    auth_manager=auth_manager)
 
             assert response.status_code == status.HTTP_200_OK, "Something went wrong when executing the query"
 
@@ -118,15 +123,55 @@ class AssistantManager(AssistantManagerBaseClass):
                               body: Greeting,
                               session_id: str,
                               endpoint_name: str,
-                              api_method: str):
+                              api_method: str,
+                              environment: str,
+                              auth_manager: AuthManagerBaseClass):
         try:
-            result = vector_query.create_greeting(name=body.addressing_name,
-                                                language_code=body.response_language_code,
-                                                tz_identifier=body.client_tz_identifier,
-                                                session_id=session_id,
-                                                endpoint_name=endpoint_name,
-                                                therapist_id=body.therapist_id,
-                                                method=api_method)
+            result = VectorQueryWorker().create_greeting(name=body.addressing_name,
+                                                         language_code=body.response_language_code,
+                                                         tz_identifier=body.client_tz_identifier,
+                                                         session_id=session_id,
+                                                         endpoint_name=endpoint_name,
+                                                         therapist_id=body.therapist_id,
+                                                         method=api_method,
+                                                         environment=environment,
+                                                         auth_manager=auth_manager)
+            assert result.status_code == status.HTTP_200_OK
+            return result
+        except Exception as e:
+            raise Exception(e)
+
+    def create_patient_summary(self,
+                               body: SessionHistorySummary,
+                               auth_manager: AuthManagerBaseClass,
+                               environment: str,
+                               session_id: str,
+                               endpoint_name: str,
+                               api_method: str):
+        try:
+            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                    body.datastore_refresh_token)
+            patient_response = datastore_client.table('patients').select('first_name').eq("id", body.patient_id).execute()
+            patient_name = patient_response.dict()['data'][0]['first_name']
+
+            therapist_response = datastore_client.table('therapists').select('first_name').eq("id", body.therapist_id).execute()
+            therapist_name = therapist_response.dict()['data'][0]['first_name']
+
+            number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", body.patient_id).execute()
+            session_number = len(number_session_response.dict()['data'])
+
+            result = VectorQueryWorker().create_summary(therapist_id=body.therapist_id,
+                                                        patient_id=body.patient_id,
+                                                        environment=environment,
+                                                        session_id=session_id,
+                                                        endpoint_name=endpoint_name,
+                                                        api_method=api_method,
+                                                        language_code=body.response_language_code,
+                                                        therapist_name=therapist_name,
+                                                        patient_name=patient_name,
+                                                        session_number=session_number,
+                                                        auth_manager=auth_manager)
+
             assert result.status_code == status.HTTP_200_OK
             return result
         except Exception as e:
