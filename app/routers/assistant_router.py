@@ -39,10 +39,10 @@ async def insert_new_session(body: model.SessionNotesInsert,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -52,7 +52,7 @@ async def insert_new_session(body: model.SessionNotesInsert,
                             therapist_id=body.therapist_id,
                             endpoint_name=SESSIONS_ENDPOINT,
                             method=logging.API_METHOD_POST,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         assert datetime_handler.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
@@ -100,10 +100,10 @@ async def update_session(body: model.SessionNotesUpdate,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -113,7 +113,7 @@ async def update_session(body: model.SessionNotesUpdate,
                             therapist_id=body.therapist_id,
                             endpoint_name=SESSIONS_ENDPOINT,
                             method=logging.API_METHOD_PUT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         auth_manager = ManagerFactory.create_auth_manager(environment)
@@ -159,10 +159,10 @@ async def delete_session(body: model.SessionNotesDelete,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -172,7 +172,7 @@ async def delete_session(body: model.SessionNotesDelete,
                             therapist_id=body.therapist_id,
                             endpoint_name=SESSIONS_ENDPOINT,
                             method=logging.API_METHOD_DELETE,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         auth_manager = ManagerFactory.create_auth_manager(environment)
@@ -219,10 +219,10 @@ async def execute_assistant_query(query: model.AssistantQuery,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -232,7 +232,7 @@ async def execute_assistant_query(query: model.AssistantQuery,
                             patient_id=query.patient_id,
                             endpoint_name=QUERIES_ENDPOINT,
                             method=logging.API_METHOD_POST,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
@@ -283,10 +283,10 @@ async def fetch_greeting(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -299,7 +299,7 @@ async def fetch_greeting(response: Response,
                             method=logging.API_METHOD_POST,
                             therapist_id=body.therapist_id,
                             endpoint_name=GREETINGS_ENDPOINT,
-                            auth_entity=current_user.username,
+                            auth_entity=current_entity.username,
                             description=logs_description)
 
     try:
@@ -352,10 +352,10 @@ async def fetch_presession_tray(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -367,7 +367,7 @@ async def fetch_presession_tray(response: Response,
                             therapist_id=body.therapist_id,
                             patient_id=body.patient_id,
                             endpoint_name=PRESESSION_TRAY_ENDPOINT,
-                            auth_entity=current_user.username,
+                            auth_entity=current_entity.username,
                             description=logs_description)
 
     try:

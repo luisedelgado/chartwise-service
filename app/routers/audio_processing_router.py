@@ -47,10 +47,10 @@ async def transcribe_session_notes(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -60,7 +60,7 @@ async def transcribe_session_notes(response: Response,
                             therapist_id=therapist_id,
                             patient_id=patient_id,
                             endpoint_name=NOTES_TRANSCRIPTION_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         audio_processing_manager = ManagerFactory.create_audio_processing_manager(environment)
@@ -110,10 +110,10 @@ async def diarize_session(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -123,7 +123,7 @@ async def diarize_session(response: Response,
                             therapist_id=therapist_id,
                             method=logging.API_METHOD_POST,
                             endpoint_name=DIARIZATION_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         assert datetime_handler.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"

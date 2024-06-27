@@ -63,13 +63,13 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def get_user(db, username: str):
+def get_entity(db, username: str):
     if username in db:
         user_dict = db[username]
         return UserInDB(**user_dict)
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_entity(fake_db, username: str, password: str):
+    user = get_entity(fake_db, username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -95,7 +95,7 @@ def access_token_is_valid(access_token: str) -> bool:
         token_data = TokenData(username=username)
     except:
         return False
-    user = get_user(users_db, username=token_data.username)
+    user = get_entity(users_db, username=token_data.username)
     if user is None or user.disabled is True:
         return False
 
@@ -104,7 +104,7 @@ def access_token_is_valid(access_token: str) -> bool:
                                                    tz=timezone.utc)
     return (token_expiration_date > datetime.now(timezone.utc))
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_auth_entity(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -118,17 +118,17 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(users_db, username=token_data.username)
+    user = get_entity(users_db, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
 
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)],
+async def get_current_active_auth_entity(
+    current_auth_entity: Annotated[User, Depends(get_current_auth_entity)],
 ):
-    if current_user.disabled:
+    if current_auth_entity.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
+    return current_auth_entity
 
 """
 Refreshes the user's auth token for a continued session experience.
@@ -137,7 +137,7 @@ Arguments:
 user – The user for whom to refresh the session.
 response  – the model with which to build the API response.
 """
-def update_auth_token_for_user(user: User, response: Response):
+def update_auth_token_for_entity(user: User, response: Response):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -169,7 +169,7 @@ async def refresh_session(user: User,
                           response: Response,
                           session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
     try:
-        token = update_auth_token_for_user(user, response)
+        token = update_auth_token_for_entity(user, response)
 
         if session_id is not None:
             return SessionRefreshData(session_id=session_id,

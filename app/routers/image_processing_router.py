@@ -41,8 +41,8 @@ async def upload_session_notes_image(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
                                                                                         response=response,
                                                                                         session_id=current_session_id)
         session_id = session_refresh_data._session_id
@@ -54,7 +54,7 @@ async def upload_session_notes_image(response: Response,
                             patient_id=patient_id,
                             therapist_id=therapist_id,
                             endpoint_name=IMAGE_UPLOAD_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
@@ -100,10 +100,10 @@ async def extract_text(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -113,7 +113,7 @@ async def extract_text(response: Response,
                             therapist_id=body.therapist_id,
                             patient_id=body.patient_id,
                             endpoint_name=TEXT_EXTRACTION_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         assert len(body.document_id) > 0, "Didn't receive a valid document id."

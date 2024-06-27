@@ -35,7 +35,7 @@ async def login_for_access_token(
     response: Response,
     session_id: Annotated[Union[str, None], Cookie()] = None,
 ) -> security.Token:
-    user = security.authenticate_user(security.users_db, form_data.username, form_data.password)
+    user = security.authenticate_entity(security.users_db, form_data.username, form_data.password)
     session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=user,
                                                                                      response=response,
                                                                                      session_id=session_id)
@@ -66,10 +66,10 @@ async def sign_up(signup_data: model.SignupData,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -77,7 +77,7 @@ async def sign_up(signup_data: model.SignupData,
     logging.log_api_request(session_id=session_id,
                             method=logging.API_METHOD_POST,
                             endpoint_name=SIGN_UP_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     try:
         auth_manager = ManagerFactory.create_auth_manager(environment)
@@ -144,10 +144,10 @@ async def logout(response: Response,
         raise security.TOKEN_EXPIRED_ERROR
 
     try:
-        current_user: security.User = await security.get_current_user(authorization)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_user,
-                                                                                         response=response,
-                                                                                         session_id=current_session_id)
+        current_entity: security.User = await security.get_current_auth_entity(authorization)
+        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
+                                                                                        response=response,
+                                                                                        session_id=current_session_id)
         session_id = session_refresh_data._session_id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -156,7 +156,7 @@ async def logout(response: Response,
                             therapist_id=therapist_id,
                             method=logging.API_METHOD_POST,
                             endpoint_name=LOGOUT_ENDPOINT,
-                            auth_entity=current_user.username)
+                            auth_entity=current_entity.username)
 
     response.delete_cookie("authorization")
     response.delete_cookie("session_id")
