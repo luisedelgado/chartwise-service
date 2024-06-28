@@ -183,7 +183,9 @@ async def consume_notification(request: Request):
         id = request.query_params["id"]
         assert status_code.lower() == "success", f"Diarization failed for job ID {id}"
 
-        datastore_client = ManagerFactory.create_auth_manager(environment).datastore_admin_instance()
+        # We are hard-coding prod here because we cannot control the env variables of Speechmatics' servers.
+        # This API is only going to be used by them, so it's ok to do this here.
+        datastore_client = ManagerFactory.create_auth_manager("prod").datastore_admin_instance()
 
         raw_data = await request.json()
         json_data = json.loads(json.dumps(raw_data))
