@@ -6,7 +6,7 @@ from typing import Annotated, Union
 
 from .internal import security
 from .internal.utilities.lazy_loader import LazyLoader
-from .managers.implementations.audio_processing_manager import AudioProcessingManager
+from .managers.manager_factory import ManagerFactory
 from .routers import (assistant_router,
                       audio_processing_router,
                       image_processing_router,
@@ -27,9 +27,9 @@ class EndpointServiceCoordinator:
 
         origins = [
             # Daniel Daza development
-            "https://localhost:5173",
-            AudioProcessingManager().get_diarization_notifications_ips(),
+            "https://localhost:5173"
         ]
+        origins.extend(ManagerFactory().create_audio_processing_manager(environment).get_diarization_notifications_ips())
 
         app.add_middleware(
             CORSMiddleware,
