@@ -244,7 +244,8 @@ async def execute_assistant_query(query: model.AssistantQuery,
                                                    session_id=session_id,
                                                    api_method=logging.API_METHOD_POST,
                                                    endpoint_name=QUERIES_ENDPOINT,
-                                                   environment=environment)
+                                                   environment=environment,
+                                                   auth_entity=current_entity.username)
 
         logging.log_api_response(session_id=session_id,
                         therapist_id=query.therapist_id,
@@ -313,7 +314,8 @@ async def fetch_greeting(response: Response,
                                                          endpoint_name=GREETINGS_ENDPOINT,
                                                          api_method=logging.API_METHOD_POST,
                                                          environment=environment,
-                                                         auth_manager=auth_manager)
+                                                         auth_manager=auth_manager,
+                                                         auth_entity=current_entity.username)
 
         logging.log_api_response(session_id=session_id,
                                 endpoint_name=GREETINGS_ENDPOINT,
@@ -380,7 +382,8 @@ async def fetch_presession_tray(response: Response,
                                                             session_id=session_id,
                                                             endpoint_name=PRESESSION_TRAY_ENDPOINT,
                                                             api_method=logging.API_METHOD_POST,
-                                                            auth_manager=auth_manager)
+                                                            auth_manager=auth_manager,
+                                                            auth_entity=current_entity.username)
 
         logging.log_api_response(session_id=session_id,
                                  endpoint_name=PRESESSION_TRAY_ENDPOINT,

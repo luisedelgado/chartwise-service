@@ -27,7 +27,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                       session_id: str,
                       api_method: str,
                       endpoint_name: str,
-                      environment: str):
+                      environment: str,
+                      auth_entity: str):
         ...
 
     def fetch_todays_greeting(self,
@@ -36,7 +37,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                               endpoint_name: str,
                               api_method: str,
                               environment: str,
-                              auth_manager: AuthManagerBaseClass):
+                              auth_manager: AuthManagerBaseClass,
+                              auth_entity: str):
         ...
 
     def create_patient_summary(self,
@@ -45,7 +47,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                environment: str,
                                session_id: str,
                                endpoint_name: str,
-                               api_method: str):
+                               api_method: str,
+                               auth_entity: str):
         ...
 
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,

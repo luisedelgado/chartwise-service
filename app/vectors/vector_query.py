@@ -40,7 +40,8 @@ class VectorQueryWorker:
                     endpoint_name: str,
                     method: str,
                     environment: str,
-                    auth_manager: AuthManagerBaseClass) -> str:
+                    auth_manager: AuthManagerBaseClass,
+                    auth_entity: str) -> str:
         try:
             # Initialize connection to Pinecone
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -62,13 +63,14 @@ class VectorQueryWorker:
                 "session_id": str(session_id),
                 "endpoint_name": endpoint_name,
                 "method": method,
+                "auth_entity": auth_entity,
             }
 
             cache_ttl = 300 # 5 minutes
             headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                caching_shard_key=index_id,
-                                                                llm_model=LLM_MODEL,
-                                                                cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
+                                                                   caching_shard_key=index_id,
+                                                                   llm_model=LLM_MODEL,
+                                                                   cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
             llm = llama_index_OpenAI(model=LLM_MODEL,
                                     temperature=0,
@@ -109,7 +111,8 @@ class VectorQueryWorker:
                         therapist_id: str,
                         method: str,
                         environment: str,
-                        auth_manager: AuthManagerBaseClass
+                        auth_manager: AuthManagerBaseClass,
+                        auth_entity: str,
                         ) -> str:
         try:
             caching_shard_key = caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
@@ -122,6 +125,7 @@ class VectorQueryWorker:
                 "method": method,
                 "tz_identifier": tz_identifier,
                 "language_code": language_code,
+                "auth_entity": auth_entity,
             }
 
             cache_ttl = 86400 # 24 hours
@@ -167,7 +171,8 @@ class VectorQueryWorker:
                        therapist_name: str,
                        patient_name: str,
                        session_number: int,
-                       auth_manager: AuthManagerBaseClass) -> str:
+                       auth_manager: AuthManagerBaseClass,
+                       auth_entity: str) -> str:
         try:
             caching_shard_key = caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -179,6 +184,7 @@ class VectorQueryWorker:
                 "endpoint_name": endpoint_name,
                 "method": api_method,
                 "language_code": language_code,
+                "auth_entity": auth_entity,
             }
 
             cache_ttl = 86400 # 24 hours

@@ -49,6 +49,7 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     endpoint_name – the endpoint name that triggered this query.
     environment – the current running environment.
+    auth_entity – the auth entity that enabled the incoming request.
     """
     def query_session(self,
                       auth_manager: AuthManagerBaseClass,
@@ -56,7 +57,8 @@ class AssistantManagerBaseClass(ABC):
                       session_id: str,
                       api_method: str,
                       endpoint_name: str,
-                      environment: str):
+                      environment: str,
+                      auth_entity: str):
         pass
 
     """
@@ -68,6 +70,7 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     environment – the current running environment.
     auth_manager – the auth_manager to be leveraged.
+    auth_entity – the auth entity that enabled the incoming request.
     """
     def fetch_todays_greeting(self,
                               body: Greeting,
@@ -75,7 +78,8 @@ class AssistantManagerBaseClass(ABC):
                               endpoint_name: str,
                               api_method: str,
                               environment: str,
-                              auth_manager: AuthManagerBaseClass):
+                              auth_manager: AuthManagerBaseClass,
+                              auth_entity: str):
         pass
 
     """
@@ -87,6 +91,7 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
+    auth_entity – the auth entity that enabled the incoming request.
     """
     def create_patient_summary(self,
                                body: SessionHistorySummary,
@@ -94,7 +99,8 @@ class AssistantManagerBaseClass(ABC):
                                environment: str,
                                session_id: str,
                                endpoint_name: str,
-                               api_method: str):
+                               api_method: str,
+                               auth_entity: str):
         pass
 
     """

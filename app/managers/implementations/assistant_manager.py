@@ -91,7 +91,8 @@ class AssistantManager(AssistantManagerBaseClass):
                       session_id: str,
                       api_method: str,
                       endpoint_name: str,
-                      environment: str):
+                      environment: str,
+                      auth_entity: str):
         try:
             datastore_client = auth_manager.datastore_user_instance(query.datastore_access_token,
                                                                     query.datastore_refresh_token)
@@ -113,7 +114,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        endpoint_name=endpoint_name,
                                                        method=api_method,
                                                        environment=environment,
-                                                       auth_manager=auth_manager)
+                                                       auth_manager=auth_manager,
+                                                       auth_entity=auth_entity)
 
             return {"response": response}
         except Exception as e:
@@ -125,7 +127,8 @@ class AssistantManager(AssistantManagerBaseClass):
                               endpoint_name: str,
                               api_method: str,
                               environment: str,
-                              auth_manager: AuthManagerBaseClass) -> str:
+                              auth_manager: AuthManagerBaseClass,
+                              auth_entity: str) -> str:
         try:
             result = VectorQueryWorker().create_greeting(name=body.addressing_name,
                                                          language_code=body.response_language_code,
@@ -135,7 +138,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                          therapist_id=body.therapist_id,
                                                          method=api_method,
                                                          environment=environment,
-                                                         auth_manager=auth_manager)
+                                                         auth_manager=auth_manager,
+                                                         auth_entity=auth_entity)
             return result
         except Exception as e:
             raise Exception(e)
@@ -170,7 +174,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                environment: str,
                                session_id: str,
                                endpoint_name: str,
-                               api_method: str):
+                               api_method: str,
+                               auth_entity: str):
         try:
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
@@ -193,7 +198,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         therapist_name=therapist_name,
                                                         patient_name=patient_name,
                                                         session_number=session_number,
-                                                        auth_manager=auth_manager)
+                                                        auth_manager=auth_manager,
+                                                        auth_entity=auth_entity)
             return result
         except Exception as e:
             raise Exception(e)
