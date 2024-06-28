@@ -47,3 +47,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                endpoint_name: str,
                                api_method: str):
         ...
+
+    def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
+                                                  job_id: str,
+                                                  summary: str,
+                                                  diarization: str):
+        ...

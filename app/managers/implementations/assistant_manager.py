@@ -20,6 +20,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert):
         try:
+            assert datetime_handler.is_valid_date(body.date), "Received invalid date"
+
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -137,6 +139,30 @@ class AssistantManager(AssistantManagerBaseClass):
             return result
         except Exception as e:
             raise Exception(e)
+
+    def update_diarization_with_notification_data(self,
+                                                  auth_manager: AuthManagerBaseClass,
+                                                  job_id: str,
+                                                  summary: str,
+                                                  diarization: str):
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+        datastore_client = auth_manager.datastore_admin_instance()
+        response = datastore_client.table('session_reports').update({
+            "notes_text": summary,
+            "session_diarization": diarization,
+            "last_updated": now_timestamp,
+        }).eq('session_diarization_job_id', job_id).execute()
+
+        session_date_raw = response.dict()['data'][0]['session_date']
+        session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
+        therapist_id = response.dict()['data'][0]['therapist_id']
+        patient_id = response.dict()['data'][0]['patient_id']
+
+        # Upload vector embeddings
+        vector_writer.insert_session_vectors(index_id=therapist_id,
+                                             namespace=patient_id,
+                                             text=summary,
+                                             date=session_date_formatted)
 
     def create_patient_summary(self,
                                body: SessionHistorySummary,

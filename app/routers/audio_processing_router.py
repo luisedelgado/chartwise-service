@@ -183,22 +183,21 @@ async def consume_notification(request: Request):
         id = request.query_params["id"]
         assert status_code.lower() == "success", f"Diarization failed for job ID {id}"
 
-        # We are hard-coding prod here because we cannot control the env variables of Speechmatics' servers.
-        # This API is only going to be used by them, so it's ok to do this here.
-        datastore_client = ManagerFactory.create_auth_manager("prod").datastore_admin_instance()
-
         raw_data = await request.json()
         json_data = json.loads(json.dumps(raw_data))
         job_id = json_data["job"]["id"]
         summary = json_data["summary"]["content"]
         diarization = DiarizationCleaner().clean_transcription(json_data["results"])
 
-        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-        datastore_client.table('session_reports').update({
-            "notes_text": summary,
-            "session_diarization": diarization,
-            "last_updated": now_timestamp,
-        }).eq('session_diarization_job_id', job_id).execute()
+        # We are hard-coding prod here because we cannot control the env variables of Speechmatics' servers.
+        # This API is only going to be used by them, so it's ok to do this here.
+        environment = "prod"
+        auth_manager = ManagerFactory.create_auth_manager(environment)
+        assistant_manager = ManagerFactory.create_assistant_manager(environment)
+        assistant_manager.update_diarization_with_notification_data(auth_manager=auth_manager,
+                                                                    job_id=job_id,
+                                                                    summary=summary,
+                                                                    diarization=diarization)
 
     except Exception as e:
         description = str(e)
