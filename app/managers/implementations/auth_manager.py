@@ -8,6 +8,10 @@ from ...api.auth_base_class import AuthManagerBaseClass
 
 class AuthManager(AuthManagerBaseClass):
 
+    # Authentication
+
+    # Supabase
+
     def datastore_user_instance(self, access_token, refresh_token) -> Client:
         key: str = os.environ.get("SUPABASE_ANON_KEY")
         url: str = os.environ.get("SUPABASE_URL")
@@ -20,6 +24,8 @@ class AuthManager(AuthManagerBaseClass):
         key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         url: str = os.environ.get("SUPABASE_URL")
         return create_client(url, key)
+
+    # Portkey
 
     def get_monitoring_proxy_url(self) -> str:
         return PORTKEY_GATEWAY_URL
