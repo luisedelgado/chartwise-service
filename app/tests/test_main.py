@@ -2,8 +2,8 @@ import os
 
 from fastapi.testclient import TestClient
 
-from ..routers.image_processing_router import IMAGE_UPLOAD_ENDPOINT
-from ..main import EndpointServiceCoordinator
+from ..routers.image_processing_router import ImageProcessingRouter
+from ..service_coordinator import EndpointServiceCoordinator
 
 DUMMY_AUTH_COOKIE = ""
 DUMMY_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
@@ -25,7 +25,7 @@ def test_invoke_image_upload_with_no_auth():
     files = {
         "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
     }
-    response = client.post(IMAGE_UPLOAD_ENDPOINT,
+    response = client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
                            data={"patient_id": DUMMY_PATIENT_ID, "therapist_id": DUMMY_THERAPIST_ID},
                            files=files)
     assert response.status_code == 401
@@ -34,7 +34,7 @@ def test_invoke_image_upload_with_auth():
     files = {
         "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
     }
-    response = client.post(IMAGE_UPLOAD_ENDPOINT,
+    response = client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
                            data={"patient_id": DUMMY_PATIENT_ID, "therapist_id": DUMMY_THERAPIST_ID},
                            files=files,
                            cookies={

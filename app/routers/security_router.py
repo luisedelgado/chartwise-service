@@ -69,10 +69,10 @@ class SecurityRouter:
                                                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                                response: Response,
                                                session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-        user = security.authenticate_entity(security.users_db, form_data.username, form_data.password)
-        session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=user,
-                                                                                        response=response,
-                                                                                        session_id=session_id)
+        user = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
+        session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=user,
+                                                                                                  response=response,
+                                                                                                  session_id=session_id)
         new_session_id = session_refresh_data._session_id
         logging.log_api_response(session_id=new_session_id,
                                 endpoint_name=self.TOKEN_ENDPOINT,
@@ -96,14 +96,14 @@ class SecurityRouter:
                                 response: Response,
                                 authorization: Annotated[Union[str, None], Cookie()] = None,
                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
-        if not security.access_token_is_valid(authorization):
+        if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
         try:
-            current_entity: security.User = await security.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
-                                                                                            response=response,
-                                                                                            session_id=current_session_id)
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -173,14 +173,14 @@ class SecurityRouter:
                                therapist_id: str,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
-        if not security.access_token_is_valid(authorization):
+        if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
         try:
-            current_entity: security.User = await security.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await security.refresh_session(user=current_entity,
-                                                                                            response=response,
-                                                                                            session_id=current_session_id)
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
