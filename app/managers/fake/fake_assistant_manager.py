@@ -9,15 +9,18 @@ from ...internal.model import (AssistantQuery,
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
-    def process_new_session_data(auth_manager: AuthManagerBaseClass,
+    def process_new_session_data(self,
+                                 auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert):
         ...
 
-    def update_session(auth_manager: AuthManagerBaseClass,
+    def update_session(self,
+                       auth_manager: AuthManagerBaseClass,
                        body: SessionNotesUpdate):
         ...
 
-    def delete_session(auth_manager: AuthManagerBaseClass,
+    def delete_session(self,
+                       auth_manager: AuthManagerBaseClass,
                        body: SessionNotesDelete):
         ...
 
@@ -51,7 +54,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                auth_entity: str):
         ...
 
-    def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
+    def update_diarization_with_notification_data(self,
+                                                  auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
                                                   diarization: str):

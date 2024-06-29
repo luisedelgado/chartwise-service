@@ -3,19 +3,19 @@ from supabase import Client
 from ...api.auth_base_class import AuthManagerBaseClass
 
 class FakeAuthManager(AuthManagerBaseClass):
-    def datastore_user_instance(access_token, refresh_token) -> Client:
+    def datastore_user_instance(self, access_token, refresh_token) -> Client:
         return None
 
-    def datastore_admin_instance() -> Client:
+    def datastore_admin_instance(self) -> Client:
         return None
 
-    def get_monitoring_proxy_url() -> str:
+    def get_monitoring_proxy_url(self) -> str:
         return ""
 
     def is_monitoring_proxy_reachable(self) -> bool:
         return False
 
-    def create_monitoring_proxy_config(cache_max_age, llm_model):
+    def create_monitoring_proxy_config(self, cache_max_age, llm_model):
         return {}
 
     def create_monitoring_proxy_headers(self, **kwargs):

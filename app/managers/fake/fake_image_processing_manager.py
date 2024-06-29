@@ -6,5 +6,5 @@ class FakeImageProcessingManager(ImageProcessingManagerBaseClass):
     async def upload_image_for_textraction(self, image: UploadFile = File(...)) -> str:
         return ""
 
-    def extract_text(document_id: str) -> str:
+    def extract_text(self, document_id: str) -> str:
         return ""
