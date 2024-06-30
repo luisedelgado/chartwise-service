@@ -1,8 +1,10 @@
-import os
-
 from fastapi.testclient import TestClient
 
+from ..managers.manager_factory import ManagerFactory
+from ..routers.assistant_router import AssistantRouter
+from ..routers.audio_processing_router import AudioProcessingRouter
 from ..routers.image_processing_router import ImageProcessingRouter
+from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
 DUMMY_AUTH_COOKIE = ""
@@ -16,7 +18,24 @@ IMAGE_PNG_FILETYPE = "image/png"
 DUMMY_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
 TEXT_PLAIN_FILETYPE = "text/plain"
 
-coordinator = EndpointServiceCoordinator(environment="testing")
+environment = "testing"
+auth_manager = ManagerFactory().create_auth_manager(environment)
+assistant_manager = ManagerFactory.create_assistant_manager(environment)
+audio_processing_manager = ManagerFactory.create_audio_processing_manager(environment)
+image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
+
+coordinator = EndpointServiceCoordinator(environment=environment,
+                                                    routers=[
+                                                        AssistantRouter(environment=environment,
+                                                                        auth_manager=auth_manager,
+                                                                        assistant_manager=assistant_manager).router,
+                                                        AudioProcessingRouter(auth_manager=auth_manager,
+                                                                              assistant_manager=assistant_manager,
+                                                                              audio_processing_manager=audio_processing_manager).router,
+                                                        ImageProcessingRouter(auth_manager=auth_manager,
+                                                                              image_processing_manager=image_processing_manager).router,
+                                                        SecurityRouter(auth_manager=auth_manager).router,
+                                                    ])
 client = TestClient(coordinator.service_app)
 
 # Image Processing Tests
