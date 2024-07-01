@@ -127,7 +127,7 @@ class AuthManager(AuthManagerBaseClass):
 
             if session_id is not None:
                 return SessionRefreshData(session_id=session_id,
-                                        auth_token=token)
+                                          auth_token=token)
 
             new_session_id = uuid.uuid1()
             response.delete_cookie("session_id")
@@ -137,7 +137,7 @@ class AuthManager(AuthManagerBaseClass):
                         secure=True,
                         samesite="none")
             return SessionRefreshData(session_id=new_session_id,
-                                    auth_token=token)
+                                      auth_token=token)
         except Exception as e:
             raise Exception(str(e))
 

@@ -2,14 +2,18 @@ from abc import ABC
 
 from fastapi import File, UploadFile
 
+from ..api.auth_base_class import AuthManagerBaseClass
+
 class ImageProcessingManagerBaseClass(ABC):
     """
     Uploads an image file to the textraction service.
     Returns an ID associated with the textraction job.
     Arguments:
+    auth_manager – the auth manager to be leveraged internally.
     image – the image to be uploaded.
     """
-    async def upload_image_for_textraction(image: UploadFile = File(...)) -> str:
+    async def upload_image_for_textraction(auth_manager: AuthManagerBaseClass,
+                                           image: UploadFile = File(...)) -> str:
         pass
 
     """
