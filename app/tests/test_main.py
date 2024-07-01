@@ -9,9 +9,11 @@ from ..service_coordinator import EndpointServiceCoordinator
 
 DUMMY_AUTH_COOKIE = "my-auth-cookie"
 DUMMY_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
-DUMMY_PDF_FILE_LOCATION = "app/tests/data/test2.pdf"
-IMAGE_PDF_FILETYPE = "application/pdf"
 DUMMY_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
+DUMMY_PDF_FILE_LOCATION = "app/tests/data/test2.pdf"
+DUMMY_WAV_FILE_LOCATION = "app/tests/data/maluma.wav"
+IMAGE_PDF_FILETYPE = "application/pdf"
+AUDIO_WAV_FILETYPE = "audio/wav"
 
 environment = "testing"
 auth_manager = ManagerFactory().create_auth_manager(environment)
@@ -35,9 +37,7 @@ coordinator = EndpointServiceCoordinator(environment=environment,
                                                     ])
 client = TestClient(coordinator.service_app)
 
-class TestingHarness:
-
-    # Image Processing Tests
+class TestingHarnessImageProcessing:
 
     def test_invoke_image_upload_with_no_auth(self):
         files = {
@@ -106,3 +106,79 @@ class TestingHarness:
                                 })
         assert response.status_code == 200
         assert response.json() == {"extraction": image_processing_manager.FAKE_TEXTRACT_RESULT}
+
+class TestingHarnessAudioProcessing:
+
+    def test_invoke_transcription_with_no_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": DUMMY_PATIENT_ID,
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                               },
+                               files=files)
+        assert response.status_code == 401
+
+    def test_invoke_transcription_with_valid_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": DUMMY_PATIENT_ID,
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               })
+        assert response.status_code == 200
+        assert response.json() == {"transcript": audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
+
+    def test_invoke_diarization_with_no_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": DUMMY_PATIENT_ID,
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                               },
+                               files=files)
+        assert response.status_code == 401
+
+    def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": DUMMY_PATIENT_ID,
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                                   "session_date": "10/24/2020",
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               })
+        assert response.status_code == 409
+
+    def test_invoke_diarization_with_valid_auth_and_valid_date_format(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": DUMMY_PATIENT_ID,
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               })
+        assert response.status_code == 200
+        assert response.json() == {"job_id": audio_processing_manager.FAKE_JOB_ID}

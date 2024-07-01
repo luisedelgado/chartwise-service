@@ -117,11 +117,11 @@ class AudioProcessingRouter:
                                                                                     audio_file=audio_file)
 
             logging.log_api_response(session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id,
-                                    endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST)
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
+                                     endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_POST)
 
             return {"transcript": transcript}
         except Exception as e:

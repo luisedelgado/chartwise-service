@@ -2,13 +2,17 @@ from abc import ABC
 
 from fastapi import File, UploadFile
 
+from ..api.auth_base_class import AuthManagerBaseClass
+
 class AudioProcessingManagerBaseClass(ABC):
     """
     Returns the incoming audio's transcription.
     Arguments:
+    auth_manager – the auth manager to be leveraged internally.
     audio_file – the audio file to be transcribed.
     """
-    async def transcribe_audio_file(audio_file: UploadFile = File(...)) -> str:
+    async def transcribe_audio_file(auth_manager: AuthManagerBaseClass,
+                                    audio_file: UploadFile = File(...)) -> str:
         pass
 
     """
@@ -25,10 +29,13 @@ class AudioProcessingManagerBaseClass(ABC):
     Returns the job id that is processing.
 
     Arguments:
-    auth_token  – the access_token associated with the current server session.
-    audio_file  – the audio file to be diarized.
+    auth_manager – the auth manager to be leveraged internally.
+    session_auth_token – the access_token associated with the current server session.
+    endpoint_url – the endpoint url to be used for making the request.
+    audio_file – the audio file to be diarized.
     """
-    async def diarize_audio_file(session_auth_token: str,
-                                endpoint_url: str,
-                                audio_file: UploadFile = File(...)) -> str:
+    async def diarize_audio_file(auth_manager: AuthManagerBaseClass,
+                                 session_auth_token: str,
+                                 endpoint_url: str,
+                                 audio_file: UploadFile = File(...)) -> str:
         pass

@@ -4,6 +4,7 @@ from fastapi import Cookie, Depends, Response
 from supabase import Client
 from typing import Annotated, Union
 
+from .fake_supabase_client import FakeSupabaseClient
 from ...internal.model import SessionRefreshData
 from ...internal.security import OAUTH2_SCHEME, Token, User, UserInDB
 from ...api.auth_base_class import AuthManagerBaseClass
@@ -62,10 +63,10 @@ class FakeAuthManager(AuthManagerBaseClass):
                                   auth_token=token)
 
     def datastore_user_instance(self, access_token, refresh_token) -> Client:
-        return None
+        return FakeSupabaseClient()
 
     def datastore_admin_instance(self) -> Client:
-        return None
+        return FakeSupabaseClient()
 
     def get_monitoring_proxy_url(self) -> str:
         return ""
