@@ -37,7 +37,7 @@ coordinator = EndpointServiceCoordinator(environment=environment,
                                                     ])
 client = TestClient(coordinator.service_app)
 
-class TestingHarnessImageProcessing:
+class TestingHarnessImageProcessingRouter:
 
     def test_invoke_image_upload_with_no_auth(self):
         files = {
@@ -60,6 +60,8 @@ class TestingHarnessImageProcessing:
                                })
         assert response.status_code == 200
         assert response.json() == {"document_id": image_processing_manager.FAKE_DOCUMENT_ID}
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
 
     def test_invoke_textraction_with_no_auth(self):
         response = client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
@@ -106,8 +108,10 @@ class TestingHarnessImageProcessing:
                                 })
         assert response.status_code == 200
         assert response.json() == {"extraction": image_processing_manager.FAKE_TEXTRACT_RESULT}
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
 
-class TestingHarnessAudioProcessing:
+class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_transcription_with_no_auth(self):
         files = {
@@ -136,6 +140,8 @@ class TestingHarnessAudioProcessing:
                                })
         assert response.status_code == 200
         assert response.json() == {"transcript": audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
 
     def test_invoke_diarization_with_no_auth(self):
         files = {
@@ -182,6 +188,8 @@ class TestingHarnessAudioProcessing:
                                })
         assert response.status_code == 200
         assert response.json() == {"job_id": audio_processing_manager.FAKE_JOB_ID}
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
 
     def test_diarization_notifications_with_invalid_auth(self):
         response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
@@ -231,3 +239,23 @@ class TestingHarnessAudioProcessing:
                                json=audio_processing_manager.FAKE_DIARIZATION_RESULT)
         assert response.status_code == 200
         assert assistant_manager.fake_processed_diarization_result == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'
+
+class TestingHarnessSecurityRouter:
+
+    def test_login_for_token_with_invalid_credentials(self):
+        response = client.post(SecurityRouter.TOKEN_ENDPOINT,
+                               data={
+                                   "username": "wrongUsername",
+                                   "password": "wrongPassword"
+                               })
+        assert response.status_code == 400
+
+    def test_login_for_token_with_valid_credentials(self):
+        response = client.post(SecurityRouter.TOKEN_ENDPOINT,
+                               data={
+                                   "username": auth_manager.FAKE_USERNAME,
+                                   "password": auth_manager.FAKE_PASSWORD
+                               })
+        assert response.status_code == 200
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID

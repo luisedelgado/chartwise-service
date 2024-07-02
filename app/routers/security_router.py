@@ -69,18 +69,23 @@ class SecurityRouter:
                                                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                                response: Response,
                                                session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-        user = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
-        session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=user,
-                                                                                                  response=response,
-                                                                                                  session_id=session_id)
-        new_session_id = session_refresh_data._session_id
-        logging.log_api_response(session_id=new_session_id,
-                                endpoint_name=self.TOKEN_ENDPOINT,
-                                http_status_code=status.HTTP_200_OK,
-                                method=logging.API_METHOD_POST,
-                                description=f"Refreshing token from {session_id} to {new_session_id}")
+        try:
+            valid_credentials = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
+            assert valid_credentials
 
-        return session_refresh_data._auth_token
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=form_data.username,
+                                                                                                      response=response,
+                                                                                                      session_id=session_id)
+            new_session_id = session_refresh_data._session_id
+            logging.log_api_response(session_id=new_session_id,
+                                    endpoint_name=self.TOKEN_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=logging.API_METHOD_POST,
+                                    description=f"Refreshing token from {session_id} to {new_session_id}")
+
+            return session_refresh_data._auth_token
+        except Exception as e:
+            raise HTTPException(detail="Invalid credentials", status_code=status.HTTP_400_BAD_REQUEST)
 
     """
     Signs up a new user.

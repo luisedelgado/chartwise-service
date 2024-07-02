@@ -9,16 +9,19 @@ from ...internal.model import SessionRefreshData
 from ...internal.security import OAUTH2_SCHEME, Token, User, UserInDB
 from ...api.auth_base_class import AuthManagerBaseClass
 
-FAKE_SESSION_ID = "8fc1b533-304e-4a33-98ba-541fdd956c1f"
-FAKE_ACCESS_TOKEN = "myRandomGibberish"
-FAKE_HASHED_PASSWORD = "myHashedPassword"
-FAKE_USER_IN_DB = UserInDB(username="myfakeusername",
-                           email="johndoe@fakeemail.fake",
-                           full_name="John Doe",
-                           hashed_password=FAKE_HASHED_PASSWORD,
-                           disabled=False)
 
 class FakeAuthManager(AuthManagerBaseClass):
+
+    FAKE_SESSION_ID = "8fc1b533-304e-4a33-98ba-541fdd956c1f"
+    FAKE_ACCESS_TOKEN = "myRandomGibberish"
+    FAKE_PASSWORD = "myPassword"
+    FAKE_HASHED_PASSWORD = "myHashedPassword"
+    FAKE_USERNAME = "myfakeusername"
+    FAKE_USER_IN_DB = UserInDB(username=FAKE_USERNAME,
+                            email="johndoe@fakeemail.fake",
+                            full_name="John Doe",
+                            hashed_password=FAKE_HASHED_PASSWORD,
+                            disabled=False)
 
     auth_cookie: str = None
 
@@ -34,22 +37,22 @@ class FakeAuthManager(AuthManagerBaseClass):
         pass
 
     def authenticate_entity(self, fake_db, username: str, password: str):
-        pass
+        return username == self.FAKE_USERNAME and password == self.FAKE_PASSWORD
 
     def create_access_token(self,
                             _: dict,
                             __: Union[timedelta, None] = None):
-        return FAKE_ACCESS_TOKEN
+        return self.FAKE_ACCESS_TOKEN
 
     def access_token_is_valid(self, access_token: str) -> bool:
         return self.auth_cookie == access_token
 
     async def get_current_auth_entity(self, _: Annotated[str, Depends(OAUTH2_SCHEME)]):
-        return FAKE_USER_IN_DB
+        return self.FAKE_USER_IN_DB
 
     async def get_current_active_auth_entity(self,
                                              _: Annotated[User, Depends(get_current_auth_entity)]):
-        FAKE_USER_IN_DB
+        self.FAKE_USER_IN_DB
 
     def update_auth_token_for_entity(self, user: User, response: Response):
         pass
@@ -58,8 +61,20 @@ class FakeAuthManager(AuthManagerBaseClass):
                               user: User,
                               response: Response,
                               session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
-        token = Token(access_token=FAKE_ACCESS_TOKEN, token_type="bearer")
-        return SessionRefreshData(session_id=FAKE_SESSION_ID,
+        response.set_cookie(key="session_id",
+                        value=self.FAKE_SESSION_ID,
+                        httponly=True,
+                        secure=True,
+                        samesite="none")
+
+        response.set_cookie(key="authorization",
+                        value=self.FAKE_ACCESS_TOKEN,
+                        httponly=True,
+                        secure=True,
+                        samesite="none")
+
+        token = Token(access_token=self.FAKE_ACCESS_TOKEN, token_type="bearer")
+        return SessionRefreshData(session_id=self.FAKE_SESSION_ID,
                                   auth_token=token)
 
     def datastore_user_instance(self, access_token, refresh_token) -> Client:
