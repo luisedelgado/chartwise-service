@@ -14,8 +14,7 @@ assistant_manager = ManagerFactory.create_assistant_manager(environment)
 audio_processing_manager = ManagerFactory.create_audio_processing_manager(environment)
 image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
 
-app = LazyLoader(lambda: EndpointServiceCoordinator(environment=environment,
-                                                    routers=[
+app = LazyLoader(lambda: EndpointServiceCoordinator(routers=[
                                                         AssistantRouter(environment=environment,
                                                                         auth_manager=auth_manager,
                                                                         assistant_manager=assistant_manager).router,

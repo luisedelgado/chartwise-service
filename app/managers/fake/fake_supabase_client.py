@@ -17,9 +17,22 @@ class FakeAuthWrapper:
         self.fake_user_id = fake_user_id
 
     def sign_up(self, obj: dict):
-        with requests_mock.Mocker() as mock:
-            url = 'https://api.example.com/data'
-            fake_response = {
+        # with requests_mock.Mocker() as mock:
+        #     url = 'https://api.example.com/data'
+        #     fake_response = {
+        #         "user": {
+        #             "role": self.fake_role,
+        #             "id": self.fake_user_id
+        #         },
+        #         "session": {
+        #             "access_token": self.fake_access_token,
+        #             "refresh_token": self.fake_refresh_token
+        #         }
+        #     }
+        #     mock.get(url, json=json.dumps(fake_response))
+        #     response = requests.get(url)
+        #     return response
+        return json.dumps({
                 "user": {
                     "role": self.fake_role,
                     "id": self.fake_user_id
@@ -28,10 +41,7 @@ class FakeAuthWrapper:
                     "access_token": self.fake_access_token,
                     "refresh_token": self.fake_refresh_token
                 }
-            }
-            mock.get(url, json=json.dumps(fake_response))
-            response = requests.get(url)
-            return response
+            })
 
 class FakeSupabasesInsertResult:
     def execute(self):

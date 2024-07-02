@@ -94,38 +94,6 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
     # Speechmatics
 
-    """
-    The set of IPs that Speechmatics may use to trigger a notification to our service.
-    """
-    def get_diarization_notifications_ips(self) -> list:
-        return [
-            "40.74.41.91",
-            "52.236.157.154",
-            "40.74.37.0",
-            "20.73.209.153",
-            "20.73.142.44",
-            "20.105.89.153",
-            "20.105.89.173",
-            "20.105.89.184",
-            "20.105.89.98",
-            "20.105.88.228",
-            "52.149.21.32",
-            "52.149.21.10",
-            "52.137.102.83",
-            "40.64.107.92",
-            "40.64.107.99",
-            "52.146.58.224",
-            "52.146.58.159",
-            "52.146.59.242",
-            "52.146.59.213",
-            "52.146.58.64",
-            "20.248.249.20",
-            "20.248.249.47",
-            "20.248.249.181",
-            "20.248.249.119",
-            "20.248.249.164",
-        ]
-
     def diarization_config(self, auth_token: str, endpoint_url: str):
         return {
             "type": "transcription",

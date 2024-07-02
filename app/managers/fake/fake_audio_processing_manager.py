@@ -10,9 +10,6 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
                                     audio_file: UploadFile = File(...)) -> str:
         return self.FAKE_TRANSCRIPTION_RESULT
 
-    def get_diarization_notifications_ips(self) -> list:
-        return []
-
     def diarization_config(self,
                            auth_token: str,
                            endpoint_url: str):
