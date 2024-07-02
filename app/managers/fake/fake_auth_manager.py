@@ -16,10 +16,12 @@ class FakeAuthManager(AuthManagerBaseClass):
     FAKE_ACCESS_TOKEN = "myRandomGibberish"
     FAKE_PASSWORD = "myPassword"
     FAKE_HASHED_PASSWORD = "myHashedPassword"
+    FAKE_FULL_NAME = "John Doe"
     FAKE_USERNAME = "myfakeusername"
+    FAKE_EMAIL = "johndoe@fakeemail.fake"
     FAKE_USER_IN_DB = UserInDB(username=FAKE_USERNAME,
-                            email="johndoe@fakeemail.fake",
-                            full_name="John Doe",
+                            email=FAKE_EMAIL,
+                            full_name=FAKE_FULL_NAME,
                             hashed_password=FAKE_HASHED_PASSWORD,
                             disabled=False)
 
@@ -41,7 +43,13 @@ class FakeAuthManager(AuthManagerBaseClass):
         pass
 
     def authenticate_entity(self, fake_db, username: str, password: str):
-        return username == self.FAKE_USERNAME and password == self.FAKE_PASSWORD
+        if username != self.FAKE_USERNAME or password != self.FAKE_PASSWORD:
+            return None
+        return UserInDB(username=self.FAKE_USERNAME,
+                        email=self.FAKE_EMAIL,
+                        full_name=self.FAKE_FULL_NAME,
+                        disabled=False,
+                        hashed_password=self.FAKE_HASHED_PASSWORD)
 
     def create_access_token(self,
                             _: dict,
@@ -98,3 +106,7 @@ class FakeAuthManager(AuthManagerBaseClass):
 
     def create_monitoring_proxy_headers(self, **kwargs):
         return {}
+
+    def logout(self, response: Response):
+        response.delete_cookie("authorization")
+        response.delete_cookie("session_id")

@@ -141,6 +141,10 @@ class AuthManager(AuthManagerBaseClass):
         except Exception as e:
             raise Exception(str(e))
 
+    def logout(self, response: Response):
+        response.delete_cookie("authorization")
+        response.delete_cookie("session_id")
+
     # Supabase
 
     def datastore_user_instance(self, access_token, refresh_token) -> Client:

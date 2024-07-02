@@ -72,10 +72,10 @@ class SecurityRouter:
                                                response: Response,
                                                session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
         try:
-            valid_credentials = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
-            assert valid_credentials
+            user = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
+            assert user
 
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=form_data.username,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=user,
                                                                                                       response=response,
                                                                                                       session_id=session_id)
             new_session_id = session_refresh_data._session_id
@@ -204,8 +204,7 @@ class SecurityRouter:
                                 endpoint_name=self.LOGOUT_ENDPOINT,
                                 auth_entity=current_entity.username)
 
-        response.delete_cookie("authorization")
-        response.delete_cookie("session_id")
+        self._auth_manager.logout(response)
 
         logging.log_api_response(session_id=session_id,
                                 therapist_id=therapist_id,

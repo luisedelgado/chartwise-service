@@ -396,3 +396,25 @@ class TestingHarnessSecurityRouter:
         }
         assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
         assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
+
+    def test_logout_with_invalid_credentials(self):
+        response = client.post(SecurityRouter.LOGOUT_ENDPOINT,
+                               params={
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                               })
+        assert response.status_code == 401
+
+    def test_logout_with_valid_credentials(self):
+        response = client.post(SecurityRouter.LOGOUT_ENDPOINT,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               },
+                               params={
+                                   "therapist_id": DUMMY_THERAPIST_ID,
+                               })
+        assert response.status_code == 200
+        cookie_header = response.headers.get("set-cookie")
+        assert cookie_header is not None
+        assert "authorization=" in cookie_header
+        assert "session_id=" in cookie_header
+        assert "expires=" in cookie_header or "Max-Age=0" in cookie_header

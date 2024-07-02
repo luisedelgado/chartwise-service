@@ -109,3 +109,11 @@ class AuthManagerBaseClass(ABC):
     """
     def create_monitoring_proxy_headers(**kwargs):
         pass
+
+    """
+    Logs out a user.
+
+    response – the response object to be used for modeling the client response.
+    """
+    def logout(response: Response):
+        pass
