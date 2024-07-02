@@ -43,6 +43,9 @@ class SignupData(BaseModel):
     signup_mechanism: str
     language_preference: str
 
+class LogoutData(BaseModel):
+    therapist_id: str
+
 class TextractionData(BaseModel):
     therapist_id: str
     patient_id: str

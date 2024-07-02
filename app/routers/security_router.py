@@ -51,11 +51,11 @@ class SecurityRouter:
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
-                         therapist_id: str,
+                         logout_data: model.LogoutData,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
-                                               therapist_id=therapist_id,
+                                               therapist_id=logout_data.therapist_id,
                                                authorization=authorization,
                                                current_session_id=current_session_id)
 

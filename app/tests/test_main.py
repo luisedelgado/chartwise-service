@@ -399,7 +399,7 @@ class TestingHarnessSecurityRouter:
 
     def test_logout_with_invalid_credentials(self):
         response = client.post(SecurityRouter.LOGOUT_ENDPOINT,
-                               params={
+                               json={
                                    "therapist_id": DUMMY_THERAPIST_ID,
                                })
         assert response.status_code == 401
@@ -409,7 +409,7 @@ class TestingHarnessSecurityRouter:
                                cookies={
                                    "authorization": DUMMY_AUTH_COOKIE,
                                },
-                               params={
+                               json={
                                    "therapist_id": DUMMY_THERAPIST_ID,
                                })
         assert response.status_code == 200
