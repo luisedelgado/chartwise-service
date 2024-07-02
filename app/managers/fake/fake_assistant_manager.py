@@ -9,6 +9,8 @@ from ...internal.model import (AssistantQuery,
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
+    fake_processed_diarization_result: str = None
+
     def process_new_session_data(self,
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert):
@@ -59,4 +61,4 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   job_id: str,
                                                   summary: str,
                                                   diarization: str):
-        ...
+        self.fake_processed_diarization_result = diarization

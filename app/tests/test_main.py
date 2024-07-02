@@ -182,3 +182,52 @@ class TestingHarnessAudioProcessing:
                                })
         assert response.status_code == 200
         assert response.json() == {"job_id": audio_processing_manager.FAKE_JOB_ID}
+
+    def test_diarization_notifications_with_invalid_auth(self):
+        response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                               })
+        assert response.status_code == 401
+
+    def test_diarization_notifications_with_valid_auth_but_no_status(self):
+        response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": DUMMY_AUTH_COOKIE
+                               },
+                               params={
+                               })
+        assert response.status_code == 417
+
+    def test_diarization_notifications_with_valid_auth_and_failed_status(self):
+        response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": DUMMY_AUTH_COOKIE
+                               },
+                               params={
+                                   "status": "failed"
+                               })
+        assert response.status_code == 417
+
+    def test_diarization_notifications_with_valid_auth_and_success_status_but_no_job_id(self):
+        response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": DUMMY_AUTH_COOKIE
+                               },
+                               params={
+                                   "status": "failed"
+                               })
+        assert response.status_code == 417
+
+    def test_diarization_notifications_with_valid_auth_and_successful_params(self):
+        assert assistant_manager.fake_processed_diarization_result == None
+        response = client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": DUMMY_AUTH_COOKIE
+                               },
+                               params={
+                                   "status": "success",
+                                   "id": audio_processing_manager.FAKE_JOB_ID
+                               },
+                               json=audio_processing_manager.FAKE_DIARIZATION_RESULT)
+        assert response.status_code == 200
+        assert assistant_manager.fake_processed_diarization_result == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'
