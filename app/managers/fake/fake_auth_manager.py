@@ -24,6 +24,10 @@ class FakeAuthManager(AuthManagerBaseClass):
                             disabled=False)
 
     auth_cookie: str = None
+    fake_supabase_client: FakeSupabaseClient
+
+    def __init__(self):
+        self.fake_supabase_client = FakeSupabaseClient()
 
     # Authentication
 
@@ -78,10 +82,10 @@ class FakeAuthManager(AuthManagerBaseClass):
                                   auth_token=token)
 
     def datastore_user_instance(self, access_token, refresh_token) -> Client:
-        return FakeSupabaseClient()
+        return self.fake_supabase_client
 
     def datastore_admin_instance(self) -> Client:
-        return FakeSupabaseClient()
+        return self.fake_supabase_client
 
     def get_monitoring_proxy_url(self) -> str:
         return ""

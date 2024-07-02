@@ -259,3 +259,140 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 200
         assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
         assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID
+
+    def test_signup_with_invalid_credentials(self):
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                               json={
+                                   "user_email": "foo@foo.com",
+                                   "user_password": "myPassword",
+                                   "first_name": "foo",
+                                   "last_name": "bar",
+                                   "birth_date": "01/01/2000",
+                                   "signup_mechanism": "custom",
+                                   "language_preference": "es-419"
+                               })
+        assert response.status_code == 401
+
+    def test_signup_with_valid_credentials_but_invalid_birthdate_format(self):
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               },
+                               json={
+                                   "user_email": "foo@foo.com",
+                                   "user_password": "myPassword",
+                                   "first_name": "foo",
+                                   "last_name": "bar",
+                                   "birth_date": "01/01/2000",
+                                   "signup_mechanism": "custom",
+                                   "language_preference": "es-419"
+                               })
+        assert response.status_code == 417
+
+    def test_signup_with_valid_credentials_but_invalid_language_preference(self):
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               },
+                               json={
+                                   "user_email": "foo@foo.com",
+                                   "user_password": "myPassword",
+                                   "first_name": "foo",
+                                   "last_name": "bar",
+                                   "birth_date": "01-01-2000",
+                                   "signup_mechanism": "custom",
+                                   "language_preference": "brbrbrbrbrbrbr"
+                               })
+        assert response.status_code == 417
+
+    def test_signup_with_valid_credentials_but_received_bad_role_from_service(self):
+        auth_manager.fake_supabase_client.fake_role = "bad_role"
+        auth_manager.fake_supabase_client.fake_access_token = "valid_token"
+        auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
+
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                               cookies={
+                                   "authorization": DUMMY_AUTH_COOKIE,
+                               },
+                               json={
+                                   "user_email": "foo@foo.com",
+                                   "user_password": "myPassword",
+                                   "first_name": "foo",
+                                   "last_name": "bar",
+                                   "birth_date": "01-01-2000",
+                                   "signup_mechanism": "custom",
+                                   "language_preference": "es-419"
+                               })
+        assert response.status_code == 417
+
+    def test_signup_with_valid_credentials_but_received_bad_access_token_from_service(self):
+        auth_manager.fake_supabase_client.fake_role = "authenticated"
+        auth_manager.fake_supabase_client.fake_access_token = ""
+        auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
+
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                            cookies={
+                                "authorization": DUMMY_AUTH_COOKIE,
+                            },
+                            json={
+                                "user_email": "foo@foo.com",
+                                "user_password": "myPassword",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "signup_mechanism": "custom",
+                                "language_preference": "es-419"
+                            })
+        assert response.status_code == 417
+
+    def test_signup_with_valid_credentials_but_received_bad_refresh_token_from_service(self):
+        auth_manager.fake_supabase_client.fake_role = "authenticated"
+        auth_manager.fake_supabase_client.fake_access_token = ""
+        auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
+
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                            cookies={
+                                "authorization": DUMMY_AUTH_COOKIE,
+                            },
+                            json={
+                                "user_email": "foo@foo.com",
+                                "user_password": "myPassword",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "signup_mechanism": "custom",
+                                "language_preference": "es-419"
+                            })
+        assert response.status_code == 417
+
+    def test_signup_success(self):
+        fake_role = "authenticated"
+        valid_access_token = "valid_access_token"
+        valid_refresh_token = "valid_refresh_token"
+        valid_user_id = "user_id"
+        auth_manager.fake_supabase_client.fake_role = fake_role
+        auth_manager.fake_supabase_client.fake_access_token = valid_access_token
+        auth_manager.fake_supabase_client.fake_refresh_token = valid_refresh_token
+        auth_manager.fake_supabase_client.fake_user_id = valid_user_id
+
+        response = client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+                            cookies={
+                                "authorization": DUMMY_AUTH_COOKIE,
+                            },
+                            json={
+                                "user_email": "foo@foo.com",
+                                "user_password": "myPassword",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "signup_mechanism": "custom",
+                                "language_preference": "es-419"
+                            })
+        assert response.status_code == 200
+        assert response.json() == {
+            "user_id": valid_user_id,
+            "access_token": valid_access_token,
+            "refresh_token": valid_refresh_token
+        }
+        assert response.cookies.get("authorization") == auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("session_id") == auth_manager.FAKE_SESSION_ID

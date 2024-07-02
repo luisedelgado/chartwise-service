@@ -7,11 +7,13 @@ from fastapi import (APIRouter,
                      Response,
                      status,)
 from fastapi.security import OAuth2PasswordRequestForm
+from langcodes import Language
 from supabase import Client
 from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal import logging, model, security
+from ..internal.utilities import datetime_handler
 
 class SecurityRouter:
 
@@ -119,6 +121,9 @@ class SecurityRouter:
                                 auth_entity=current_entity.username)
 
         try:
+            assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
+            assert Language.get(signup_data.language_preference).is_valid(), "Invalid language_preference parameter"
+
             datastore_client: Client = self._auth_manager.datastore_admin_instance()
             res = datastore_client.auth.sign_up({
                 "email": signup_data.user_email,
@@ -126,9 +131,12 @@ class SecurityRouter:
             })
 
             json_response = json.loads(res.json())
-            assert (json_response["user"]["role"] == 'authenticated'
-                and json_response["session"]["access_token"]
-                and json_response["session"]["refresh_token"]), "Something went wrong when signing up the user"
+            user_role = json_response["user"]["role"]
+            access_token = json_response["session"]["access_token"]
+            refresh_token = json_response["session"]["refresh_token"]
+            assert (user_role == 'authenticated'
+                and access_token
+                and refresh_token), "Something went wrong when signing up the user"
 
             user_id = json_response["user"]["id"]
             datastore_client.table('therapists').insert({
@@ -150,12 +158,12 @@ class SecurityRouter:
 
             return {
                 "user_id": user_id,
-                "access_token": json_response["session"]["access_token"],
-                "refresh_token": json_response["session"]["refresh_token"]
+                "access_token": access_token,
+                "refresh_token": refresh_token
             }
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
                             endpoint_name=self.SIGN_UP_ENDPOINT,
                             error_code=status_code,
