@@ -60,7 +60,6 @@ class Greeting(BaseModel):
 class SessionHistorySummary(BaseModel):
     therapist_id: str
     patient_id: str
-    response_language_code: str
     datastore_access_token: str
     datastore_refresh_token: str
 

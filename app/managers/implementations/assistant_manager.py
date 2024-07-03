@@ -195,8 +195,10 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_response = datastore_client.table('patients').select('first_name').eq("id", body.patient_id).execute()
             patient_name = patient_response.dict()['data'][0]['first_name']
 
-            therapist_response = datastore_client.table('therapists').select('first_name').eq("id", body.therapist_id).execute()
-            therapist_name = therapist_response.dict()['data'][0]['first_name']
+            therapist_response = datastore_client.table('therapists').select('*').eq("id", body.therapist_id).execute()
+            therapist_response_dict = therapist_response.dict()
+            therapist_name = therapist_response_dict['data'][0]['first_name']
+            language_code = therapist_response_dict['data'][0]['language_preference']
 
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", body.patient_id).execute()
             session_number = len(number_session_response.dict()['data'])
@@ -204,7 +206,7 @@ class AssistantManager(AssistantManagerBaseClass):
             result = VectorQueryWorker().create_summary(index_id=body.therapist_id,
                                                         namespace=body.patient_id,
                                                         environment=environment,
-                                                        language_code=body.response_language_code,
+                                                        language_code=language_code,
                                                         session_id=session_id,
                                                         endpoint_name=endpoint_name,
                                                         method=api_method,

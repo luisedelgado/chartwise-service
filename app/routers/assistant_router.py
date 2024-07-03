@@ -3,7 +3,6 @@ from fastapi import (APIRouter,
                      HTTPException,
                      Response,
                      status,)
-from langcodes import Language
 from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
@@ -418,33 +417,28 @@ class AssistantRouter:
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-        logs_description = ''.join(['language_code:',
-                                    body.response_language_code])
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
                                 therapist_id=body.therapist_id,
                                 patient_id=body.patient_id,
                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                auth_entity=current_entity.username,
-                                description=logs_description)
+                                auth_entity=current_entity.username)
 
         try:
-            assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
-
             response = self._assistant_manager.create_patient_summary(body=body,
-                                                                environment=self._environment,
-                                                                session_id=session_id,
-                                                                endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                api_method=logging.API_METHOD_POST,
-                                                                auth_manager=self._auth_manager,
-                                                                auth_entity=current_entity.username)
+                                                                     environment=self._environment,
+                                                                     session_id=session_id,
+                                                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                                                     api_method=logging.API_METHOD_POST,
+                                                                     auth_manager=self._auth_manager,
+                                                                     auth_entity=current_entity.username)
 
             logging.log_api_response(session_id=session_id,
-                                    endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                    therapist_id=body.therapist_id,
-                                    patient_id=body.patient_id,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST)
+                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                     therapist_id=body.therapist_id,
+                                     patient_id=body.patient_id,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_POST)
 
             return {"summary": response}
         except Exception as e:
