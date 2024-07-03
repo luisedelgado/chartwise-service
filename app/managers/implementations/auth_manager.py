@@ -195,6 +195,7 @@ class AuthManager(AuthManagerBaseClass):
         metadata = None if "metadata" not in kwargs else kwargs["metadata"]
         return createHeaders(trace_id=uuid.uuid4(),
                             api_key=os.environ.get("PORTKEY_API_KEY"),
-                            config=self.create_monitoring_proxy_config(cache_max_age, llm_model),
+                            config=self.create_monitoring_proxy_config(cache_max_age=cache_max_age,
+                                                                       llm_model=llm_model),
                             cache_namespace=caching_shard_key,
                             metadata=metadata)

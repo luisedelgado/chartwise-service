@@ -66,11 +66,10 @@ class VectorQueryWorker:
                 "auth_entity": auth_entity,
             }
 
-            cache_ttl = 300 # 5 minutes
             headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
                                                                    caching_shard_key=index_id,
                                                                    llm_model=LLM_MODEL,
-                                                                   cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
+                                                                   cache_max_age=0) if is_monitoring_proxy_reachable else None
 
             llm = llama_index_OpenAI(model=LLM_MODEL,
                                     temperature=0,
