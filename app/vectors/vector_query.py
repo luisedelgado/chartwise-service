@@ -72,9 +72,9 @@ class VectorQueryWorker:
                                                                    cache_max_age=0) if is_monitoring_proxy_reachable else None
 
             llm = llama_index_OpenAI(model=LLM_MODEL,
-                                    temperature=0,
-                                    api_base=api_base,
-                                    default_headers=headers)
+                                     temperature=0,
+                                     api_base=api_base,
+                                     default_headers=headers)
             query_engine = vector_index.as_query_engine(
                 text_qa_template=message_templates.create_chat_prompt_template(response_language_code),
                 refine_template=message_templates.create_refine_prompt_template(response_language_code),
