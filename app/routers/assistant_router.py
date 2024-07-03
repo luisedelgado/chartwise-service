@@ -301,15 +301,13 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert Language.get(query.response_language_code).is_valid(), "Invalid response_language_code parameter"
-
             response = self._assistant_manager.query_session(auth_manager=self._auth_manager,
-                                                    query=query,
-                                                    session_id=session_id,
-                                                    api_method=logging.API_METHOD_POST,
-                                                    endpoint_name=self.QUERIES_ENDPOINT,
-                                                    environment=self._environment,
-                                                    auth_entity=current_entity.username)
+                                                             query=query,
+                                                             session_id=session_id,
+                                                             api_method=logging.API_METHOD_POST,
+                                                             endpoint_name=self.QUERIES_ENDPOINT,
+                                                             environment=self._environment,
+                                                             auth_entity=current_entity.username)
 
             logging.log_api_response(session_id=session_id,
                             therapist_id=query.therapist_id,
@@ -356,10 +354,7 @@ class AssistantRouter:
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-        logs_description = ''.join(['language_code:',
-                                    body.response_language_code,
-                                    ';tz_identifier:',
-                                    body.client_tz_identifier])
+        logs_description = ''.join(['tz_identifier:', body.client_tz_identifier])
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
                                 therapist_id=body.therapist_id,
@@ -369,15 +364,14 @@ class AssistantRouter:
 
         try:
             assert datetime_handler.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
-            assert Language.get(body.response_language_code).is_valid(), "Invalid response_language_code parameter"
 
             result = self._assistant_manager.fetch_todays_greeting(body=body,
-                                                            session_id=session_id,
-                                                            endpoint_name=self.GREETINGS_ENDPOINT,
-                                                            api_method=logging.API_METHOD_POST,
-                                                            environment=self._environment,
-                                                            auth_manager=self._auth_manager,
-                                                            auth_entity=current_entity.username)
+                                                                   session_id=session_id,
+                                                                   endpoint_name=self.GREETINGS_ENDPOINT,
+                                                                   api_method=logging.API_METHOD_POST,
+                                                                   environment=self._environment,
+                                                                   auth_manager=self._auth_manager,
+                                                                   auth_entity=current_entity.username)
 
             logging.log_api_response(session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,

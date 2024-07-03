@@ -108,12 +108,15 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_first_name = patient_query_dict['data'][0]['first_name']
             patient_last_name = patient_query_dict['data'][0]['last_name']
 
-            # Go through with the query
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', query.therapist_id).execute()
+            assert (0 != len((therapist_query).data))
+
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
             response = VectorQueryWorker().query_store(index_id=query.therapist_id,
                                                        namespace=query.patient_id,
                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                        input=query.text,
-                                                       response_language_code=query.response_language_code,
+                                                       response_language_code=language_code,
                                                        session_id=session_id,
                                                        endpoint_name=endpoint_name,
                                                        method=api_method,
@@ -134,8 +137,14 @@ class AssistantManager(AssistantManagerBaseClass):
                               auth_manager: AuthManagerBaseClass,
                               auth_entity: str) -> str:
         try:
+            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                    body.datastore_refresh_token)
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            assert (0 != len((therapist_query).data))
+
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
             result = VectorQueryWorker().create_greeting(name=body.addressing_name,
-                                                         language_code=body.response_language_code,
+                                                         language_code=language_code,
                                                          tz_identifier=body.client_tz_identifier,
                                                          session_id=session_id,
                                                          endpoint_name=endpoint_name,

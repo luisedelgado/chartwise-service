@@ -29,7 +29,6 @@ class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str
     text: str
-    response_language_code: str
     datastore_access_token: str
     datastore_refresh_token: str
 
@@ -53,9 +52,10 @@ class TextractionData(BaseModel):
 
 class Greeting(BaseModel):
     addressing_name: str
-    response_language_code: str
     client_tz_identifier: str
     therapist_id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
 
 class SessionHistorySummary(BaseModel):
     therapist_id: str
