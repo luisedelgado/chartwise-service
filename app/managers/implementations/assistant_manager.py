@@ -192,18 +192,18 @@ class AssistantManager(AssistantManagerBaseClass):
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", body.patient_id).execute()
             session_number = len(number_session_response.dict()['data'])
 
-            result = VectorQueryWorker().create_summary(therapist_id=body.therapist_id,
-                                                        patient_id=body.patient_id,
+            result = VectorQueryWorker().create_summary(index_id=body.therapist_id,
+                                                        namespace=body.patient_id,
                                                         environment=environment,
+                                                        language_code=body.response_language_code,
                                                         session_id=session_id,
                                                         endpoint_name=endpoint_name,
-                                                        api_method=api_method,
-                                                        language_code=body.response_language_code,
-                                                        therapist_name=therapist_name,
+                                                        method=api_method,
+                                                        auth_entity=auth_entity,
                                                         patient_name=patient_name,
+                                                        therapist_name=therapist_name,
                                                         session_number=session_number,
-                                                        auth_manager=auth_manager,
-                                                        auth_entity=auth_entity)
+                                                        auth_manager=auth_manager)
             return result
         except Exception as e:
             raise Exception(e)
