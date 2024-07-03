@@ -34,6 +34,7 @@ class VectorQueryWorker:
     def query_store(self,
                     index_id: str,
                     namespace: str,
+                    patient_name: str,
                     input: str,
                     response_language_code: str,
                     session_id: str,
@@ -76,7 +77,8 @@ class VectorQueryWorker:
                                      api_base=api_base,
                                      default_headers=headers)
             query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_chat_prompt_template(response_language_code),
+                text_qa_template=message_templates.create_chat_prompt_template(language_code=response_language_code,
+                                                                               patient_name=patient_name),
                 refine_template=message_templates.create_refine_prompt_template(response_language_code),
                 llm=llm,
                 streaming=True,

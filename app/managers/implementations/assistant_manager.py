@@ -98,16 +98,20 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                     query.datastore_refresh_token)
 
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
-            patient_therapist_match = (0 != len(
-                (datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
                                                                                                         query.patient_id).execute()
-            ).data))
+            patient_therapist_match = (0 != len((patient_query).data))
 
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+
+            patient_query_dict = patient_query.dict()
+            patient_first_name = patient_query_dict['data'][0]['first_name']
+            patient_last_name = patient_query_dict['data'][0]['last_name']
 
             # Go through with the query
             response = VectorQueryWorker().query_store(index_id=query.therapist_id,
                                                        namespace=query.patient_id,
+                                                       patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                        input=query.text,
                                                        response_language_code=query.response_language_code,
                                                        session_id=session_id,

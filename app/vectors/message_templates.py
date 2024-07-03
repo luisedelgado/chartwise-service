@@ -10,19 +10,21 @@ from pytz import timezone
 def __create_system_qa_message() -> str:
     return '''A therapist is using you to ask questions about their patients' notes. 
     Your job is to answer the therapist's questions based on the information context you find from the sessions.
-    For any information you reference, always outline the session date found in the metadata.'''
+    For any information you reference, always outline the session date found in the metadata. 
+    If the question references a person for whom you can't find information in the session notes, you should strictly say you can't provide an answer.'''
 
-def __create_user_qa_message(language_code: str) -> str:
+def __create_user_qa_message(language_code: str, patient_name: str) -> str:
     message_content = (
     '''We have provided context information below. \n
     ---------------------\n
     {context_str}
     \n---------------------\n''')
     language_code_requirement = f"\nTo craft your response use language {language_code}."
+    patient_name_context = f"\nFor reference, the patient's name is {patient_name}."
     execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
-    return message_content + language_code_requirement + execution_statement
+    return message_content + language_code_requirement + patient_name_context + execution_statement
 
-def create_chat_prompt_template(language_code: str) -> ChatPromptTemplate:
+def create_chat_prompt_template(language_code: str, patient_name: str) -> ChatPromptTemplate:
     qa_messages = [
         ChatMessage(
             role=MessageRole.SYSTEM,
@@ -30,7 +32,7 @@ def create_chat_prompt_template(language_code: str) -> ChatPromptTemplate:
         ),
         ChatMessage(
             role=MessageRole.USER,
-            content=__create_user_qa_message(language_code),
+            content=__create_user_qa_message(language_code=language_code, patient_name=patient_name),
         ),
     ]
     return ChatPromptTemplate(qa_messages)
