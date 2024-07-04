@@ -11,11 +11,10 @@ def run_tests_and_deploy_if_success(env_to_deploy):
         return
 
     venv_python = "/Users/luisdelgado/Documents/APIs/RAGService/.venv311/bin/python"
-    tests_result = subprocess.run([venv_python, "-m", "unittest", "discover"], capture_output=True, text=True)
+    tests_result = subprocess.run([venv_python, "-m", "pytest", "-p", "no:warnings"], capture_output=True, text=True)
     print(tests_result.stdout)
     if tests_result.returncode != 0:
         print("Some tests failed.")
-        print(tests_result.stderr)
         return
 
     print("All tests passed!")
