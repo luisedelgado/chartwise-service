@@ -69,6 +69,39 @@ class QuestionSuggestionsParams(BaseModel):
     datastore_access_token: str
     datastore_refresh_token: str
 
+class PatientInsertPayload(BaseModel):
+    first_name: str
+    middle_name: str
+    last_name: str
+    birth_date: str
+    gender: str
+    email: str
+    phone_number: str
+    consentment_channel: str
+    therapist_id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
+class PatientUpdatePayload(BaseModel):
+    id: str
+    first_name: str
+    middle_name: str
+    last_name: str
+    birth_date: str
+    gender: str
+    email: str
+    phone_number: str
+    consentment_channel: str
+    therapist_id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
+class PatientDeletePayload(BaseModel):
+    id: str
+    therapist_id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
 class SessionRefreshData():
     def __init__(self, session_id, auth_token):
         self._session_id = session_id

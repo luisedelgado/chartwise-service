@@ -83,8 +83,8 @@ class AudioProcessingRouter:
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     audio_file – the audio file for which the transcription will be created.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _transcribe_session_notes_internal(self,
                                                  response: Response,
@@ -143,8 +143,8 @@ class AudioProcessingRouter:
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     audio_file – the audio file for which the diarized transcription will be created.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _diarize_session_internal(self,
                                         response: Response,

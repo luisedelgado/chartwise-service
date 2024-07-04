@@ -20,7 +20,7 @@ class FileCopyResult:
 Returns a wrapper with the full path of the incoming file's PDF copy.
 
 Arguments:
-image  – the image file to be processed
+image – the image file to be processed
 """
 async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
     try:
@@ -49,7 +49,7 @@ async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
 Returns a wrapper with the full path of the incoming file's copy.
 
 Arguments:
-file  – the file to be processed
+file – the file to be processed
 """
 async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
     try:
@@ -73,7 +73,7 @@ async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
 Cleans up the incoming set of files from the local directory.
 
 Arguments:
-files  – the set of files to be cleaned up
+files – the set of files to be cleaned up
 """
 async def clean_up_files(files):
     for file in files:

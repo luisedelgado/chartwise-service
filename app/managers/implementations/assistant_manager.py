@@ -7,6 +7,7 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
                                QuestionSuggestionsParams,
+                               PatientDeletePayload,
                                SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
@@ -81,8 +82,17 @@ class AssistantManager(AssistantManagerBaseClass):
 
             # Delete vector embeddings
             vector_writer.delete_session_vectors(index_id=body.therapist_id,
-                                                namespace=body.patient_id,
-                                                date=session_date_formatted)
+                                                 namespace=body.patient_id,
+                                                 date=session_date_formatted)
+        except Exception as e:
+            raise Exception(e)
+
+    def delete_all_sessions_for_patient(self,
+                                        auth_manager: AuthManagerBaseClass,
+                                        body: PatientDeletePayload):
+        try:
+            vector_writer.delete_session_vectors(index_id=body.therapist_id,
+                                                 namespace=body.id)
         except Exception as e:
             raise Exception(e)
 

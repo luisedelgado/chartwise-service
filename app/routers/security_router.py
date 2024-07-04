@@ -17,12 +17,13 @@ from ..internal.utilities import datetime_handler
 
 class SecurityRouter:
 
-    ROUTER_TAG = "security"
+    ROUTER_TAG = "authentication"
     LOGOUT_ENDPOINT = "/logout"
     SIGN_UP_ENDPOINT = "/sign-up"
     TOKEN_ENDPOINT = "/token"
 
-    def __init__(self, auth_manager: AuthManagerBaseClass):
+    def __init__(self,
+                 auth_manager: AuthManagerBaseClass):
         self._auth_manager = auth_manager
         self.router = APIRouter()
         self._register_routes()
@@ -63,9 +64,9 @@ class SecurityRouter:
     Returns an oauth token to be used for invoking the endpoints.
 
     Arguments:
-    form_data  – the data required to validate the user.
-    response – The response object to be used for creating the final response.
-    session_id  – the id of the current user session.
+    form_data – the data required to validate the user.
+    response – the response object to be used for creating the final response.
+    session_id – the id of the current user session.
     """
     async def _login_for_access_token_internal(self,
                                                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -80,10 +81,10 @@ class SecurityRouter:
                                                                                                       session_id=session_id)
             new_session_id = session_refresh_data._session_id
             logging.log_api_response(session_id=new_session_id,
-                                    endpoint_name=self.TOKEN_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST,
-                                    description=f"Refreshing token from {session_id} to {new_session_id}")
+                                     endpoint_name=self.TOKEN_ENDPOINT,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_POST,
+                                     description=f"Refreshing token from {session_id} to {new_session_id}")
 
             return session_refresh_data._auth_token
         except Exception as e:
@@ -95,8 +96,8 @@ class SecurityRouter:
     Arguments:
     signup_data – the data to be used to sign up the user.
     response – the response model to be used for creating the final response.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _sign_up_internal(self,
                                 signup_data: model.SignupData,
@@ -165,10 +166,10 @@ class SecurityRouter:
             description = str(e)
             status_code = status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
-                            endpoint_name=self.SIGN_UP_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_POST)
+                              endpoint_name=self.SIGN_UP_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=logging.API_METHOD_POST)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -177,9 +178,9 @@ class SecurityRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
-    therapist_id – The therapist id associated with the operation.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    therapist_id – the therapist id associated with the operation.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
                                response: Response,
@@ -207,9 +208,9 @@ class SecurityRouter:
         self._auth_manager.logout(response)
 
         logging.log_api_response(session_id=session_id,
-                                therapist_id=therapist_id,
-                                endpoint_name=self.LOGOUT_ENDPOINT,
-                                http_status_code=status.HTTP_200_OK,
-                                method=logging.API_METHOD_POST)
+                                 therapist_id=therapist_id,
+                                 endpoint_name=self.LOGOUT_ENDPOINT,
+                                 http_status_code=status.HTTP_200_OK,
+                                 method=logging.API_METHOD_POST)
 
         return {}

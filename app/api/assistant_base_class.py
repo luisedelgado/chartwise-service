@@ -4,6 +4,7 @@ from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               Greeting,
                               QuestionSuggestionsParams,
+                              PatientDeletePayload,
                               SessionHistorySummary,
                               SessionNotesDelete,
                               SessionNotesInsert,
@@ -13,6 +14,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Takes care of processing a new session's data.
+
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the data associated with the session.
@@ -23,6 +25,7 @@ class AssistantManagerBaseClass(ABC):
     
     """
     Takes care of updating a session's data.
+
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the new data associated with the session.
@@ -33,6 +36,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Takes care of deleting a session's data.
+
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the data associated with the session to be deleted.
@@ -42,7 +46,19 @@ class AssistantManagerBaseClass(ABC):
         pass
 
     """
+    Takes care of deleting all sessions associated with the incoming patient id.
+
+    Arguments:
+    auth_manager – the auth_manager to be leveraged.
+    body – the data associated with the sessions to be deleted.
+    """
+    def delete_all_sessions_for_patient(auth_manager: AuthManagerBaseClass,
+                                        body: PatientDeletePayload):
+        pass
+
+    """
     Queries information about a given session.
+
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     query – the data associated with the query.
@@ -63,6 +79,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Creates a greeting for the current user and date.
+
     Arguments:
     body – the data associated with the greeting.
     session_id – the current session id.
@@ -83,6 +100,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Creates a summary about the given patient's session history.
+
     Arguments:
     body – the data associated with the summary.
     auth_manager – the auth_manager to be leveraged.
@@ -103,6 +121,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Retrieves a set of questions to be presented as suggestions for the user on what to ask the assistant.
+
     Arguments:
     body – the payload associated with the question suggestions to be retrieved.
     auth_manager – the auth_manager to be leveraged.
@@ -123,6 +142,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Updates a diarization entry with data coming from Speechmatics' notification service.
+
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     job_id – the id of the job that ran.

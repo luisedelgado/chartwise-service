@@ -5,7 +5,7 @@ Removes unwanted characters and patterns in text input.
 Returnes the cleaned content.
 
 Arguments:
-content  – text input.
+content – text input.
 """
 def clean_up_text(content: str) -> str:
     # Fix hyphenated words broken by newline

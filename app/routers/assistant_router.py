@@ -3,6 +3,7 @@ from fastapi import (APIRouter,
                      HTTPException,
                      Response,
                      status,)
+from supabase import Client
 from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
@@ -17,6 +18,7 @@ class AssistantRouter:
     GREETINGS_ENDPOINT = "/v1/greetings"
     PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
+    PATIENTS_ENDPOINT = "/patients"
     ROUTER_TAG = "assistant"
 
     def __init__(self,
@@ -102,6 +104,36 @@ class AssistantRouter:
                                                                    body=body,
                                                                    authorization=authorization,
                                                                    current_session_id=current_session_id)
+
+        @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def add_patient(response: Response,
+                              body: model.PatientInsertPayload,
+                              authorization: Annotated[Union[str, None], Cookie()] = None,
+                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._add_patient_internal(response=response,
+                                                    body=body,
+                                                    authorization=authorization,
+                                                    current_session_id=current_session_id)
+
+        @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def update_patient(response: Response,
+                              body: model.PatientUpdatePayload,
+                              authorization: Annotated[Union[str, None], Cookie()] = None,
+                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._update_patient_internal(response=response,
+                                                       body=body,
+                                                       authorization=authorization,
+                                                       current_session_id=current_session_id)
+
+        @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def delete_patient(response: Response,
+                                 body: model.PatientDeletePayload,
+                                 authorization: Annotated[Union[str, None], Cookie()] = None,
+                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._delete_patient_internal(response=response,
+                                                       body=body,
+                                                       authorization=authorization,
+                                                       current_session_id=current_session_id)
 
     """
     Stores a new session report.
@@ -283,8 +315,8 @@ class AssistantRouter:
     Arguments:
     query – the query that will be executed.
     response – the response model with which to create the final response.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
                                                 query: model.AssistantQuery,
@@ -344,8 +376,8 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     body – the json body associated with the request.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _fetch_greeting_internal(self,
                                        response: Response,
@@ -408,8 +440,8 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     body – the json body associated with the request.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
@@ -512,5 +544,204 @@ class AssistantRouter:
                             error_code=status_code,
                             description=description,
                             method=logging.API_METHOD_POST)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Adds a patient.
+
+    Arguments:
+    response – the object to be used for constructing the final response.
+    body – the body associated with the request.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
+    """
+    async def _add_patient_internal(self,
+                                    response: Response,
+                                    body: model.PatientInsertPayload,
+                                    authorization: Annotated[Union[str, None], Cookie()],
+                                    current_session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.TOKEN_EXPIRED_ERROR
+
+        try:
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
+            session_id = session_refresh_data._session_id
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_POST,
+                                endpoint_name=self.PATIENTS_ENDPOINT,
+                                therapist_id=body.therapist_id,
+                                auth_entity=current_entity.username)
+
+        try:
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
+
+            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                                  body.datastore_refresh_token)
+            datastore_client.table('patients').insert({
+                "first_name": body.first_name,
+                "middle_name": body.middle_name,
+                "last_name": body.last_name,
+                "birth_date": body.birth_date,
+                "email": body.email,
+                "gender": body.gender,
+                "phone_number": body.phone_number,
+                "consentment_channel": body.consentment_channel,
+            }).execute()
+
+            logging.log_api_response(session_id=session_id,
+                                     method=logging.API_METHOD_POST,
+                                     endpoint_name=self.PATIENTS_ENDPOINT,
+                                     therapist_id=body.therapist_id,
+                                     auth_entity=current_entity.username,
+                                     http_status_code=status.HTTP_200_OK)
+
+            return {}
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_417_EXPECTATION_FAILED
+            logging.log_error(session_id=session_id,
+                              endpoint_name=self.PATIENTS_ENDPOINT,
+                              error_code=status_code,
+                              therapist_id=body.therapist_id,
+                              description=description,
+                              method=logging.API_METHOD_POST)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Updates a patient.
+
+    Arguments:
+    response – the object to be used for constructing the final response.
+    body – the body associated with the request.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
+    """
+    async def _update_patient_internal(self,
+                                       response: Response,
+                                       body: model.PatientUpdatePayload,
+                                       authorization: Annotated[Union[str, None], Cookie()],
+                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.TOKEN_EXPIRED_ERROR
+
+        try:
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
+            session_id = session_refresh_data._session_id
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_PUT,
+                                endpoint_name=self.PATIENTS_ENDPOINT,
+                                therapist_id=body.therapist_id,
+                                auth_entity=current_entity.username,
+                                patient_id=body.id)
+
+        try:
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
+
+            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                                  body.datastore_refresh_token)
+            datastore_client.table('patients').update({
+                "first_name": body.first_name,
+                "middle_name": body.middle_name,
+                "last_name": body.last_name,
+                "birth_date": body.birth_date,
+                "email": body.email,
+                "gender": body.gender,
+                "phone_number": body.phone_number,
+                "consentment_channel": body.consentment_channel,
+            }).eq('id', body.id).execute()
+
+            logging.log_api_response(session_id=session_id,
+                                     method=logging.API_METHOD_PUT,
+                                     endpoint_name=self.PATIENTS_ENDPOINT,
+                                     therapist_id=body.therapist_id,
+                                     patient_id=body.id,
+                                     auth_entity=current_entity.username,
+                                     http_status_code=status.HTTP_200_OK)
+            return {}
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_400_BAD_REQUEST
+            logging.log_error(session_id=session_id,
+                              endpoint_name=self.PATIENTS_ENDPOINT,
+                              error_code=status_code,
+                              therapist_id=body.therapist_id,
+                              patient_id=body.id,
+                              description=description,
+                              method=logging.API_METHOD_PUT)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Deletes a patient.
+
+    Arguments:
+    response – the object to be used for constructing the final response.
+    body – the body associated with the request.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
+    """
+    async def _delete_patient_internal(self,
+                                       response: Response,
+                                       body: model.PatientDeletePayload,
+                                       authorization: Annotated[Union[str, None], Cookie()],
+                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.TOKEN_EXPIRED_ERROR
+
+        try:
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
+            session_id = session_refresh_data._session_id
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_DELETE,
+                                endpoint_name=self.PATIENTS_ENDPOINT,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.id,
+                                auth_entity=current_entity.username)
+
+        try:
+            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                                  body.datastore_refresh_token)
+            datastore_client.table('patients').delete().eq('id', body.id).execute()
+            self._assistant_manager.delete_all_sessions_for_patient(auth_manager=self._auth_manager,
+                                                                    body=body)
+
+            logging.log_api_response(session_id=session_id,
+                                     method=logging.API_METHOD_DELETE,
+                                     endpoint_name=self.PATIENTS_ENDPOINT,
+                                     therapist_id=body.therapist_id,
+                                     patient_id=body.id,
+                                     auth_entity=current_entity.username,
+                                     http_status_code=status.HTTP_200_OK)
+            return {}
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_400_BAD_REQUEST
+            logging.log_error(session_id=session_id,
+                              endpoint_name=self.PATIENTS_ENDPOINT,
+                              error_code=status_code,
+                              therapist_id=body.therapist_id,
+                              patient_id=body.id,
+                              description=description,
+                              method=logging.API_METHOD_DELETE)
             raise HTTPException(status_code=status_code,
                                 detail=description)

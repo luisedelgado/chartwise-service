@@ -152,7 +152,7 @@ class AuthManager(AuthManagerBaseClass):
         url: str = os.environ.get("SUPABASE_URL")
         supabase: Client = create_client(url, key)
         supabase.auth.set_session(access_token=access_token,
-                                refresh_token=refresh_token)
+                                  refresh_token=refresh_token)
         return supabase
 
     def datastore_admin_instance(self) -> Client:

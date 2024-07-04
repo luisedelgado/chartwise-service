@@ -67,24 +67,31 @@ def insert_session_vectors(index_id, namespace, text, date):
         raise Exception(str(e))
 
 """
-Deletes the set of vectors that match the incoming data.
+Deletes session vectors. If the date param is None, it deletes everything inside the namespace.
+Otherwise it deletes the vectors that match the date filtering prefix.
 
 Arguments:
 index_id – the index where vectors will be deleted.
 namespace – the specific namespace where vectors will be deleted.
-date – the session_date to be used as metadata filtering.
+date – the optional value to be used as a filtering prefix.
 """
-def delete_session_vectors(index_id, namespace, date):
+def delete_session_vectors(index_id, namespace, date=None):
     try:
-        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
+        if date is not None:
+            assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         index = pc.Index(index_id)
         assert pc.describe_index(index_id).status['ready']
 
-        # Delete the outdated data
-        list_generator = index.list(prefix=date, namespace=namespace)
-        ids_to_delete = list(list_generator)[0]
+        if date is None:
+            # Delete all vectors inside namespace
+            list_generator = index.list(namespace=namespace)
+            ids_to_delete = list(list_generator)[0]
+        else:
+            # Delete the subset of data that matches the date prefix.
+            list_generator = index.list(prefix=date, namespace=namespace)
+            ids_to_delete = list(list_generator)[0]
 
         if len(ids_to_delete) > 0:
             index.delete(ids=ids_to_delete, namespace=namespace)
@@ -122,7 +129,7 @@ def update_session_vectors(index_id, namespace, text, date):
 Creates an index in the datastore. If index name already exists, the method will fail silently.
 
 Arguments:
-index_name  – the name that should be used to create the index.
+index_name – the name that should be used to create the index.
 """
 def __create_index_if_necessary(index_name: str):
     try:

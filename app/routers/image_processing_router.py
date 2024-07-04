@@ -64,8 +64,8 @@ class ImageProcessingRouter:
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _upload_session_notes_image_internal(self,
                                                    response: Response,
@@ -123,8 +123,8 @@ class ImageProcessingRouter:
     therapist_id – the therapist_id for the operation.
     patient_id – the patient_id for the operation.
     document_id – the id of the document to be textracted.
-    authorization – The authorization cookie, if exists.
-    current_session_id – The session_id cookie, if exists.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
     """
     async def _extract_text_internal(self,
                                      response: Response,

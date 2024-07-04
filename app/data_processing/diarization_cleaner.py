@@ -19,7 +19,7 @@ class DiarizationCleaner:
     Returns a JSON representation of the transcription after having been transformed for easier manipulation.
 
     Arguments:
-    input  – the diarization input.
+    input – the diarization input.
     session_id – the current session id.
     invoking_endpoint – the endpoint that invoked this codepath.
     """
@@ -73,7 +73,7 @@ class DiarizationCleaner:
     Helper method for appending data to the current speaker's run-on content.
 
     Arguments:
-    content  – the content to be appended.
+    content – the content to be appended.
     prepend_space – flag determining if we prepend the content with a space character.
     """
     def __append_speaker_content(self, content: str, prepend_space: bool):
@@ -88,7 +88,7 @@ class DiarizationCleaner:
     Helper method for getting a Dict entry containing the current speaker's at-hand content.
 
     Arguments:
-    entry_end_time  – the time at which the speaker's intervention finished.
+    entry_end_time – the time at which the speaker's intervention finished.
     """
     def __get_entry_node(self, entry_end_time: str) -> Dict:
         return {
