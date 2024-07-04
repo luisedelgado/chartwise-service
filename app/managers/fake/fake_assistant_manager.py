@@ -10,11 +10,12 @@ from ...internal.model import (AssistantQuery,
 class FakeAssistantManager(AssistantManagerBaseClass):
 
     fake_processed_diarization_result: str = None
+    fake_insert_text: str = None
 
     def process_new_session_data(self,
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert):
-        ...
+        self.fake_insert_text = body.text
 
     def update_session(self,
                        auth_manager: AuthManagerBaseClass,
