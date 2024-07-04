@@ -9,7 +9,7 @@ from typing import Annotated, Union
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal import logging, model, security
-from ..internal.utilities import datetime_handler
+from ..internal.utilities import datetime_handler, general_utilities
 
 class AssistantRouter:
 
@@ -405,7 +405,7 @@ class AssistantRouter:
                                 description=logs_description)
 
         try:
-            assert datetime_handler.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
+            assert general_utilities.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
 
             result = self._assistant_manager.fetch_todays_greeting(body=body,
                                                                    session_id=session_id,
@@ -469,12 +469,12 @@ class AssistantRouter:
 
         try:
             response = self._assistant_manager.create_patient_summary(body=body,
-                                                                     environment=self._environment,
-                                                                     session_id=session_id,
-                                                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                     api_method=logging.API_METHOD_POST,
-                                                                     auth_manager=self._auth_manager,
-                                                                     auth_entity=current_entity.username)
+                                                                      environment=self._environment,
+                                                                      session_id=session_id,
+                                                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                                                      api_method=logging.API_METHOD_POST,
+                                                                      auth_manager=self._auth_manager,
+                                                                      auth_entity=current_entity.username)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
@@ -521,12 +521,12 @@ class AssistantRouter:
 
         try:
             json_questions = self._assistant_manager.fetch_question_suggestions(body=body,
-                                                                           auth_manager=self._auth_manager,
-                                                                           environment=self._environment,
-                                                                           session_id=session_id,
-                                                                           endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                                                           api_method=logging.API_METHOD_POST,
-                                                                           auth_entity=current_entity.username)
+                                                                                auth_manager=self._auth_manager,
+                                                                                environment=self._environment,
+                                                                                session_id=session_id,
+                                                                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                                                                api_method=logging.API_METHOD_POST,
+                                                                                auth_entity=current_entity.username)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
@@ -582,6 +582,9 @@ class AssistantRouter:
         try:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
 
+            gender_to_lower = body.gender.lower()
+            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
+
             datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                                   body.datastore_refresh_token)
             datastore_client.table('patients').insert({
@@ -590,7 +593,7 @@ class AssistantRouter:
                 "last_name": body.last_name,
                 "birth_date": body.birth_date,
                 "email": body.email,
-                "gender": body.gender,
+                "gender": gender_to_lower,
                 "phone_number": body.phone_number,
                 "consentment_channel": body.consentment_channel,
             }).execute()
@@ -651,6 +654,9 @@ class AssistantRouter:
         try:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
 
+            gender_to_lower = body.gender.lower()
+            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
+
             datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                                   body.datastore_refresh_token)
             datastore_client.table('patients').update({
@@ -659,7 +665,7 @@ class AssistantRouter:
                 "last_name": body.last_name,
                 "birth_date": body.birth_date,
                 "email": body.email,
-                "gender": body.gender,
+                "gender": gender_to_lower,
                 "phone_number": body.phone_number,
                 "consentment_channel": body.consentment_channel,
             }).eq('id', body.id).execute()

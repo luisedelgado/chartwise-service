@@ -23,6 +23,8 @@ class VectorQueryWorker:
     Arguments:
     index_id – the index id that should be queried inside the datastore.
     namespace – the namespace within the index that should be queried.
+    patient_name – the name by which the patient should be addressed.
+    patient_gender – the patient's gender.
     input – the input for the query.
     response_language_code – the language code to be used in the response.
     session_id – the session id.
@@ -36,6 +38,7 @@ class VectorQueryWorker:
                     index_id: str,
                     namespace: str,
                     patient_name: str,
+                    patient_gender: str,
                     input: str,
                     response_language_code: str,
                     session_id: str,
@@ -77,7 +80,8 @@ class VectorQueryWorker:
                                      default_headers=headers)
             query_engine = vector_index.as_query_engine(
                 text_qa_template=message_templates.create_chat_prompt_template(language_code=response_language_code,
-                                                                               patient_name=patient_name),
+                                                                               patient_name=patient_name,
+                                                                               patient_gender=patient_gender),
                 refine_template=message_templates.create_refine_prompt_template(response_language_code),
                 llm=llm,
                 streaming=True,
@@ -94,6 +98,7 @@ class VectorQueryWorker:
 
     Arguments:
     name – the addressing name to be used in the greeting.
+    therapist_gender – the therapist gender.
     language_code – the language_code to be used in the greeting.
     tz_identifier – the timezone identifier to be used for calculating the client's current time.
     session_id – the session id.
@@ -105,7 +110,8 @@ class VectorQueryWorker:
     auth_entity – the auth entity who authorized this request.
     """
     def create_greeting(self,
-                        name: str,
+                        therapist_name: str,
+                        therapist_gender: str,
                         language_code: str,
                         tz_identifier: str,
                         session_id: str,
@@ -132,7 +138,8 @@ class VectorQueryWorker:
 
             cache_ttl = 86400 # 24 hours
             messages = [
-                    {"role": "system", "content": message_templates.create_system_greeting_message(name=name,
+                    {"role": "system", "content": message_templates.create_system_greeting_message(therapist_name=therapist_name,
+                                                                                                   therapist_gender=therapist_gender,
                                                                                                    tz_identifier=tz_identifier,
                                                                                                    language_code=language_code)},
                     {"role": "user", "content": message_templates.create_user_greeting_message()}
@@ -182,7 +189,9 @@ class VectorQueryWorker:
                        method: str,
                        auth_entity: str,
                        patient_name: str,
+                       patient_gender: str,
                        therapist_name: str,
+                       therapist_gender: str,
                        session_number: int,
                        auth_manager: AuthManagerBaseClass) -> str:
         try:
@@ -222,7 +231,9 @@ class VectorQueryWorker:
             query_engine = vector_index.as_query_engine(
                 text_qa_template=message_templates.create_summary_template(language_code=language_code,
                                                                            patient_name=patient_name,
+                                                                           patient_gender=patient_gender,
                                                                            therapist_name=therapist_name,
+                                                                           therapist_gender=therapist_gender,
                                                                            session_number=session_number),
                 llm=llm,
                 streaming=True,
@@ -244,6 +255,8 @@ class VectorQueryWorker:
     endpoint_name – the endpoint that was invoked.
     method – the API method that was invoked.
     auth_entity – the auth entity who authorized this request.
+    patient_name – the name by which the patient should be addressed.
+    patient_gender – the patient gender.
     auth_manager – the auth manager to be leveraged internally.
     """
     def create_question_suggestions(self,
@@ -256,6 +269,7 @@ class VectorQueryWorker:
                                     method: str,
                                     auth_entity: str,
                                     patient_name: str,
+                                    patient_gender: str,
                                     auth_manager: AuthManagerBaseClass) -> str:
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -292,7 +306,9 @@ class VectorQueryWorker:
                                      api_base=api_base,
                                      default_headers=headers)
             query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_question_suggestions_template(language_code=language_code, patient_name=patient_name),
+                text_qa_template=message_templates.create_question_suggestions_template(language_code=language_code,
+                                                                                        patient_name=patient_name,
+                                                                                        patient_gender=patient_gender),
                 llm=llm,
                 streaming=True,
             )

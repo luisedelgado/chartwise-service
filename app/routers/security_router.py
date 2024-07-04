@@ -13,7 +13,7 @@ from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal import logging, model, security
-from ..internal.utilities import datetime_handler
+from ..internal.utilities import datetime_handler, general_utilities
 
 class SecurityRouter:
 
@@ -125,6 +125,9 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
             assert Language.get(signup_data.language_preference).is_valid(), "Invalid language_preference parameter"
 
+            gender_to_lower = signup_data.gender.lower()
+            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
+
             datastore_client: Client = self._auth_manager.datastore_admin_instance()
             res = datastore_client.auth.sign_up({
                 "email": signup_data.user_email,
@@ -145,6 +148,7 @@ class SecurityRouter:
                 "first_name": signup_data.first_name,
                 "middle_name": signup_data.middle_name,
                 "last_name": signup_data.last_name,
+                "gender": gender_to_lower,
                 "birth_date": signup_data.birth_date,
                 "login_mechanism": signup_data.signup_mechanism,
                 "email": signup_data.user_email,

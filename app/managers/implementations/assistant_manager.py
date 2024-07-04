@@ -117,6 +117,7 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_query_dict = patient_query.dict()
             patient_first_name = patient_query_dict['data'][0]['first_name']
             patient_last_name = patient_query_dict['data'][0]['last_name']
+            patient_gender = patient_query_dict['data'][0]['gender']
 
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', query.therapist_id).execute()
             assert (0 != len((therapist_query).data))
@@ -125,6 +126,7 @@ class AssistantManager(AssistantManagerBaseClass):
             response = VectorQueryWorker().query_store(index_id=query.therapist_id,
                                                        namespace=query.patient_id,
                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                       patient_gender=patient_gender,
                                                        input=query.text,
                                                        response_language_code=language_code,
                                                        session_id=session_id,
@@ -152,8 +154,11 @@ class AssistantManager(AssistantManagerBaseClass):
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
             assert (0 != len((therapist_query).data))
 
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
-            result = VectorQueryWorker().create_greeting(name=body.addressing_name,
+            therapist_query_dict = therapist_query.dict()
+            language_code = therapist_query_dict['data'][0]["language_preference"]
+            therapist_gender = therapist_query_dict['data'][0]["gender"]
+            result = VectorQueryWorker().create_greeting(therapist_name=body.addressing_name,
+                                                         therapist_gender=therapist_gender,
                                                          language_code=language_code,
                                                          tz_identifier=body.client_tz_identifier,
                                                          session_id=session_id,
@@ -188,6 +193,7 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_query_dict = patient_query.dict()
             patient_first_name = patient_query_dict['data'][0]['first_name']
             patient_last_name = patient_query_dict['data'][0]['last_name']
+            patient_gender = patient_query_dict['data'][0]['gender']
 
             return VectorQueryWorker().create_question_suggestions(language_code=language_code,
                                                                    session_id=session_id,
@@ -198,7 +204,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                    environment=environment,
                                                                    auth_manager=auth_manager,
                                                                    auth_entity=auth_entity,
-                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])))
+                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                   patient_gender=patient_gender)
         except Exception as e:
             raise Exception(e)
 
@@ -237,16 +244,19 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
-            patient_response = datastore_client.table('patients').select('first_name').eq("id", body.patient_id).execute()
-            patient_name = patient_response.dict()['data'][0]['first_name']
+            patient_response = datastore_client.table('patients').select('*').eq("id", body.patient_id).execute()
+            patient_response_dict = patient_response.dict()
+            patient_name = patient_response_dict['data'][0]['first_name']
+            patient_gender = patient_response_dict['data'][0]['gender']
 
             therapist_response = datastore_client.table('therapists').select('*').eq("id", body.therapist_id).execute()
             therapist_response_dict = therapist_response.dict()
             therapist_name = therapist_response_dict['data'][0]['first_name']
             language_code = therapist_response_dict['data'][0]['language_preference']
+            therapist_gender = therapist_response_dict['data'][0]['gender']
 
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", body.patient_id).execute()
-            session_number = len(number_session_response.dict()['data'])
+            session_number = 1 + len(number_session_response.dict()['data'])
 
             result = VectorQueryWorker().create_summary(index_id=body.therapist_id,
                                                         namespace=body.patient_id,
@@ -257,7 +267,9 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         method=api_method,
                                                         auth_entity=auth_entity,
                                                         patient_name=patient_name,
+                                                        patient_gender=patient_gender,
                                                         therapist_name=therapist_name,
+                                                        therapist_gender=therapist_gender,
                                                         session_number=session_number,
                                                         auth_manager=auth_manager)
             return result

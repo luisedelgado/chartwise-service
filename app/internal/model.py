@@ -41,6 +41,7 @@ class SignupData(BaseModel):
     birth_date: str
     signup_mechanism: str
     language_preference: str
+    gender: str
 
 class LogoutData(BaseModel):
     therapist_id: str

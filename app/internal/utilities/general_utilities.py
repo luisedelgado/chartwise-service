@@ -1,0 +1,24 @@
+from pytz import timezone
+
+"""
+Returns a flag representing whether or not the incoming timezone identifier is valid.
+For context: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+"""
+def is_valid_timezone_identifier(tz_identifier: str) -> bool:
+    try:
+        timezone(tz_identifier)
+        return True
+    except:
+        return False
+
+"""
+Returns a flag representing whether or not the incoming gender is in a valid format.
+"""
+def is_valid_gender_value(gender: str) -> bool:
+    return (gender in ['male', 'female', 'other', 'rather_not_say'])
+
+"""
+Returns a flag representing whether or not the incoming gender has default pronouns.
+"""
+def gender_has_default_pronouns(gender: str) -> bool:
+    return (gender in ['male', 'female'])
