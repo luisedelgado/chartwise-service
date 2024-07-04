@@ -2,7 +2,7 @@ import argparse, subprocess, os, pty
 
 from pathlib import Path
 
-# Command for executing: python run_tests.py -env <environment>
+# Command for executing: python test_and_deploy.py -env <environment>
 
 def run_tests_and_deploy_if_success(env_to_deploy):
     venv_python_dir = Path("/Users/luisdelgado/Documents/APIs/RAGService/.venv311/bin")
