@@ -16,6 +16,7 @@ class AssistantRouter:
     QUERIES_ENDPOINT = "/v1/queries"
     GREETINGS_ENDPOINT = "/v1/greetings"
     PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
+    QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
     ROUTER_TAG = "assistant"
 
     def __init__(self,
@@ -92,6 +93,16 @@ class AssistantRouter:
                                                               authorization=authorization,
                                                               current_session_id=current_session_id)
 
+        @self.router.post(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def fetch_question_suggestions(response: Response,
+                                             body: model.QuestionSuggestionsParams,
+                                             authorization: Annotated[Union[str, None], Cookie()] = None,
+                                             current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._fetch_question_suggestions_internal(response=response,
+                                                                   body=body,
+                                                                   authorization=authorization,
+                                                                   current_session_id=current_session_id)
+
     """
     Stores a new session report.
 
@@ -104,8 +115,8 @@ class AssistantRouter:
     async def _insert_new_session_internal(self,
                                            body: model.SessionNotesInsert,
                                            response: Response,
-                                           authorization: Annotated[Union[str, None], Cookie()] = None,
-                                           current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                           authorization: Annotated[Union[str, None], Cookie()],
+                                           current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -163,8 +174,8 @@ class AssistantRouter:
     async def _update_session_internal(self,
                                        body: model.SessionNotesUpdate,
                                        response: Response,
-                                       authorization: Annotated[Union[str, None], Cookie()] = None,
-                                       current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                       authorization: Annotated[Union[str, None], Cookie()],
+                                       current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -220,8 +231,8 @@ class AssistantRouter:
     async def _delete_session_internal(self,
                                        body: model.SessionNotesDelete,
                                        response: Response,
-                                       authorization: Annotated[Union[str, None], Cookie()] = None,
-                                       current_session_id: Annotated[Union[str, None], Cookie()] = None,):
+                                       authorization: Annotated[Union[str, None], Cookie()],
+                                       current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -278,8 +289,8 @@ class AssistantRouter:
     async def _execute_assistant_query_internal(self,
                                                 query: model.AssistantQuery,
                                                 response: Response,
-                                                authorization: Annotated[Union[str, None], Cookie()] = None,
-                                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                                authorization: Annotated[Union[str, None], Cookie()],
+                                                current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -339,8 +350,8 @@ class AssistantRouter:
     async def _fetch_greeting_internal(self,
                                        response: Response,
                                        body: model.Greeting,
-                                       authorization: Annotated[Union[str, None], Cookie()] = None,
-                                       current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                       authorization: Annotated[Union[str, None], Cookie()],
+                                       current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -403,8 +414,8 @@ class AssistantRouter:
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
                                               body: model.SessionHistorySummary,
-                                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                              authorization: Annotated[Union[str, None], Cookie()],
+                                              current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -446,6 +457,58 @@ class AssistantRouter:
             status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
             logging.log_error(session_id=session_id,
                             endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                            error_code=status_code,
+                            description=description,
+                            method=logging.API_METHOD_POST)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    async def _fetch_question_suggestions_internal(self,
+                                                   response: Response,
+                                                   body: model.QuestionSuggestionsParams,
+                                                   authorization: Annotated[Union[str, None], Cookie()],
+                                                   current_session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.TOKEN_EXPIRED_ERROR
+
+        try:
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
+            session_id = session_refresh_data._session_id
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_POST,
+                                therapist_id=body.therapist_id,
+                                patient_id=body.patient_id,
+                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                auth_entity=current_entity.username)
+
+        try:
+            json_questions = self._assistant_manager.fetch_question_suggestions(body=body,
+                                                                           auth_manager=self._auth_manager,
+                                                                           environment=self._environment,
+                                                                           session_id=session_id,
+                                                                           endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                                                           api_method=logging.API_METHOD_POST,
+                                                                           auth_entity=current_entity.username)
+
+            logging.log_api_response(session_id=session_id,
+                                     endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                     therapist_id=body.therapist_id,
+                                     patient_id=body.patient_id,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_POST)
+
+            return json_questions
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            logging.log_error(session_id=session_id,
+                            endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                             error_code=status_code,
                             description=description,
                             method=logging.API_METHOD_POST)

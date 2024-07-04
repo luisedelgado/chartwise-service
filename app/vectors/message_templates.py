@@ -85,25 +85,6 @@ def create_user_greeting_message() -> str:
 
 # Summary Prompt
 
-def create_summary_template(language_code: str,
-                            patient_name: str,
-                            therapist_name: str,
-                            session_number: int) -> ChatPromptTemplate:
-    summary_message_templates = [
-        ChatMessage(
-            role=MessageRole.SYSTEM,
-            content=__create_system_summary_message(),
-        ),
-        ChatMessage(
-            role=MessageRole.USER,
-            content=__create_user_summary_message(language_code=language_code,
-                                                  patient_name=patient_name,
-                                                  therapist_name=therapist_name,
-                                                  session_number=session_number),
-        ),
-    ]
-    return ChatPromptTemplate(summary_message_templates)
-
 def __create_system_summary_message() -> str:
     return f'''A mental health practitioner is entering our Practice Management Platform.
     They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
@@ -127,3 +108,58 @@ def __create_user_summary_message(therapist_name: str,
         return context_paragraph + instruction + params
     except Exception as e:
         raise Exception(e)
+
+def create_summary_template(language_code: str,
+                            patient_name: str,
+                            therapist_name: str,
+                            session_number: int) -> ChatPromptTemplate:
+    summary_message_templates = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=__create_system_summary_message(),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=__create_user_summary_message(language_code=language_code,
+                                                  patient_name=patient_name,
+                                                  therapist_name=therapist_name,
+                                                  session_number=session_number),
+        ),
+    ]
+    return ChatPromptTemplate(summary_message_templates)
+
+# Question Suggestions
+
+def __create_system_question_suggestions_message() -> str:
+    return f'''A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. 
+    They have the opportunity to ask you a question about the patient's session history.
+    Your job is to provide the practitioner with three questions that they could ask you about the patient, for which you'd have rich answers.
+    You may use the session date found in the metadata for navigating through the sessions' data. 
+    The questions should be as concise as possible. Return a JSON array with a single key, "questions", and the array of questions as its value.'''
+
+def __create_user_question_suggestions_message(language_code: str, patient_name: str) -> str:
+    try:
+        context_paragraph =('''We have provided context information below. \n
+                            ---------------------\n
+                            {context_str}
+                            \n---------------------\n''')
+        language_code_requirement = f"\nTo craft your response use language {language_code}."
+        patient_name_context = f"\nFor reference, the patient's name is {patient_name}."
+        execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
+        return context_paragraph + language_code_requirement + patient_name_context + execution_statement
+    except Exception as e:
+        raise Exception(e)
+
+def create_question_suggestions_template(language_code: str, patient_name: str) -> ChatPromptTemplate:
+    summary_message_templates = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=__create_system_question_suggestions_message(),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=__create_user_question_suggestions_message(language_code=language_code,
+                                                               patient_name=patient_name),
+        ),
+    ]
+    return ChatPromptTemplate(summary_message_templates)

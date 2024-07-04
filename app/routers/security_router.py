@@ -70,7 +70,7 @@ class SecurityRouter:
     async def _login_for_access_token_internal(self,
                                                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                                response: Response,
-                                               session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+                                               session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         try:
             user = self._auth_manager.authenticate_entity(security.users_db, form_data.username, form_data.password)
             assert user
@@ -101,8 +101,8 @@ class SecurityRouter:
     async def _sign_up_internal(self,
                                 signup_data: model.SignupData,
                                 response: Response,
-                                authorization: Annotated[Union[str, None], Cookie()] = None,
-                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                authorization: Annotated[Union[str, None], Cookie()],
+                                current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -184,8 +184,8 @@ class SecurityRouter:
     async def _logout_internal(self,
                                response: Response,
                                therapist_id: str,
-                               authorization: Annotated[Union[str, None], Cookie()] = None,
-                               current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                               authorization: Annotated[Union[str, None], Cookie()],
+                               current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 

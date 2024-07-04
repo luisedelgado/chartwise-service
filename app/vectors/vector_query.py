@@ -231,3 +231,72 @@ class VectorQueryWorker:
             return str(response)
         except Exception as e:
             raise Exception(e)
+
+    """
+    Fetches a set of questions to be suggested to the user for feeding the assistant.
+
+    Arguments:
+    index_id – the index id that should be queried inside the datastore.
+    namespace – the namespace within the index that should be queried.
+    environment – the current running environment.
+    language_code – the language code to be used in the response.
+    session_id – the session id.
+    endpoint_name – the endpoint that was invoked.
+    method – the API method that was invoked.
+    auth_entity – the auth entity who authorized this request.
+    auth_manager – the auth manager to be leveraged internally.
+    """
+    def create_question_suggestions(self,
+                                    index_id: str,
+                                    namespace: str,
+                                    environment: str,
+                                    language_code: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    method: str,
+                                    auth_entity: str,
+                                    patient_name: str,
+                                    auth_manager: AuthManagerBaseClass) -> str:
+        try:
+            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+            assert pc.describe_index(index_id).status['ready']
+
+            index = pc.Index(index_id)
+            vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
+            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
+
+            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+
+            caching_shard_key = (namespace + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            metadata = {
+                "environment": environment,
+                "user": index_id,
+                "patient": namespace,
+                "session_id": str(session_id),
+                "caching_shard_key": caching_shard_key,
+                "endpoint_name": endpoint_name,
+                "method": method,
+                "language_code": language_code,
+                "auth_entity": auth_entity,
+            }
+
+            cache_ttl = 86400 # 24 hours
+            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                   caching_shard_key=caching_shard_key,
+                                                                   llm_model=LLM_MODEL,
+                                                                   cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
+
+            llm = llama_index_OpenAI(model=LLM_MODEL,
+                                     temperature=0,
+                                     api_base=api_base,
+                                     default_headers=headers)
+            query_engine = vector_index.as_query_engine(
+                text_qa_template=message_templates.create_question_suggestions_template(language_code=language_code, patient_name=patient_name),
+                llm=llm,
+                streaming=True,
+            )
+            response = query_engine.query(f"What are 3 questions that I could ask about {patient_name}'s session history?")
+            return eval(str(response))
+        except Exception as e:
+            raise Exception(e)

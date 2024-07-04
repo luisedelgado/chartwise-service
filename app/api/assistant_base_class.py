@@ -3,6 +3,7 @@ from abc import ABC
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               Greeting,
+                              QuestionSuggestionsParams,
                               SessionHistorySummary,
                               SessionNotesDelete,
                               SessionNotesInsert,
@@ -51,8 +52,7 @@ class AssistantManagerBaseClass(ABC):
     environment – the current running environment.
     auth_entity – the auth entity that enabled the incoming request.
     """
-    def query_session(self,
-                      auth_manager: AuthManagerBaseClass,
+    def query_session(auth_manager: AuthManagerBaseClass,
                       query: AssistantQuery,
                       session_id: str,
                       api_method: str,
@@ -72,8 +72,7 @@ class AssistantManagerBaseClass(ABC):
     auth_manager – the auth_manager to be leveraged.
     auth_entity – the auth entity that enabled the incoming request.
     """
-    def fetch_todays_greeting(self,
-                              body: Greeting,
+    def fetch_todays_greeting(body: Greeting,
                               session_id: str,
                               endpoint_name: str,
                               api_method: str,
@@ -93,14 +92,33 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     auth_entity – the auth entity that enabled the incoming request.
     """
-    def create_patient_summary(self,
-                               body: SessionHistorySummary,
+    def create_patient_summary(body: SessionHistorySummary,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
                                auth_entity: str):
+        pass
+
+    """
+    Retrieves a set of questions to be presented as suggestions for the user on what to ask the assistant.
+    Arguments:
+    body – the payload associated with the question suggestions to be retrieved.
+    auth_manager – the auth_manager to be leveraged.
+    environment – the current running environment.
+    session_id – the current session id.
+    endpoint_name – the endpoint name that triggered this query.
+    api_method – the api method that triggered this query.
+    auth_entity – the auth entity that enabled the incoming request.
+    """
+    def fetch_question_suggestions(body: QuestionSuggestionsParams,
+                                   auth_manager: AuthManagerBaseClass,
+                                   environment: str,
+                                   session_id: str,
+                                   endpoint_name: str,
+                                   api_method: str,
+                                   auth_entity: str):
         pass
 
     """

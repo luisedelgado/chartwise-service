@@ -6,6 +6,7 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
+                               QuestionSuggestionsParams,
                                SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
@@ -101,7 +102,6 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
                                                                                                         query.patient_id).execute()
             patient_therapist_match = (0 != len((patient_query).data))
-
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
             patient_query_dict = patient_query.dict()
@@ -154,6 +154,41 @@ class AssistantManager(AssistantManagerBaseClass):
                                                          auth_manager=auth_manager,
                                                          auth_entity=auth_entity)
             return result
+        except Exception as e:
+            raise Exception(e)
+
+    def fetch_question_suggestions(self,
+                                   body: QuestionSuggestionsParams,
+                                   auth_manager: AuthManagerBaseClass,
+                                   environment: str,
+                                   session_id: str,
+                                   endpoint_name: str,
+                                   api_method: str,
+                                   auth_entity: str):
+        try:
+            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
+                                                                    body.datastore_refresh_token)
+
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            assert (0 != len((therapist_query).data))
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
+                                                                                                                    body.patient_id).execute()
+            patient_query_dict = patient_query.dict()
+            patient_first_name = patient_query_dict['data'][0]['first_name']
+            patient_last_name = patient_query_dict['data'][0]['last_name']
+
+            return VectorQueryWorker().create_question_suggestions(language_code=language_code,
+                                                                   session_id=session_id,
+                                                                   endpoint_name=endpoint_name,
+                                                                   index_id=body.therapist_id,
+                                                                   namespace=body.patient_id,
+                                                                   method=api_method,
+                                                                   environment=environment,
+                                                                   auth_manager=auth_manager,
+                                                                   auth_entity=auth_entity,
+                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])))
         except Exception as e:
             raise Exception(e)
 

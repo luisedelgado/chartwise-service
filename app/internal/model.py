@@ -63,6 +63,12 @@ class SessionHistorySummary(BaseModel):
     datastore_access_token: str
     datastore_refresh_token: str
 
+class QuestionSuggestionsParams(BaseModel):
+    therapist_id: str
+    patient_id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
 class SessionRefreshData():
     def __init__(self, session_id, auth_token):
         self._session_id = session_id

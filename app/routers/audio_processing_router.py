@@ -90,9 +90,9 @@ class AudioProcessingRouter:
                                                  response: Response,
                                                  therapist_id: Annotated[str, Form()],
                                                  patient_id: Annotated[str, Form()],
-                                                 audio_file: UploadFile = File(...),
-                                                 authorization: Annotated[Union[str, None], Cookie()] = None,
-                                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                                 audio_file: UploadFile,
+                                                 authorization: Annotated[Union[str, None], Cookie()],
+                                                 current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -151,9 +151,9 @@ class AudioProcessingRouter:
                                         session_date: Annotated[str, Form()],
                                         therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
-                                        audio_file: UploadFile = File(...),
-                                        authorization: Annotated[Union[str, None], Cookie()] = None,
-                                        current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                        audio_file: UploadFile,
+                                        authorization: Annotated[Union[str, None], Cookie()],
+                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 

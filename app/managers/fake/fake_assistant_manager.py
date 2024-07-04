@@ -2,6 +2,7 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
+                               QuestionSuggestionsParams,
                                SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
@@ -55,6 +56,16 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                endpoint_name: str,
                                api_method: str,
                                auth_entity: str):
+        ...
+
+    def fetch_question_suggestions(self,
+                                   body: QuestionSuggestionsParams,
+                                   auth_manager: AuthManagerBaseClass,
+                                   environment: str,
+                                   session_id: str,
+                                   endpoint_name: str,
+                                   api_method: str,
+                                   auth_entity: str):
         ...
 
     def update_diarization_with_notification_data(self,
