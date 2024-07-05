@@ -174,7 +174,7 @@ class AudioProcessingRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert datetime_handler.is_valid_date(session_date), "Invalid date. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(session_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,

@@ -147,7 +147,7 @@ class AuthManager(AuthManagerBaseClass):
 
     # Supabase
 
-    def datastore_user_instance(self, access_token, refresh_token) -> Client:
+    def datastore_user_instance(self, access_token: str, refresh_token: str) -> Client:
         key: str = os.environ.get("SUPABASE_ANON_KEY")
         url: str = os.environ.get("SUPABASE_URL")
         supabase: Client = create_client(url, key)

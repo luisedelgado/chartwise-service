@@ -8,7 +8,8 @@ from ..internal.model import (AssistantQuery,
                               SessionHistorySummary,
                               SessionNotesDelete,
                               SessionNotesInsert,
-                              SessionNotesUpdate)
+                              SessionNotesUpdate,
+                              TherapistDeletePayload,)
 
 class AssistantManagerBaseClass(ABC):
 
@@ -49,11 +50,19 @@ class AssistantManagerBaseClass(ABC):
     Takes care of deleting all sessions associated with the incoming patient id.
 
     Arguments:
-    auth_manager – the auth_manager to be leveraged.
     body – the data associated with the sessions to be deleted.
     """
-    def delete_all_sessions_for_patient(auth_manager: AuthManagerBaseClass,
-                                        body: PatientDeletePayload):
+    def delete_all_sessions_for_patient(body: PatientDeletePayload):
+        pass
+
+    """
+    Takes care of deleting all sessions associated with the incoming patient id.
+
+    Arguments:
+    body – the data associated with the sessions to be deleted.
+    """
+    def delete_all_sessions_for_therapist(self,
+                                          body: TherapistDeletePayload):
         pass
 
     """

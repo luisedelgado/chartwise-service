@@ -101,6 +101,20 @@ def delete_session_vectors(index_id, namespace, date=None):
         raise Exception(str(e))
 
 """
+Deletes a full index. This is an operation typically associated with a therapist wanting
+to leave the platform, and therefore delete all of their data.
+
+Arguments:
+index_id – the index where vectors will be deleted.
+"""
+def delete_index(index_id):
+    try:
+        pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        pc.delete_index(index_id)
+    except Exception as e:
+        raise Exception(str(e))
+
+"""
 Updates a session record leveraging the incoming data.
 
 Arguments:

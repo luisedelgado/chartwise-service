@@ -28,7 +28,8 @@ class TestingHarnessAudioProcessingRouter:
                                                           AudioProcessingRouter(auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,
                                                                                 audio_processing_manager=self.audio_processing_manager).router,
-                                                          SecurityRouter(auth_manager=self.auth_manager).router])
+                                                          SecurityRouter(auth_manager=self.auth_manager,
+                                                                         assistant_manager=self.assistant_manager).router])
         self.client = TestClient(coordinator.service_app)
 
     def test_invoke_transcription_with_no_auth(self):

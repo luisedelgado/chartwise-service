@@ -103,6 +103,23 @@ class PatientDeletePayload(BaseModel):
     datastore_access_token: str
     datastore_refresh_token: str
 
+class TherapistUpdatePayload(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    language_preference: str
+    gender: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
+class TherapistDeletePayload(BaseModel):
+    id: str
+    datastore_access_token: str
+    datastore_refresh_token: str
+
 class SessionRefreshData():
     def __init__(self, session_id, auth_token):
         self._session_id = session_id

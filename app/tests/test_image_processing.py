@@ -24,7 +24,8 @@ class TestingHarnessImageProcessingRouter:
 
         coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(auth_manager=self.auth_manager,
                                                                                 image_processing_manager=self.image_processing_manager).router,
-                                                          SecurityRouter(auth_manager=self.auth_manager).router])
+                                                          SecurityRouter(auth_manager=self.auth_manager,
+                                                                         assistant_manager=self.assistant_manager).router])
         self.client = TestClient(coordinator.service_app)
 
     def test_invoke_image_upload_with_no_auth(self):

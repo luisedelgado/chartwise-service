@@ -20,7 +20,8 @@ app = EndpointServiceCoordinator(routers=[
                                     AudioProcessingRouter(auth_manager=auth_manager,
                                                             assistant_manager=assistant_manager,
                                                             audio_processing_manager=audio_processing_manager).router,
-                                    SecurityRouter(auth_manager=auth_manager).router,
+                                    SecurityRouter(auth_manager=auth_manager,
+                                                   assistant_manager=assistant_manager).router,
                                     ImageProcessingRouter(auth_manager=auth_manager,
                                                             image_processing_manager=image_processing_manager).router,
                                 ]).service_app

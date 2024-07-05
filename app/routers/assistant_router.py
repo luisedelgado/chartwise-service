@@ -18,7 +18,7 @@ class AssistantRouter:
     GREETINGS_ENDPOINT = "/v1/greetings"
     PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
-    PATIENTS_ENDPOINT = "/patients"
+    PATIENTS_ENDPOINT = "/v1/patients"
     ROUTER_TAG = "assistant"
 
     def __init__(self,
@@ -169,7 +169,7 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert datetime_handler.is_valid_date(body.date), "Invalid date. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager, body=body)
 
@@ -580,7 +580,7 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             gender_to_lower = body.gender.lower()
             assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
@@ -608,7 +608,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_417_EXPECTATION_FAILED
+            status_code = status.HTTP_400_BAD_REQUEST
             logging.log_error(session_id=session_id,
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
@@ -652,7 +652,7 @@ class AssistantRouter:
                                 patient_id=body.id)
 
         try:
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             gender_to_lower = body.gender.lower()
             assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"

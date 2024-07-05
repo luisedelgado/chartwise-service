@@ -11,7 +11,8 @@ from ...internal.model import (AssistantQuery,
                                SessionHistorySummary,
                                SessionNotesDelete,
                                SessionNotesInsert,
-                               SessionNotesUpdate)
+                               SessionNotesUpdate,
+                               TherapistDeletePayload,)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import VectorQueryWorker
@@ -88,11 +89,17 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     def delete_all_sessions_for_patient(self,
-                                        auth_manager: AuthManagerBaseClass,
                                         body: PatientDeletePayload):
         try:
             vector_writer.delete_session_vectors(index_id=body.therapist_id,
                                                  namespace=body.id)
+        except Exception as e:
+            raise Exception(e)
+
+    def delete_all_sessions_for_therapist(self,
+                                          body: TherapistDeletePayload):
+        try:
+            vector_writer.delete_index(body.id)
         except Exception as e:
             raise Exception(e)
 

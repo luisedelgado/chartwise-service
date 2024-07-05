@@ -24,7 +24,8 @@ class TestingHarnessAssistantRouter:
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
                                                                           auth_manager=self.auth_manager,
                                                                           assistant_manager=self.assistant_manager).router,
-                                                          SecurityRouter(auth_manager=self.auth_manager).router])
+                                                          SecurityRouter(auth_manager=self.auth_manager,
+                                                                         assistant_manager=self.assistant_manager).router])
         self.client = TestClient(coordinator.service_app)
 
     def test_insert_new_session_with_invalid_auth(self):
