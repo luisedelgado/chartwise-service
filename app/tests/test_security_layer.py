@@ -41,7 +41,7 @@ class TestingHarnessSecurityRouter:
         assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
 
     def test_signup_with_invalid_credentials(self):
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                json={
                                    "user_email": "foo@foo.com",
                                    "user_password": "myPassword",
@@ -49,13 +49,13 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
                                    "signup_mechanism": "custom",
-                                   "language_preference": "es-419",
+                                   "language_code_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 401
 
     def test_signup_with_valid_credentials_but_invalid_birthdate_format(self):
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": DUMMY_AUTH_COOKIE,
                                },
@@ -66,13 +66,13 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
                                    "signup_mechanism": "custom",
-                                   "language_preference": "es-419",
+                                   "language_code_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 417
 
     def test_signup_with_valid_credentials_but_invalid_language_preference(self):
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": DUMMY_AUTH_COOKIE,
                                },
@@ -83,13 +83,13 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
                                    "signup_mechanism": "custom",
-                                   "language_preference": "brbrbrbrbrbrbr",
+                                   "language_code_preference": "brbrbrbrbrbrbr",
                                    "gender": "male",
                                })
         assert response.status_code == 417
 
     def test_signup_with_valid_credentials_but_invalid_gender_format(self):
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": DUMMY_AUTH_COOKIE,
                                },
@@ -100,7 +100,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
                                    "signup_mechanism": "custom",
-                                   "language_preference": "brbrbrbrbrbrbr",
+                                   "language_code_preference": "brbrbrbrbrbrbr",
                                    "gender": "woman",
                                })
         assert response.status_code == 417
@@ -110,7 +110,7 @@ class TestingHarnessSecurityRouter:
         self.auth_manager.fake_supabase_client.fake_access_token = "valid_token"
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": DUMMY_AUTH_COOKIE,
                                },
@@ -121,7 +121,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
                                    "signup_mechanism": "custom",
-                                   "language_preference": "es-419",
+                                   "language_code_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 417
@@ -131,7 +131,7 @@ class TestingHarnessSecurityRouter:
         self.auth_manager.fake_supabase_client.fake_access_token = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": DUMMY_AUTH_COOKIE,
                             },
@@ -142,7 +142,7 @@ class TestingHarnessSecurityRouter:
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
                                 "signup_mechanism": "custom",
-                                "language_preference": "es-419",
+                                "language_code_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 417
@@ -152,7 +152,7 @@ class TestingHarnessSecurityRouter:
         self.auth_manager.fake_supabase_client.fake_access_token = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
-        response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": DUMMY_AUTH_COOKIE,
                             },
@@ -163,7 +163,7 @@ class TestingHarnessSecurityRouter:
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
                                 "signup_mechanism": "custom",
-                                "language_preference": "es-419",
+                                "language_code_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 417
@@ -179,7 +179,7 @@ class TestingHarnessSecurityRouter:
     #     self.auth_manager.fake_supabase_client.fake_refresh_token = valid_refresh_token
     #     self.auth_manager.fake_supabase_client.fake_user_id = valid_user_id
 
-    #     response = self.client.post(SecurityRouter.SIGN_UP_ENDPOINT,
+    #     response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
     #                         cookies={
     #                             "authorization": DUMMY_AUTH_COOKIE,
     #                         },
