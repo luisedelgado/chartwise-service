@@ -169,7 +169,7 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert body.source.value != "undefined", '''Invalid parameter 'undefined' for source.'''
+            assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager, body=body)
@@ -469,7 +469,7 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert body.summary_configuration.value != "undefined", '''Invalid parameter 'undefined' for summary_configuration.'''
+            assert body.summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
 
             json_response = self._assistant_manager.create_patient_summary(body=body,
                                                                            environment=self._environment,
@@ -583,8 +583,8 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert body.consentment_channel.value != "undefined", '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
+            assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert body.gender.value != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
@@ -597,7 +597,7 @@ class AssistantRouter:
                 "email": body.email,
                 "gender": body.gender.value,
                 "phone_number": body.phone_number,
-                "consentment_channel": body.consentment_channel,
+                "consentment_channel": body.consentment_channel.value,
             }).execute()
 
             logging.log_api_response(session_id=session_id,
@@ -654,8 +654,8 @@ class AssistantRouter:
                                 patient_id=body.id)
 
         try:
-            assert body.consentment_channel.value != "undefined", '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
+            assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
@@ -668,7 +668,7 @@ class AssistantRouter:
                 "email": body.email,
                 "gender": body.gender.value,
                 "phone_number": body.phone_number,
-                "consentment_channel": body.consentment_channel,
+                "consentment_channel": body.consentment_channel.value,
             }).eq('id', body.id).execute()
 
             logging.log_api_response(session_id=session_id,

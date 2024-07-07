@@ -21,6 +21,7 @@ class SessionNotesUpdate(BaseModel):
     patient_id: str
     therapist_id: str
     session_notes_id: str
+    source: SessionNotesSource
     diarization: str = None
     text: str
     datastore_access_token: str

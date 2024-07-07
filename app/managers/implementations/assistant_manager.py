@@ -31,7 +31,7 @@ class AssistantManager(AssistantManagerBaseClass):
                 "notes_text": body.text,
                 "session_date": body.date,
                 "patient_id": body.patient_id,
-                "source": body.source,
+                "source": body.source.value,
                 "last_updated": now_timestamp,
                 "therapist_id": body.therapist_id}).execute()
 
@@ -54,6 +54,7 @@ class AssistantManager(AssistantManagerBaseClass):
             update_result = datastore_client.table('session_reports').update({
                 "notes_text": body.text,
                 "last_updated": now_timestamp,
+                "source": body.source.value,
                 "session_diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
@@ -191,11 +192,14 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                     body.datastore_refresh_token)
 
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
-            assert (0 != len((therapist_query).data))
+            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
+
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
             patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
                                                                                                                     body.patient_id).execute()
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
             patient_query_dict = patient_query.dict()
             patient_first_name = patient_query_dict['data'][0]['first_name']
             patient_last_name = patient_query_dict['data'][0]['last_name']
@@ -254,7 +258,10 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
-            patient_response = datastore_client.table('patients').select('*').eq("id", body.patient_id).execute()
+            patient_response = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
+                                                                                                                    body.patient_id).execute()
+            assert (0 != len((patient_response).data)), "There isn't a patient-therapist match with the incoming ids."
+
             patient_response_dict = patient_response.dict()
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']

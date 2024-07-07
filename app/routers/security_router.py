@@ -187,8 +187,8 @@ class SecurityRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            assert signup_data.signup_mechanism.value != "undefined", '''Invalid parameter 'undefined' for signup_mechanism.'''
-            assert signup_data.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
+            assert signup_data.signup_mechanism != model.SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
+            assert signup_data.gender.value != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
             assert Language.get(signup_data.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
@@ -273,7 +273,7 @@ class SecurityRouter:
                                 endpoint_name=self.THERAPISTS_ENDPOINT,
                                 auth_entity=current_entity.username)
         try:
-            assert body.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
+            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
