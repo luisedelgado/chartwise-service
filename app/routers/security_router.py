@@ -187,11 +187,10 @@ class SecurityRouter:
                                 auth_entity=current_entity.username)
 
         try:
+            assert signup_data.signup_mechanism.value != "undefined", '''Invalid parameter 'undefined' for signup_mechanism.'''
+            assert signup_data.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
             assert Language.get(signup_data.language_code_preference).is_valid(), "Invalid language_preference parameter"
-
-            gender_to_lower = signup_data.gender.lower()
-            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
 
             datastore_client: Client = self._auth_manager.datastore_admin_instance()
             res = datastore_client.auth.sign_up({
@@ -213,9 +212,9 @@ class SecurityRouter:
                 "first_name": signup_data.first_name,
                 "middle_name": signup_data.middle_name,
                 "last_name": signup_data.last_name,
-                "gender": gender_to_lower,
+                "gender": signup_data.gender.value,
                 "birth_date": signup_data.birth_date,
-                "login_mechanism": signup_data.signup_mechanism,
+                "login_mechanism": signup_data.signup_mechanism.value,
                 "email": signup_data.user_email,
                 "language_preference": signup_data.language_code_preference,
             }).execute()
@@ -274,11 +273,9 @@ class SecurityRouter:
                                 endpoint_name=self.THERAPISTS_ENDPOINT,
                                 auth_entity=current_entity.username)
         try:
+            assert body.gender.value != "undefined", '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
-
-            gender_to_lower = body.gender.lower()
-            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=body.datastore_refresh_token,
                                                                                   access_token=body.datastore_access_token)
@@ -286,7 +283,7 @@ class SecurityRouter:
                 "first_name": body.first_name,
                 "middle_name": body.middle_name,
                 "last_name": body.last_name,
-                "gender": gender_to_lower,
+                "gender": body.gender.value,
                 "birth_date": body.birth_date,
                 "email": body.email,
                 "language_preference": body.language_code_preference,

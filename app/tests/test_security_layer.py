@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from ..internal.model import Gender
 from ..managers.manager_factory import ManagerFactory
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -48,7 +49,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
-                                   "signup_mechanism": "custom",
+                                   "signup_mechanism": "internal",
                                    "language_code_preference": "es-419",
                                    "gender": "male",
                                })
@@ -65,7 +66,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
-                                   "signup_mechanism": "custom",
+                                   "signup_mechanism": "internal",
                                    "language_code_preference": "es-419",
                                    "gender": "male",
                                })
@@ -82,7 +83,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
-                                   "signup_mechanism": "custom",
+                                   "signup_mechanism": "internal",
                                    "language_code_preference": "brbrbrbrbrbrbr",
                                    "gender": "male",
                                })
@@ -99,9 +100,9 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
-                                   "signup_mechanism": "custom",
+                                   "signup_mechanism": "internal",
                                    "language_code_preference": "brbrbrbrbrbrbr",
-                                   "gender": "woman",
+                                   "gender": "undefined",
                                })
         assert response.status_code == 417
 
@@ -120,7 +121,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
-                                   "signup_mechanism": "custom",
+                                   "signup_mechanism": "internal",
                                    "language_code_preference": "es-419",
                                    "gender": "male",
                                })
@@ -141,7 +142,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "signup_mechanism": "custom",
+                                "signup_mechanism": "internal",
                                 "language_code_preference": "es-419",
                                 "gender": "male",
                             })
@@ -162,7 +163,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "signup_mechanism": "custom",
+                                "signup_mechanism": "internal",
                                 "language_code_preference": "es-419",
                                 "gender": "male",
                             })

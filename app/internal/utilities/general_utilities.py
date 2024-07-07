@@ -12,12 +12,6 @@ def is_valid_timezone_identifier(tz_identifier: str) -> bool:
         return False
 
 """
-Returns a flag representing whether or not the incoming gender is in a valid format.
-"""
-def is_valid_gender_value(gender: str) -> bool:
-    return (gender in ['male', 'female', 'other', 'rather_not_say'])
-
-"""
 Returns a flag representing whether or not the incoming gender has default pronouns.
 """
 def gender_has_default_pronouns(gender: str) -> bool:
