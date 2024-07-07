@@ -201,17 +201,20 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
 
-            return VectorQueryWorker().create_question_suggestions(language_code=language_code,
-                                                                   session_id=session_id,
-                                                                   endpoint_name=endpoint_name,
-                                                                   index_id=body.therapist_id,
-                                                                   namespace=body.patient_id,
-                                                                   method=api_method,
-                                                                   environment=environment,
-                                                                   auth_manager=auth_manager,
-                                                                   auth_entity=auth_entity,
-                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                   patient_gender=patient_gender)
+            response = VectorQueryWorker().create_question_suggestions(language_code=language_code,
+                                                                       session_id=session_id,
+                                                                       endpoint_name=endpoint_name,
+                                                                       index_id=body.therapist_id,
+                                                                       namespace=body.patient_id,
+                                                                       method=api_method,
+                                                                       environment=environment,
+                                                                       auth_manager=auth_manager,
+                                                                       auth_entity=auth_entity,
+                                                                       patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                       patient_gender=patient_gender)
+
+            assert 'questions' in response, "Something went wrong in generating a response. Please try again"
+            return response
         except Exception as e:
             raise Exception(e)
 
@@ -280,6 +283,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         session_number=session_number,
                                                         auth_manager=auth_manager,
                                                         configuration=configuration)
+
+            assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result
         except Exception as e:
             raise Exception(e)

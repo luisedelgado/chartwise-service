@@ -98,13 +98,14 @@ def create_user_greeting_message() -> str:
 
 # Summary Prompt
 
-def __create_system_summary_message(language_code: str) -> str:
+def __create_system_summary_message(language_code: str, summary_configuration: SummaryConfiguration) -> str:
+    summary_configuration_format_param = ", structured in bullet points" if summary_configuration != SummaryConfiguration.FULL_SUMMARY else ""
     return f'''A mental health practitioner is entering our Practice Management Platform.
     They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
     Your job is to provide a summary of the patient's most recent sessions, as well as big themes that have come up historically during sessions (if any).
     You may use the session date found in the metadata for navigating through the sessions' data.
     Particularly for patients with a short session history, use only the information you find from the metadata session dates (even if it results in a shorter summary).
-    The "less is more" principle applies. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value, structured in bullet points.
+    The "less is more" principle applies. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value{summary_configuration_format_param}.
     It is very important that the summary response is written using language code {language_code}.'''
 
 def __create_user_summary_message(therapist_name: str,
@@ -148,7 +149,8 @@ def create_summary_template(language_code: str,
     summary_message_templates = [
         ChatMessage(
             role=MessageRole.SYSTEM,
-            content=__create_system_summary_message(language_code=language_code),
+            content=__create_system_summary_message(language_code=language_code,
+                                                    summary_configuration=configuration),
         ),
         ChatMessage(
             role=MessageRole.USER,
