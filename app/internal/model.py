@@ -40,7 +40,7 @@ class SignupData(BaseModel):
     last_name: str
     birth_date: str
     signup_mechanism: str
-    language_preference: str
+    language_code_preference: str
     gender: str
 
 class LogoutData(BaseModel):
@@ -110,7 +110,7 @@ class TherapistUpdatePayload(BaseModel):
     middle_name: str = None
     last_name: str
     birth_date: str
-    language_preference: str
+    language_code_preference: str
     gender: str
     datastore_access_token: str
     datastore_refresh_token: str

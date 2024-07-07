@@ -8,6 +8,7 @@ from llama_index.core.schema import TextNode
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from pinecone import ServerlessSpec, PineconeApiException
+from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
@@ -95,8 +96,6 @@ def delete_session_vectors(index_id, namespace, date=None):
 
         if len(ids_to_delete) > 0:
             index.delete(ids=ids_to_delete, namespace=namespace)
-    except PineconeApiException as e:
-        raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:
         raise Exception(str(e))
 
@@ -111,6 +110,10 @@ def delete_index(index_id):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         pc.delete_index(index_id)
+    except NotFoundException as e:
+        # Index doesn't exist, failing silently. Therapist is deleting their profile prior to having any
+        # data in our vector db
+        pass
     except Exception as e:
         raise Exception(str(e))
 

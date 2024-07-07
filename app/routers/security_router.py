@@ -20,7 +20,6 @@ class SecurityRouter:
 
     ROUTER_TAG = "authentication"
     LOGOUT_ENDPOINT = "/v1/logout"
-    SIGN_UP_ENDPOINT = "/v1/sign-up"
     TOKEN_ENDPOINT = "/token"
     THERAPISTS_ENDPOINT = "/v1/therapists"
 
@@ -44,16 +43,6 @@ class SecurityRouter:
                                                                response=response,
                                                                session_id=session_id)
 
-        @self.router.post(self.SIGN_UP_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def sign_up(signup_data: model.SignupData,
-                          response: Response,
-                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                          current_session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._sign_up_internal(signup_data=signup_data,
-                                                response=response,
-                                                authorization=authorization,
-                                                current_session_id=current_session_id)
-
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
                          logout_data: model.LogoutData,
@@ -63,6 +52,16 @@ class SecurityRouter:
                                                therapist_id=logout_data.therapist_id,
                                                authorization=authorization,
                                                current_session_id=current_session_id)
+
+        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def signup_new_therapist(signup_data: model.SignupData,
+                                       response: Response,
+                                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                                       current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._signup_new_therapist_internal(signup_data=signup_data,
+                                                             response=response,
+                                                             authorization=authorization,
+                                                             current_session_id=current_session_id)
 
         @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_therapist_data(response: Response,
@@ -75,14 +74,14 @@ class SecurityRouter:
                                                               current_session_id=current_session_id)
 
         @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_therapist_data(response: Response,
-                                        body: model.TherapistDeletePayload,
-                                        authorization: Annotated[Union[str, None], Cookie()] = None,
-                                        current_session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_therapist_data_internal(response=response,
-                                                              body=body,
-                                                              authorization=authorization,
-                                                              current_session_id=current_session_id)
+        async def delete_all_therapist_data(response: Response,
+                                            body: model.TherapistDeletePayload,
+                                            authorization: Annotated[Union[str, None], Cookie()] = None,
+                                            current_session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._delete_all_therapist_data_internal(response=response,
+                                                                  body=body,
+                                                                  authorization=authorization,
+                                                                  current_session_id=current_session_id)
 
     """
     Returns an oauth token to be used for invoking the endpoints.
@@ -113,93 +112,6 @@ class SecurityRouter:
             return session_refresh_data._auth_token
         except Exception as e:
             raise HTTPException(detail="Invalid credentials", status_code=status.HTTP_400_BAD_REQUEST)
-
-    """
-    Signs up a new user.
-
-    Arguments:
-    signup_data – the data to be used to sign up the user.
-    response – the response model to be used for creating the final response.
-    authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
-    """
-    async def _sign_up_internal(self,
-                                signup_data: model.SignupData,
-                                response: Response,
-                                authorization: Annotated[Union[str, None], Cookie()],
-                                current_session_id: Annotated[Union[str, None], Cookie()]):
-        if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
-
-        try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-
-        logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
-                                endpoint_name=self.SIGN_UP_ENDPOINT,
-                                auth_entity=current_entity.username)
-
-        try:
-            assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
-            assert Language.get(signup_data.language_preference).is_valid(), "Invalid language_preference parameter"
-
-            gender_to_lower = signup_data.gender.lower()
-            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
-
-            datastore_client: Client = self._auth_manager.datastore_admin_instance()
-            res = datastore_client.auth.sign_up({
-                "email": signup_data.user_email,
-                "password": signup_data.user_password,
-            })
-
-            json_response = json.loads(res.json())
-            user_role = json_response["user"]["role"]
-            access_token = json_response["session"]["access_token"]
-            refresh_token = json_response["session"]["refresh_token"]
-            assert (user_role == 'authenticated'
-                and access_token
-                and refresh_token), "Something went wrong when signing up the user"
-
-            user_id = json_response["user"]["id"]
-            datastore_client.table('therapists').insert({
-                "id": user_id,
-                "first_name": signup_data.first_name,
-                "middle_name": signup_data.middle_name,
-                "last_name": signup_data.last_name,
-                "gender": gender_to_lower,
-                "birth_date": signup_data.birth_date,
-                "login_mechanism": signup_data.signup_mechanism,
-                "email": signup_data.user_email,
-                "language_preference": signup_data.language_preference,
-            }).execute()
-
-            logging.log_api_response(therapist_id=user_id,
-                                    session_id=session_id,
-                                    endpoint_name=self.SIGN_UP_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST)
-
-            return {
-                "user_id": user_id,
-                "access_token": access_token,
-                "refresh_token": refresh_token
-            }
-        except Exception as e:
-            description = str(e)
-            status_code = status.HTTP_417_EXPECTATION_FAILED
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.SIGN_UP_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=logging.API_METHOD_POST)
-            raise HTTPException(status_code=status_code,
-                                detail=description)
 
     """
     Logs out the user.
@@ -244,6 +156,93 @@ class SecurityRouter:
         return {}
 
     """
+    Signs up a new therapist user.
+
+    Arguments:
+    signup_data – the data to be used to sign up the user.
+    response – the response model to be used for creating the final response.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
+    """
+    async def _signup_new_therapist_internal(self,
+                                             signup_data: model.SignupData,
+                                             response: Response,
+                                             authorization: Annotated[Union[str, None], Cookie()],
+                                             current_session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.TOKEN_EXPIRED_ERROR
+
+        try:
+            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+                                                                                                      response=response,
+                                                                                                      session_id=current_session_id)
+            session_id = session_refresh_data._session_id
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_POST,
+                                endpoint_name=self.THERAPISTS_ENDPOINT,
+                                auth_entity=current_entity.username)
+
+        try:
+            assert datetime_handler.is_valid_date(signup_data.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert Language.get(signup_data.language_code_preference).is_valid(), "Invalid language_preference parameter"
+
+            gender_to_lower = signup_data.gender.lower()
+            assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
+
+            datastore_client: Client = self._auth_manager.datastore_admin_instance()
+            res = datastore_client.auth.sign_up({
+                "email": signup_data.user_email,
+                "password": signup_data.user_password,
+            })
+
+            json_response = json.loads(res.json())
+            user_role = json_response["user"]["role"]
+            access_token = json_response["session"]["access_token"]
+            refresh_token = json_response["session"]["refresh_token"]
+            assert (user_role == 'authenticated'
+                and access_token
+                and refresh_token), "Something went wrong when signing up the user"
+
+            user_id = json_response["user"]["id"]
+            datastore_client.table('therapists').insert({
+                "id": user_id,
+                "first_name": signup_data.first_name,
+                "middle_name": signup_data.middle_name,
+                "last_name": signup_data.last_name,
+                "gender": gender_to_lower,
+                "birth_date": signup_data.birth_date,
+                "login_mechanism": signup_data.signup_mechanism,
+                "email": signup_data.user_email,
+                "language_preference": signup_data.language_code_preference,
+            }).execute()
+
+            logging.log_api_response(therapist_id=user_id,
+                                    session_id=session_id,
+                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=logging.API_METHOD_POST)
+
+            return {
+                "id": user_id,
+                "datastore_access_token": access_token,
+                "datastore_refresh_token": refresh_token
+            }
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_417_EXPECTATION_FAILED
+            logging.log_error(session_id=session_id,
+                              endpoint_name=self.THERAPISTS_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=logging.API_METHOD_POST)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
     Updates data associated with a therapist.
 
     Arguments:
@@ -276,6 +275,7 @@ class SecurityRouter:
                                 auth_entity=current_entity.username)
         try:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
             gender_to_lower = body.gender.lower()
             assert general_utilities.is_valid_gender_value(gender_to_lower), "Invalid format for 'gender' param. Expected values are: ['male', 'female', 'other', 'rather_not_say']"
@@ -289,7 +289,7 @@ class SecurityRouter:
                 "gender": gender_to_lower,
                 "birth_date": body.birth_date,
                 "email": body.email,
-                "language_preference": body.language_preference,
+                "language_preference": body.language_code_preference,
             }).eq('id', body.id).execute()
 
             logging.log_api_response(therapist_id=body.id,
@@ -318,11 +318,11 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
-    async def _delete_therapist_data_internal(self,
-                                              response: Response,
-                                              body: model.TherapistDeletePayload,
-                                              authorization: Annotated[Union[str, None], Cookie()],
-                                              current_session_id: Annotated[Union[str, None], Cookie()]):
+    async def _delete_all_therapist_data_internal(self,
+                                                  response: Response,
+                                                  body: model.TherapistDeletePayload,
+                                                  authorization: Annotated[Union[str, None], Cookie()],
+                                                  current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.TOKEN_EXPIRED_ERROR
 
@@ -343,9 +343,20 @@ class SecurityRouter:
         try:
             datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=body.datastore_refresh_token,
                                                                                   access_token=body.datastore_access_token)
+
+            # Delete therapist and all their patients (through cascading)
             datastore_client.table('therapists').delete().eq('id', body.id).execute()
+
+            # Remove the active session and clear Auth data from client storage.
+            datastore_client.auth.sign_out()
+
+            # Delete vectors associated with therapist's patients
             self._assistant_manager.delete_all_sessions_for_therapist(body)
 
+            # Delete auth and session cookies
+            self._auth_manager.logout(response)
+
+            logging.log_account_deletion(therapist_id=body.id)
             logging.log_api_response(therapist_id=body.id,
                                      session_id=session_id,
                                      endpoint_name=self.THERAPISTS_ENDPOINT,

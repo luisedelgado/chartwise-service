@@ -130,3 +130,25 @@ def log_diarization_event(**kwargs):
             "description": description}).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
+
+"""
+Event logged when a user deletes all their account data.
+
+Arguments:
+kwargs – the set of associated optional args.
+"""
+def log_account_deletion(**kwargs):
+    # We don't want to log if we're in staging or dev
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
+        return
+
+    therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
+
+    try:
+        datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
+        datastore_client.table('account_deletion_logs').insert({
+            "therapist_id": therapist_id,
+        }).execute()
+    except Exception as e:
+        print(f"Silently failing when trying to log response - Error: {str(e)}")
