@@ -242,8 +242,10 @@ class VectorQueryWorker:
                 llm=llm,
                 streaming=True,
             )
-            response = query_engine.query("Write a summary about the patient's session history")
-            return str(response)
+            query_input = self._create_user_message_for_summary_request(summary_configuration=configuration,
+                                                                        patient_name=patient_name)
+            response = query_engine.query(query_input)
+            return eval(str(response))
         except NotFoundException as e:
             # Index is not defined in the vector db
             raise Exception("Index does not exist. Cannot create summary until a valid index is sent")
@@ -323,3 +325,28 @@ class VectorQueryWorker:
             return eval(str(response))
         except Exception as e:
             raise Exception(e)
+
+    # Private
+
+    """
+    Returns a user prompt to be used for creating a summary, based on the incoming SummaryConfiguration object.
+
+    Arguments:
+    summary_configuration – the configuration that is being used for generating the summary.
+    """
+    def _create_user_message_for_summary_request(self,
+                                                 patient_name: str,
+                                                 summary_configuration: SummaryConfiguration) -> str:
+        value = summary_configuration.value
+        if value == "undefined":
+           raise Exception("Received 'undefined' as a SummaryConfiguration value.")
+        elif value == "full_summary":
+            return f"Write a summary about {patient_name}'s session history. Your response should not go over 600 characters."
+        elif value == "primary_topics":
+            return f"What are the three primary topics associated with {patient_name}'s session history? Each bullet point should not take more than 50 characters."
+        elif value == "emotional_state":
+            return f"What are three signals that have come up in sessions about {patient_name}'s emotional state? Each bullet point should not take more than 50 characters."
+        elif value == "symptoms":
+            return f"What are three symptoms that {patient_name} has manifested during sessions? Each bullet point should not take more than 50 characters."
+        else:
+            raise Exception(f"Untracked SummaryConfiguration value: {summary_configuration}")

@@ -468,14 +468,16 @@ class AssistantRouter:
                                 auth_entity=current_entity.username)
 
         try:
-            response = self._assistant_manager.create_patient_summary(body=body,
-                                                                      environment=self._environment,
-                                                                      session_id=session_id,
-                                                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                      api_method=logging.API_METHOD_POST,
-                                                                      auth_manager=self._auth_manager,
-                                                                      auth_entity=current_entity.username,
-                                                                      configuration=body.summary_configuration)
+            assert body.summary_configuration.value != "undefined", '''Received 'undefined' for summary_configuration. Valid options are: ["primary_topics", "emotional_state", "symptoms", "full_summary"].'''
+
+            json_response = self._assistant_manager.create_patient_summary(body=body,
+                                                                           environment=self._environment,
+                                                                           session_id=session_id,
+                                                                           endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                                                           api_method=logging.API_METHOD_POST,
+                                                                           auth_manager=self._auth_manager,
+                                                                           auth_entity=current_entity.username,
+                                                                           configuration=body.summary_configuration)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
@@ -483,8 +485,7 @@ class AssistantRouter:
                                      patient_id=body.patient_id,
                                      http_status_code=status.HTTP_200_OK,
                                      method=logging.API_METHOD_POST)
-
-            return {"summary": response}
+            return json_response
         except Exception as e:
             description = str(e)
             status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code

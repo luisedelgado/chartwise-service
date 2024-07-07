@@ -98,20 +98,22 @@ def create_user_greeting_message() -> str:
 
 # Summary Prompt
 
-def __create_system_summary_message() -> str:
+def __create_system_summary_message(language_code: str) -> str:
     return f'''A mental health practitioner is entering our Practice Management Platform.
     They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
     Your job is to provide a summary of the patient's most recent sessions, as well as big themes that have come up historically during sessions (if any).
-    You may use the session date found in the metadata for navigating through the sessions' data. The output should be structured in bullet points.
+    You may use the session date found in the metadata for navigating through the sessions' data.
     Particularly for patients with a short session history, use only the information you find from the metadata session dates (even if it results in a shorter summary).
-    The "less is more" principle applies.'''
+    The "less is more" principle applies. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value, structured in bullet points.
+    It is very important that the summary response is written using language code {language_code}.'''
 
 def __create_user_summary_message(therapist_name: str,
                                   therapist_gender: str,
                                   patient_name: str,
                                   patient_gender: str,
                                   language_code: str,
-                                  session_number: int) -> str:
+                                  session_number: int,
+                                  summary_configuration: SummaryConfiguration) -> str:
     try:
         ordinal_session_number = num2words(session_number, to='ordinal_num')
         context_paragraph =('''We have provided context information below. \n
@@ -119,14 +121,20 @@ def __create_user_summary_message(therapist_name: str,
                             {context_str}
                             \n---------------------\n''')
         instruction = "{query_str}"
-        therapist_gender_context = f"For reference, {therapist_name} is a {therapist_gender}." if gender_has_default_pronouns(therapist_gender) else ""
-        patient_gender_context = f"For reference, {patient_name} is a {patient_gender}." if gender_has_default_pronouns(patient_gender) else ""
-        params = f'''\nAddress the therapist by their name, {therapist_name}, and the patient by theirs, which is {patient_name}.
-        {therapist_gender_context}
-        {patient_gender_context}
-        Start by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time.
-        It is very important that you craft your response using language code {language_code}. Your response should not go over 600 characters.'''
-        return context_paragraph + instruction + params
+        name_params = f"\nAddress the therapist by their name, {therapist_name}, and the patient by theirs, which is {patient_name}.\n"
+        gender_params = ""
+        if gender_has_default_pronouns(therapist_gender):
+            gender_params += f"For reference, {therapist_name} is a {therapist_gender}. "
+        if gender_has_default_pronouns(patient_gender):
+            gender_params += f"For reference, {patient_name} is a {patient_gender}. "
+        language_params = f"\nIt is very important that you craft your response using language code {language_code}."
+
+        message = context_paragraph + instruction + name_params + gender_params + language_params
+
+        if summary_configuration.value == "full_summary":
+            message += f"\nStart by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time."
+
+        return message
     except Exception as e:
         raise Exception(e)
 
@@ -140,7 +148,7 @@ def create_summary_template(language_code: str,
     summary_message_templates = [
         ChatMessage(
             role=MessageRole.SYSTEM,
-            content=__create_system_summary_message(),
+            content=__create_system_summary_message(language_code=language_code),
         ),
         ChatMessage(
             role=MessageRole.USER,
@@ -149,7 +157,8 @@ def create_summary_template(language_code: str,
                                                   patient_gender=patient_gender,
                                                   therapist_name=therapist_name,
                                                   therapist_gender=therapist_gender,
-                                                  session_number=session_number),
+                                                  session_number=session_number,
+                                                  summary_configuration=configuration),
         ),
     ]
     return ChatPromptTemplate(summary_message_templates)
@@ -161,7 +170,8 @@ def __create_system_question_suggestions_message() -> str:
     They have the opportunity to ask you a question about the patient's session history.
     Your job is to provide the practitioner with three questions that they could ask you about the patient, for which you'd have rich answers.
     You may use the session date found in the metadata for navigating through the sessions' data. 
-    The questions should be as concise as possible. Return a JSON array with a single key, "questions", and the array of questions as its value.'''
+    It is very important that each question remain under 50 characters of length.
+    Return a JSON array with a single key, "questions", and the array of questions as its value.'''
 
 def __create_user_question_suggestions_message(language_code: str,
                                                patient_name: str,
@@ -178,7 +188,8 @@ def __create_user_question_suggestions_message(language_code: str,
         else:
             patient_context = f"\nFor reference, the patient's name is {patient_name}."
         execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
-        return context_paragraph + language_code_requirement + patient_context + execution_statement
+        length_param = "\nIt is very important that each question remain under 50 characters of length."
+        return context_paragraph + language_code_requirement + patient_context + execution_statement + length_param
     except Exception as e:
         raise Exception(e)
 
