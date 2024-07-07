@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel
 
 class SessionNotesInsert(BaseModel):
@@ -58,11 +59,19 @@ class Greeting(BaseModel):
     datastore_access_token: str
     datastore_refresh_token: str
 
+class SummaryConfiguration(Enum):
+    UNDEFINED = "undefined"
+    PRIMARY_TOPICS = "primary_topics"
+    EMOTIONAL_STATE = "emotional_state"
+    SYMPTOMS = "symptoms"
+    FULL_SUMMARY = "full_summary"
+
 class SessionHistorySummary(BaseModel):
     therapist_id: str
     patient_id: str
     datastore_access_token: str
     datastore_refresh_token: str
+    summary_configuration: SummaryConfiguration
 
 class QuestionSuggestionsParams(BaseModel):
     therapist_id: str
@@ -72,7 +81,7 @@ class QuestionSuggestionsParams(BaseModel):
 
 class PatientInsertPayload(BaseModel):
     first_name: str
-    middle_name: str
+    middle_name: str = None
     last_name: str
     birth_date: str
     gender: str
@@ -86,7 +95,7 @@ class PatientInsertPayload(BaseModel):
 class PatientUpdatePayload(BaseModel):
     id: str
     first_name: str
-    middle_name: str
+    middle_name: str = None
     last_name: str
     birth_date: str
     gender: str

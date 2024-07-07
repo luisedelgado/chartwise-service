@@ -8,6 +8,7 @@ from ...internal.model import (AssistantQuery,
                                SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate,
+                               SummaryConfiguration,
                                TherapistDeletePayload,)
 
 class FakeAssistantManager(AssistantManagerBaseClass):
@@ -66,7 +67,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str):
+                               auth_entity: str,
+                               configuration: SummaryConfiguration):
         ...
 
     def fetch_question_suggestions(self,

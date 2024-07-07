@@ -5,6 +5,7 @@ from llama_index.core.llms import ChatMessage, MessageRole
 from num2words import num2words
 from pytz import timezone
 
+from ..internal.model import SummaryConfiguration
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
 
 # Text QA Prompt
@@ -134,7 +135,8 @@ def create_summary_template(language_code: str,
                             patient_gender: str,
                             therapist_name: str,
                             therapist_gender: str,
-                            session_number: int) -> ChatPromptTemplate:
+                            session_number: int,
+                            configuration: SummaryConfiguration) -> ChatPromptTemplate:
     summary_message_templates = [
         ChatMessage(
             role=MessageRole.SYSTEM,

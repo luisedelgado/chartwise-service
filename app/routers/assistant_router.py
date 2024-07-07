@@ -474,7 +474,8 @@ class AssistantRouter:
                                                                       endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                       api_method=logging.API_METHOD_POST,
                                                                       auth_manager=self._auth_manager,
-                                                                      auth_entity=current_entity.username)
+                                                                      auth_entity=current_entity.username,
+                                                                      configuration=body.summary_configuration)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,

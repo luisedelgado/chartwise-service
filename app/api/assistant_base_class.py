@@ -9,6 +9,7 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesDelete,
                               SessionNotesInsert,
                               SessionNotesUpdate,
+                              SummaryConfiguration,
                               TherapistDeletePayload,)
 
 class AssistantManagerBaseClass(ABC):
@@ -118,6 +119,7 @@ class AssistantManagerBaseClass(ABC):
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
     auth_entity – the auth entity that enabled the incoming request.
+    configuration – the configuration for creating the summary.]
     """
     def create_patient_summary(body: SessionHistorySummary,
                                auth_manager: AuthManagerBaseClass,
@@ -125,7 +127,8 @@ class AssistantManagerBaseClass(ABC):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str):
+                               auth_entity: str,
+                               configuration: SummaryConfiguration):
         pass
 
     """

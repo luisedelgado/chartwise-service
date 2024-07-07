@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from fastapi import status
-
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
@@ -12,6 +10,7 @@ from ...internal.model import (AssistantQuery,
                                SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate,
+                               SummaryConfiguration,
                                TherapistDeletePayload,)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
@@ -247,7 +246,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str):
+                               auth_entity: str,
+                               configuration: SummaryConfiguration):
         try:
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
@@ -278,7 +278,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         therapist_name=therapist_name,
                                                         therapist_gender=therapist_gender,
                                                         session_number=session_number,
-                                                        auth_manager=auth_manager)
+                                                        auth_manager=auth_manager,
+                                                        configuration=configuration)
             return result
         except Exception as e:
             raise Exception(e)

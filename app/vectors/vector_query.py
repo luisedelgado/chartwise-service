@@ -1,13 +1,14 @@
 import os
 
 from datetime import datetime
-from fastapi import status
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI as llama_index_OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
+from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
+from ..internal.model import SummaryConfiguration
 from . import message_templates
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
@@ -178,6 +179,7 @@ class VectorQueryWorker:
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
     auth_manager – the auth manager to be leveraged internally.
+    configuration – the configuration to be used for creating the summary.
     """
     def create_summary(self,
                        index_id: str,
@@ -193,7 +195,8 @@ class VectorQueryWorker:
                        therapist_name: str,
                        therapist_gender: str,
                        session_number: int,
-                       auth_manager: AuthManagerBaseClass) -> str:
+                       auth_manager: AuthManagerBaseClass,
+                       configuration: SummaryConfiguration) -> str:
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             assert pc.describe_index(index_id).status['ready']
@@ -234,12 +237,16 @@ class VectorQueryWorker:
                                                                            patient_gender=patient_gender,
                                                                            therapist_name=therapist_name,
                                                                            therapist_gender=therapist_gender,
-                                                                           session_number=session_number),
+                                                                           session_number=session_number,
+                                                                           configuration=configuration),
                 llm=llm,
                 streaming=True,
             )
             response = query_engine.query("Write a summary about the patient's session history")
             return str(response)
+        except NotFoundException as e:
+            # Index is not defined in the vector db
+            raise Exception("Index does not exist. Cannot create summary until a valid index is sent")
         except Exception as e:
             raise Exception(e)
 
