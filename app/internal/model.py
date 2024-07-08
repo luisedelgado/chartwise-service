@@ -18,8 +18,8 @@ class SessionNotesInsert(BaseModel):
     source: SessionNotesSource
 
 class SessionNotesUpdate(BaseModel):
-    patient_id: str
     therapist_id: str
+    date: str
     session_notes_id: str
     source: SessionNotesSource
     diarization: str = None

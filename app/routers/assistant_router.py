@@ -222,18 +222,19 @@ class AssistantRouter:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
-                                patient_id=body.patient_id,
                                 therapist_id=body.therapist_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
                                 method=logging.API_METHOD_PUT,
                                 auth_entity=current_entity.username)
 
         try:
+            assert datetime_handler.is_valid_date(body.date), "Received invalid date"
+            assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
+
             self._assistant_manager.update_session(auth_manager=self._auth_manager, body=body)
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
-                                    patient_id=body.patient_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=logging.API_METHOD_PUT)
@@ -244,7 +245,6 @@ class AssistantRouter:
             status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
             logging.log_error(session_id=session_id,
                             therapist_id=body.therapist_id,
-                            patient_id=body.patient_id,
                             endpoint_name=self.SESSIONS_ENDPOINT,
                             error_code=status_code,
                             description=description,

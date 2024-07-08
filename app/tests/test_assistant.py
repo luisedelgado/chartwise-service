@@ -8,8 +8,9 @@ from ..service_coordinator import EndpointServiceCoordinator
 FAKE_AUTH_COOKIE = "my-auth-cookie"
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
-DUMMY_REFRESH_TOKEN = "refreshToken"
-DUMMY_ACCESS_TOKEN = "accessToken"
+FAKE_SESSION_REPORT_ID = "5245b72e-abbb-bg14-96a6-ccbf69756942fb"
+FAKE_REFRESH_TOKEN = "refreshToken"
+FAKE_ACCESS_TOKEN = "accessToken"
 ENVIRONMENT = "testing"
 
 class TestingHarnessAssistantRouter:
@@ -35,8 +36,8 @@ class TestingHarnessAssistantRouter:
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                    "date": "01-01-2020",
-                                   "datastore_access_token": DUMMY_ACCESS_TOKEN,
-                                   "datastore_refresh_token": DUMMY_REFRESH_TOKEN,
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                    "source": "manual_input"
                                })
         assert response.status_code == 401
@@ -51,8 +52,8 @@ class TestingHarnessAssistantRouter:
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
-                                        "datastore_access_token": DUMMY_ACCESS_TOKEN,
-                                        "datastore_refresh_token": DUMMY_REFRESH_TOKEN,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                         "source": "manual_input"
                                     })
         assert response.status_code == 400
@@ -67,8 +68,8 @@ class TestingHarnessAssistantRouter:
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
-                                        "datastore_access_token": DUMMY_ACCESS_TOKEN,
-                                        "datastore_refresh_token": DUMMY_REFRESH_TOKEN,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                         "source": "undefined"
                                     })
         assert response.status_code == 400
@@ -86,9 +87,70 @@ class TestingHarnessAssistantRouter:
     #                                     "therapist_id": FAKE_THERAPIST_ID,
     #                                     "text": insert_text,
     #                                     "date": "01-01-2020",
-    #                                     "datastore_access_token": DUMMY_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": DUMMY_REFRESH_TOKEN,
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN,
     #                                     "source": "manual_input"
     #                                 })
     #     assert response.status_code == 200
     #     assert self.assistant_manager.fake_insert_text == insert_text
+
+    def test_update_session_with_invalid_auth(self):
+        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
+                               json={
+                                   "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                   "date": "01-01-2020",
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   "source": "manual_input"
+                               })
+        assert response.status_code == 401
+
+    def test_update_session_with_valid_auth_but_invalid_date_format(self):
+        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    json={
+                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01/01/2020",
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "source": "manual_input"
+                                    })
+        assert response.status_code == 400
+
+    def test_update_session_with_valid_auth_but_undefined_source(self):
+        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
+                                   cookies={
+                                       "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    json={
+                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01-01-2020",
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "source": "undefined"
+                                    })
+        assert response.status_code == 400
+
+    def test_update_session_success(self):
+        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
+                                   cookies={
+                                       "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    json={
+                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01-01-2020",
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "source": "manual_input"
+                                    })
+        assert response.status_code == 200

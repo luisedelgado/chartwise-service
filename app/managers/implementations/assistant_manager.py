@@ -22,8 +22,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert):
         try:
-            assert datetime_handler.is_valid_date(body.date), "Received invalid date"
-
             datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
                                                                     body.datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -55,6 +53,7 @@ class AssistantManager(AssistantManagerBaseClass):
                 "notes_text": body.text,
                 "last_updated": now_timestamp,
                 "source": body.source.value,
+                "date": body.date,
                 "session_diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
