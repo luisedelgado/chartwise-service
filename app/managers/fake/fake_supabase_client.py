@@ -6,13 +6,13 @@ from supabase import Client
 class FakeAuthWrapper:
 
     fake_role: str = None
-    fake_access_token: str = None
+    FAKE_AUTH_TOKEN: str = None
     fake_refresh_token: str = None
     fake_user_id: str = None
 
-    def __init__(self, fake_role, fake_access_token, fake_refresh_token, fake_user_id):
+    def __init__(self, fake_role, FAKE_AUTH_TOKEN, fake_refresh_token, fake_user_id):
         self.fake_role = fake_role
-        self.fake_access_token = fake_access_token
+        self.FAKE_AUTH_TOKEN = FAKE_AUTH_TOKEN
         self.fake_refresh_token = fake_refresh_token
         self.fake_user_id = fake_user_id
 
@@ -25,7 +25,7 @@ class FakeAuthWrapper:
         #             "id": self.fake_user_id
         #         },
         #         "session": {
-        #             "access_token": self.fake_access_token,
+        #             "access_token": self.FAKE_AUTH_TOKEN,
         #             "refresh_token": self.fake_refresh_token
         #         }
         #     }
@@ -38,13 +38,16 @@ class FakeAuthWrapper:
                     "id": self.fake_user_id
                 },
                 "session": {
-                    "access_token": self.fake_access_token,
+                    "access_token": self.FAKE_AUTH_TOKEN,
                     "refresh_token": self.fake_refresh_token
                 }
             })
 
-class FakeSupabasesInsertResult:
+class FakeSupabaseOperationResult:
     def execute(self):
+        pass
+
+    def eq(left, right):
         pass
 
 class FakeSupabaseTable:
@@ -52,12 +55,15 @@ class FakeSupabaseTable:
         self.table_name = table_name
 
     def insert(self, obj: dict):
-        return FakeSupabasesInsertResult()
+        return FakeSupabaseOperationResult()
+
+    def update(self, obj: dict):
+        return FakeSupabaseOperationResult()
 
 class FakeSupabaseClient(Client):
 
     fake_role: str = None
-    fake_access_token: str = None
+    FAKE_AUTH_TOKEN: str = None
     fake_refresh_token: str = None
     fake_user_id: str = None
 
@@ -67,7 +73,7 @@ class FakeSupabaseClient(Client):
     @property
     def auth(self):
         return FakeAuthWrapper(fake_role=self.fake_role,
-                               fake_access_token=self.fake_access_token,
+                               FAKE_AUTH_TOKEN=self.FAKE_AUTH_TOKEN,
                                fake_refresh_token=self.fake_refresh_token,
                                fake_user_id=self.fake_user_id)
 

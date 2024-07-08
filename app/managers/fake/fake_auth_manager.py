@@ -13,7 +13,7 @@ from ...api.auth_base_class import AuthManagerBaseClass
 class FakeAuthManager(AuthManagerBaseClass):
 
     FAKE_SESSION_ID = "8fc1b533-304e-4a33-98ba-541fdd956c1f"
-    FAKE_ACCESS_TOKEN = "myRandomGibberish"
+    FAKE_AUTH_TOKEN = "myRandomGibberish"
     FAKE_PASSWORD = "myPassword"
     FAKE_HASHED_PASSWORD = "myHashedPassword"
     FAKE_FULL_NAME = "John Doe"
@@ -54,7 +54,7 @@ class FakeAuthManager(AuthManagerBaseClass):
     def create_access_token(self,
                             _: dict,
                             __: Union[timedelta, None] = None):
-        return self.FAKE_ACCESS_TOKEN
+        return self.FAKE_AUTH_TOKEN
 
     def access_token_is_valid(self, access_token: str) -> bool:
         return self.auth_cookie == access_token
@@ -80,12 +80,12 @@ class FakeAuthManager(AuthManagerBaseClass):
                         samesite="none")
 
         response.set_cookie(key="authorization",
-                        value=self.FAKE_ACCESS_TOKEN,
+                        value=self.FAKE_AUTH_TOKEN,
                         httponly=True,
                         secure=True,
                         samesite="none")
 
-        token = Token(access_token=self.FAKE_ACCESS_TOKEN, token_type="bearer")
+        token = Token(access_token=self.FAKE_AUTH_TOKEN, token_type="bearer")
         return SessionRefreshData(session_id=self.FAKE_SESSION_ID,
                                   auth_token=token)
 

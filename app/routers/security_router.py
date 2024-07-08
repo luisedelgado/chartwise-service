@@ -232,7 +232,7 @@ class SecurityRouter:
             }
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_417_EXPECTATION_FAILED
+            status_code = status.HTTP_400_BAD_REQUEST if type(e) == AssertionError else status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,

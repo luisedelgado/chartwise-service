@@ -5,16 +5,18 @@ from ..managers.manager_factory import ManagerFactory
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
-DUMMY_AUTH_COOKIE = "my-auth-cookie"
-DUMMY_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
-DUMMY_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
+FAKE_AUTH_COOKIE = "my-auth-cookie"
+FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
+FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
+FAKE_DATASTORE_ACCESS_TOKEN = "fakeDatastoreAccessToken"
+FAKE_DATASTORE_REFRESH_TOKEN = "fakeDatastoreRefreshToken"
 ENVIRONMENT = "testing"
 
 class TestingHarnessSecurityRouter:
 
     def setup_method(self):
         self.auth_manager = ManagerFactory().create_auth_manager(ENVIRONMENT)
-        self.auth_manager.auth_cookie = DUMMY_AUTH_COOKIE
+        self.auth_manager.auth_cookie = FAKE_AUTH_COOKIE
 
         self.assistant_manager = ManagerFactory.create_assistant_manager(ENVIRONMENT)
         self.audio_processing_manager = ManagerFactory.create_audio_processing_manager(ENVIRONMENT)
@@ -38,7 +40,7 @@ class TestingHarnessSecurityRouter:
                                    "password": self.auth_manager.FAKE_PASSWORD
                                })
         assert response.status_code == 200
-        assert response.cookies.get("authorization") == self.auth_manager.FAKE_ACCESS_TOKEN
+        assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
         assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
 
     def test_signup_with_invalid_credentials(self):
@@ -58,7 +60,7 @@ class TestingHarnessSecurityRouter:
     def test_signup_with_valid_credentials_but_invalid_birthdate_format(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
-                                   "authorization": DUMMY_AUTH_COOKIE,
+                                   "authorization": FAKE_AUTH_COOKIE,
                                },
                                json={
                                    "user_email": "foo@foo.com",
@@ -70,12 +72,12 @@ class TestingHarnessSecurityRouter:
                                    "language_code_preference": "es-419",
                                    "gender": "male",
                                })
-        assert response.status_code == 417
+        assert response.status_code == 400
 
     def test_signup_with_valid_credentials_but_invalid_language_preference(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
-                                   "authorization": DUMMY_AUTH_COOKIE,
+                                   "authorization": FAKE_AUTH_COOKIE,
                                },
                                json={
                                    "user_email": "foo@foo.com",
@@ -92,7 +94,7 @@ class TestingHarnessSecurityRouter:
     def test_signup_with_valid_credentials_but_invalid_gender_format(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
-                                   "authorization": DUMMY_AUTH_COOKIE,
+                                   "authorization": FAKE_AUTH_COOKIE,
                                },
                                json={
                                    "user_email": "foo@foo.com",
@@ -106,14 +108,31 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 417
 
+    def test_signup_with_valid_credentials_but_undefined_signup_mechanism(self):
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
+                               cookies={
+                                   "authorization": FAKE_AUTH_COOKIE,
+                               },
+                               json={
+                                   "user_email": "foo@foo.com",
+                                   "user_password": "myPassword",
+                                   "first_name": "foo",
+                                   "last_name": "bar",
+                                   "birth_date": "01-01-2000",
+                                   "signup_mechanism": "undefined",
+                                   "language_code_preference": "brbrbrbrbrbrbr",
+                                   "gender": "undefined",
+                               })
+        assert response.status_code == 400
+
     def test_signup_with_valid_credentials_but_received_bad_role_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "bad_role"
-        self.auth_manager.fake_supabase_client.fake_access_token = "valid_token"
+        self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = "valid_token"
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
-                                   "authorization": DUMMY_AUTH_COOKIE,
+                                   "authorization": FAKE_AUTH_COOKIE,
                                },
                                json={
                                    "user_email": "foo@foo.com",
@@ -129,12 +148,12 @@ class TestingHarnessSecurityRouter:
 
     def test_signup_with_valid_credentials_but_received_bad_access_token_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "authenticated"
-        self.auth_manager.fake_supabase_client.fake_access_token = ""
+        self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": DUMMY_AUTH_COOKIE,
+                                "authorization": FAKE_AUTH_COOKIE,
                             },
                             json={
                                 "user_email": "foo@foo.com",
@@ -150,12 +169,12 @@ class TestingHarnessSecurityRouter:
 
     def test_signup_with_valid_credentials_but_received_bad_refresh_token_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "authenticated"
-        self.auth_manager.fake_supabase_client.fake_access_token = ""
+        self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
 
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": DUMMY_AUTH_COOKIE,
+                                "authorization": FAKE_AUTH_COOKIE,
                             },
                             json={
                                 "user_email": "foo@foo.com",
@@ -176,13 +195,13 @@ class TestingHarnessSecurityRouter:
     #     valid_refresh_token = "valid_refresh_token"
     #     valid_user_id = "user_id"
     #     self.auth_manager.fake_supabase_client.fake_role = fake_role
-    #     self.auth_manager.fake_supabase_client.fake_access_token = valid_access_token
+    #     self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = valid_access_token
     #     self.auth_manager.fake_supabase_client.fake_refresh_token = valid_refresh_token
     #     self.auth_manager.fake_supabase_client.fake_user_id = valid_user_id
 
     #     response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
     #                         cookies={
-    #                             "authorization": DUMMY_AUTH_COOKIE,
+    #                             "authorization": FAKE_AUTH_COOKIE,
     #                         },
     #                         json={
     #                             "user_email": "foo@foo.com",
@@ -199,23 +218,110 @@ class TestingHarnessSecurityRouter:
     #         "access_token": valid_access_token,
     #         "refresh_token": valid_refresh_token
     #     }
-    #     assert response.cookies.get("authorization") == self.auth_manager.FAKE_ACCESS_TOKEN
+    #     assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
     #     assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
+
+    def test_update_therapist_with_invalid_credentials(self):
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
+                            json={
+                                "id": "fakeUserId",
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_code_preference": "es-419",
+                                "gender": "male",
+                                "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                            })
+        assert response.status_code == 401
+
+    def test_update_therapist_with_valid_credentials_but_undefined_gender(self):
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
+                            cookies={
+                                "authorization": FAKE_AUTH_COOKIE,
+                            },
+                            json={
+                                "id": "fakeUserId",
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_code_preference": "es-419",
+                                "gender": "undefined",
+                                "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                            })
+        assert response.status_code == 400
+
+    def test_update_therapist_with_valid_credentials_but_invalid_date(self):
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
+                            cookies={
+                                "authorization": FAKE_AUTH_COOKIE,
+                            },
+                            json={
+                                "id": "fakeUserId",
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01/01/2000",
+                                "language_code_preference": "es-419",
+                                "gender": "male",
+                                "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                            })
+        assert response.status_code == 400
+
+    def test_update_therapist_with_valid_credentials_but_invalid_language_code(self):
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
+                            cookies={
+                                "authorization": FAKE_AUTH_COOKIE,
+                            },
+                            json={
+                                "id": "fakeUserId",
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_code_preference": "spanish",
+                                "gender": "male",
+                                "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                            })
+        assert response.status_code == 400
+
+    def test_update_therapist_success(self):
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
+                            cookies={
+                                "authorization": FAKE_AUTH_COOKIE,
+                            },
+                            json={
+                                "id": "fakeUserId",
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_code_preference": "es-419",
+                                "gender": "male",
+                                "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                            })
+        assert response.status_code == 400
 
     def test_logout_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT,
                                json={
-                                   "therapist_id": DUMMY_THERAPIST_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
                                })
         assert response.status_code == 401
 
     def test_logout_with_valid_credentials(self):
         response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT,
                                cookies={
-                                   "authorization": DUMMY_AUTH_COOKIE,
+                                   "authorization": FAKE_AUTH_COOKIE,
                                },
                                json={
-                                   "therapist_id": DUMMY_THERAPIST_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
                                })
         assert response.status_code == 200
         cookie_header = response.headers.get("set-cookie")
