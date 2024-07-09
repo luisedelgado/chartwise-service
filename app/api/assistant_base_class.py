@@ -6,7 +6,6 @@ from ..internal.model import (AssistantQuery,
                               QuestionSuggestionsParams,
                               PatientDeletePayload,
                               SessionHistorySummary,
-                              SessionNotesDelete,
                               SessionNotesInsert,
                               SessionNotesUpdate,
                               SummaryConfiguration,
@@ -41,10 +40,10 @@ class AssistantManagerBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
-    body – the data associated with the session to be deleted.
+    session_report_id – the id associated with the session to be deleted.
     """
     def delete_session(auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesDelete):
+                       session_report_id: str):
         pass
 
     """

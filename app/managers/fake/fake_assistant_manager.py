@@ -5,7 +5,6 @@ from ...internal.model import (AssistantQuery,
                                QuestionSuggestionsParams,
                                PatientDeletePayload,
                                SessionHistorySummary,
-                               SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate,
                                SummaryConfiguration,
@@ -28,7 +27,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesDelete):
+                       session_report_id: str):
         ...
 
     def delete_all_sessions_for_patient(self,

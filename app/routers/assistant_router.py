@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import (APIRouter,
                      Cookie,
                      HTTPException,
@@ -56,11 +58,11 @@ class AssistantRouter:
                                                        current_session_id=current_session_id)
 
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_session(body: model.SessionNotesDelete,
-                                 response: Response,
+        async def delete_session(response: Response,
+                                 session_report_id: str = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_session_internal(body=body,
+            return await self._delete_session_internal(session_report_id=session_report_id,
                                                        response=response,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
@@ -262,7 +264,7 @@ class AssistantRouter:
     current_session_id – the session_id cookie, if exists.
     """
     async def _delete_session_internal(self,
-                                       body: model.SessionNotesDelete,
+                                       session_report_id: str,
                                        response: Response,
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
@@ -279,18 +281,32 @@ class AssistantRouter:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
-                                patient_id=body.patient_id,
-                                therapist_id=body.therapist_id,
+                                session_report_id=session_report_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
                                 method=logging.API_METHOD_DELETE,
                                 auth_entity=current_entity.username)
 
         try:
-            self._assistant_manager.delete_session(auth_manager=self._auth_manager, body=body)
+            assert len(session_report_id or '') > 0, "Received invalid session_report_id"
+            uuid.UUID(str(session_report_id))
+        except Exception as e:
+            description = str(e)
+            status_code = status.HTTP_400_BAD_REQUEST
+            logging.log_error(session_id=session_id,
+                            session_report_id=session_report_id,
+                            endpoint_name=self.SESSIONS_ENDPOINT,
+                            error_code=status_code,
+                            description=description,
+                            method=logging.API_METHOD_DELETE)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+        try:
+            self._assistant_manager.delete_session(auth_manager=self._auth_manager,
+                                                   session_report_id=session_report_id)
 
             logging.log_api_response(session_id=session_id,
-                                    therapist_id=body.therapist_id,
-                                    patient_id=body.patient_id,
+                                    session_report_id=session_report_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=logging.API_METHOD_DELETE)
@@ -298,10 +314,9 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
             logging.log_error(session_id=session_id,
-                            therapist_id=body.therapist_id,
-                            patient_id=body.patient_id,
+                            session_report_id=session_report_id,
                             endpoint_name=self.SESSIONS_ENDPOINT,
                             error_code=status_code,
                             description=description,

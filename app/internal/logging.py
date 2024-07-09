@@ -28,6 +28,7 @@ def log_api_request(**kwargs):
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
         patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
         method = None if "method" not in kwargs else kwargs["method"]
+        session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
         datastore_client.table('api_request_logs').insert({
             "session_id": str(session_id),
             "endpoint_name": endpoint_name,
@@ -36,6 +37,7 @@ def log_api_request(**kwargs):
             "patient_id": patient_id,
             "method": method,
             "endpoint_auth_entity": auth_entity,
+            "session_report_id": session_report_id,
         }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log request - Error: {str(e)}")
@@ -59,6 +61,7 @@ def log_api_response(**kwargs):
     http_status_code = None if "http_status_code" not in kwargs else kwargs["http_status_code"]
     description = None if "description" not in kwargs else kwargs["description"]
     method = None if "method" not in kwargs else kwargs["method"]
+    session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
 
     try:
         datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
@@ -70,6 +73,7 @@ def log_api_response(**kwargs):
             "http_status_code": http_status_code,
             "description": description,
             "method": method,
+            "session_report_id": session_report_id,
         }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
@@ -93,6 +97,7 @@ def log_error(**kwargs):
     error_code = None if "error_code" not in kwargs else kwargs["error_code"]
     description = None if "description" not in kwargs else kwargs["description"]
     method = None if "method" not in kwargs else kwargs["method"]
+    session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
 
     try:
         datastore_client = ManagerFactory().create_auth_manager(environment).datastore_admin_instance()
@@ -104,6 +109,7 @@ def log_error(**kwargs):
             "error_code": error_code,
             "description": description,
             "method": method,
+            "session_report_id": session_report_id,
         }).execute()
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")

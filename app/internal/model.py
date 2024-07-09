@@ -27,13 +27,6 @@ class SessionNotesUpdate(BaseModel):
     datastore_access_token: str
     datastore_refresh_token: str
 
-class SessionNotesDelete(BaseModel):
-    patient_id: str
-    therapist_id: str
-    session_notes_id: str
-    datastore_access_token: str
-    datastore_refresh_token: str
-
 class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str

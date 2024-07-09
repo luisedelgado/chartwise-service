@@ -8,7 +8,7 @@ from ..service_coordinator import EndpointServiceCoordinator
 FAKE_AUTH_COOKIE = "my-auth-cookie"
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
-FAKE_SESSION_REPORT_ID = "5245b72e-abbb-bg14-96a6-ccbf69756942fb"
+FAKE_SESSION_REPORT_ID = "09b6da8d-a58e-45e2-9022-7d58ca02266b"
 FAKE_REFRESH_TOKEN = "refreshToken"
 FAKE_ACCESS_TOKEN = "accessToken"
 ENVIRONMENT = "testing"
@@ -152,5 +152,42 @@ class TestingHarnessAssistantRouter:
                                         "datastore_access_token": FAKE_ACCESS_TOKEN,
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                         "source": "manual_input"
+                                    })
+        assert response.status_code == 200
+
+    def test_delete_session_with_invalid_auth(self):
+        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
+                                      params={
+                                          "session_report_id": FAKE_SESSION_REPORT_ID,
+                                      })
+        assert response.status_code == 401
+
+    def test_delete_session_with_valid_auth_but_empty_session_notes_id(self):
+        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
+                                      cookies={
+                                          "authorization": FAKE_AUTH_COOKIE,
+                                      },
+                                      params={
+                                          "session_report_id": "",
+                                      })
+        assert response.status_code == 400
+
+    def test_delete_session_with_valid_auth_but_invalid_session_notes_id(self):
+        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    params={
+                                        "session_report_id": "4123sdggsdgsdgdsgsdg",
+                                    })
+        assert response.status_code == 400
+
+    def test_delete_session_success(self):
+        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
+                                   cookies={
+                                       "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    params={
+                                        "session_report_id": FAKE_SESSION_REPORT_ID,
                                     })
         assert response.status_code == 200

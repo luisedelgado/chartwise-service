@@ -7,7 +7,6 @@ from ...internal.model import (AssistantQuery,
                                QuestionSuggestionsParams,
                                PatientDeletePayload,
                                SessionHistorySummary,
-                               SessionNotesDelete,
                                SessionNotesInsert,
                                SessionNotesUpdate,
                                SummaryConfiguration,
@@ -70,19 +69,21 @@ class AssistantManager(AssistantManagerBaseClass):
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesDelete):
+                       session_report_id: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client = auth_manager.datastore_admin_instance()
 
-            delete_result = datastore_client.table('session_reports').delete().eq('id', body.session_notes_id).execute()
+            delete_result = datastore_client.table('session_reports').delete().eq('id', session_report_id).execute()
+            delete_result_dict = delete_result.dict()
 
-            session_date_raw = delete_result.dict()['data'][0]['session_date']
+            therapist_id = delete_result_dict['data'][0]['therapist_id']
+            patient_id = delete_result_dict['data'][0]['patient_id']
+            session_date_raw = delete_result_dict['data'][0]['session_date']
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
             # Delete vector embeddings
-            vector_writer.delete_session_vectors(index_id=body.therapist_id,
-                                                 namespace=body.patient_id,
+            vector_writer.delete_session_vectors(index_id=therapist_id,
+                                                 namespace=patient_id,
                                                  date=session_date_formatted)
         except Exception as e:
             raise Exception(e)
