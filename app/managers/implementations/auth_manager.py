@@ -1,8 +1,7 @@
 import jwt, logging, os, requests, uuid
 
 from datetime import datetime, timedelta, timezone
-from fastapi import Cookie, Depends, HTTPException, status, Request, Response
-from jwt.exceptions import InvalidTokenError
+from fastapi import Cookie, HTTPException, status, Request, Response
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 from supabase import create_client, Client
@@ -10,7 +9,7 @@ from typing import Annotated, Union
 
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import SessionRefreshData
-from ...internal.security import OAUTH2_SCHEME, Token, User, UserInDB, users_db
+from ...internal.security import Token
 
 class AuthManager(AuthManagerBaseClass):
 
@@ -23,25 +22,6 @@ class AuthManager(AuthManagerBaseClass):
         logging.getLogger('passlib').setLevel(logging.ERROR)
 
     # Authentication
-
-    def verify_password(self, plain_password, hashed_password):
-        return self._pwd_context.verify(plain_password, hashed_password)
-
-    def get_password_hash(self, password):
-        return self._pwd_context.hash(password)
-
-    def get_entity(self, db, username: str):
-        if username in db:
-            user_dict = db[username]
-            return UserInDB(**user_dict)
-
-    def authenticate_entity(self, fake_db, username: str, password: str):
-        user = self.get_entity(fake_db, username)
-        if not user:
-            return False
-        if not self.verify_password(password, user.hashed_password):
-            return False
-        return user
 
     def authenticate_datastore_user(self,
                                     user_id: str,
@@ -81,30 +61,6 @@ class AuthManager(AuthManagerBaseClass):
         token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
                                                        tz=timezone.utc)
         return (token_expiration_date > datetime.now(timezone.utc))
-
-    async def get_current_auth_entity(self, token: Annotated[str, Depends(OAUTH2_SCHEME)]):
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            username: str = payload.get("sub")
-            if username is None:
-                raise credentials_exception
-        except InvalidTokenError:
-            raise credentials_exception
-        user = self.get_entity(users_db, username=username)
-        if user is None:
-            raise credentials_exception
-        return user
-
-    async def get_current_active_auth_entity(self,
-                                             current_auth_entity: Annotated[User, Depends(get_current_auth_entity)]):
-        if current_auth_entity.disabled:
-            raise HTTPException(status_code=400, detail="Inactive user")
-        return current_auth_entity
 
     def update_auth_token_for_entity(self, user_id: str, response: Response):
         if not user_id:

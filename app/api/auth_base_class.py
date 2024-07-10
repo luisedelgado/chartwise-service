@@ -1,56 +1,15 @@
 from abc import ABC
 from datetime import timedelta
 
-from fastapi import Cookie, Depends, Request, Response
+from fastapi import Cookie, Request, Response
 from supabase import Client
 from typing import Annotated, Union
 
 from ..internal.model import SessionRefreshData
-from ..internal.security import OAUTH2_SCHEME, User
 
 class AuthManagerBaseClass(ABC):
 
     # Authentication
-
-    """
-    Returns a flag determining if the password matches the hashed password.
-
-    Arguments:
-    password – the password to be verified.
-    hashed_password – the hashed password to be used as a benchmark.
-    """
-    def verify_password(self, plain_password, hashed_password):
-        pass
-
-    """
-    Returns the password hash from the incoming password.
-
-    Arguments:
-    password – the password to be hashed.
-    """
-    def get_password_hash(self, password):
-        pass
-
-    """
-    Returns the full entity from the incoming username.
-
-    Arguments:
-    db – the db where the entity will be queried for.
-    username – the username to be used for querying.
-    """
-    def get_entity(self, db, username: str):
-        pass
-
-    """
-    Authenticates an entity.
-
-    Arguments:
-    db – the db against which authentication will be attempted.
-    username – the username to be used for authentication.
-    password – the password to be used for authentication.
-    """
-    def authenticate_entity(self, db, username: str, password: str):
-        pass
 
     """
     Authenticates a datastore user.
@@ -85,26 +44,6 @@ class AuthManagerBaseClass(ABC):
     access_token – the token to be validated.
     """
     def access_token_is_valid(self, access_token: str) -> bool:
-        pass
-
-    """
-    Returns the current auth entity.
-
-    Arguments:
-    token – the current alive token that's being used in the session.
-    """
-    async def get_current_auth_entity(self, token: Annotated[str, Depends(OAUTH2_SCHEME)]):
-        pass
-
-    """
-    Returns the currently active auth entity.
-
-    Arguments:
-    user – the user for whom to refresh the session.
-    current_auth_entity – the current auth entity (to be determined if active or not).
-    """
-    async def get_current_active_auth_entity(self,
-                                             current_auth_entity: Annotated[User, Depends(get_current_auth_entity)]):
         pass
 
     """
