@@ -129,9 +129,6 @@ class TherapistUpdatePayload(BaseModel):
     language_code_preference: str
     gender: Gender
 
-class TherapistDeletePayload(BaseModel):
-    id: str
-
 class SessionRefreshData():
     def __init__(self, session_id, auth_token, datastore_access_token = None, datastore_refresh_token = None):
         self._session_id = session_id

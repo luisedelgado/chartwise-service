@@ -16,6 +16,9 @@ class FakeAuthWrapper:
         self.fake_refresh_token = fake_refresh_token
         self.fake_user_id = fake_user_id
 
+    def sign_out(self):
+        pass
+
     def sign_up(self, obj: dict):
         # with requests_mock.Mocker() as mock:
         #     url = 'https://api.example.com/data'
@@ -58,6 +61,9 @@ class FakeSupabaseTable:
         return FakeSupabaseOperationResult()
 
     def update(self, obj: dict):
+        return FakeSupabaseOperationResult()
+
+    def delete(self):
         return FakeSupabaseOperationResult()
 
 class FakeSupabaseClient(Client):

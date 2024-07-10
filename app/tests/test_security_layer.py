@@ -311,3 +311,34 @@ class TestingHarnessSecurityRouter:
         assert "authorization=" in cookie_header
         assert "session_id=" in cookie_header
         assert "expires=" in cookie_header or "Max-Age=0" in cookie_header
+
+    def test_delete_therapist_with_invalid_credentials(self):
+        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
+                                      params={
+                                          "id": FAKE_THERAPIST_ID,
+                                          })
+        assert response.status_code == 401
+
+    def test_delete_therapist_with_empty_id(self):
+        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
+                                        cookies={
+                                            "authorization": FAKE_AUTH_COOKIE,
+                                            "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                            "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                        },
+                                        params={
+                                            "id": "",
+                                        })
+        assert response.status_code == 400
+
+    def test_delete_therapist_success(self):
+        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
+                                        cookies={
+                                            "authorization": FAKE_AUTH_COOKIE,
+                                            "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                            "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                        },
+                                        params={
+                                            "id": FAKE_THERAPIST_ID,
+                                        })
+        assert response.status_code == 200
