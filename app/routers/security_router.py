@@ -7,7 +7,7 @@ from fastapi import (APIRouter,
                      Request,
                      Response,
                      status,)
-from langcodes import Language
+from langcodes import Language, tag_parser
 from supabase import Client
 from typing import Annotated, Union
 
@@ -227,7 +227,7 @@ class SecurityRouter:
 
         try:
             assert body.signup_mechanism != model.SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
-            assert body.gender.value != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
@@ -254,7 +254,7 @@ class SecurityRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) == AssertionError else status.HTTP_417_EXPECTATION_FAILED
+            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError or type(e) == tag_parser.LanguageTagError) else status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,
@@ -327,7 +327,7 @@ class SecurityRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError or type(e) == tag_parser.LanguageTagError) else status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,

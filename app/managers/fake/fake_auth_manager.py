@@ -18,7 +18,10 @@ class FakeAuthManager(AuthManagerBaseClass):
     FAKE_HASHED_PASSWORD = "myHashedPassword"
     FAKE_FULL_NAME = "John Doe"
     FAKE_USERNAME = "myfakeusername"
+    FAKE_USER_ID = "ffc1b533-304e-4a33-98ba-541fdd956c1f"
     FAKE_EMAIL = "johndoe@fakeemail.fake"
+    FAKE_DATASTORE_ACCESS_TOKEN = "fakeDatastoreAccessToken"
+    FAKE_DATASTORE_REFRESH_TOKEN = "fakeDatastoreRefreshToken"
     FAKE_USER_IN_DB = UserInDB(username=FAKE_USERNAME,
                             email=FAKE_EMAIL,
                             full_name=FAKE_FULL_NAME,
@@ -55,7 +58,9 @@ class FakeAuthManager(AuthManagerBaseClass):
                                     user_id: str,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str) -> bool:
-        pass
+        return (user_id == self.FAKE_USER_ID and
+                datastore_access_token == self.FAKE_DATASTORE_ACCESS_TOKEN and
+                datastore_refresh_token == self.FAKE_DATASTORE_REFRESH_TOKEN)
 
     def create_access_token(self,
                             _: dict,
@@ -87,12 +92,21 @@ class FakeAuthManager(AuthManagerBaseClass):
                         httponly=True,
                         secure=True,
                         samesite="none")
-
         response.set_cookie(key="authorization",
                         value=self.FAKE_AUTH_TOKEN,
                         httponly=True,
                         secure=True,
                         samesite="none")
+        response.set_cookie(key="datastore_access_token",
+                            value=self.FAKE_DATASTORE_ACCESS_TOKEN,
+                            httponly=True,
+                            secure=True,
+                            samesite="none")
+        response.set_cookie(key="datastore_refresh_token",
+                            value=self.FAKE_DATASTORE_REFRESH_TOKEN,
+                            httponly=True,
+                            secure=True,
+                            samesite="none")
 
         token = Token(access_token=self.FAKE_AUTH_TOKEN, token_type="bearer")
         return SessionRefreshData(session_id=self.FAKE_SESSION_ID,

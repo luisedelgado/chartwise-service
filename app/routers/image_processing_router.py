@@ -169,7 +169,7 @@ class ImageProcessingRouter:
             return {"extraction": full_text}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
+            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError) else status.HTTP_417_EXPECTATION_FAILED
             logging.log_error(session_id=session_id,
                             therapist_id=body.therapist_id,
                             patient_id=body.patient_id,

@@ -47,8 +47,8 @@ class FakeSupabaseOperationResult:
     def execute(self):
         pass
 
-    def eq(left, right):
-        pass
+    def eq(self, left, right):
+        return FakeSupabaseOperationResult()
 
 class FakeSupabaseTable:
     def __init__(self, table_name: str):
