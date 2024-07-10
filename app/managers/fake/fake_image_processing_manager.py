@@ -14,6 +14,5 @@ class FakeImageProcessingManager(ImageProcessingManagerBaseClass):
         return self.FAKE_DOCUMENT_ID
 
     def extract_text(self, document_id: str) -> str:
-        if document_id != self.FAKE_DOCUMENT_ID:
-            raise Exception("Invalid document id")
+        assert document_id == self.FAKE_DOCUMENT_ID, "Invalid document id"
         return self.FAKE_TEXTRACT_RESULT

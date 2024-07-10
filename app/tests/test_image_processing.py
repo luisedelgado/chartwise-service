@@ -70,8 +70,10 @@ class TestingHarnessImageProcessingRouter:
                                         },
                                         cookies={
                                             "authorization": FAKE_AUTH_COOKIE,
-                                        })
-        assert response.status_code == 409
+                                            "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                            "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                        },)
+        assert response.status_code == 400
 
     def test_invoke_textraction_with_auth_but_invalid_doc_id(self):
         response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
@@ -82,8 +84,10 @@ class TestingHarnessImageProcessingRouter:
                                 },
                                 cookies={
                                     "authorization": FAKE_AUTH_COOKIE,
-                                })
-        assert response.status_code == 409
+                                    "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                    "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                },)
+        assert response.status_code == 400
 
     def test_invoke_textraction_with_auth_and_valid_doc_id(self):
         response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
