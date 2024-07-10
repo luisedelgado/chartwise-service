@@ -363,7 +363,7 @@ class SecurityRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         if len(id or '') == 0:
-            raise HTTPException(detail="Invalid id to be deleted", status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(detail="Invalid or empty id to be deleted", status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
             session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=id,
