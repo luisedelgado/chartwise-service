@@ -11,6 +11,7 @@ from ...internal.model import (AssistantQuery,
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
+    FAKE_SESSION_NOTES_ID = "8fc1b533-304e-4a33-98ba-541fdd956c1f"
     fake_processed_diarization_result: str = None
     fake_insert_text: str = None
 

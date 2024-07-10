@@ -377,6 +377,7 @@ class AssistantRouter:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
+                                therapist_id=therapist_id,
                                 session_report_id=session_report_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
                                 method=logging.API_METHOD_DELETE)
@@ -388,30 +389,33 @@ class AssistantRouter:
             description = str(e)
             status_code = status.HTTP_400_BAD_REQUEST
             logging.log_error(session_id=session_id,
-                            session_report_id=session_report_id,
-                            endpoint_name=self.SESSIONS_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_DELETE)
+                              therapist_id=therapist_id,
+                              session_report_id=session_report_id,
+                              endpoint_name=self.SESSIONS_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=logging.API_METHOD_DELETE)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
         try:
+            assert len(therapist_id or '') > 0, "Received invalid therapist_id param"
             self._assistant_manager.delete_session(auth_manager=self._auth_manager,
                                                    session_report_id=session_report_id,
                                                    datastore_access_token=datastore_access_token,
                                                    datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
-                                    session_report_id=session_report_id,
-                                    endpoint_name=self.SESSIONS_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_DELETE)
+                                     therapist_id=therapist_id,
+                                     session_report_id=session_report_id,
+                                     endpoint_name=self.SESSIONS_ENDPOINT,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_DELETE)
 
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
             logging.log_error(session_id=session_id,
                             session_report_id=session_report_id,
                             endpoint_name=self.SESSIONS_ENDPOINT,

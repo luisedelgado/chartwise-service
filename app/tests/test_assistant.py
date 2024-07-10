@@ -46,14 +46,14 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                         "source": "manual_input"
                                     })
         assert response.status_code == 400
@@ -62,14 +62,14 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01/01/2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "date": "01-01-2020",
                                         "source": "undefined"
                                     })
         assert response.status_code == 400
@@ -96,98 +96,120 @@ class TestingHarnessAssistantRouter:
 
     def test_update_session_with_invalid_auth(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
-                               json={
-                                   "session_notes_id": FAKE_SESSION_REPORT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
-                                   "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                   "date": "01-01-2020",
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                   "source": "manual_input"
-                               })
+                                    json={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01-01-2020",
+                                        "source": "manual_input",
+                                        "session_notes_id": self.assistant_manager.FAKE_SESSION_NOTES_ID
+                                    })
         assert response.status_code == 401
 
     def test_update_session_with_valid_auth_but_invalid_date_format(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                        "source": "manual_input"
+                                        "source": "manual_input",
+                                        "session_notes_id": self.assistant_manager.FAKE_SESSION_NOTES_ID
                                     })
         assert response.status_code == 400
 
     def test_update_session_with_valid_auth_but_undefined_source(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
-                                   cookies={
-                                       "authorization": FAKE_AUTH_COOKIE,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                        "source": "undefined"
+                                        "source": "undefined",
+                                        "session_notes_id": self.assistant_manager.FAKE_SESSION_NOTES_ID
                                     })
         assert response.status_code == 400
 
     def test_update_session_success(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
-                                   cookies={
-                                       "authorization": FAKE_AUTH_COOKIE,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID,
+                                        "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                        "source": "manual_input"
+                                        "source": "manual_input",
+                                        "session_notes_id": self.assistant_manager.FAKE_SESSION_NOTES_ID
                                     })
         assert response.status_code == 200
 
     def test_delete_session_with_invalid_auth(self):
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                      params={
-                                          "session_report_id": FAKE_SESSION_REPORT_ID,
-                                      })
+                                        params={
+                                            "session_report_id": FAKE_SESSION_REPORT_ID,
+                                        })
         assert response.status_code == 401
 
     def test_delete_session_with_valid_auth_but_empty_session_notes_id(self):
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                      cookies={
-                                          "authorization": FAKE_AUTH_COOKIE,
-                                      },
-                                      params={
-                                          "session_report_id": "",
-                                      })
+                                        cookies={
+                                            "authorization": FAKE_AUTH_COOKIE,
+                                            "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                            "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                        },
+                                        params={
+                                            "session_report_id": "",
+                                        })
         assert response.status_code == 400
 
     def test_delete_session_with_valid_auth_but_invalid_session_notes_id(self):
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     params={
                                         "session_report_id": "4123sdggsdgsdgdsgsdg",
                                     })
         assert response.status_code == 400
 
-    def test_delete_session_success(self):
+    def test_delete_session_with_valid_auth_but_invalid_therapist_id(self):
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                   cookies={
-                                       "authorization": FAKE_AUTH_COOKIE,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                     },
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID,
+                                        "therapist_id": ""
+                                    })
+        assert response.status_code == 400
+
+    def test_delete_session_success(self):
+        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "session_report_id": FAKE_SESSION_REPORT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 200
