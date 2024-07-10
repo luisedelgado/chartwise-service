@@ -75,7 +75,7 @@ class TestingHarnessAudioProcessingRouter:
                                files=files)
         assert response.status_code == 401
 
-    def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
+    def test_invoke_diarization_with_valid_auth_token_but_invalid_date_format(self):
         files = {
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
@@ -88,6 +88,24 @@ class TestingHarnessAudioProcessingRouter:
                                files=files,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
+                               })
+        assert response.status_code == 401
+
+    def test_invoke_diarization_with_valid_tokens_but_invalid_date_format(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10/24/2020",
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": FAKE_AUTH_COOKIE,
+                                   "datastore_access_token": FAKE_AUTH_COOKIE,
+                                   "datastore_refresh_token": FAKE_AUTH_COOKIE,
                                })
         assert response.status_code == 409
 
@@ -104,6 +122,8 @@ class TestingHarnessAudioProcessingRouter:
                                files=files,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
+                                   "datastore_access_token": FAKE_AUTH_COOKIE,
+                                   "datastore_refresh_token": FAKE_AUTH_COOKIE,
                                })
         assert response.status_code == 200
         assert response.json() == {"job_id": self.audio_processing_manager.FAKE_JOB_ID}

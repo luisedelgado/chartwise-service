@@ -19,9 +19,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the data associated with the session.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def process_new_session_data(auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert):
+                                 body: SessionNotesInsert,
+                                 datastore_access_token: str,
+                                 datastore_refresh_token: str):
         pass
     
     """
@@ -30,9 +34,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the new data associated with the session.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def update_session(auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate):
+                       body: SessionNotesUpdate,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         pass
 
     """
@@ -41,9 +49,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     session_report_id – the id associated with the session to be deleted.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def delete_session(auth_manager: AuthManagerBaseClass,
-                       session_report_id: str):
+                       session_report_id: str,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         pass
 
     """
@@ -75,7 +87,8 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     endpoint_name – the endpoint name that triggered this query.
     environment – the current running environment.
-    auth_entity – the auth entity that enabled the incoming request.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def query_session(auth_manager: AuthManagerBaseClass,
                       query: AssistantQuery,
@@ -83,7 +96,8 @@ class AssistantManagerBaseClass(ABC):
                       api_method: str,
                       endpoint_name: str,
                       environment: str,
-                      auth_entity: str):
+                      datastore_access_token: str,
+                      datastore_refresh_token: str):
         pass
 
     """
@@ -96,7 +110,8 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     environment – the current running environment.
     auth_manager – the auth_manager to be leveraged.
-    auth_entity – the auth entity that enabled the incoming request.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def fetch_todays_greeting(body: Greeting,
                               session_id: str,
@@ -104,7 +119,8 @@ class AssistantManagerBaseClass(ABC):
                               api_method: str,
                               environment: str,
                               auth_manager: AuthManagerBaseClass,
-                              auth_entity: str):
+                              datastore_access_token: str,
+                              datastore_refresh_token: str):
         pass
 
     """
@@ -117,8 +133,9 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    auth_entity – the auth entity that enabled the incoming request.
-    configuration – the configuration for creating the summary.]
+    configuration – the configuration for creating the summary.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def create_patient_summary(body: SessionHistorySummary,
                                auth_manager: AuthManagerBaseClass,
@@ -126,8 +143,9 @@ class AssistantManagerBaseClass(ABC):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str,
-                               configuration: SummaryConfiguration):
+                               configuration: SummaryConfiguration,
+                               datastore_access_token: str,
+                               datastore_refresh_token: str):
         pass
 
     """
@@ -140,7 +158,8 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    auth_entity – the auth entity that enabled the incoming request.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
     """
     def fetch_question_suggestions(body: QuestionSuggestionsParams,
                                    auth_manager: AuthManagerBaseClass,
@@ -148,7 +167,8 @@ class AssistantManagerBaseClass(ABC):
                                    session_id: str,
                                    endpoint_name: str,
                                    api_method: str,
-                                   auth_entity: str):
+                                   datastore_access_token: str,
+                                   datastore_refresh_token: str):
         pass
 
     """

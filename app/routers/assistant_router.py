@@ -3,6 +3,7 @@ import uuid
 from fastapi import (APIRouter,
                      Cookie,
                      HTTPException,
+                     Request,
                      Response,
                      status,)
 from supabase import Client
@@ -39,101 +40,163 @@ class AssistantRouter:
     def _register_routes(self):
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def insert_new_session(body: model.SessionNotesInsert,
+                                     request: Request,
                                      response: Response,
+                                     datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._insert_new_session_internal(body=body,
+                                                           request=request,
                                                            response=response,
+                                                           datastore_access_token=datastore_access_token,
+                                                           datastore_refresh_token=datastore_refresh_token,
                                                            authorization=authorization,
                                                            current_session_id=current_session_id)
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_session(body: model.SessionNotesUpdate,
+                                 request: Request,
                                  response: Response,
+                                 datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_session_internal(body=body,
                                                        response=response,
+                                                       request=request,
+                                                       datastore_access_token=datastore_access_token,
+                                                       datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_session(response: Response,
+                                 request: Request,
+                                 therapist_id: str = None,
                                  session_report_id: str = None,
+                                 datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_session_internal(session_report_id=session_report_id,
+            return await self._delete_session_internal(therapist_id=therapist_id,
+                                                       session_report_id=session_report_id,
                                                        response=response,
+                                                       request=request,
+                                                       datastore_access_token=datastore_access_token,
+                                                       datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def execute_assistant_query(query: model.AssistantQuery,
                                           response: Response,
+                                          request: Request,
+                                          datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                          datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._execute_assistant_query_internal(query=query,
+                                                                request=request,
                                                                 response=response,
+                                                                datastore_access_token=datastore_access_token,
+                                                                datastore_refresh_token=datastore_refresh_token,
                                                                 authorization=authorization,
                                                                 current_session_id=current_session_id)
 
         @self.router.post(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
+                                 request: Request,
                                  body: model.Greeting,
+                                 datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_greeting_internal(response=response,
+                                                       request=request,
                                                        body=body,
+                                                       datastore_access_token=datastore_access_token,
+                                                       datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
         @self.router.post(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_presession_tray(response: Response,
+                                        request: Request,
                                         body: model.SessionHistorySummary,
+                                        datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
                                         current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_presession_tray_internal(response=response,
+                                                              request=request,
                                                               body=body,
+                                                              datastore_access_token=datastore_access_token,
+                                                              datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
                                                               current_session_id=current_session_id)
 
         @self.router.post(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_question_suggestions(response: Response,
+                                             request: Request,
                                              body: model.QuestionSuggestionsParams,
+                                             datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
                                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_question_suggestions_internal(response=response,
+                                                                   request=request,
                                                                    body=body,
+                                                                   datastore_access_token=datastore_access_token,
+                                                                   datastore_refresh_token=datastore_refresh_token,
                                                                    authorization=authorization,
                                                                    current_session_id=current_session_id)
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
+                              request: Request,
                               body: model.PatientInsertPayload,
+                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                               authorization: Annotated[Union[str, None], Cookie()] = None,
                               current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(response=response,
+                                                    request=request,
                                                     body=body,
+                                                    datastore_access_token=datastore_access_token,
+                                                    datastore_refresh_token=datastore_refresh_token,
                                                     authorization=authorization,
                                                     current_session_id=current_session_id)
 
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
-                              body: model.PatientUpdatePayload,
-                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 request: Request,
+                                 body: model.PatientUpdatePayload,
+                                 datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
+                                 authorization: Annotated[Union[str, None], Cookie()] = None,
+                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(response=response,
+                                                       request=request,
                                                        body=body,
+                                                       datastore_access_token=datastore_access_token,
+                                                       datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(response: Response,
+                                 request: Request,
                                  body: model.PatientDeletePayload,
+                                 datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(response=response,
+                                                       request=request,
                                                        body=body,
+                                                       datastore_access_token=datastore_access_token,
+                                                       datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
@@ -141,22 +204,31 @@ class AssistantRouter:
     Stores a new session report.
 
     Arguments:
-    body – the incoming request body.
+    body – the incoming request json body.
+    request – the incoming request object.
     response – the response model with which to create the final response.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _insert_new_session_internal(self,
                                            body: model.SessionNotesInsert,
+                                           request: Request,
                                            response: Response,
+                                           datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                            authorization: Annotated[Union[str, None], Cookie()],
                                            current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -167,14 +239,16 @@ class AssistantRouter:
                                 patient_id=body.patient_id,
                                 therapist_id=body.therapist_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=logging.API_METHOD_POST,
-                                auth_entity=current_entity.username)
+                                method=logging.API_METHOD_POST,)
 
         try:
             assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. The expected format is mm-dd-yyyy"
 
-            self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager, body=body)
+            self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
+                                                             body=body,
+                                                             datastore_access_token=datastore_access_token,
+                                                             datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -202,21 +276,30 @@ class AssistantRouter:
 
     Arguments:
     body – the incoming request body.
+    request – the incoming request object.
     response – the response model with which to create the final response.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _update_session_internal(self,
                                        body: model.SessionNotesUpdate,
+                                       request: Request,
                                        response: Response,
+                                       datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                       datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -226,14 +309,16 @@ class AssistantRouter:
         logging.log_api_request(session_id=session_id,
                                 therapist_id=body.therapist_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=logging.API_METHOD_PUT,
-                                auth_entity=current_entity.username)
+                                method=logging.API_METHOD_PUT)
 
         try:
             assert datetime_handler.is_valid_date(body.date), "Received invalid date"
             assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            self._assistant_manager.update_session(auth_manager=self._auth_manager, body=body)
+            self._assistant_manager.update_session(auth_manager=self._auth_manager,
+                                                   body=body,
+                                                   datastore_access_token=datastore_access_token,
+                                                   datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -258,22 +343,33 @@ class AssistantRouter:
     Deletes a session report.
 
     Arguments:
-    body – the incoming request body.
+    therapist_id – the therapist id associated with the session report to be deleted.
+    session_report_id – the id for the incoming session report.
+    request – the incoming request object.
     response – the response model with which to create the final response.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _delete_session_internal(self,
+                                       therapist_id: str,
                                        session_report_id: str,
+                                       request: Request,
                                        response: Response,
+                                       datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                       datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -283,8 +379,7 @@ class AssistantRouter:
         logging.log_api_request(session_id=session_id,
                                 session_report_id=session_report_id,
                                 endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=logging.API_METHOD_DELETE,
-                                auth_entity=current_entity.username)
+                                method=logging.API_METHOD_DELETE)
 
         try:
             assert len(session_report_id or '') > 0, "Received invalid session_report_id"
@@ -303,7 +398,9 @@ class AssistantRouter:
 
         try:
             self._assistant_manager.delete_session(auth_manager=self._auth_manager,
-                                                   session_report_id=session_report_id)
+                                                   session_report_id=session_report_id,
+                                                   datastore_access_token=datastore_access_token,
+                                                   datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                     session_report_id=session_report_id,
@@ -330,21 +427,30 @@ class AssistantRouter:
 
     Arguments:
     query – the query that will be executed.
+    request – the incoming request object.
     response – the response model with which to create the final response.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
                                                 query: model.AssistantQuery,
+                                                request: Request,
                                                 response: Response,
+                                                datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                 authorization: Annotated[Union[str, None], Cookie()],
                                                 current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=query.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -355,8 +461,7 @@ class AssistantRouter:
                                 therapist_id=query.therapist_id,
                                 patient_id=query.patient_id,
                                 endpoint_name=self.QUERIES_ENDPOINT,
-                                method=logging.API_METHOD_POST,
-                                auth_entity=current_entity.username)
+                                method=logging.API_METHOD_POST)
 
         try:
             response = self._assistant_manager.query_session(auth_manager=self._auth_manager,
@@ -365,7 +470,8 @@ class AssistantRouter:
                                                              api_method=logging.API_METHOD_POST,
                                                              endpoint_name=self.QUERIES_ENDPOINT,
                                                              environment=self._environment,
-                                                             auth_entity=current_entity.username)
+                                                             datastore_access_token=datastore_access_token,
+                                                             datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                             therapist_id=query.therapist_id,
@@ -391,21 +497,30 @@ class AssistantRouter:
 
     Arguments:
     response – the response model used for the final response that will be returned.
+    request – the incoming request object.
     body – the json body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _fetch_greeting_internal(self,
                                        response: Response,
+                                       request: Request,
                                        body: model.Greeting,
+                                       datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                       datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -417,7 +532,6 @@ class AssistantRouter:
                                 method=logging.API_METHOD_POST,
                                 therapist_id=body.therapist_id,
                                 endpoint_name=self.GREETINGS_ENDPOINT,
-                                auth_entity=current_entity.username,
                                 description=logs_description)
 
         try:
@@ -429,7 +543,8 @@ class AssistantRouter:
                                                                    api_method=logging.API_METHOD_POST,
                                                                    environment=self._environment,
                                                                    auth_manager=self._auth_manager,
-                                                                   auth_entity=current_entity.username)
+                                                                   datastore_access_token=datastore_access_token,
+                                                                   datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,
@@ -455,21 +570,30 @@ class AssistantRouter:
 
     Arguments:
     response – the response model used for the final response that will be returned.
+    request – the incoming request object.
     body – the json body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
+                                              request: Request,
                                               body: model.SessionHistorySummary,
+                                              datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
                                               current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -480,8 +604,7 @@ class AssistantRouter:
                                 method=logging.API_METHOD_POST,
                                 therapist_id=body.therapist_id,
                                 patient_id=body.patient_id,
-                                endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
 
         try:
             assert body.summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
@@ -492,8 +615,9 @@ class AssistantRouter:
                                                                            endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                            api_method=logging.API_METHOD_POST,
                                                                            auth_manager=self._auth_manager,
-                                                                           auth_entity=current_entity.username,
-                                                                           configuration=body.summary_configuration)
+                                                                           configuration=body.summary_configuration,
+                                                                           datastore_access_token=datastore_access_token,
+                                                                           datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
@@ -513,17 +637,35 @@ class AssistantRouter:
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
+    """
+    Returns a set of question suggestions based on the incoming patient context.
+
+    Arguments:
+    response – the response model used for the final response that will be returned.
+    request – the incoming request object.
+    body – the json body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
+    authorization – the authorization cookie, if exists.
+    current_session_id – the session_id cookie, if exists.
+    """
     async def _fetch_question_suggestions_internal(self,
                                                    response: Response,
+                                                   request: Request,
                                                    body: model.QuestionSuggestionsParams,
+                                                   datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                    authorization: Annotated[Union[str, None], Cookie()],
                                                    current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -534,8 +676,7 @@ class AssistantRouter:
                                 method=logging.API_METHOD_POST,
                                 therapist_id=body.therapist_id,
                                 patient_id=body.patient_id,
-                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
 
         try:
             json_questions = self._assistant_manager.fetch_question_suggestions(body=body,
@@ -544,7 +685,8 @@ class AssistantRouter:
                                                                                 session_id=session_id,
                                                                                 endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                                                                                 api_method=logging.API_METHOD_POST,
-                                                                                auth_entity=current_entity.username)
+                                                                                datastore_access_token=datastore_access_token,
+                                                                                datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
@@ -570,21 +712,30 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
+    request – the incoming request object.
     body – the body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _add_patient_internal(self,
                                     response: Response,
+                                    request: Request,
                                     body: model.PatientInsertPayload,
+                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                     authorization: Annotated[Union[str, None], Cookie()],
                                     current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -594,16 +745,15 @@ class AssistantRouter:
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
                                 endpoint_name=self.PATIENTS_ENDPOINT,
-                                therapist_id=body.therapist_id,
-                                auth_entity=current_entity.username)
+                                therapist_id=body.therapist_id)
 
         try:
             assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender.value != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
-            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                                  body.datastore_refresh_token)
+            datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
+                                                                                  datastore_refresh_token)
             datastore_client.table('patients').insert({
                 "first_name": body.first_name,
                 "middle_name": body.middle_name,
@@ -619,7 +769,6 @@ class AssistantRouter:
                                      method=logging.API_METHOD_POST,
                                      endpoint_name=self.PATIENTS_ENDPOINT,
                                      therapist_id=body.therapist_id,
-                                     auth_entity=current_entity.username,
                                      http_status_code=status.HTTP_200_OK)
 
             return {}
@@ -640,22 +789,31 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
+    request – the incoming request object.
     body – the body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _update_patient_internal(self,
                                        response: Response,
+                                       request: Request,
                                        body: model.PatientUpdatePayload,
+                                       datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                       datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                                                                       response=response,
+                                                                                                      request=request,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
@@ -665,7 +823,6 @@ class AssistantRouter:
                                 method=logging.API_METHOD_PUT,
                                 endpoint_name=self.PATIENTS_ENDPOINT,
                                 therapist_id=body.therapist_id,
-                                auth_entity=current_entity.username,
                                 patient_id=body.id)
 
         try:
@@ -673,8 +830,8 @@ class AssistantRouter:
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
 
-            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                                  body.datastore_refresh_token)
+            datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
+                                                                                  datastore_refresh_token)
             datastore_client.table('patients').update({
                 "first_name": body.first_name,
                 "middle_name": body.middle_name,
@@ -691,7 +848,6 @@ class AssistantRouter:
                                      endpoint_name=self.PATIENTS_ENDPOINT,
                                      therapist_id=body.therapist_id,
                                      patient_id=body.id,
-                                     auth_entity=current_entity.username,
                                      http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -712,22 +868,31 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
+    request – the incoming request object.
     body – the body associated with the request.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _delete_patient_internal(self,
                                        response: Response,
+                                       request: Request,
                                        body: model.PatientDeletePayload,
+                                       datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                       datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                                                                       response=response,
+                                                                                                      request=request,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
@@ -737,22 +902,19 @@ class AssistantRouter:
                                 method=logging.API_METHOD_DELETE,
                                 endpoint_name=self.PATIENTS_ENDPOINT,
                                 therapist_id=body.therapist_id,
-                                patient_id=body.id,
-                                auth_entity=current_entity.username)
+                                patient_id=body.patient_id,)
 
         try:
-            datastore_client: Client = self._auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                                  body.datastore_refresh_token)
-            datastore_client.table('patients').delete().eq('id', body.id).execute()
-            self._assistant_manager.delete_all_sessions_for_patient(auth_manager=self._auth_manager,
-                                                                    body=body)
+            datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
+                                                                                  datastore_refresh_token)
+            datastore_client.table('patients').delete().eq('id', body.patient_id).execute()
+            self._assistant_manager.delete_all_sessions_for_patient(body=body)
 
             logging.log_api_response(session_id=session_id,
                                      method=logging.API_METHOD_DELETE,
                                      endpoint_name=self.PATIENTS_ENDPOINT,
                                      therapist_id=body.therapist_id,
-                                     patient_id=body.id,
-                                     auth_entity=current_entity.username,
+                                     patient_id=body.patient_id,
                                      http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -762,7 +924,7 @@ class AssistantRouter:
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
                               therapist_id=body.therapist_id,
-                              patient_id=body.id,
+                              patient_id=body.patient_id,
                               description=description,
                               method=logging.API_METHOD_DELETE)
             raise HTTPException(status_code=status_code,

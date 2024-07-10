@@ -33,7 +33,6 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
-    auth_entity – the auth entity who authorized this request.
     """
     def query_store(self,
                     index_id: str,
@@ -46,8 +45,7 @@ class VectorQueryWorker:
                     endpoint_name: str,
                     method: str,
                     environment: str,
-                    auth_manager: AuthManagerBaseClass,
-                    auth_entity: str) -> str:
+                    auth_manager: AuthManagerBaseClass) -> str:
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             assert pc.describe_index(index_id).status['ready']
@@ -68,7 +66,6 @@ class VectorQueryWorker:
                 "session_id": str(session_id),
                 "endpoint_name": endpoint_name,
                 "method": method,
-                "auth_entity": auth_entity,
             }
 
             headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
@@ -108,7 +105,6 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
-    auth_entity – the auth entity who authorized this request.
     """
     def create_greeting(self,
                         therapist_name: str,
@@ -121,7 +117,6 @@ class VectorQueryWorker:
                         method: str,
                         environment: str,
                         auth_manager: AuthManagerBaseClass,
-                        auth_entity: str,
                         ) -> str:
         try:
             caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
@@ -134,7 +129,6 @@ class VectorQueryWorker:
                 "method": method,
                 "tz_identifier": tz_identifier,
                 "language_code": language_code,
-                "auth_entity": auth_entity,
             }
 
             cache_ttl = 86400 # 24 hours
@@ -174,7 +168,6 @@ class VectorQueryWorker:
     session_id – the session id.
     endpoint_name – the endpoint that was invoked.
     method – the API method that was invoked.
-    auth_entity – the auth entity who authorized this request.
     patient_name – the name by which the patient should be referred to.
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
@@ -189,7 +182,6 @@ class VectorQueryWorker:
                        session_id: str,
                        endpoint_name: str,
                        method: str,
-                       auth_entity: str,
                        patient_name: str,
                        patient_gender: str,
                        therapist_name: str,
@@ -218,7 +210,6 @@ class VectorQueryWorker:
                 "endpoint_name": endpoint_name,
                 "method": method,
                 "language_code": language_code,
-                "auth_entity": auth_entity,
             }
 
             cache_ttl = 86400 # 24 hours
@@ -263,7 +254,6 @@ class VectorQueryWorker:
     session_id – the session id.
     endpoint_name – the endpoint that was invoked.
     method – the API method that was invoked.
-    auth_entity – the auth entity who authorized this request.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     auth_manager – the auth manager to be leveraged internally.
@@ -276,7 +266,6 @@ class VectorQueryWorker:
                                     session_id: str,
                                     endpoint_name: str,
                                     method: str,
-                                    auth_entity: str,
                                     patient_name: str,
                                     patient_gender: str,
                                     auth_manager: AuthManagerBaseClass) -> str:
@@ -301,7 +290,6 @@ class VectorQueryWorker:
                 "endpoint_name": endpoint_name,
                 "method": method,
                 "language_code": language_code,
-                "auth_entity": auth_entity,
             }
 
             cache_ttl = 86400 # 24 hours

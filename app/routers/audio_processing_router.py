@@ -11,6 +11,7 @@ from fastapi import (APIRouter,
                      Request,
                      status,
                      UploadFile)
+from supabase import Client
 from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
@@ -43,12 +44,14 @@ class AudioProcessingRouter:
     def _register_routes(self):
         @self.router.post(self.NOTES_TRANSCRIPTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def transcribe_session_notes(response: Response,
+                                           request: Request,
                                            therapist_id: Annotated[str, Form()],
                                            patient_id: Annotated[str, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
+                                                                 request=request,
                                                                  therapist_id=therapist_id,
                                                                  patient_id=patient_id,
                                                                  audio_file=audio_file,
@@ -57,17 +60,23 @@ class AudioProcessingRouter:
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def diarize_session(response: Response,
+                                  request: Request,
                                   session_date: Annotated[str, Form()],
                                   therapist_id: Annotated[str, Form()],
                                   patient_id: Annotated[str, Form()],
                                   audio_file: UploadFile = File(...),
+                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                   current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(response=response,
+                                                        request=request,
                                                         session_date=session_date,
                                                         therapist_id=therapist_id,
                                                         patient_id=patient_id,
                                                         audio_file=audio_file,
+                                                        datastore_access_token=datastore_access_token,
+                                                        datastore_refresh_token=datastore_refresh_token,
                                                         authorization=authorization,
                                                         current_session_id=current_session_id)
 
@@ -80,6 +89,7 @@ class AudioProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
+    request – the incoming request object.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     audio_file – the audio file for which the transcription will be created.
@@ -88,17 +98,18 @@ class AudioProcessingRouter:
     """
     async def _transcribe_session_notes_internal(self,
                                                  response: Response,
+                                                 request: Request,
                                                  therapist_id: Annotated[str, Form()],
                                                  patient_id: Annotated[str, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
                                                  current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -109,8 +120,7 @@ class AudioProcessingRouter:
                                 method=logging.API_METHOD_POST,
                                 therapist_id=therapist_id,
                                 patient_id=patient_id,
-                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
             transcript = await self._audio_processing_manager.transcribe_audio_file(auth_manager=self._auth_manager,
@@ -140,26 +150,35 @@ class AudioProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
+    request – the incoming request object.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     audio_file – the audio file for which the diarized transcription will be created.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     current_session_id – the session_id cookie, if exists.
     """
     async def _diarize_session_internal(self,
                                         response: Response,
+                                        request: Request,
                                         session_date: Annotated[str, Form()],
                                         therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
                                         audio_file: UploadFile,
+                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                         authorization: Annotated[Union[str, None], Cookie()],
                                         current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -170,8 +189,7 @@ class AudioProcessingRouter:
                                 patient_id=patient_id,
                                 therapist_id=therapist_id,
                                 method=logging.API_METHOD_POST,
-                                endpoint_name=self.DIARIZATION_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
             assert datetime_handler.is_valid_date(session_date), "Invalid date format. The expected format is mm-dd-yyyy"
@@ -183,7 +201,8 @@ class AudioProcessingRouter:
                                                                                   endpoint_url=endpoint_url)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            datastore_client = self._auth_manager.datastore_admin_instance()
+            datastore_client: Client = self._auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             datastore_client.table('session_reports').insert({
                 "session_diarization_job_id": job_id,
                 "session_date": session_date,
@@ -219,9 +238,9 @@ class AudioProcessingRouter:
         try:
             authorization = request.headers["authorization"].split()[-1]
             if not self._auth_manager.access_token_is_valid(authorization):
-                raise security.TOKEN_EXPIRED_ERROR
+                raise security.AUTH_TOKEN_EXPIRED_ERROR
         except:
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
             status_code = request.query_params["status"]

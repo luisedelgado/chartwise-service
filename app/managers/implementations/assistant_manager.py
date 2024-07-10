@@ -1,5 +1,8 @@
 from datetime import datetime
 
+from pinecone import NotFoundException
+from supabase import Client
+
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
@@ -19,10 +22,12 @@ class AssistantManager(AssistantManagerBaseClass):
 
     def process_new_session_data(self,
                                  auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert):
+                                 body: SessionNotesInsert,
+                                 datastore_access_token: str,
+                                 datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
@@ -42,17 +47,19 @@ class AssistantManager(AssistantManagerBaseClass):
 
     def update_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate):
+                       body: SessionNotesUpdate,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             update_result = datastore_client.table('session_reports').update({
                 "notes_text": body.text,
                 "last_updated": now_timestamp,
                 "source": body.source.value,
-                "date": body.date,
+                "session_date": body.date,
                 "session_diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
@@ -69,9 +76,12 @@ class AssistantManager(AssistantManagerBaseClass):
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       session_report_id: str):
+                       session_report_id: str,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_admin_instance()
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
 
             delete_result = datastore_client.table('session_reports').delete().eq('id', session_report_id).execute()
             delete_result_dict = delete_result.dict()
@@ -92,8 +102,13 @@ class AssistantManager(AssistantManagerBaseClass):
                                         body: PatientDeletePayload):
         try:
             vector_writer.delete_session_vectors(index_id=body.therapist_id,
-                                                 namespace=body.id)
+                                                 namespace=body.patient_id)
+        except NotFoundException:
+            # Index doesn't exist, failing silently. Patient is being deleted prior to having any
+            # data in our vector db
+            pass
         except Exception as e:
+            foo = type(e)
             raise Exception(e)
 
     def delete_all_sessions_for_therapist(self,
@@ -110,10 +125,11 @@ class AssistantManager(AssistantManagerBaseClass):
                       api_method: str,
                       endpoint_name: str,
                       environment: str,
-                      auth_entity: str):
+                      datastore_access_token: str,
+                      datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(query.datastore_access_token,
-                                                                    query.datastore_refresh_token)
+            datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
+                                                                            datastore_refresh_token)
 
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
             patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
@@ -140,8 +156,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        endpoint_name=endpoint_name,
                                                        method=api_method,
                                                        environment=environment,
-                                                       auth_manager=auth_manager,
-                                                       auth_entity=auth_entity)
+                                                       auth_manager=auth_manager)
 
             return {"response": response}
         except Exception as e:
@@ -154,10 +169,11 @@ class AssistantManager(AssistantManagerBaseClass):
                               api_method: str,
                               environment: str,
                               auth_manager: AuthManagerBaseClass,
-                              auth_entity: str) -> str:
+                              datastore_access_token: str,
+                              datastore_refresh_token: str) -> str:
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
             assert (0 != len((therapist_query).data))
 
@@ -173,8 +189,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                          therapist_id=body.therapist_id,
                                                          method=api_method,
                                                          environment=environment,
-                                                         auth_manager=auth_manager,
-                                                         auth_entity=auth_entity)
+                                                         auth_manager=auth_manager)
             return result
         except Exception as e:
             raise Exception(e)
@@ -186,10 +201,11 @@ class AssistantManager(AssistantManagerBaseClass):
                                    session_id: str,
                                    endpoint_name: str,
                                    api_method: str,
-                                   auth_entity: str):
+                                   datastore_access_token: str,
+                                   datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
 
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
             assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
@@ -213,7 +229,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                        method=api_method,
                                                                        environment=environment,
                                                                        auth_manager=auth_manager,
-                                                                       auth_entity=auth_entity,
                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                        patient_gender=patient_gender)
 
@@ -253,11 +268,12 @@ class AssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str,
-                               configuration: SummaryConfiguration):
+                               configuration: SummaryConfiguration,
+                               datastore_access_token: str,
+                               datastore_refresh_token: str):
         try:
-            datastore_client = auth_manager.datastore_user_instance(body.datastore_access_token,
-                                                                    body.datastore_refresh_token)
+            datastore_client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                    refresh_token=datastore_refresh_token)
             patient_response = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
                                                                                                                     body.patient_id).execute()
             assert (0 != len((patient_response).data)), "There isn't a patient-therapist match with the incoming ids."
@@ -282,7 +298,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         session_id=session_id,
                                                         endpoint_name=endpoint_name,
                                                         method=api_method,
-                                                        auth_entity=auth_entity,
                                                         patient_name=patient_name,
                                                         patient_gender=patient_gender,
                                                         therapist_name=therapist_name,

@@ -17,21 +17,26 @@ class FakeAssistantManager(AssistantManagerBaseClass):
 
     def process_new_session_data(self,
                                  auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert):
+                                 body: SessionNotesInsert,
+                                 datastore_access_token: str,
+                                 datastore_refresh_token: str):
         self.fake_insert_text = body.text
 
     def update_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate):
+                       body: SessionNotesUpdate,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         ...
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
-                       session_report_id: str):
+                       session_report_id: str,
+                       datastore_access_token: str,
+                       datastore_refresh_token: str):
         ...
 
     def delete_all_sessions_for_patient(self,
-                                        auth_manager: AuthManagerBaseClass,
                                         body: PatientDeletePayload):
         ...
 
@@ -46,7 +51,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                       api_method: str,
                       endpoint_name: str,
                       environment: str,
-                      auth_entity: str):
+                      datastore_access_token: str,
+                      datastore_refresh_token: str):
         ...
 
     def fetch_todays_greeting(self,
@@ -56,7 +62,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                               api_method: str,
                               environment: str,
                               auth_manager: AuthManagerBaseClass,
-                              auth_entity: str):
+                              datastore_access_token: str,
+                              datastore_refresh_token: str):
         ...
 
     def create_patient_summary(self,
@@ -66,8 +73,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               auth_entity: str,
-                               configuration: SummaryConfiguration):
+                               configuration: SummaryConfiguration,
+                               datastore_access_token: str,
+                               datastore_refresh_token: str):
         ...
 
     def fetch_question_suggestions(self,
@@ -77,7 +85,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                    session_id: str,
                                    endpoint_name: str,
                                    api_method: str,
-                                   auth_entity: str):
+                                   datastore_access_token: str,
+                                   datastore_refresh_token: str):
         ...
 
     def update_diarization_with_notification_data(self,

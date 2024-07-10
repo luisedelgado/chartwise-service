@@ -1,7 +1,7 @@
 from abc import ABC
 from datetime import timedelta
 
-from fastapi import Cookie, Depends, Response
+from fastapi import Cookie, Depends, Request, Response
 from supabase import Client
 from typing import Annotated, Union
 
@@ -53,6 +53,20 @@ class AuthManagerBaseClass(ABC):
         pass
 
     """
+    Authenticates a datastore user.
+
+    Arguments:
+    user_id – the id associated with the user that's being authenticated.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
+    """
+    def authenticate_datastore_user(self,
+                                    user_id: str,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str) -> bool:
+        pass
+
+    """
     Creates an access token to be used in the session.
 
     Arguments:
@@ -97,23 +111,29 @@ class AuthManagerBaseClass(ABC):
     Refreshes the user's auth token for a continued session experience.
 
     Arguments:
-    user – the user for whom to refresh the session.
+    user_id – the user id for whom to refresh the session.
     response – the model with which to build the API response.
     """
-    def update_auth_token_for_entity(self, user: User, response: Response):
+    def update_auth_token_for_entity(self, user_id: str, response: Response):
         pass
 
     """
     Validates the incoming session cookies.
 
     Arguments:
-    user – the user for whom to refresh the current session.
+    user_id – the user for whom to refresh the current session.
+    request – the incoming request object.
     response – the response object where we can update cookies.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     current_session_id – the session_id cookie to be validated, if exists.
     """
     async def refresh_session(self,
-                              user: User,
+                              user_id: str,
+                              request: Request,
                               response: Response,
+                              datastore_access_token: str = None,
+                              datastore_refresh_token: str = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
         pass
 

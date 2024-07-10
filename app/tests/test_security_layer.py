@@ -27,23 +27,25 @@ class TestingHarnessSecurityRouter:
 
     def test_login_for_token_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                               data={
-                                   "username": "wrongUsername",
-                                   "password": "wrongPassword"
+                               json={
+                                   "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                                   "email": "foo@foo.com"
                                })
         assert response.status_code == 400
 
     def test_login_for_token_with_valid_credentials(self):
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                               data={
-                                   "username": self.auth_manager.FAKE_USERNAME,
-                                   "password": self.auth_manager.FAKE_PASSWORD
+                               json={
+                                   "datastore_access_token": FAKE_DATASTORE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_DATASTORE_REFRESH_TOKEN,
+                                   "email": "foo@foo.com"
                                })
         assert response.status_code == 200
         assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
         assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
 
-    def test_signup_with_invalid_credentials(self):
+    def test_add_therapist_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                json={
                                    "user_email": "foo@foo.com",
@@ -57,7 +59,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 401
 
-    def test_signup_with_valid_credentials_but_invalid_birthdate_format(self):
+    def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
@@ -74,7 +76,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 400
 
-    def test_signup_with_valid_credentials_but_invalid_language_preference(self):
+    def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
@@ -91,7 +93,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 417
 
-    def test_signup_with_valid_credentials_but_invalid_gender_format(self):
+    def test_add_therapist_with_valid_credentials_but_invalid_gender_format(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
@@ -108,7 +110,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 417
 
-    def test_signup_with_valid_credentials_but_undefined_signup_mechanism(self):
+    def test_add_therapist_with_valid_credentials_but_undefined_signup_mechanism(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": FAKE_AUTH_COOKIE,
@@ -125,7 +127,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 400
 
-    def test_signup_with_valid_credentials_but_received_bad_role_from_service(self):
+    def test_add_therapist_with_valid_credentials_but_received_bad_role_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "bad_role"
         self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = "valid_token"
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
@@ -146,7 +148,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 417
 
-    def test_signup_with_valid_credentials_but_received_bad_access_token_from_service(self):
+    def test_add_therapist_with_valid_credentials_but_received_bad_access_token_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "authenticated"
         self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"
@@ -167,7 +169,7 @@ class TestingHarnessSecurityRouter:
                             })
         assert response.status_code == 417
 
-    def test_signup_with_valid_credentials_but_received_bad_refresh_token_from_service(self):
+    def test_add_therapist_with_valid_credentials_but_received_bad_refresh_token_from_service(self):
         self.auth_manager.fake_supabase_client.fake_role = "authenticated"
         self.auth_manager.fake_supabase_client.FAKE_AUTH_TOKEN = ""
         self.auth_manager.fake_supabase_client.fake_refresh_token = "valid_token"

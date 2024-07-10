@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import Cookie, Depends, Response
+from fastapi import Cookie, Depends, Request, Response
 from supabase import Client
 from typing import Annotated, Union
 
@@ -51,6 +51,12 @@ class FakeAuthManager(AuthManagerBaseClass):
                         disabled=False,
                         hashed_password=self.FAKE_HASHED_PASSWORD)
 
+    def authenticate_datastore_user(self,
+                                    user_id: str,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str) -> bool:
+        pass
+
     def create_access_token(self,
                             _: dict,
                             __: Union[timedelta, None] = None):
@@ -66,12 +72,15 @@ class FakeAuthManager(AuthManagerBaseClass):
                                              _: Annotated[User, Depends(get_current_auth_entity)]):
         self.FAKE_USER_IN_DB
 
-    def update_auth_token_for_entity(self, user: User, response: Response):
+    def update_auth_token_for_entity(self, user_id: str, response: Response):
         pass
 
     async def refresh_session(self,
-                              user: User,
+                              user_id: str,
+                              request: Request,
                               response: Response,
+                              datastore_access_token: str = None,
+                              datastore_refresh_token: str = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
         response.set_cookie(key="session_id",
                         value=self.FAKE_SESSION_ID,
@@ -110,3 +119,5 @@ class FakeAuthManager(AuthManagerBaseClass):
     def logout(self, response: Response):
         response.delete_cookie("authorization")
         response.delete_cookie("session_id")
+        response.delete_cookie("datastore_access_token")
+        response.delete_cookie("datastore_refresh_token")

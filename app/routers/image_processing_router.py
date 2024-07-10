@@ -1,10 +1,9 @@
-import os
-
 from fastapi import (APIRouter,
                      Cookie,
                      File,
                      Form,
                      HTTPException,
+                     Request,
                      Response,
                      status,
                      UploadFile)
@@ -34,12 +33,14 @@ class ImageProcessingRouter:
     def _register_routes(self):
         @self.router.post(self.IMAGE_UPLOAD_ENDPOINT, tags=[self.ROUTER_TAG])
         async def upload_session_notes_image(response: Response,
+                                             request: Request,
                                              patient_id: Annotated[str, Form()],
                                              therapist_id: Annotated[str, Form()],
                                              image: UploadFile = File(...),
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
                                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._upload_session_notes_image_internal(response=response,
+                                                                   request=request,
                                                                    patient_id=patient_id,
                                                                    therapist_id=therapist_id,
                                                                    image=image,
@@ -48,10 +49,12 @@ class ImageProcessingRouter:
 
         @self.router.post(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def extract_text(response: Response,
+                               request: Request,
                                body: model.TextractionData,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
+                                                     request=request,
                                                      body=body,
                                                      authorization=authorization,
                                                      current_session_id=current_session_id)
@@ -61,6 +64,7 @@ class ImageProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
+    request – the incoming request object.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
@@ -69,17 +73,18 @@ class ImageProcessingRouter:
     """
     async def _upload_session_notes_image_internal(self,
                                                    response: Response,
+                                                   request: Request,
                                                    patient_id: Annotated[str, Form()],
                                                    therapist_id: Annotated[str, Form()],
                                                    image: UploadFile,
                                                    authorization: Annotated[Union[str, None], Cookie()],
                                                    current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -90,8 +95,7 @@ class ImageProcessingRouter:
                                 method=logging.API_METHOD_POST,
                                 patient_id=patient_id,
                                 therapist_id=therapist_id,
-                                endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
 
         try:
             document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
@@ -119,6 +123,7 @@ class ImageProcessingRouter:
     Returns the text extracted from the incoming document_id.
 
     Arguments:
+    request – the incoming request object.
     response – the response model to be used for crafting the final response.
     therapist_id – the therapist_id for the operation.
     patient_id – the patient_id for the operation.
@@ -127,16 +132,17 @@ class ImageProcessingRouter:
     current_session_id – the session_id cookie, if exists.
     """
     async def _extract_text_internal(self,
+                                     request: Request,
                                      response: Response,
                                      body: model.TextractionData,
                                      authorization: Annotated[Union[str, None], Cookie()],
                                      current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.TOKEN_EXPIRED_ERROR
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            current_entity: security.User = await self._auth_manager.get_current_auth_entity(authorization)
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user=current_entity,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                                                                      request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
@@ -147,8 +153,7 @@ class ImageProcessingRouter:
                                 method=logging.API_METHOD_GET,
                                 therapist_id=body.therapist_id,
                                 patient_id=body.patient_id,
-                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                auth_entity=current_entity.username)
+                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
             assert len(body.document_id) > 0, "Didn't receive a valid document id."

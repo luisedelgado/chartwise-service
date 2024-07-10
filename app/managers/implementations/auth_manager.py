@@ -1,7 +1,7 @@
 import jwt, logging, os, requests, uuid
 
 from datetime import datetime, timedelta, timezone
-from fastapi import Cookie, Depends, HTTPException, status, Response
+from fastapi import Cookie, Depends, HTTPException, status, Request, Response
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
@@ -10,7 +10,7 @@ from typing import Annotated, Union
 
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import SessionRefreshData
-from ...internal.security import OAUTH2_SCHEME, Token, TokenData, User, UserInDB, users_db
+from ...internal.security import OAUTH2_SCHEME, Token, User, UserInDB, users_db
 
 class AuthManager(AuthManagerBaseClass):
 
@@ -43,6 +43,19 @@ class AuthManager(AuthManagerBaseClass):
             return False
         return user
 
+    def authenticate_datastore_user(self,
+                                    user_id: str,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str) -> bool:
+        try:
+            datastore_client = self.datastore_user_instance(access_token=datastore_access_token,
+                                                            refresh_token=datastore_refresh_token)
+
+            response = datastore_client.auth.get_user().dict()
+            return response['user']['id'] == user_id
+        except Exception as e:
+            raise Exception(f"Faulty tokens: {e}")
+
     def create_access_token(self,
                             data: dict,
                             expires_delta: Union[timedelta, None] = None):
@@ -58,19 +71,15 @@ class AuthManager(AuthManagerBaseClass):
     def access_token_is_valid(self, access_token: str) -> bool:
         try:
             payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            username: str = payload.get("sub")
-            if username is None:
+            user_id: str = payload.get("sub")
+            if user_id is None:
                 return False
-            token_data = TokenData(username=username)
         except:
-            return False
-        user = self.get_entity(users_db, username=token_data.username)
-        if user is None or user.disabled is True:
             return False
 
         # Check that token hasn't expired
         token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
-                                                    tz=timezone.utc)
+                                                       tz=timezone.utc)
         return (token_expiration_date > datetime.now(timezone.utc))
 
     async def get_current_auth_entity(self, token: Annotated[str, Depends(OAUTH2_SCHEME)]):
@@ -84,10 +93,9 @@ class AuthManager(AuthManagerBaseClass):
             username: str = payload.get("sub")
             if username is None:
                 raise credentials_exception
-            token_data = TokenData(username=username)
         except InvalidTokenError:
             raise credentials_exception
-        user = self.get_entity(users_db, username=token_data.username)
+        user = self.get_entity(users_db, username=username)
         if user is None:
             raise credentials_exception
         return user
@@ -98,8 +106,8 @@ class AuthManager(AuthManagerBaseClass):
             raise HTTPException(status_code=400, detail="Inactive user")
         return current_auth_entity
 
-    def update_auth_token_for_entity(self, user: User, response: Response):
-        if not user:
+    def update_auth_token_for_entity(self, user_id: str, response: Response):
+        if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
@@ -108,9 +116,8 @@ class AuthManager(AuthManagerBaseClass):
 
         access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = self.create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
+            data={"sub": user_id}, expires_delta=access_token_expires
         )
-        response.delete_cookie("authorization")
         response.set_cookie(key="authorization",
                             value=access_token,
                             httponly=True,
@@ -119,31 +126,61 @@ class AuthManager(AuthManagerBaseClass):
         return Token(access_token=access_token, token_type="bearer")
 
     async def refresh_session(self,
-                              user: User,
+                              user_id: str,
+                              request: Request,
                               response: Response,
+                              datastore_access_token: str = None,
+                              datastore_refresh_token: str = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
         try:
-            token = self.update_auth_token_for_entity(user, response)
+            auth_token = self.update_auth_token_for_entity(user_id, response)
 
-            if session_id is not None:
-                return SessionRefreshData(session_id=session_id,
-                                          auth_token=token)
+            if session_id is None:
+                session_id = uuid.uuid1()
+                response.set_cookie(key="session_id",
+                            value=session_id,
+                            httponly=True,
+                            secure=True,
+                            samesite="none")
 
-            new_session_id = uuid.uuid1()
-            response.delete_cookie("session_id")
-            response.set_cookie(key="session_id",
-                        value=new_session_id,
-                        httponly=True,
-                        secure=True,
-                        samesite="none")
-            return SessionRefreshData(session_id=new_session_id,
-                                      auth_token=token)
+            # We are being sent new datastore tokens. Let's refresh the datastore session, and update cookies.
+            if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
+                datastore_client: Client = self.datastore_user_instance(access_token=datastore_access_token,
+                                                                        refresh_token=datastore_refresh_token)
+                refresh_session_response = datastore_client.auth.refresh_session().dict()
+                assert refresh_session_response['user']['role'] == 'authenticated'
+
+                datastore_access_token = refresh_session_response['session']['access_token']
+                datastore_refresh_token = refresh_session_response['session']['refresh_token']
+                response.set_cookie(key="datastore_access_token",
+                                    value=datastore_access_token,
+                                    httponly=True,
+                                    secure=True,
+                                    samesite="none")
+                response.set_cookie(key="datastore_refresh_token",
+                                    value=datastore_refresh_token,
+                                    httponly=True,
+                                    secure=True,
+                                    samesite="none")
+            elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
+                datastore_access_token = request.cookies['datastore_access_token']
+                datastore_refresh_token = request.cookies['datastore_refresh_token']
+            else:
+                datastore_access_token = None
+                datastore_refresh_token = None
+
+            return SessionRefreshData(session_id=session_id,
+                                      auth_token=auth_token,
+                                      datastore_access_token=datastore_access_token,
+                                      datastore_refresh_token=datastore_refresh_token)
         except Exception as e:
             raise Exception(str(e))
 
     def logout(self, response: Response):
         response.delete_cookie("authorization")
         response.delete_cookie("session_id")
+        response.delete_cookie("datastore_access_token")
+        response.delete_cookie("datastore_refresh_token")
 
     # Supabase
 

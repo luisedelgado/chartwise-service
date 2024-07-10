@@ -24,7 +24,6 @@ def log_api_request(**kwargs):
         session_id = None if "session_id" not in kwargs else kwargs["session_id"]
         endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
         description = None if "description" not in kwargs else kwargs["description"]
-        auth_entity = None if "auth_entity" not in kwargs else kwargs["auth_entity"]
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
         patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
         method = None if "method" not in kwargs else kwargs["method"]
@@ -36,7 +35,6 @@ def log_api_request(**kwargs):
             "therapist_id": therapist_id,
             "patient_id": patient_id,
             "method": method,
-            "endpoint_auth_entity": auth_entity,
             "session_report_id": session_report_id,
         }).execute()
     except Exception as e:

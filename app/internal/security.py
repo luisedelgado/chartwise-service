@@ -5,9 +5,15 @@ from typing import Union
 
 OAUTH2_SCHEME = OAuth2PasswordBearer(tokenUrl="token")
 
-TOKEN_EXPIRED_ERROR = HTTPException(
+AUTH_TOKEN_EXPIRED_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Token missing or expired",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+DATASTORE_TOKENS_ERROR = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="One or more datastore tokens are missing or expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -16,7 +22,7 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    username: Union[str, None] = None
+    user_id: Union[str, None] = None
 
 class User(BaseModel):
     username: str

@@ -96,6 +96,8 @@ def delete_session_vectors(index_id, namespace, date=None):
 
         if len(ids_to_delete) > 0:
             index.delete(ids=ids_to_delete, namespace=namespace)
+    except NotFoundException as e:
+        raise NotFoundException(e)
     except Exception as e:
         raise Exception(str(e))
 

@@ -13,7 +13,7 @@ from ..internal.utilities.general_utilities import gender_has_default_pronouns
 def __create_system_qa_message() -> str:
     return '''A therapist is using you to ask questions about their patients' notes. 
     Your job is to answer the therapist's questions based on the information context you find from the sessions.
-    For any information you reference, always outline the session date found in the metadata. 
+    For any information you reference, always outline the session date found in the metadata. If no information is found through metadata, do not mention any dates.
     If the question references a person for whom you can't find information in the session notes, you should strictly say you can't provide an answer.'''
 
 def __create_user_qa_message(language_code: str, patient_gender: str, patient_name: str) -> str:
