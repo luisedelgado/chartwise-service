@@ -4,7 +4,6 @@ from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               Greeting,
                               QuestionSuggestionsParams,
-                              PatientDeletePayload,
                               SessionHistorySummary,
                               SessionNotesInsert,
                               SessionNotesUpdate,
@@ -61,9 +60,10 @@ class AssistantManagerBaseClass(ABC):
     Takes care of deleting all sessions associated with the incoming patient id.
 
     Arguments:
-    body – the data associated with the sessions to be deleted.
+    therapist_id – the therapist associated with the patient sessions to be deleted.
+    patient_id – the patient_id associated with the sessions to be deleted.
     """
-    def delete_all_sessions_for_patient(body: PatientDeletePayload):
+    def delete_all_sessions_for_patient(therapist_id: str, patient_id: str):
         pass
 
     """

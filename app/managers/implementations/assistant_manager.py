@@ -8,7 +8,6 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
                                QuestionSuggestionsParams,
-                               PatientDeletePayload,
                                SessionHistorySummary,
                                SessionNotesInsert,
                                SessionNotesUpdate,
@@ -84,6 +83,7 @@ class AssistantManager(AssistantManagerBaseClass):
 
             delete_result = datastore_client.table('session_reports').delete().eq('id', session_report_id).execute()
             delete_result_dict = delete_result.dict()
+            assert len(delete_result_dict['data']) > 0, "No session found with the incoming session_report_id"
 
             therapist_id = delete_result_dict['data'][0]['therapist_id']
             patient_id = delete_result_dict['data'][0]['patient_id']
@@ -98,16 +98,16 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     def delete_all_sessions_for_patient(self,
-                                        body: PatientDeletePayload):
+                                        therapist_id: str,
+                                        patient_id: str):
         try:
-            vector_writer.delete_session_vectors(index_id=body.therapist_id,
-                                                 namespace=body.patient_id)
+            vector_writer.delete_session_vectors(index_id=therapist_id,
+                                                 namespace=patient_id)
         except NotFoundException:
             # Index doesn't exist, failing silently. Patient is being deleted prior to having any
             # data in our vector db
             pass
         except Exception as e:
-            foo = type(e)
             raise Exception(e)
 
     def delete_all_sessions_for_therapist(self,

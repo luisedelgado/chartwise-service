@@ -90,14 +90,14 @@ class SecurityRouter:
         @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_all_therapist_data(response: Response,
                                             request: Request,
-                                            id: str = None,
+                                            therapist_id: str = None,
                                             datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                             authorization: Annotated[Union[str, None], Cookie()] = None,
                                             current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_all_therapist_data_internal(response=response,
                                                                   request=request,
-                                                                  id=id,
+                                                                  therapist_id=therapist_id,
                                                                   datastore_access_token=datastore_access_token,
                                                                   datastore_refresh_token=datastore_refresh_token,
                                                                   authorization=authorization,
@@ -344,7 +344,7 @@ class SecurityRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
-    id – the id associated with the therapist data to be deleted.
+    therapist_id – the id associated with the therapist data to be deleted.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -353,7 +353,7 @@ class SecurityRouter:
     async def _delete_all_therapist_data_internal(self,
                                                   response: Response,
                                                   request: Request,
-                                                  id: str,
+                                                  therapist_id: str,
                                                   datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                   authorization: Annotated[Union[str, None], Cookie()],
@@ -364,11 +364,11 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        if len(id or '') == 0:
-            raise HTTPException(detail="Invalid or empty id to be deleted", status_code=status.HTTP_400_BAD_REQUEST)
+        if len(therapist_id or '') == 0:
+            raise HTTPException(detail="Invalid or empty therapist_id to be deleted", status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       response=response,
                                                                                                       request=request,
                                                                                                       session_id=current_session_id)
@@ -378,7 +378,7 @@ class SecurityRouter:
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
-                                therapist_id=id,
+                                therapist_id=therapist_id,
                                 method=logging.API_METHOD_DELETE,
                                 endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
@@ -386,19 +386,20 @@ class SecurityRouter:
                                                                                   access_token=datastore_access_token)
 
             # Delete therapist and all their patients (through cascading)
-            datastore_client.table('therapists').delete().eq('id', id).execute()
+            delete_response = datastore_client.table('therapists').delete().eq('id', therapist_id).execute().dict()
+            assert len(delete_response['data']) > 0, "No therapist found with the incoming id"
 
             # Remove the active session and clear Auth data from client storage.
             datastore_client.auth.sign_out()
 
             # Delete vectors associated with therapist's patients
-            self._assistant_manager.delete_all_sessions_for_therapist(id)
+            self._assistant_manager.delete_all_sessions_for_therapist(therapist_id)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
-            logging.log_account_deletion(therapist_id=id)
-            logging.log_api_response(therapist_id=id,
+            logging.log_account_deletion(therapist_id=therapist_id)
+            logging.log_api_response(therapist_id=therapist_id,
                                      session_id=session_id,
                                      endpoint_name=self.THERAPISTS_ENDPOINT,
                                      http_status_code=status.HTTP_200_OK,

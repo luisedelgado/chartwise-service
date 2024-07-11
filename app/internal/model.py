@@ -98,10 +98,6 @@ class PatientUpdatePayload(BaseModel):
     consentment_channel: PatientConsentmentChannel
     therapist_id: str
 
-class PatientDeletePayload(BaseModel):
-    patient_id: str
-    therapist_id: str
-
 class SignupMechanism(Enum):
     UNDEFINED = "undefined"
     GOOGLE = "google"

@@ -3,7 +3,6 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                Greeting,
                                QuestionSuggestionsParams,
-                               PatientDeletePayload,
                                SessionHistorySummary,
                                SessionNotesInsert,
                                SessionNotesUpdate,
@@ -37,7 +36,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
         ...
 
     def delete_all_sessions_for_patient(self,
-                                        body: PatientDeletePayload):
+                                        therapist_id: str,
+                                        patient_id: str):
         ...
 
     def delete_all_sessions_for_therapist(self,

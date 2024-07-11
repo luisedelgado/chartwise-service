@@ -65,8 +65,8 @@ class AuthManager(AuthManagerBaseClass):
     def update_auth_token_for_entity(self, user_id: str, response: Response):
         if not user_id:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Couldn't make a user out of the incoming ids",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

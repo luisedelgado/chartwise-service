@@ -187,14 +187,16 @@ class AssistantRouter:
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(response: Response,
                                  request: Request,
-                                 body: model.PatientDeletePayload,
+                                 patient_id: str = None,
+                                 therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(response=response,
                                                        request=request,
-                                                       body=body,
+                                                       patient_id=patient_id,
+                                                       therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -882,7 +884,8 @@ class AssistantRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
-    body – the body associated with the request.
+    patient_id – the id for the patient to be deleted.
+    therapist_id – the therapist id associated with the patient to be deleted.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -891,7 +894,8 @@ class AssistantRouter:
     async def _delete_patient_internal(self,
                                        response: Response,
                                        request: Request,
-                                       body: model.PatientDeletePayload,
+                                       patient_id: str,
+                                       therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -903,32 +907,37 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       response=response,
                                                                                                       request=request,
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_DELETE,
                                 endpoint_name=self.PATIENTS_ENDPOINT,
-                                therapist_id=body.therapist_id,
-                                patient_id=body.patient_id,)
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,)
 
         try:
+            assert patient_id is not None, "Missing patient_id param"
+            assert therapist_id is not None, "Missing therapist_id param"
+
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
-            datastore_client.table('patients').delete().eq('id', body.patient_id).execute()
-            self._assistant_manager.delete_all_sessions_for_patient(body=body)
+            delete_response = datastore_client.table('patients').delete().eq('id', patient_id).execute().dict()
+            assert len(delete_response['data']) > 0, "No patient found with the incoming patient_id"
+
+            self._assistant_manager.delete_all_sessions_for_patient(therapist_id=therapist_id, patient_id=patient_id)
 
             logging.log_api_response(session_id=session_id,
                                      method=logging.API_METHOD_DELETE,
                                      endpoint_name=self.PATIENTS_ENDPOINT,
-                                     therapist_id=body.therapist_id,
-                                     patient_id=body.patient_id,
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -937,8 +946,8 @@ class AssistantRouter:
             logging.log_error(session_id=session_id,
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
-                              therapist_id=body.therapist_id,
-                              patient_id=body.patient_id,
+                              therapist_id=therapist_id,
+                              patient_id=patient_id,
                               description=description,
                               method=logging.API_METHOD_DELETE)
             raise HTTPException(status_code=status_code,
