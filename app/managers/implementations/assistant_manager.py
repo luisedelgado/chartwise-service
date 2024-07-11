@@ -6,7 +6,6 @@ from supabase import Client
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
-                               Greeting,
                                QuestionSuggestionsParams,
                                SessionHistorySummary,
                                SessionNotesInsert,
@@ -162,7 +161,8 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     def fetch_todays_greeting(self,
-                              body: Greeting,
+                              client_tz_identifier: str,
+                              therapist_id: str,
                               session_id: str,
                               endpoint_name: str,
                               api_method: str,
@@ -173,19 +173,20 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
-            assert (0 != len((therapist_query).data))
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
+            assert (0 != len((therapist_query).data)), "No user was found with the incoming id"
 
             therapist_query_dict = therapist_query.dict()
+            addressing_name = therapist_query_dict['data'][0]["first_name"]
             language_code = therapist_query_dict['data'][0]["language_preference"]
             therapist_gender = therapist_query_dict['data'][0]["gender"]
-            result = VectorQueryWorker().create_greeting(therapist_name=body.addressing_name,
+            result = VectorQueryWorker().create_greeting(therapist_name=addressing_name,
                                                          therapist_gender=therapist_gender,
                                                          language_code=language_code,
-                                                         tz_identifier=body.client_tz_identifier,
+                                                         tz_identifier=client_tz_identifier,
                                                          session_id=session_id,
                                                          endpoint_name=endpoint_name,
-                                                         therapist_id=body.therapist_id,
+                                                         therapist_id=therapist_id,
                                                          method=api_method,
                                                          environment=environment,
                                                          auth_manager=auth_manager)

@@ -49,11 +49,6 @@ class TextractionData(BaseModel):
     patient_id: str
     document_id: str
 
-class Greeting(BaseModel):
-    addressing_name: str
-    client_tz_identifier: str
-    therapist_id: str
-
 class SummaryConfiguration(Enum):
     UNDEFINED = "undefined"
     PRIMARY_TOPICS = "primary_topics"

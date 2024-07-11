@@ -1,7 +1,6 @@
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
-                               Greeting,
                                QuestionSuggestionsParams,
                                SessionHistorySummary,
                                SessionNotesInsert,
@@ -56,7 +55,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
         ...
 
     def fetch_todays_greeting(self,
-                              body: Greeting,
+                              client_tz_identifier: str,
+                              therapist_id: str,
                               session_id: str,
                               endpoint_name: str,
                               api_method: str,

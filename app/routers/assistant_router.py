@@ -104,17 +104,19 @@ class AssistantRouter:
                                                                 authorization=authorization,
                                                                 current_session_id=current_session_id)
 
-        @self.router.post(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
                                  request: Request,
-                                 body: model.Greeting,
+                                 client_tz_identifier: str = None,
+                                 therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_greeting_internal(response=response,
                                                        request=request,
-                                                       body=body,
+                                                       client_tz_identifier=client_tz_identifier,
+                                                       therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -508,7 +510,8 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
-    body – the json body associated with the request.
+    client_tz_identifier – the timezone identifier associated with the client.
+    therapist_id – the therapist id associated with the user.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -517,7 +520,8 @@ class AssistantRouter:
     async def _fetch_greeting_internal(self,
                                        response: Response,
                                        request: Request,
-                                       body: model.Greeting,
+                                       client_tz_identifier: str,
+                                       therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -529,7 +533,7 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
@@ -538,17 +542,18 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logs_description = ''.join(['tz_identifier:', body.client_tz_identifier])
+        logs_description = ''.join(['tz_identifier:', client_tz_identifier])
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
-                                therapist_id=body.therapist_id,
+                                therapist_id=therapist_id,
                                 endpoint_name=self.GREETINGS_ENDPOINT,
                                 description=logs_description)
 
         try:
-            assert general_utilities.is_valid_timezone_identifier(body.client_tz_identifier), "Invalid timezone identifier parameter"
+            assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
 
-            result = self._assistant_manager.fetch_todays_greeting(body=body,
+            result = self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
+                                                                   therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    endpoint_name=self.GREETINGS_ENDPOINT,
                                                                    api_method=logging.API_METHOD_POST,
@@ -559,7 +564,7 @@ class AssistantRouter:
 
             logging.log_api_response(session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,
-                                    therapist_id=body.therapist_id,
+                                    therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
                                     description=logs_description,
                                     method=logging.API_METHOD_POST)

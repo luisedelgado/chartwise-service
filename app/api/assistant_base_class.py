@@ -2,7 +2,6 @@ from abc import ABC
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
-                              Greeting,
                               QuestionSuggestionsParams,
                               SessionHistorySummary,
                               SessionNotesInsert,
@@ -103,7 +102,8 @@ class AssistantManagerBaseClass(ABC):
     Creates a greeting for the current user and date.
 
     Arguments:
-    body – the data associated with the greeting.
+    client_tz_identifier – the timezone associated with the client.
+    therapist_id – the therapist_id associated with the user.
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
@@ -112,7 +112,8 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def fetch_todays_greeting(body: Greeting,
+    def fetch_todays_greeting(client_tz_identifier: str,
+                              therapist_id: str,
                               session_id: str,
                               endpoint_name: str,
                               api_method: str,
