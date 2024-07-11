@@ -47,11 +47,26 @@ class FakeAuthWrapper:
             })
 
 class FakeSupabaseOperationResult:
+
+    def __init__(self, operation_obj = None):
+        self._operation_obj = operation_obj
+
+    _operation_obj = None
+
     def execute(self):
-        pass
+        return FakeSupabaseOperationResult(self._operation_obj)
 
     def eq(self, left, right):
-        return FakeSupabaseOperationResult()
+        self._operation_obj = right
+        return FakeSupabaseOperationResult(right)
+
+    def dict(self):
+        data = []
+        if self._operation_obj is not None:
+            data.append(self._operation_obj)
+        return {
+            "data": data
+        }
 
 class FakeSupabaseTable:
     def __init__(self, table_name: str):

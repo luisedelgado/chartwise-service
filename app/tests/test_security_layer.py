@@ -339,6 +339,6 @@ class TestingHarnessSecurityRouter:
                                             "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                         },
                                         params={
-                                            "id": FAKE_THERAPIST_ID,
+                                            "therapist_id": FAKE_THERAPIST_ID,
                                         })
         assert response.status_code == 200
