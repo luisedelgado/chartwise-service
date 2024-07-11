@@ -19,7 +19,7 @@ from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..internal import logging, model, security
-from ..internal.utilities import datetime_handler
+from ..internal.utilities import datetime_handler, general_utilities
 
 class AudioProcessingRouter:
 
@@ -114,7 +114,8 @@ class AudioProcessingRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -136,7 +137,7 @@ class AudioProcessingRouter:
             return {"transcript": transcript}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                             error_code=status_code,
@@ -183,7 +184,8 @@ class AudioProcessingRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 patient_id=patient_id,
@@ -220,7 +222,7 @@ class AudioProcessingRouter:
             return {"job_id": job_id}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.DIARIZATION_ENDPOINT,
                             error_code=status_code,
@@ -243,9 +245,9 @@ class AudioProcessingRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            status_code = request.query_params["status"]
+            request_status_code = request.query_params["status"]
             id = request.query_params["id"]
-            assert status_code.lower() == "success", f"Diarization failed for job ID {id}"
+            assert request_status_code.lower() == "success", f"Diarization failed for job ID {id}"
 
             raw_data = await request.json()
             json_data = json.loads(json.dumps(raw_data))
@@ -259,7 +261,7 @@ class AudioProcessingRouter:
                                                                               diarization=diarization)
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_diarization_event(error_code=status_code, description=description)
             raise HTTPException(status_code=status_code, detail=description)
 

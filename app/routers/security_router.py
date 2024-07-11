@@ -1,5 +1,3 @@
-import json
-
 from fastapi import (APIRouter,
                      Cookie,
                      Depends,
@@ -7,14 +5,14 @@ from fastapi import (APIRouter,
                      Request,
                      Response,
                      status,)
-from langcodes import Language, tag_parser
+from langcodes import Language
 from supabase import Client
 from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..internal import logging, model, security
-from ..internal.utilities import datetime_handler
+from ..internal.utilities import datetime_handler, general_utilities
 
 class SecurityRouter:
 
@@ -141,7 +139,8 @@ class SecurityRouter:
 
             return session_refresh_data._auth_token
         except Exception as e:
-            raise HTTPException(detail=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(detail=str(e), status_code=status_code)
 
     """
     Logs out the user.
@@ -169,7 +168,8 @@ class SecurityRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=therapist_id,
@@ -219,7 +219,8 @@ class SecurityRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -254,7 +255,7 @@ class SecurityRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError or type(e) == tag_parser.LanguageTagError) else status.HTTP_417_EXPECTATION_FAILED
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,
@@ -296,7 +297,8 @@ class SecurityRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=body.id,
@@ -327,7 +329,7 @@ class SecurityRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError or type(e) == tag_parser.LanguageTagError) else status.HTTP_417_EXPECTATION_FAILED
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,
@@ -372,7 +374,8 @@ class SecurityRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=id,
@@ -403,7 +406,7 @@ class SecurityRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.THERAPISTS_ENDPOINT,
                               error_code=status_code,

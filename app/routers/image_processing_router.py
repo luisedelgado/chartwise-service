@@ -12,6 +12,7 @@ from typing import Annotated, Union
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.image_processing_base_class import ImageProcessingManagerBaseClass
 from ..internal import logging, model, security
+from ..internal.utilities import general_utilities
 
 class ImageProcessingRouter:
 
@@ -89,7 +90,8 @@ class ImageProcessingRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -111,7 +113,7 @@ class ImageProcessingRouter:
             return {"document_id": document_id}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_409_CONFLICT if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
                             error_code=status_code,
@@ -147,7 +149,8 @@ class ImageProcessingRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_GET,
@@ -169,7 +172,7 @@ class ImageProcessingRouter:
             return {"extraction": full_text}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if (type(e) == AssertionError) else status.HTTP_417_EXPECTATION_FAILED
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             therapist_id=body.therapist_id,
                             patient_id=body.patient_id,

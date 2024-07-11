@@ -233,7 +233,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 patient_id=body.patient_id,
@@ -260,7 +261,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             therapist_id=body.therapist_id,
                             patient_id=body.patient_id,
@@ -304,7 +305,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=body.therapist_id,
@@ -329,7 +331,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             therapist_id=body.therapist_id,
                             endpoint_name=self.SESSIONS_ENDPOINT,
@@ -374,7 +376,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=therapist_id,
@@ -387,7 +390,7 @@ class AssistantRouter:
             uuid.UUID(str(session_report_id))
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               therapist_id=therapist_id,
                               session_report_id=session_report_id,
@@ -415,7 +418,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             session_report_id=session_report_id,
                             endpoint_name=self.SESSIONS_ENDPOINT,
@@ -459,7 +462,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 therapist_id=query.therapist_id,
@@ -486,7 +490,7 @@ class AssistantRouter:
             return response
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             patient_id=query.patient_id,
                             endpoint_name=self.QUERIES_ENDPOINT,
@@ -529,7 +533,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logs_description = ''.join(['tz_identifier:', body.client_tz_identifier])
         logging.log_api_request(session_id=session_id,
@@ -560,7 +565,7 @@ class AssistantRouter:
             return {"message": result}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.GREETINGS_ENDPOINT,
                             error_code=status_code,
@@ -602,7 +607,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -632,7 +638,7 @@ class AssistantRouter:
             return json_response
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                             error_code=status_code,
@@ -674,7 +680,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -702,7 +709,7 @@ class AssistantRouter:
             return json_questions
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST if type(e) is not HTTPException else e.status_code
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                             endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                             error_code=status_code,
@@ -744,7 +751,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
@@ -778,7 +786,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
@@ -821,7 +829,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_PUT,
@@ -856,7 +865,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
@@ -900,7 +909,8 @@ class AssistantRouter:
                                                                                                       session_id=current_session_id)
             session_id = session_refresh_data._session_id
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_DELETE,
@@ -923,7 +933,7 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = status.HTTP_400_BAD_REQUEST
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,

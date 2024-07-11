@@ -1,3 +1,4 @@
+from fastapi import status
 from pytz import timezone
 
 """
@@ -16,3 +17,15 @@ Returns a flag representing whether or not the incoming gender has default prono
 """
 def gender_has_default_pronouns(gender: str) -> bool:
     return (gender in ['male', 'female'])
+
+"""
+Attempts to extract a status code for an Exception object whose underlying type we don't know.
+"""
+def extract_status_code(exception, fallback: status):
+    common_status_attributes = ['status_code', 'code', 'status', 'response_code']
+    for attr in common_status_attributes:
+        if hasattr(exception, attr):
+            value = getattr(exception, attr)
+            if isinstance(value, int):
+                return value
+    return fallback

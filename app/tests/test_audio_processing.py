@@ -107,7 +107,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "datastore_access_token": FAKE_AUTH_COOKIE,
                                    "datastore_refresh_token": FAKE_AUTH_COOKIE,
                                })
-        assert response.status_code == 409
+        assert response.status_code == 417
 
     def test_invoke_diarization_with_valid_auth_and_valid_date_format(self):
         files = {
