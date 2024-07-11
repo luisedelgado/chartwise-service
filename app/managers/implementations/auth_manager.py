@@ -99,10 +99,22 @@ class AuthManager(AuthManagerBaseClass):
                             secure=True,
                             samesite="none")
 
-            # We are being sent new datastore tokens. Let's refresh the datastore session, and update cookies.
+            # We are being sent new datastore tokens. Let's update cookies.
             if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
-                datastore_client: Client = self.datastore_user_instance(access_token=datastore_access_token,
-                                                                        refresh_token=datastore_refresh_token)
+                response.set_cookie(key="datastore_access_token",
+                                    value=datastore_access_token,
+                                    httponly=True,
+                                    secure=True,
+                                    samesite="none")
+                response.set_cookie(key="datastore_refresh_token",
+                                    value=datastore_refresh_token,
+                                    httponly=True,
+                                    secure=True,
+                                    samesite="none")
+            # If we have datastore tokens in cookies, let's refresh them.
+            elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
+                datastore_client: Client = self.datastore_user_instance(access_token=request.cookies['datastore_access_token'],
+                                                                        refresh_token=request.cookies['datastore_refresh_token'])
                 refresh_session_response = datastore_client.auth.refresh_session().dict()
                 assert refresh_session_response['user']['role'] == 'authenticated'
 
@@ -118,9 +130,6 @@ class AuthManager(AuthManagerBaseClass):
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
-            elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
-                datastore_access_token = request.cookies['datastore_access_token']
-                datastore_refresh_token = request.cookies['datastore_refresh_token']
             else:
                 datastore_access_token = None
                 datastore_refresh_token = None
