@@ -1,8 +1,6 @@
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
-                               QuestionSuggestionsParams,
-                               SessionHistorySummary,
                                SessionNotesInsert,
                                SessionNotesUpdate,
                                SummaryConfiguration,)
@@ -67,7 +65,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
         ...
 
     def create_patient_summary(self,
-                               body: SessionHistorySummary,
+                               therapist_id: str,
+                               patient_id: str,
+                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
@@ -79,7 +79,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
         ...
 
     def fetch_question_suggestions(self,
-                                   body: QuestionSuggestionsParams,
+                                   therapist_id: str,
+                                   patient_id: str,
                                    auth_manager: AuthManagerBaseClass,
                                    environment: str,
                                    session_id: str,

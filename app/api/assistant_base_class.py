@@ -2,8 +2,6 @@ from abc import ABC
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
-                              QuestionSuggestionsParams,
-                              SessionHistorySummary,
                               SessionNotesInsert,
                               SessionNotesUpdate,
                               SummaryConfiguration)
@@ -127,7 +125,9 @@ class AssistantManagerBaseClass(ABC):
     Creates a summary about the given patient's session history.
 
     Arguments:
-    body – the data associated with the summary.
+    therapist_id – the id associated with the user.
+    patient_id – the id associated with the patient whose presession tray will be fetched.
+    summary_configuration – the summary configuration.
     auth_manager – the auth_manager to be leveraged.
     environment – the current running environment.
     session_id – the current session id.
@@ -137,7 +137,9 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def create_patient_summary(body: SessionHistorySummary,
+    def create_patient_summary(therapist_id: str,
+                               patient_id: str,
+                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
@@ -152,7 +154,8 @@ class AssistantManagerBaseClass(ABC):
     Retrieves a set of questions to be presented as suggestions for the user on what to ask the assistant.
 
     Arguments:
-    body – the payload associated with the question suggestions to be retrieved.
+    therapist_id – the id associated with the therapist user.
+    patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     auth_manager – the auth_manager to be leveraged.
     environment – the current running environment.
     session_id – the current session id.
@@ -161,7 +164,8 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def fetch_question_suggestions(body: QuestionSuggestionsParams,
+    def fetch_question_suggestions(therapist_id: str,
+                                   patient_id: str,
                                    auth_manager: AuthManagerBaseClass,
                                    environment: str,
                                    session_id: str,

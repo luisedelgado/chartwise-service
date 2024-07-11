@@ -122,33 +122,39 @@ class AssistantRouter:
                                                        authorization=authorization,
                                                        current_session_id=current_session_id)
 
-        @self.router.post(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_presession_tray(response: Response,
                                         request: Request,
-                                        body: model.SessionHistorySummary,
+                                        therapist_id: str = None,
+                                        patient_id: str = None,
+                                        summary_configuration: model.SummaryConfiguration = model.SummaryConfiguration.UNDEFINED,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
                                         current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_presession_tray_internal(response=response,
                                                               request=request,
-                                                              body=body,
+                                                              therapist_id=therapist_id,
+                                                              patient_id=patient_id,
+                                                              summary_configuration=summary_configuration,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
                                                               current_session_id=current_session_id)
 
-        @self.router.post(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_question_suggestions(response: Response,
                                              request: Request,
-                                             body: model.QuestionSuggestionsParams,
+                                             therapist_id: str = None,
+                                             patient_id: str = None,
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
                                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_question_suggestions_internal(response=response,
                                                                    request=request,
-                                                                   body=body,
+                                                                   therapist_id=therapist_id,
+                                                                   patient_id=patient_id,
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
                                                                    authorization=authorization,
@@ -587,7 +593,9 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
-    body – the json body associated with the request.
+    therapist_id – the id associated with the user.
+    patient_id – the id associated with the patient whose presession tray will be fetched.
+    summary_configuration – the summary configuration.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -596,7 +604,9 @@ class AssistantRouter:
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
                                               request: Request,
-                                              body: model.SessionHistorySummary,
+                                              therapist_id: str,
+                                              patient_id: str,
+                                              summary_configuration: model.SummaryConfiguration,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -608,7 +618,7 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
@@ -619,27 +629,31 @@ class AssistantRouter:
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
-                                therapist_id=body.therapist_id,
-                                patient_id=body.patient_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
 
         try:
-            assert body.summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
+            assert therapist_id is not None, "Missing therapist_id param"
+            assert patient_id is not None, "Missing patient_id param"
+            assert summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
 
-            json_response = self._assistant_manager.create_patient_summary(body=body,
+            json_response = self._assistant_manager.create_patient_summary(summary_configuration=summary_configuration,
+                                                                           patient_id=patient_id,
+                                                                           therapist_id=therapist_id,
                                                                            environment=self._environment,
                                                                            session_id=session_id,
                                                                            endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                            api_method=logging.API_METHOD_POST,
                                                                            auth_manager=self._auth_manager,
-                                                                           configuration=body.summary_configuration,
+                                                                           configuration=summary_configuration,
                                                                            datastore_access_token=datastore_access_token,
                                                                            datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                     therapist_id=body.therapist_id,
-                                     patient_id=body.patient_id,
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK,
                                      method=logging.API_METHOD_POST)
             return json_response
@@ -660,7 +674,8 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
-    body – the json body associated with the request.
+    therapist_id – the id associated with the therapist user.
+    patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -669,7 +684,8 @@ class AssistantRouter:
     async def _fetch_question_suggestions_internal(self,
                                                    response: Response,
                                                    request: Request,
-                                                   body: model.QuestionSuggestionsParams,
+                                                   therapist_id: str,
+                                                   patient_id: str,
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                    authorization: Annotated[Union[str, None], Cookie()],
@@ -681,7 +697,7 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
@@ -692,12 +708,16 @@ class AssistantRouter:
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_POST,
-                                therapist_id=body.therapist_id,
-                                patient_id=body.patient_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
                                 endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
 
         try:
-            json_questions = self._assistant_manager.fetch_question_suggestions(body=body,
+            assert patient_id is not None, "Missing patient_id param"
+            assert therapist_id is not None, "Missing therapist_id param"
+
+            json_questions = self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
+                                                                                patient_id=patient_id,
                                                                                 auth_manager=self._auth_manager,
                                                                                 environment=self._environment,
                                                                                 session_id=session_id,
@@ -708,8 +728,8 @@ class AssistantRouter:
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                     therapist_id=body.therapist_id,
-                                     patient_id=body.patient_id,
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK,
                                      method=logging.API_METHOD_POST)
 

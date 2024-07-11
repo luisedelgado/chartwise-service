@@ -48,15 +48,19 @@ class ImageProcessingRouter:
                                                                    authorization=authorization,
                                                                    current_session_id=current_session_id)
 
-        @self.router.post(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def extract_text(response: Response,
                                request: Request,
-                               body: model.TextractionData,
+                               therapist_id: str = None,
+                               patient_id: str = None,
+                               document_id: str = None,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                current_session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
                                                      request=request,
-                                                     body=body,
+                                                     therapist_id=therapist_id,
+                                                     patient_id=patient_id,
+                                                     document_id=document_id,
                                                      authorization=authorization,
                                                      current_session_id=current_session_id)
 
@@ -136,14 +140,16 @@ class ImageProcessingRouter:
     async def _extract_text_internal(self,
                                      request: Request,
                                      response: Response,
-                                     body: model.TextractionData,
+                                     therapist_id: str,
+                                     patient_id: str,
+                                     document_id: str,
                                      authorization: Annotated[Union[str, None], Cookie()],
                                      current_session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
                                                                                                       request=request,
                                                                                                       response=response,
                                                                                                       session_id=current_session_id)
@@ -154,17 +160,19 @@ class ImageProcessingRouter:
 
         logging.log_api_request(session_id=session_id,
                                 method=logging.API_METHOD_GET,
-                                therapist_id=body.therapist_id,
-                                patient_id=body.patient_id,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
                                 endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
-            assert len(body.document_id) > 0, "Didn't receive a valid document id."
-            full_text = self._image_processing_manager.extract_text(body.document_id)
+            assert len(therapist_id or '') > 0, "Missing therapist_id param."
+            assert len(patient_id or '') > 0, "Missing patient_id param."
+            assert len(document_id or '') > 0, "Didn't receive a valid document id."
+            full_text = self._image_processing_manager.extract_text(document_id)
 
             logging.log_api_response(session_id=session_id,
-                                    therapist_id=body.therapist_id,
-                                    patient_id=body.patient_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
                                     endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=logging.API_METHOD_GET)
@@ -174,8 +182,8 @@ class ImageProcessingRouter:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
-                            therapist_id=body.therapist_id,
-                            patient_id=body.patient_id,
+                            therapist_id=therapist_id,
+                            patient_id=patient_id,
                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                             error_code=status_code,
                             description=description,

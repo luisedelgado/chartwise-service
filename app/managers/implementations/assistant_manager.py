@@ -6,8 +6,6 @@ from supabase import Client
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
-                               QuestionSuggestionsParams,
-                               SessionHistorySummary,
                                SessionNotesInsert,
                                SessionNotesUpdate,
                                SummaryConfiguration,)
@@ -195,7 +193,8 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     def fetch_question_suggestions(self,
-                                   body: QuestionSuggestionsParams,
+                                   therapist_id: str,
+                                   patient_id: str,
                                    auth_manager: AuthManagerBaseClass,
                                    environment: str,
                                    session_id: str,
@@ -207,13 +206,13 @@ class AssistantManager(AssistantManagerBaseClass):
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
 
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
             assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
-            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
-                                                                                                                    body.patient_id).execute()
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+                                                                                                               patient_id).execute()
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             patient_query_dict = patient_query.dict()
@@ -224,8 +223,8 @@ class AssistantManager(AssistantManagerBaseClass):
             response = VectorQueryWorker().create_question_suggestions(language_code=language_code,
                                                                        session_id=session_id,
                                                                        endpoint_name=endpoint_name,
-                                                                       index_id=body.therapist_id,
-                                                                       namespace=body.patient_id,
+                                                                       index_id=therapist_id,
+                                                                       namespace=patient_id,
                                                                        method=api_method,
                                                                        environment=environment,
                                                                        auth_manager=auth_manager,
@@ -262,7 +261,9 @@ class AssistantManager(AssistantManagerBaseClass):
                                              date=session_date_formatted)
 
     def create_patient_summary(self,
-                               body: SessionHistorySummary,
+                               therapist_id: str,
+                               patient_id: str,
+                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
@@ -274,25 +275,25 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             datastore_client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                     refresh_token=datastore_refresh_token)
-            patient_response = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id',
-                                                                                                                    body.patient_id).execute()
+            patient_response = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+                                                                                                                  patient_id).execute()
             assert (0 != len((patient_response).data)), "There isn't a patient-therapist match with the incoming ids."
 
             patient_response_dict = patient_response.dict()
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']
 
-            therapist_response = datastore_client.table('therapists').select('*').eq("id", body.therapist_id).execute()
+            therapist_response = datastore_client.table('therapists').select('*').eq("id", therapist_id).execute()
             therapist_response_dict = therapist_response.dict()
             therapist_name = therapist_response_dict['data'][0]['first_name']
             language_code = therapist_response_dict['data'][0]['language_preference']
             therapist_gender = therapist_response_dict['data'][0]['gender']
 
-            number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", body.patient_id).execute()
+            number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", patient_id).execute()
             session_number = 1 + len(number_session_response.dict()['data'])
 
-            result = VectorQueryWorker().create_summary(index_id=body.therapist_id,
-                                                        namespace=body.patient_id,
+            result = VectorQueryWorker().create_summary(index_id=therapist_id,
+                                                        namespace=patient_id,
                                                         environment=environment,
                                                         language_code=language_code,
                                                         session_id=session_id,

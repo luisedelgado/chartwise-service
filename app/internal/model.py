@@ -44,26 +44,12 @@ class LoginData(BaseModel):
 class LogoutData(BaseModel):
     therapist_id: str
 
-class TextractionData(BaseModel):
-    therapist_id: str
-    patient_id: str
-    document_id: str
-
 class SummaryConfiguration(Enum):
     UNDEFINED = "undefined"
     PRIMARY_TOPICS = "primary_topics"
     EMOTIONAL_STATE = "emotional_state"
     SYMPTOMS = "symptoms"
     FULL_SUMMARY = "full_summary"
-
-class SessionHistorySummary(BaseModel):
-    therapist_id: str
-    patient_id: str
-    summary_configuration: SummaryConfiguration
-
-class QuestionSuggestionsParams(BaseModel):
-    therapist_id: str
-    patient_id: str
 
 class PatientConsentmentChannel(Enum):
     UNDEFINED = "undefined"

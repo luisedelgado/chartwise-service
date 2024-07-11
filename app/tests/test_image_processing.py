@@ -53,8 +53,8 @@ class TestingHarnessImageProcessingRouter:
         assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
 
     def test_invoke_textraction_with_no_auth(self):
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    json={
+        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+                                    params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "document_id": "12345"
@@ -62,8 +62,8 @@ class TestingHarnessImageProcessingRouter:
         assert response.status_code == 401
 
     def test_invoke_textraction_with_auth_but_empty_doc_id(self):
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    json={
+        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+                                    params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "document_id": ""
@@ -76,8 +76,8 @@ class TestingHarnessImageProcessingRouter:
         assert response.status_code == 400
 
     def test_invoke_textraction_with_auth_but_invalid_doc_id(self):
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                               json={
+        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+                               params={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "document_id": "000"
@@ -90,8 +90,8 @@ class TestingHarnessImageProcessingRouter:
         assert response.status_code == 400
 
     def test_invoke_textraction_with_auth_and_valid_doc_id(self):
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                               json={
+        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+                               params={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "document_id": "12345"
