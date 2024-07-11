@@ -49,14 +49,14 @@ class AudioProcessingRouter:
                                            patient_id: Annotated[str, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
-                                           current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
                                                                  request=request,
                                                                  therapist_id=therapist_id,
                                                                  patient_id=patient_id,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
-                                                                 current_session_id=current_session_id)
+                                                                 session_id=session_id)
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def diarize_session(response: Response,
@@ -68,7 +68,7 @@ class AudioProcessingRouter:
                                   datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
-                                  current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(response=response,
                                                         request=request,
                                                         session_date=session_date,
@@ -78,7 +78,7 @@ class AudioProcessingRouter:
                                                         datastore_access_token=datastore_access_token,
                                                         datastore_refresh_token=datastore_refresh_token,
                                                         authorization=authorization,
-                                                        current_session_id=current_session_id)
+                                                        session_id=session_id)
 
         @self.router.post(self.DIARIZATION_NOTIFICATION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def consume_notification(request: Request):
@@ -94,7 +94,7 @@ class AudioProcessingRouter:
     patient_id – the id of the patient associated with the session notes.
     audio_file – the audio file for which the transcription will be created.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _transcribe_session_notes_internal(self,
                                                  response: Response,
@@ -103,18 +103,16 @@ class AudioProcessingRouter:
                                                  patient_id: Annotated[str, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
-                                                 current_session_id: Annotated[Union[str, None], Cookie()]):
+                                                 session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -158,7 +156,7 @@ class AudioProcessingRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _diarize_session_internal(self,
                                         response: Response,
@@ -170,7 +168,7 @@ class AudioProcessingRouter:
                                         datastore_access_token: Annotated[Union[str, None], Cookie()],
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                         authorization: Annotated[Union[str, None], Cookie()],
-                                        current_session_id: Annotated[Union[str, None], Cookie()]):
+                                        session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -178,13 +176,11 @@ class AudioProcessingRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -216,6 +212,8 @@ class AudioProcessingRouter:
 
             logging.log_api_response(session_id=session_id,
                                     endpoint_name=self.DIARIZATION_ENDPOINT,
+                                    patient_id=patient_id,
+                                    therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
                                     method=logging.API_METHOD_POST)
 
@@ -224,10 +222,12 @@ class AudioProcessingRouter:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
-                            endpoint_name=self.DIARIZATION_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_POST)
+                              endpoint_name=self.DIARIZATION_ENDPOINT,
+                              error_code=status_code,
+                              patient_id=patient_id,
+                              therapist_id=therapist_id,
+                              description=description,
+                              method=logging.API_METHOD_POST)
             raise HTTPException(status_code=status_code, detail=description)
 
     """

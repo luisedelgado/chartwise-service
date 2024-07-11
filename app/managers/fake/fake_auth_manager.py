@@ -1,13 +1,12 @@
 from datetime import timedelta
 
-from fastapi import Cookie, Request, Response
+from fastapi import Request, Response
 from supabase import Client
-from typing import Annotated, Union
+from typing import Union
 
 from .fake_supabase_client import FakeSupabaseClient
-from ...internal.model import SessionRefreshData
-from ...internal.security import Token
 from ...api.auth_base_class import AuthManagerBaseClass
+from ...internal.security import Token
 
 class FakeAuthManager(AuthManagerBaseClass):
 
@@ -46,7 +45,7 @@ class FakeAuthManager(AuthManagerBaseClass):
     def access_token_is_valid(self, access_token: str) -> bool:
         return self.auth_cookie == access_token
 
-    def update_auth_token_for_entity(self, user_id: str, response: Response):
+    def update_auth_token_for_entity(self, user_id: str, response: Response) -> Token:
         pass
 
     async def refresh_session(self,
@@ -54,8 +53,7 @@ class FakeAuthManager(AuthManagerBaseClass):
                               request: Request,
                               response: Response,
                               datastore_access_token: str = None,
-                              datastore_refresh_token: str = None,
-                              session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
+                              datastore_refresh_token: str = None) -> Token:
         response.set_cookie(key="session_id",
                             value=self.FAKE_SESSION_ID,
                             httponly=True,
@@ -76,10 +74,7 @@ class FakeAuthManager(AuthManagerBaseClass):
                             httponly=True,
                             secure=True,
                             samesite="none")
-
-        token = Token(access_token=self.FAKE_AUTH_TOKEN, token_type="bearer")
-        return SessionRefreshData(session_id=self.FAKE_SESSION_ID,
-                                  auth_token=token)
+        return Token(access_token=self.FAKE_AUTH_TOKEN, token_type="bearer")
 
     def datastore_user_instance(self, access_token, refresh_token) -> Client:
         return self.fake_supabase_client

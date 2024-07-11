@@ -45,14 +45,14 @@ class AssistantRouter:
                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
-                                     current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                     session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._insert_new_session_internal(body=body,
                                                            request=request,
                                                            response=response,
                                                            datastore_access_token=datastore_access_token,
                                                            datastore_refresh_token=datastore_refresh_token,
                                                            authorization=authorization,
-                                                           current_session_id=current_session_id)
+                                                           session_id=session_id)
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_session(body: model.SessionNotesUpdate,
@@ -61,14 +61,14 @@ class AssistantRouter:
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_session_internal(body=body,
                                                        response=response,
                                                        request=request,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
-                                                       current_session_id=current_session_id)
+                                                       session_id=session_id)
 
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_session(response: Response,
@@ -78,7 +78,7 @@ class AssistantRouter:
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_session_internal(therapist_id=therapist_id,
                                                        session_report_id=session_report_id,
                                                        response=response,
@@ -86,7 +86,7 @@ class AssistantRouter:
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
-                                                       current_session_id=current_session_id)
+                                                       session_id=session_id)
 
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def execute_assistant_query(query: model.AssistantQuery,
@@ -95,14 +95,14 @@ class AssistantRouter:
                                           datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
-                                          current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._execute_assistant_query_internal(query=query,
                                                                 request=request,
                                                                 response=response,
                                                                 datastore_access_token=datastore_access_token,
                                                                 datastore_refresh_token=datastore_refresh_token,
                                                                 authorization=authorization,
-                                                                current_session_id=current_session_id)
+                                                                session_id=session_id)
 
         @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
@@ -112,7 +112,7 @@ class AssistantRouter:
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_greeting_internal(response=response,
                                                        request=request,
                                                        client_tz_identifier=client_tz_identifier,
@@ -120,7 +120,7 @@ class AssistantRouter:
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
-                                                       current_session_id=current_session_id)
+                                                       session_id=session_id)
 
         @self.router.get(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_presession_tray(response: Response,
@@ -131,7 +131,7 @@ class AssistantRouter:
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
-                                        current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                        session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_presession_tray_internal(response=response,
                                                               request=request,
                                                               therapist_id=therapist_id,
@@ -140,7 +140,7 @@ class AssistantRouter:
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
-                                                              current_session_id=current_session_id)
+                                                              session_id=session_id)
 
         @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_question_suggestions(response: Response,
@@ -150,7 +150,7 @@ class AssistantRouter:
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                                             current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_question_suggestions_internal(response=response,
                                                                    request=request,
                                                                    therapist_id=therapist_id,
@@ -158,7 +158,7 @@ class AssistantRouter:
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
                                                                    authorization=authorization,
-                                                                   current_session_id=current_session_id)
+                                                                   session_id=session_id)
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
@@ -167,14 +167,14 @@ class AssistantRouter:
                               datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                               datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                               authorization: Annotated[Union[str, None], Cookie()] = None,
-                              current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                              session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(response=response,
                                                     request=request,
                                                     body=body,
                                                     datastore_access_token=datastore_access_token,
                                                     datastore_refresh_token=datastore_refresh_token,
                                                     authorization=authorization,
-                                                    current_session_id=current_session_id)
+                                                    session_id=session_id)
 
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
@@ -183,14 +183,14 @@ class AssistantRouter:
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(response=response,
                                                        request=request,
                                                        body=body,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
-                                                       current_session_id=current_session_id)
+                                                       session_id=session_id)
 
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(response: Response,
@@ -200,7 +200,7 @@ class AssistantRouter:
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
-                                 current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(response=response,
                                                        request=request,
                                                        patient_id=patient_id,
@@ -208,7 +208,7 @@ class AssistantRouter:
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
-                                                       current_session_id=current_session_id)
+                                                       session_id=session_id)
 
     """
     Stores a new session report.
@@ -220,7 +220,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _insert_new_session_internal(self,
                                            body: model.SessionNotesInsert,
@@ -229,7 +229,7 @@ class AssistantRouter:
                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                            authorization: Annotated[Union[str, None], Cookie()],
-                                           current_session_id: Annotated[Union[str, None], Cookie()]):
+                                           session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -237,13 +237,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -292,7 +290,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _update_session_internal(self,
                                        body: model.SessionNotesUpdate,
@@ -301,7 +299,7 @@ class AssistantRouter:
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -309,13 +307,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -362,7 +358,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _delete_session_internal(self,
                                        therapist_id: str,
@@ -372,7 +368,7 @@ class AssistantRouter:
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -380,13 +376,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -449,7 +443,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
                                                 query: model.AssistantQuery,
@@ -458,7 +452,7 @@ class AssistantRouter:
                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                 authorization: Annotated[Union[str, None], Cookie()],
-                                                current_session_id: Annotated[Union[str, None], Cookie()]):
+                                                session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -466,13 +460,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=query.therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=query.therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -521,7 +513,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _fetch_greeting_internal(self,
                                        response: Response,
@@ -531,7 +523,7 @@ class AssistantRouter:
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -539,13 +531,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
@@ -599,7 +589,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
@@ -610,7 +600,7 @@ class AssistantRouter:
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
-                                              current_session_id: Annotated[Union[str, None], Cookie()]):
+                                              session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -618,13 +608,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -679,7 +667,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _fetch_question_suggestions_internal(self,
                                                    response: Response,
@@ -689,7 +677,7 @@ class AssistantRouter:
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                    authorization: Annotated[Union[str, None], Cookie()],
-                                                   current_session_id: Annotated[Union[str, None], Cookie()]):
+                                                   session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -697,13 +685,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -755,7 +741,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _add_patient_internal(self,
                                     response: Response,
@@ -764,7 +750,7 @@ class AssistantRouter:
                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                     authorization: Annotated[Union[str, None], Cookie()],
-                                    current_session_id: Annotated[Union[str, None], Cookie()]):
+                                    session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -772,13 +758,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -793,7 +777,7 @@ class AssistantRouter:
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
-            datastore_client.table('patients').insert({
+            response = datastore_client.table('patients').insert({
                 "first_name": body.first_name,
                 "middle_name": body.middle_name,
                 "last_name": body.last_name,
@@ -803,11 +787,13 @@ class AssistantRouter:
                 "phone_number": body.phone_number,
                 "consentment_channel": body.consentment_channel.value,
             }).execute()
+            patient_id = response.dict()['data'][0]['id']
 
             logging.log_api_response(session_id=session_id,
                                      method=logging.API_METHOD_POST,
                                      endpoint_name=self.PATIENTS_ENDPOINT,
                                      therapist_id=body.therapist_id,
+                                     patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK)
 
             return {}
@@ -833,7 +819,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _update_patient_internal(self,
                                        response: Response,
@@ -842,7 +828,7 @@ class AssistantRouter:
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -850,13 +836,11 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=body.therapist_id,
-                                                                                                      response=response,
-                                                                                                      request=request,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+                                                     response=response,
+                                                     request=request)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -914,7 +898,7 @@ class AssistantRouter:
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _delete_patient_internal(self,
                                        response: Response,
@@ -924,7 +908,7 @@ class AssistantRouter:
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       current_session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -932,11 +916,9 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      response=response,
-                                                                                                      request=request,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response,
+                                                     request=request)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))

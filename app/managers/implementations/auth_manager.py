@@ -5,10 +5,9 @@ from fastapi import Cookie, HTTPException, status, Request, Response
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 from supabase import create_client, Client
-from typing import Annotated, Union
+from typing import Union
 
 from ...api.auth_base_class import AuthManagerBaseClass
-from ...internal.model import SessionRefreshData
 from ...internal.security import Token
 
 class AuthManager(AuthManagerBaseClass):
@@ -62,7 +61,7 @@ class AuthManager(AuthManagerBaseClass):
                                                        tz=timezone.utc)
         return (token_expiration_date > datetime.now(timezone.utc))
 
-    def update_auth_token_for_entity(self, user_id: str, response: Response):
+    def update_auth_token_for_entity(self, user_id: str, response: Response) -> Token:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,18 +85,9 @@ class AuthManager(AuthManagerBaseClass):
                               request: Request,
                               response: Response,
                               datastore_access_token: str = None,
-                              datastore_refresh_token: str = None,
-                              session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
+                              datastore_refresh_token: str = None) -> Token:
         try:
             auth_token = self.update_auth_token_for_entity(user_id, response)
-
-            if session_id is None:
-                session_id = uuid.uuid1()
-                response.set_cookie(key="session_id",
-                            value=session_id,
-                            httponly=True,
-                            secure=True,
-                            samesite="none")
 
             # We are being sent new datastore tokens. Let's update cookies.
             if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
@@ -134,10 +124,7 @@ class AuthManager(AuthManagerBaseClass):
                 datastore_access_token = None
                 datastore_refresh_token = None
 
-            return SessionRefreshData(session_id=session_id,
-                                      auth_token=auth_token,
-                                      datastore_access_token=datastore_access_token,
-                                      datastore_refresh_token=datastore_refresh_token)
+            return auth_token
         except Exception as e:
             raise Exception(str(e))
 

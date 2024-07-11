@@ -1,11 +1,11 @@
 from abc import ABC
 from datetime import timedelta
 
-from fastapi import Cookie, Request, Response
+from fastapi import Request, Response
 from supabase import Client
-from typing import Annotated, Union
+from typing import Union
 
-from ..internal.model import SessionRefreshData
+from ..internal.security import Token
 
 class AuthManagerBaseClass(ABC):
 
@@ -47,17 +47,18 @@ class AuthManagerBaseClass(ABC):
         pass
 
     """
-    Refreshes the user's auth token for a continued session experience.
+    Refreshes and returns the user's auth token for a continued session experience.
 
     Arguments:
     user_id – the user id for whom to refresh the session.
     response – the model with which to build the API response.
     """
-    def update_auth_token_for_entity(self, user_id: str, response: Response):
+    def update_auth_token_for_entity(self, user_id: str, response: Response) -> Token:
         pass
 
     """
-    Validates the incoming session cookies.
+    Validates the session cookies.
+    Returns an Auth token
 
     Arguments:
     user_id – the user for whom to refresh the current session.
@@ -65,15 +66,13 @@ class AuthManagerBaseClass(ABC):
     response – the response object where we can update cookies.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
-    current_session_id – the session_id cookie to be validated, if exists.
     """
     async def refresh_session(self,
                               user_id: str,
                               request: Request,
                               response: Response,
                               datastore_access_token: str = None,
-                              datastore_refresh_token: str = None,
-                              session_id: Annotated[Union[str, None], Cookie()] = None) -> SessionRefreshData | None:
+                              datastore_refresh_token: str = None) -> Token:
         pass
 
     """

@@ -105,10 +105,3 @@ class TherapistUpdatePayload(BaseModel):
     birth_date: str
     language_code_preference: str
     gender: Gender
-
-class SessionRefreshData():
-    def __init__(self, session_id, auth_token, datastore_access_token = None, datastore_refresh_token = None):
-        self._session_id = session_id
-        self._auth_token = auth_token
-        self._datastore_access_token = datastore_access_token
-        self._datastore_refresh_token = datastore_refresh_token

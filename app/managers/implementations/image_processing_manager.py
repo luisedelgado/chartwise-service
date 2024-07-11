@@ -63,7 +63,9 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
             raise Exception(str(e))
 
     def extract_text(self, document_id: str) -> str:
-        url = os.getenv("DOCUPANDA_URL") + "/" + document_id
+        base_url = os.getenv("DOCUPANDA_BASE_URL")
+        document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
+        url = base_url + document_endpoint + "/" + document_id
 
         headers = {
             "accept": "application/json",

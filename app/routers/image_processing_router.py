@@ -39,14 +39,14 @@ class ImageProcessingRouter:
                                              therapist_id: Annotated[str, Form()],
                                              image: UploadFile = File(...),
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                                             current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._upload_session_notes_image_internal(response=response,
                                                                    request=request,
                                                                    patient_id=patient_id,
                                                                    therapist_id=therapist_id,
                                                                    image=image,
                                                                    authorization=authorization,
-                                                                   current_session_id=current_session_id)
+                                                                   session_id=session_id)
 
         @self.router.get(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def extract_text(response: Response,
@@ -55,14 +55,14 @@ class ImageProcessingRouter:
                                patient_id: str = None,
                                document_id: str = None,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
-                               current_session_id: Annotated[Union[str, None], Cookie()] = None):
+                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
                                                      request=request,
                                                      therapist_id=therapist_id,
                                                      patient_id=patient_id,
                                                      document_id=document_id,
                                                      authorization=authorization,
-                                                     current_session_id=current_session_id)
+                                                     session_id=session_id)
 
     """
     Returns a document_id value associated with the file that was uploaded.
@@ -74,7 +74,7 @@ class ImageProcessingRouter:
     patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _upload_session_notes_image_internal(self,
                                                    response: Response,
@@ -83,18 +83,16 @@ class ImageProcessingRouter:
                                                    therapist_id: Annotated[str, Form()],
                                                    image: UploadFile,
                                                    authorization: Annotated[Union[str, None], Cookie()],
-                                                   current_session_id: Annotated[Union[str, None], Cookie()]):
+                                                   session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
@@ -135,7 +133,7 @@ class ImageProcessingRouter:
     patient_id – the patient_id for the operation.
     document_id – the id of the document to be textracted.
     authorization – the authorization cookie, if exists.
-    current_session_id – the session_id cookie, if exists.
+    session_id – the session_id cookie, if exists.
     """
     async def _extract_text_internal(self,
                                      request: Request,
@@ -144,18 +142,16 @@ class ImageProcessingRouter:
                                      patient_id: str,
                                      document_id: str,
                                      authorization: Annotated[Union[str, None], Cookie()],
-                                     current_session_id: Annotated[Union[str, None], Cookie()]):
+                                     session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            session_refresh_data: model.SessionRefreshData = await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                                                                      request=request,
-                                                                                                      response=response,
-                                                                                                      session_id=current_session_id)
-            session_id = session_refresh_data._session_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,

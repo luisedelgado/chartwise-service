@@ -32,7 +32,7 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 400
 
-    def test_login_for_token_with_valid_credentials(self):
+    def test_login_for_token_with_valid_credentials_new_session(self):
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
                                json={
                                    "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
@@ -43,7 +43,7 @@ class TestingHarnessSecurityRouter:
         assert response.cookies.get("datastore_access_token") == self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN
         assert response.cookies.get("datastore_refresh_token") == self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
         assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
-        assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
+        assert response.cookies.get("session_id") is not None
 
     def test_add_therapist_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
