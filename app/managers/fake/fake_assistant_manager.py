@@ -96,3 +96,15 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   summary: str,
                                                   diarization: str):
         self.fake_processed_diarization_result = diarization
+
+    def fetch_frequent_topics(self,
+                              therapist_id: str,
+                              patient_id: str,
+                              auth_manager: AuthManagerBaseClass,
+                              environment: str,
+                              session_id: str,
+                              endpoint_name: str,
+                              api_method: str,
+                              datastore_access_token: str,
+                              datastore_refresh_token: str):
+        pass

@@ -210,7 +210,6 @@ class AssistantManager(AssistantManagerBaseClass):
             assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-
             patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
                                                                                                                patient_id).execute()
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
@@ -263,7 +262,6 @@ class AssistantManager(AssistantManagerBaseClass):
     def create_patient_summary(self,
                                therapist_id: str,
                                patient_id: str,
-                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
@@ -309,5 +307,51 @@ class AssistantManager(AssistantManagerBaseClass):
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result
+        except Exception as e:
+            raise Exception(e)
+
+    def fetch_frequent_topics(self,
+                              therapist_id: str,
+                              patient_id: str,
+                              auth_manager: AuthManagerBaseClass,
+                              environment: str,
+                              session_id: str,
+                              endpoint_name: str,
+                              api_method: str,
+                              datastore_access_token: str,
+                              datastore_refresh_token: str):
+        try:
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
+
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
+            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
+
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
+                                                                                                               patient_id).execute()
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
+            patient_query_dict = patient_query.dict()
+            patient_first_name = patient_query_dict['data'][0]['first_name']
+            patient_last_name = patient_query_dict['data'][0]['last_name']
+            patient_gender = patient_query_dict['data'][0]['gender']
+
+            response = VectorQueryWorker().fetch_frequent_topics(language_code=language_code,
+                                                                 session_id=session_id,
+                                                                 endpoint_name=endpoint_name,
+                                                                 index_id=therapist_id,
+                                                                 namespace=patient_id,
+                                                                 method=api_method,
+                                                                 environment=environment,
+                                                                 auth_manager=auth_manager,
+                                                                 patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                 patient_gender=patient_gender)
+
+            error_message = "Something went wrong in generating a response. Please try again"
+            assert 'topics' in response, error_message
+            assert 'topic' in response['topics'][0], error_message
+            assert 'percentage' in response['topics'][0], error_message
+            return response
         except Exception as e:
             raise Exception(e)

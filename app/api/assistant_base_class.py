@@ -189,3 +189,27 @@ class AssistantManagerBaseClass(ABC):
                                                   summary: str,
                                                   diarization: str):
         pass
+
+    """
+    Returns a set of topics (along with frequency percentages) that the incoming patient_id is associated with.
+
+    Arguments:
+    response – the response model used for the final response that will be returned.
+    request – the incoming request object.
+    therapist_id – the id associated with the therapist user.
+    patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    def fetch_frequent_topics(therapist_id: str,
+                              patient_id: str,
+                              auth_manager: AuthManagerBaseClass,
+                              environment: str,
+                              session_id: str,
+                              endpoint_name: str,
+                              api_method: str,
+                              datastore_access_token: str,
+                              datastore_refresh_token: str):
+        pass

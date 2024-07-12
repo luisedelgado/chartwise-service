@@ -22,6 +22,7 @@ class AssistantRouter:
     PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
     PATIENTS_ENDPOINT = "/v1/patients"
+    TOPICS_ENDPOINT = "/v1/topics"
     ROUTER_TAG = "assistant"
 
     def __init__(self,
@@ -209,6 +210,24 @@ class AssistantRouter:
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        session_id=session_id)
+
+        @self.router.get(self.TOPICS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def fetch_frequent_topics(response: Response,
+                                        request: Request,
+                                        patient_id: str = None,
+                                        therapist_id: str = None,
+                                        datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
+                                        authorization: Annotated[Union[str, None], Cookie()] = None,
+                                        session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._fetch_frequent_topics_internal(response=response,
+                                                              request=request,
+                                                              patient_id=patient_id,
+                                                              therapist_id=therapist_id,
+                                                              datastore_access_token=datastore_access_token,
+                                                              datastore_refresh_token=datastore_refresh_token,
+                                                              authorization=authorization,
+                                                              session_id=session_id)
 
     """
     Stores a new session report.
@@ -544,7 +563,7 @@ class AssistantRouter:
 
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
+                                method=logging.API_METHOD_GET,
                                 therapist_id=therapist_id,
                                 endpoint_name=self.GREETINGS_ENDPOINT,
                                 description=logs_description)
@@ -556,7 +575,7 @@ class AssistantRouter:
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    endpoint_name=self.GREETINGS_ENDPOINT,
-                                                                   api_method=logging.API_METHOD_POST,
+                                                                   api_method=logging.API_METHOD_GET,
                                                                    environment=self._environment,
                                                                    auth_manager=self._auth_manager,
                                                                    datastore_access_token=datastore_access_token,
@@ -567,7 +586,7 @@ class AssistantRouter:
                                     therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
                                     description=logs_description,
-                                    method=logging.API_METHOD_POST)
+                                    method=logging.API_METHOD_GET)
 
             return {"message": result}
         except Exception as e:
@@ -577,7 +596,7 @@ class AssistantRouter:
                             endpoint_name=self.GREETINGS_ENDPOINT,
                             error_code=status_code,
                             description=description,
-                            method=logging.API_METHOD_POST)
+                            method=logging.API_METHOD_GET)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -620,7 +639,7 @@ class AssistantRouter:
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
+                                method=logging.API_METHOD_GET,
                                 therapist_id=therapist_id,
                                 patient_id=patient_id,
                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
@@ -630,13 +649,12 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
 
-            json_response = self._assistant_manager.create_patient_summary(summary_configuration=summary_configuration,
-                                                                           patient_id=patient_id,
+            json_response = self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                            therapist_id=therapist_id,
                                                                            environment=self._environment,
                                                                            session_id=session_id,
                                                                            endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                           api_method=logging.API_METHOD_POST,
+                                                                           api_method=logging.API_METHOD_GET,
                                                                            auth_manager=self._auth_manager,
                                                                            configuration=summary_configuration,
                                                                            datastore_access_token=datastore_access_token,
@@ -647,7 +665,7 @@ class AssistantRouter:
                                      therapist_id=therapist_id,
                                      patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK,
-                                     method=logging.API_METHOD_POST)
+                                     method=logging.API_METHOD_GET)
             return json_response
         except Exception as e:
             description = str(e)
@@ -656,7 +674,7 @@ class AssistantRouter:
                             endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                             error_code=status_code,
                             description=description,
-                            method=logging.API_METHOD_POST)
+                            method=logging.API_METHOD_GET)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -697,7 +715,7 @@ class AssistantRouter:
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
+                                method=logging.API_METHOD_GET,
                                 therapist_id=therapist_id,
                                 patient_id=patient_id,
                                 endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
@@ -712,7 +730,7 @@ class AssistantRouter:
                                                                                 environment=self._environment,
                                                                                 session_id=session_id,
                                                                                 endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                                                                api_method=logging.API_METHOD_POST,
+                                                                                api_method=logging.API_METHOD_GET,
                                                                                 datastore_access_token=datastore_access_token,
                                                                                 datastore_refresh_token=datastore_refresh_token)
 
@@ -721,7 +739,7 @@ class AssistantRouter:
                                      therapist_id=therapist_id,
                                      patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK,
-                                     method=logging.API_METHOD_POST)
+                                     method=logging.API_METHOD_GET)
 
             return json_questions
         except Exception as e:
@@ -731,7 +749,7 @@ class AssistantRouter:
                             endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                             error_code=status_code,
                             description=description,
-                            method=logging.API_METHOD_POST)
+                            method=logging.API_METHOD_GET)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -962,5 +980,80 @@ class AssistantRouter:
                               patient_id=patient_id,
                               description=description,
                               method=logging.API_METHOD_DELETE)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Returns a set of topics (along with frequency percentages) that the incoming patient_id is associated with.
+
+    Arguments:
+    response – the response model used for the final response that will be returned.
+    request – the incoming request object.
+    therapist_id – the id associated with the therapist user.
+    patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _fetch_frequent_topics_internal(self,
+                                             response: Response,
+                                             request: Request,
+                                             therapist_id: str,
+                                             patient_id: str,
+                                             datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                             authorization: Annotated[Union[str, None], Cookie()],
+                                             session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
+
+        try:
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=status_code, detail=str(e))
+
+        logging.log_api_request(session_id=session_id,
+                                method=logging.API_METHOD_GET,
+                                therapist_id=therapist_id,
+                                patient_id=patient_id,
+                                endpoint_name=self.TOPICS_ENDPOINT)
+
+        try:
+            assert len(patient_id or '') > 0, "Missing patient_id param"
+            assert len(therapist_id or '') > 0, "Missing therapist_id param"
+
+            json_topics = self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
+                                                                        patient_id=patient_id,
+                                                                        auth_manager=self._auth_manager,
+                                                                        environment=self._environment,
+                                                                        session_id=session_id,
+                                                                        endpoint_name=self.TOPICS_ENDPOINT,
+                                                                        api_method=logging.API_METHOD_GET,
+                                                                        datastore_access_token=datastore_access_token,
+                                                                        datastore_refresh_token=datastore_refresh_token)
+
+            logging.log_api_response(session_id=session_id,
+                                     endpoint_name=self.TOPICS_ENDPOINT,
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=logging.API_METHOD_GET)
+
+            return json_topics
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            logging.log_error(session_id=session_id,
+                            endpoint_name=self.TOPICS_ENDPOINT,
+                            error_code=status_code,
+                            description=description,
+                            method=logging.API_METHOD_GET)
             raise HTTPException(status_code=status_code,
                                 detail=description)

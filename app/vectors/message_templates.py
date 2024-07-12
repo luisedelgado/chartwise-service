@@ -100,20 +100,22 @@ def create_user_greeting_message() -> str:
 
 def __create_system_summary_message(language_code: str, summary_configuration: SummaryConfiguration) -> str:
     summary_configuration_format_param = ", structured in bullet points" if summary_configuration != SummaryConfiguration.FULL_SUMMARY else ""
-    return f'''A mental health practitioner is entering our Practice Management Platform.
+    main_instruction = f'''A mental health practitioner is entering our Practice Management Platform.
     They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
-    Your job is to provide a summary of the patient's most recent sessions, as well as big themes that have come up historically during sessions (if any).
-    You may use the session date found in the metadata for navigating through the sessions' data.
+    Your job is to provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. If there's no data for a particular section, simply omit it, and summarize the information that you do find.
+    Each section may take up to 800 characters. You may use the session date found in the metadata for navigating through the sessions' data.
     Particularly for patients with a short session history, use only the information you find from the metadata session dates (even if it results in a shorter summary).
     The "less is more" principle applies. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value{summary_configuration_format_param}.
     It is very important that the summary response is written using language code {language_code}.'''
+    json_example = r'''\nFor example, a response for language code es-419 would look like: {{"summary": "Sesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo."}}'''
+    return main_instruction + json_example
 
 def __create_user_summary_message(therapist_name: str,
                                   therapist_gender: str,
                                   patient_name: str,
                                   patient_gender: str,
-                                  language_code: str,
                                   session_number: int,
+                                  language_code: str,
                                   summary_configuration: SummaryConfiguration) -> str:
     try:
         ordinal_session_number = num2words(session_number, to='ordinal_num')
@@ -128,9 +130,9 @@ def __create_user_summary_message(therapist_name: str,
             gender_params += f"For reference, {therapist_name} is a {therapist_gender}. "
         if gender_has_default_pronouns(patient_gender):
             gender_params += f"For reference, {patient_name} is a {patient_gender}. "
-        language_params = f"\nIt is very important that you craft your response using language code {language_code}."
 
-        message = context_paragraph + instruction + name_params + gender_params + language_params
+        content_params = f"\nIt is very important that the summary is written using language code {language_code}"
+        message = context_paragraph + instruction + name_params + gender_params + content_params
 
         if summary_configuration.value == "full_summary":
             message += f"\nStart by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time."
@@ -167,13 +169,16 @@ def create_summary_template(language_code: str,
 
 # Question Suggestions
 
-def __create_system_question_suggestions_message() -> str:
-    return f'''A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. 
+def __create_system_question_suggestions_message(language_code: str) -> str:
+    main_instruction = f'''A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. 
     They have the opportunity to ask you a question about the patient's session history.
     Your job is to provide the practitioner with three questions that they could ask you about the patient, for which you'd have rich answers.
     You may use the session date found in the metadata for navigating through the sessions' data. 
-    It is very important that each question remain under 50 characters of length.
-    Return a JSON array with a single key, "questions", and the array of questions as its value.'''
+    It is very important that each question remains under 60 characters of length. Avoid questions like "What happened during the session of 04/10/2022?" and instead aim for narrow-focused questions like "When has the patient talked about his childhood?"
+    Return a JSON object with a key titled "questions", written in English, and the array of questions as its value.
+    It is very important that the content of each question is written using language code {language_code}.'''
+    json_example = r'''\nFor example, a response for language code es-419 would look like: {{"questions": ["¿Cuándo fue la última vez que hablamos del divorcio?", "¿Qué fue lo último que revisamos en sesión?", "¿Qué tema sería beneficioso retomar con el paciente?"]}}'''
+    return main_instruction + json_example
 
 def __create_user_question_suggestions_message(language_code: str,
                                                patient_name: str,
@@ -183,15 +188,13 @@ def __create_user_question_suggestions_message(language_code: str,
                             ---------------------\n
                             {context_str}
                             \n---------------------\n''')
-        language_code_requirement = f"\nIt is very important that you craft your response using language code {language_code}."
-
         if gender_has_default_pronouns(patient_gender):
             patient_context = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}."
         else:
             patient_context = f"\nFor reference, the patient's name is {patient_name}."
         execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
-        length_param = "\nIt is very important that each question remain under 50 characters of length."
-        return context_paragraph + language_code_requirement + patient_context + execution_statement + length_param
+        length_param = f"\nIt is very important that each question is written using language code {language_code}, and that it remains under 50 characters of length."
+        return context_paragraph + patient_context + execution_statement + length_param
     except Exception as e:
         raise Exception(e)
 
@@ -201,7 +204,7 @@ def create_question_suggestions_template(language_code: str,
     question_suggestions_templates = [
         ChatMessage(
             role=MessageRole.SYSTEM,
-            content=__create_system_question_suggestions_message(),
+            content=__create_system_question_suggestions_message(language_code),
         ),
         ChatMessage(
             role=MessageRole.USER,
@@ -211,3 +214,53 @@ def create_question_suggestions_template(language_code: str,
         ),
     ]
     return ChatPromptTemplate(question_suggestions_templates)
+
+# Frequent Topics
+
+def __create_system_frequent_topics_message(language_code: str) -> str:
+    main_instruction = f'''A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. 
+    They want to gain insight into what are the most frequent topics that the patient has spoken about in their whole session history.
+    Your job is to provide the practitioner with the patient's three most frequent topics, as well as the topic's respective percentage.
+    For example, for a patient that has spoken equally about three topics, each topic porcentage would be 33.3%. Do not return topics with 0%, instead return only the topics that have more than 0%.
+    You may use the session date found in the metadata for navigating through the sessions' data. 
+    It is very important that each topic remain under 25 characters of length.
+    Return a JSON object with a single key titled "topics", written in English, and its only value being an array containing up to three objects. 
+    Each object should have two keys titled "topic" and "percentage", written in English, and the content of each key's value needs to be written in language code {language_code}.'''
+    json_example = r'''\nFor example, a response for language code es-419 where the patient spoke equally about the three topics would look like: {{"topics":[{{"topic": "Ansiedad por el trabajo", "percentage": "33%"}},{{"topic": "Mejora en el matrimonio", "percentage": "33%"}},{{"topic": "Pensando en adoptar", "percentage": "33%"}}]}}'''
+    return main_instruction + json_example
+
+def __create_user_frequent_topics_message(language_code: str,
+                                          patient_name: str,
+                                          patient_gender: str) -> str:
+    try:
+        context_paragraph =('''We have provided context information below. \n
+                            ---------------------\n
+                            {context_str}
+                            \n---------------------\n''')
+
+        if gender_has_default_pronouns(patient_gender):
+            patient_context = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}."
+        else:
+            patient_context = f"\nFor reference, the patient's name is {patient_name}."
+        execution_statement = "\nGiven this information, please answer the question: {query_str}\n"
+        content_params = f"\nIt is very important that each topic is written using language code {language_code}, and that it remain under 25 characters of length."
+        return context_paragraph + patient_context + execution_statement + content_params
+    except Exception as e:
+        raise Exception(e)
+
+def create_frequent_topics_template(language_code: str,
+                                    patient_name: str,
+                                    patient_gender: str) -> ChatPromptTemplate:
+    frequent_topics_templates = [
+        ChatMessage(
+            role=MessageRole.SYSTEM,
+            content=__create_system_frequent_topics_message(language_code),
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content=__create_user_frequent_topics_message(language_code=language_code,
+                                                          patient_name=patient_name,
+                                                          patient_gender=patient_gender),
+        ),
+    ]
+    return ChatPromptTemplate(frequent_topics_templates)
