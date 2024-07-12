@@ -67,7 +67,6 @@ class FakeAssistantManager(AssistantManagerBaseClass):
     def create_patient_summary(self,
                                therapist_id: str,
                                patient_id: str,
-                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,

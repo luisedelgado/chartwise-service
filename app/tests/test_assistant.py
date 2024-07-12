@@ -742,3 +742,61 @@ class TestingHarnessAssistantRouter:
                                         "therapist_id": self.auth_manager.FAKE_USER_ID,
                                     })
         assert response.status_code == 200
+
+    def test_frequent_topics_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                    })
+        assert response.status_code == 401
+
+    def test_frequent_topics_with_auth_but_missing_datastore_tokens(self):
+        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                    })
+        assert response.status_code == 401
+
+    def test_frequent_topics_with_missing_therapist_id(self):
+        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": "",
+                                    })
+        assert response.status_code == 400
+
+    def test_frequent_topics_with_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "patient_id": "",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                    })
+        assert response.status_code == 400
+
+    def test_frequent_topics_success(self):
+        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                        "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": self.auth_manager.FAKE_USER_ID,
+                                    })
+        assert response.status_code == 200

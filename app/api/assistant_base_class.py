@@ -127,7 +127,6 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     therapist_id – the id associated with the user.
     patient_id – the id associated with the patient whose presession tray will be fetched.
-    summary_configuration – the summary configuration.
     auth_manager – the auth_manager to be leveraged.
     environment – the current running environment.
     session_id – the current session id.
@@ -139,7 +138,6 @@ class AssistantManagerBaseClass(ABC):
     """
     def create_patient_summary(therapist_id: str,
                                patient_id: str,
-                               summary_configuration: SummaryConfiguration,
                                auth_manager: AuthManagerBaseClass,
                                environment: str,
                                session_id: str,
