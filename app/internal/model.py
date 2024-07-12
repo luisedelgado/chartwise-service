@@ -68,7 +68,7 @@ class PatientInsertPayload(BaseModel):
     therapist_id: str
 
 class PatientUpdatePayload(BaseModel):
-    id: str
+    patient_id: str
     first_name: str
     middle_name: str = None
     last_name: str

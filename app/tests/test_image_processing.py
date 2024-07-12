@@ -42,7 +42,7 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    data={"patient_id": FAKE_PATIENT_ID, "therapist_id": FAKE_THERAPIST_ID},
+                                    data={"patient_id": FAKE_PATIENT_ID, "therapist_id": self.auth_manager.FAKE_USER_ID},
                                     files=files,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
@@ -93,7 +93,7 @@ class TestingHarnessImageProcessingRouter:
         response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
                                params={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "document_id": "12345"
                                 },
                                 cookies={

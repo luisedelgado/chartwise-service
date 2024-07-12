@@ -278,7 +278,7 @@ class TestingHarnessSecurityRouter:
                                 "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                             },
                             json={
-                                "id": FAKE_THERAPIST_ID,
+                                "id": self.auth_manager.FAKE_USER_ID,
                                 "email": "foo@foo.com",
                                 "first_name": "foo",
                                 "last_name": "bar",
@@ -303,7 +303,7 @@ class TestingHarnessSecurityRouter:
                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                 },
                                 json={
-                                    "therapist_id": FAKE_THERAPIST_ID,
+                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
                                 })
         assert response.status_code == 200
         cookie_header = response.headers.get("set-cookie")
@@ -339,6 +339,6 @@ class TestingHarnessSecurityRouter:
                                             "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
                                         },
                                         params={
-                                            "therapist_id": FAKE_THERAPIST_ID,
+                                            "therapist_id": self.auth_manager.FAKE_USER_ID,
                                         })
         assert response.status_code == 200

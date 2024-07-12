@@ -51,7 +51,7 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
                                },
                                files=files,
                                cookies={
@@ -98,7 +98,7 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10/24/2020",
                                },
                                files=files,
@@ -116,7 +116,7 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10-24-2020",
                                },
                                files=files,

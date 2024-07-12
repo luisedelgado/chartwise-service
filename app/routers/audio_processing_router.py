@@ -122,6 +122,9 @@ class AudioProcessingRouter:
                                 endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
+            assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
+            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+
             transcript = await self._audio_processing_manager.transcribe_audio_file(auth_manager=self._auth_manager,
                                                                                     audio_file=audio_file)
 
@@ -191,6 +194,8 @@ class AudioProcessingRouter:
 
         try:
             assert datetime_handler.is_valid_date(session_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
+            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,

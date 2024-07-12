@@ -61,7 +61,9 @@ class FakeSupabaseOperationResult:
         return FakeSupabaseOperationResult(right)
 
     def dict(self):
-        data = []
+        data = [{
+            "id": 0
+        }]
         if self._operation_obj is not None:
             data.append(self._operation_obj)
         return {

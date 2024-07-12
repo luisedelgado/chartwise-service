@@ -474,6 +474,10 @@ class AssistantRouter:
                                 method=logging.API_METHOD_POST)
 
         try:
+            assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
+            assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
+            assert len(query.text or '') > 0, "Invalid text in payload"
+
             response = self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                              query=query,
                                                              session_id=session_id,
@@ -622,8 +626,8 @@ class AssistantRouter:
                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
 
         try:
-            assert therapist_id is not None, "Missing therapist_id param"
-            assert patient_id is not None, "Missing patient_id param"
+            assert len(therapist_id or '') > 0, "Missing therapist_id param"
+            assert len(patient_id or '') > 0, "Missing patient_id param"
             assert summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
 
             json_response = self._assistant_manager.create_patient_summary(summary_configuration=summary_configuration,
@@ -699,8 +703,8 @@ class AssistantRouter:
                                 endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
 
         try:
-            assert patient_id is not None, "Missing patient_id param"
-            assert therapist_id is not None, "Missing therapist_id param"
+            assert len(patient_id or '') > 0, "Missing patient_id param"
+            assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
             json_questions = self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
                                                                                 patient_id=patient_id,
@@ -847,9 +851,10 @@ class AssistantRouter:
                                 method=logging.API_METHOD_PUT,
                                 endpoint_name=self.PATIENTS_ENDPOINT,
                                 therapist_id=body.therapist_id,
-                                patient_id=body.id)
+                                patient_id=body.patient_id)
 
         try:
+            assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
             assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
@@ -865,13 +870,13 @@ class AssistantRouter:
                 "gender": body.gender.value,
                 "phone_number": body.phone_number,
                 "consentment_channel": body.consentment_channel.value,
-            }).eq('id', body.id).execute()
+            }).eq('id', body.patient_id).execute()
 
             logging.log_api_response(session_id=session_id,
                                      method=logging.API_METHOD_PUT,
                                      endpoint_name=self.PATIENTS_ENDPOINT,
                                      therapist_id=body.therapist_id,
-                                     patient_id=body.id,
+                                     patient_id=body.patient_id,
                                      http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -881,7 +886,7 @@ class AssistantRouter:
                               endpoint_name=self.PATIENTS_ENDPOINT,
                               error_code=status_code,
                               therapist_id=body.therapist_id,
-                              patient_id=body.id,
+                              patient_id=body.patient_id,
                               description=description,
                               method=logging.API_METHOD_PUT)
             raise HTTPException(status_code=status_code,
@@ -930,8 +935,8 @@ class AssistantRouter:
                                 patient_id=patient_id,)
 
         try:
-            assert patient_id is not None, "Missing patient_id param"
-            assert therapist_id is not None, "Missing therapist_id param"
+            assert len(patient_id or '') > 0, "Missing patient_id param"
+            assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)

@@ -54,6 +54,7 @@ class FakeAuthManager(AuthManagerBaseClass):
                               response: Response,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
+        assert user_id == self.FAKE_USER_ID
         response.set_cookie(key="session_id",
                             value=self.FAKE_SESSION_ID,
                             httponly=True,

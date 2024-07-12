@@ -102,6 +102,9 @@ class ImageProcessingRouter:
                                 endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
 
         try:
+            assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
+            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+
             document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
                                                                                             image=image)
 
@@ -164,6 +167,7 @@ class ImageProcessingRouter:
             assert len(therapist_id or '') > 0, "Missing therapist_id param."
             assert len(patient_id or '') > 0, "Missing patient_id param."
             assert len(document_id or '') > 0, "Didn't receive a valid document id."
+
             full_text = self._image_processing_manager.extract_text(document_id)
 
             logging.log_api_response(session_id=session_id,
