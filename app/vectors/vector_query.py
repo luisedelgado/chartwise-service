@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from llama_index.core import VectorStoreIndex
 from llama_index.llms.openai import OpenAI as llama_index_OpenAI
+from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
 from pinecone.exceptions import NotFoundException
@@ -52,7 +53,7 @@ class VectorQueryWorker:
 
             index = pc.Index(index_id)
             vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
+            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=6)
 
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
@@ -69,8 +70,7 @@ class VectorQueryWorker:
             }
 
             headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                   llm_model=LLM_MODEL,
-                                                                   cache_max_age=0) if is_monitoring_proxy_reachable else None
+                                                                   llm_model=LLM_MODEL) if is_monitoring_proxy_reachable else None
 
             llm = llama_index_OpenAI(model=LLM_MODEL,
                                      temperature=0,
@@ -83,6 +83,7 @@ class VectorQueryWorker:
                 refine_template=message_templates.create_refine_prompt_template(response_language_code),
                 llm=llm,
                 streaming=True,
+                node_postprocessors=[CohereRerank(api_key=os.environ.get("COHERE_API_KEY"), top_n=3)],
             )
 
             response = query_engine.query(input)

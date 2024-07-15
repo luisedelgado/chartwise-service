@@ -1,12 +1,11 @@
-import os
+import os, uuid
+import tiktoken
 
 from fastapi import HTTPException
-from llama_index.core import Document, Settings
-from llama_index.core.ingestion import IngestionPipeline
-from llama_index.core.node_parser import SemanticSplitterNodeParser
-from llama_index.core.schema import TextNode
-from llama_index.vector_stores.pinecone import PineconeVectorStore
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from llama_index.core import Document
 from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
+from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
@@ -27,14 +26,6 @@ def insert_session_vectors(index_id, namespace, text, date):
     try:
         assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
-        doc = Document()
-        doc.set_content(data_cleaner.clean_up_text(text))
-
-        metadata_additions = {
-            "session_date": date
-        }
-        doc.metadata.update(metadata_additions)
-
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         
         # If index already exists, this will silently fail so we can continue writing to it
@@ -45,22 +36,32 @@ def insert_session_vectors(index_id, namespace, text, date):
         index = pc.Index(index_id)
         vector_store = PineconeVectorStore(pinecone_index=index)
         vector_store.namespace = namespace
+
         embed_model = OpenAIEmbedding(mode=OpenAIEmbeddingMode.SIMILARITY_MODE,
                                       model=OpenAIEmbeddingModelType.TEXT_EMBED_3_SMALL,
                                       api_key=os.environ.get('OPENAI_API_KEY'))
 
-        semantic_splitter = SemanticSplitterNodeParser(
-            buffer_size=1,
-            breakpoint_percentile_threshold=95,
-            embed_model=embed_model,
+        enc = tiktoken.get_encoding("cl100k_base")
+        splitter = RecursiveCharacterTextSplitter(
+            separators=["\n\n", "\n", " ", ""],
+            chunk_size=256,
+            chunk_overlap=25,
+            length_function=lambda text: len(enc.encode(text)),
         )
-        semantic_nodes = semantic_splitter.get_nodes_from_documents([doc])
+        chunks = splitter.split_text(text)
 
-        for index, node in enumerate(semantic_nodes):
-            node.id_ = f"{date}-{index}"
-            node.embedding = embed_model.get_text_embedding(node.get_content())
+        vectors = []
+        for chunk_index, chunk in enumerate(chunks):
+            doc = Document()
+            doc.id_ = f"{date}-{chunk_index}-{uuid.uuid1()}"
+            doc.set_content(data_cleaner.clean_up_text(chunk))
+            doc.metadata.update({
+                "session_date": date
+            })
+            doc.embedding = embed_model.get_text_embedding(chunk)
+            vectors.append(doc)
 
-        vector_store.add(semantic_nodes)
+        vector_store.add(vectors)
 
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
