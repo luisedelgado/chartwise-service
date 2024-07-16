@@ -18,7 +18,7 @@ from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal import logging, model, security
+from ..internal import logging, security
 from ..internal.utilities import datetime_handler, general_utilities
 
 class AudioProcessingRouter:
@@ -115,8 +115,9 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
+        post_api_method = logging.API_METHOD_POST
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
+                                method=post_api_method,
                                 therapist_id=therapist_id,
                                 patient_id=patient_id,
                                 endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
@@ -133,17 +134,17 @@ class AudioProcessingRouter:
                                      patient_id=patient_id,
                                      endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                                      http_status_code=status.HTTP_200_OK,
-                                     method=logging.API_METHOD_POST)
+                                     method=post_api_method)
 
             return {"transcript": transcript}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
-                            endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_POST)
+                              endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -186,10 +187,11 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
+        post_api_method = logging.API_METHOD_POST
         logging.log_api_request(session_id=session_id,
                                 patient_id=patient_id,
                                 therapist_id=therapist_id,
-                                method=logging.API_METHOD_POST,
+                                method=post_api_method,
                                 endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
@@ -220,7 +222,7 @@ class AudioProcessingRouter:
                                     patient_id=patient_id,
                                     therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST)
+                                    method=post_api_method)
 
             return {"job_id": job_id}
         except Exception as e:
@@ -232,7 +234,7 @@ class AudioProcessingRouter:
                               patient_id=patient_id,
                               therapist_id=therapist_id,
                               description=description,
-                              method=logging.API_METHOD_POST)
+                              method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """

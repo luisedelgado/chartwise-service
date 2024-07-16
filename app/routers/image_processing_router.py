@@ -95,8 +95,9 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
+        post_api_method = logging.API_METHOD_POST
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_POST,
+                                method=post_api_method,
                                 patient_id=patient_id,
                                 therapist_id=therapist_id,
                                 endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
@@ -109,21 +110,21 @@ class ImageProcessingRouter:
                                                                                             image=image)
 
             logging.log_api_response(session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id,
-                                    endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_POST)
+                                     therapist_id=therapist_id,
+                                     patient_id=patient_id,
+                                     endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=post_api_method)
 
             return {"document_id": document_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             logging.log_error(session_id=session_id,
-                            endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_POST)
+                              endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -157,8 +158,9 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
+        get_api_method = logging.API_METHOD_GET
         logging.log_api_request(session_id=session_id,
-                                method=logging.API_METHOD_GET,
+                                method=get_api_method,
                                 therapist_id=therapist_id,
                                 patient_id=patient_id,
                                 endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
@@ -175,17 +177,17 @@ class ImageProcessingRouter:
                                     patient_id=patient_id,
                                     endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
-                                    method=logging.API_METHOD_GET)
+                                    method=get_api_method)
 
             return {"extraction": full_text}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logging.log_error(session_id=session_id,
-                            therapist_id=therapist_id,
-                            patient_id=patient_id,
-                            endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=logging.API_METHOD_GET)
+                              therapist_id=therapist_id,
+                              patient_id=patient_id,
+                              endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=get_api_method)
             raise HTTPException(status_code=status_code, detail=description)
