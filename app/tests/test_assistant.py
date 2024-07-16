@@ -355,7 +355,7 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "summary_configuration": "full_summary"
+                                        "briefing_configuration": "full_summary"
                                     })
         assert response.status_code == 401
 
@@ -367,7 +367,7 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "summary_configuration": "full_summary"
+                                        "briefing_configuration": "full_summary"
                                     })
         assert response.status_code == 401
 
@@ -381,7 +381,7 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": "",
-                                        "summary_configuration": "full_summary"
+                                        "briefing_configuration": "full_summary"
                                     })
         assert response.status_code == 400
 
@@ -395,11 +395,11 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": "",
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "summary_configuration": "full_summary"
+                                        "briefing_configuration": "full_summary"
                                     })
         assert response.status_code == 400
 
-    def test_presession_summary_with_undefined_summary_configuration(self):
+    def test_presession_summary_with_undefined_briefing_configuration(self):
         response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
                                     cookies={
                                         "authorization": FAKE_AUTH_COOKIE,
@@ -409,7 +409,7 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "summary_configuration": "undefined"
+                                        "briefing_configuration": "undefined"
                                     })
         assert response.status_code == 400
 
@@ -423,7 +423,7 @@ class TestingHarnessAssistantRouter:
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": self.auth_manager.FAKE_USER_ID,
-                                        "summary_configuration": "full_summary"
+                                        "briefing_configuration": "full_summary"
                                     })
         assert response.status_code == 200
 

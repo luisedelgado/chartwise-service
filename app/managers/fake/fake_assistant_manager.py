@@ -3,7 +3,7 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
                                SessionNotesUpdate,
-                               SummaryConfiguration,)
+                               BriefingConfiguration,)
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
@@ -15,14 +15,21 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
-                                 datastore_refresh_token: str):
+                                 datastore_refresh_token: str,
+                                 session_id: str,
+                                 endpoint_name: str,
+                                 method: str,
+                                 evironment: str):
         self.fake_insert_text = body.text
 
     def update_session(self,
                        auth_manager: AuthManagerBaseClass,
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       datastore_refresh_token: str,
+                       environment: str,
+                       endpoint_name: str,
+                       method: str):
         ...
 
     def delete_session(self,
@@ -72,7 +79,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               configuration: SummaryConfiguration,
+                               configuration: BriefingConfiguration,
                                datastore_access_token: str,
                                datastore_refresh_token: str):
         ...
@@ -93,7 +100,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str):
+                                                  diarization: str,
+                                                  endpoint_name: str,
+                                                  method: str,):
         self.fake_processed_diarization_result = diarization
 
     def fetch_frequent_topics(self,

@@ -30,7 +30,7 @@ class TestingHarnessSecurityRouter:
                                    "datastore_refresh_token": "",
                                    "user_id": ""
                                })
-        assert response.status_code == 400
+        assert response.status_code == 401
 
     def test_login_for_token_with_valid_credentials_new_session(self):
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,

@@ -4,7 +4,7 @@ from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               SessionNotesInsert,
                               SessionNotesUpdate,
-                              SummaryConfiguration)
+                              BriefingConfiguration)
 
 class AssistantManagerBaseClass(ABC):
 
@@ -16,11 +16,19 @@ class AssistantManagerBaseClass(ABC):
     body – the data associated with the session.
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
+    session_id – the session id.
+    endpoint_name – the endpoint name that invoked this api.
+    method – the api method that invoked this flow.
+    environment – the current environment.
     """
     def process_new_session_data(auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
-                                 datastore_refresh_token: str):
+                                 datastore_refresh_token: str,
+                                 session_id: str,
+                                 endpoint_name: str,
+                                 method: str,
+                                 environment: str):
         pass
     
     """
@@ -31,11 +39,17 @@ class AssistantManagerBaseClass(ABC):
     body – the new data associated with the session.
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
+    environment – the current environment.
+    endpoint_name – the endpoint that triggered this api.
+    method – the api method that invoked this flow.
     """
     def update_session(auth_manager: AuthManagerBaseClass,
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       datastore_refresh_token: str,
+                       environment: str,
+                       endpoint_name: str,
+                       method: str):
         pass
 
     """
@@ -143,7 +157,7 @@ class AssistantManagerBaseClass(ABC):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               configuration: SummaryConfiguration,
+                               configuration: BriefingConfiguration,
                                datastore_access_token: str,
                                datastore_refresh_token: str):
         pass
@@ -181,11 +195,15 @@ class AssistantManagerBaseClass(ABC):
     job_id – the id of the job that ran.
     summary – the session summary.
     diarization – the diarized session.
+    endpoint_name – the endpoint name that triggered this query.
+    method – the api method that triggered this query.
     """
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str):
+                                                  diarization: str,
+                                                  endpoint_name: str,
+                                                  method: str):
         pass
 
     """

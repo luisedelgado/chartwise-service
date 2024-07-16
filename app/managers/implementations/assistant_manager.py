@@ -8,7 +8,7 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
                                SessionNotesUpdate,
-                               SummaryConfiguration,)
+                               BriefingConfiguration,)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import VectorQueryWorker
@@ -19,7 +19,11 @@ class AssistantManager(AssistantManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
-                                 datastore_refresh_token: str):
+                                 datastore_refresh_token: str,
+                                 session_id: str,
+                                 endpoint_name: str,
+                                 method: str,
+                                 environment: str,):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -32,11 +36,22 @@ class AssistantManager(AssistantManagerBaseClass):
                 "last_updated": now_timestamp,
                 "therapist_id": body.therapist_id}).execute()
 
+            query_result = datastore_client.from_('patients').select('*').eq('id', body.patient_id).execute()
+            query_result_dict = query_result.dict()
+            patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
+                                          query_result_dict['data'][0]['last_name']])
+
             # Upload vector embeddings
             vector_writer.insert_session_vectors(index_id=body.therapist_id,
-                                                    namespace=body.patient_id,
-                                                    text=body.text,
-                                                    date=body.date)
+                                                 namespace=body.patient_id,
+                                                 text=body.text,
+                                                 date=body.date,
+                                                 patient_name=patient_full_name,
+                                                 endpoint_name=endpoint_name,
+                                                 method=method,
+                                                 auth_manager=auth_manager,
+                                                 environment=environment,
+                                                 session_id=session_id)
         except Exception as e:
             raise Exception(e)
 
@@ -44,7 +59,10 @@ class AssistantManager(AssistantManagerBaseClass):
                        auth_manager: AuthManagerBaseClass,
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       datastore_refresh_token: str,
+                       environment: str,
+                       endpoint_name: str,
+                       method: str):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -58,14 +76,25 @@ class AssistantManager(AssistantManagerBaseClass):
                 "session_diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
-            session_date_raw = update_result.dict()['data'][0]['session_date']
+            update_result_dict = update_result.dict()
+            session_date_raw = update_result_dict['data'][0]['session_date']
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
+            patient_id = update_result_dict['data'][0]['patient_id']
+
+            patient_query = datastore_client.from_('patients').select('*').eq('id', patient_id).execute().dict()
+            patient_full_name = " ".join([patient_query['data'][0]['first_name'],
+                                          patient_query['data'][0]['last_name']])
 
             # Upload vector embeddings
             vector_writer.update_session_vectors(index_id=body.therapist_id,
                                                 namespace=body.patient_id,
                                                 text=body.text,
-                                                date=session_date_formatted)
+                                                date=session_date_formatted,
+                                                environment=environment,
+                                                endpoint_name=endpoint_name,
+                                                method=method,
+                                                patient_name=patient_full_name,
+                                                auth_manager=auth_manager,)
         except Exception as e:
             raise Exception(e)
 
@@ -100,12 +129,10 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             vector_writer.delete_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id)
-        except NotFoundException:
+        except Exception as e:
             # Index doesn't exist, failing silently. Patient is being deleted prior to having any
             # data in our vector db
             pass
-        except Exception as e:
-            raise Exception(e)
 
     def delete_all_sessions_for_therapist(self,
                                           id: str):
@@ -239,7 +266,9 @@ class AssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str):
+                                                  diarization: str,
+                                                  endpoint_name: str,
+                                                  method: str,):
         now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
         datastore_client = auth_manager.datastore_admin_instance()
         response = datastore_client.table('session_reports').update({
@@ -253,11 +282,20 @@ class AssistantManager(AssistantManagerBaseClass):
         therapist_id = response.dict()['data'][0]['therapist_id']
         patient_id = response.dict()['data'][0]['patient_id']
 
+        query_result = datastore_client.from_('patients').select('*').eq('id', patient_id).execute()
+        query_result_dict = query_result.dict()
+        patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
+                                      query_result_dict['data'][0]['last_name']])
+
         # Upload vector embeddings
         vector_writer.insert_session_vectors(index_id=therapist_id,
                                              namespace=patient_id,
                                              text=summary,
-                                             date=session_date_formatted)
+                                             patient_name=patient_full_name,
+                                             date=session_date_formatted,
+                                             auth_manager=auth_manager,
+                                             endpoint_name=endpoint_name,
+                                             method=method)
 
     def create_patient_summary(self,
                                therapist_id: str,
@@ -267,7 +305,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                session_id: str,
                                endpoint_name: str,
                                api_method: str,
-                               configuration: SummaryConfiguration,
+                               configuration: BriefingConfiguration,
                                datastore_access_token: str,
                                datastore_refresh_token: str):
         try:
@@ -290,20 +328,20 @@ class AssistantManager(AssistantManagerBaseClass):
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", patient_id).execute()
             session_number = 1 + len(number_session_response.dict()['data'])
 
-            result = VectorQueryWorker().create_summary(index_id=therapist_id,
-                                                        namespace=patient_id,
-                                                        environment=environment,
-                                                        language_code=language_code,
-                                                        session_id=session_id,
-                                                        endpoint_name=endpoint_name,
-                                                        method=api_method,
-                                                        patient_name=patient_name,
-                                                        patient_gender=patient_gender,
-                                                        therapist_name=therapist_name,
-                                                        therapist_gender=therapist_gender,
-                                                        session_number=session_number,
-                                                        auth_manager=auth_manager,
-                                                        configuration=configuration)
+            result = VectorQueryWorker().create_briefing(index_id=therapist_id,
+                                                         namespace=patient_id,
+                                                         environment=environment,
+                                                         language_code=language_code,
+                                                         session_id=session_id,
+                                                         endpoint_name=endpoint_name,
+                                                         method=api_method,
+                                                         patient_name=patient_name,
+                                                         patient_gender=patient_gender,
+                                                         therapist_name=therapist_name,
+                                                         therapist_gender=therapist_gender,
+                                                         session_number=session_number,
+                                                         auth_manager=auth_manager,
+                                                         configuration=configuration)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result

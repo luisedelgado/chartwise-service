@@ -9,7 +9,7 @@ from openai import OpenAI
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
-from ..internal.model import SummaryConfiguration
+from ..internal.model import BriefingConfiguration
 from . import message_templates
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
@@ -53,7 +53,7 @@ class VectorQueryWorker:
 
             index = pc.Index(index_id)
             vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=6)
+            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
@@ -83,6 +83,7 @@ class VectorQueryWorker:
                 refine_template=message_templates.create_refine_prompt_template(response_language_code),
                 llm=llm,
                 streaming=True,
+                similarity_top_k=10,
                 node_postprocessors=[CohereRerank(api_key=os.environ.get("COHERE_API_KEY"), top_n=3)],
             )
 
@@ -159,7 +160,7 @@ class VectorQueryWorker:
             raise Exception(e)
 
     """
-    Creates and returns a brief summary on the incoming patient id's data.
+    Creates and returns a briefing on the incoming patient id's data.
 
     Arguments:
     index_id – the index id that should be queried inside the datastore.
@@ -175,7 +176,7 @@ class VectorQueryWorker:
     auth_manager – the auth manager to be leveraged internally.
     configuration – the configuration to be used for creating the summary.
     """
-    def create_summary(self,
+    def create_briefing(self,
                        index_id: str,
                        namespace: str,
                        environment: str,
@@ -189,7 +190,7 @@ class VectorQueryWorker:
                        therapist_gender: str,
                        session_number: int,
                        auth_manager: AuthManagerBaseClass,
-                       configuration: SummaryConfiguration) -> str:
+                       configuration: BriefingConfiguration) -> str:
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             assert pc.describe_index(index_id).status['ready']
@@ -201,7 +202,7 @@ class VectorQueryWorker:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
 
-            caching_shard_key = (namespace + "-summary-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (namespace + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user": index_id,
@@ -224,18 +225,18 @@ class VectorQueryWorker:
                                      api_base=api_base,
                                      default_headers=headers)
             query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_summary_template(language_code=language_code,
-                                                                           patient_name=patient_name,
-                                                                           patient_gender=patient_gender,
-                                                                           therapist_name=therapist_name,
-                                                                           therapist_gender=therapist_gender,
-                                                                           session_number=session_number,
-                                                                           configuration=configuration),
+                text_qa_template=message_templates.create_briefing_template(language_code=language_code,
+                                                                            patient_name=patient_name,
+                                                                            patient_gender=patient_gender,
+                                                                            therapist_name=therapist_name,
+                                                                            therapist_gender=therapist_gender,
+                                                                            session_number=session_number,
+                                                                            configuration=configuration),
                 llm=llm,
                 streaming=True,
             )
-            query_input = self._create_user_message_for_summary_request(summary_configuration=configuration,
-                                                                        patient_name=patient_name)
+            query_input = self._create_user_message_for_briefing_request(briefing_configuration=configuration,
+                                                                         patient_name=patient_name)
             response = query_engine.query(query_input)
             return eval(str(response))
         except NotFoundException as e:
@@ -389,17 +390,17 @@ class VectorQueryWorker:
     # Private
 
     """
-    Returns a user prompt to be used for creating a summary, based on the incoming SummaryConfiguration object.
+    Returns a user prompt to be used for creating a briefing, based on the incoming BriefingConfiguration object.
 
     Arguments:
-    summary_configuration – the configuration that is being used for generating the summary.
+    briefing_configuration – the configuration that is being used for generating the summary.
     """
-    def _create_user_message_for_summary_request(self,
-                                                 patient_name: str,
-                                                 summary_configuration: SummaryConfiguration) -> str:
-        value = summary_configuration.value
+    def _create_user_message_for_briefing_request(self,
+                                                  patient_name: str,
+                                                  briefing_configuration: BriefingConfiguration) -> str:
+        value = briefing_configuration.value
         if value == "undefined":
-           raise Exception("Received 'undefined' as a SummaryConfiguration value.")
+           raise Exception("Received 'undefined' as a BriefingConfiguration value.")
         elif value == "full_summary":
             return f"Write a summary about {patient_name}'s session history. Your response should not go over 600 characters."
         elif value == "primary_topics":
@@ -409,4 +410,4 @@ class VectorQueryWorker:
         elif value == "symptoms":
             return f"What are three symptoms that {patient_name} has manifested during sessions? Each bullet point should not take more than 50 characters."
         else:
-            raise Exception(f"Untracked SummaryConfiguration value: {summary_configuration}")
+            raise Exception(f"Untracked BriefingConfiguration value: {briefing_configuration}")

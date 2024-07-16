@@ -44,7 +44,7 @@ class LoginData(BaseModel):
 class LogoutData(BaseModel):
     therapist_id: str
 
-class SummaryConfiguration(Enum):
+class BriefingConfiguration(Enum):
     UNDEFINED = "undefined"
     PRIMARY_TOPICS = "primary_topics"
     EMOTIONAL_STATE = "emotional_state"

@@ -128,7 +128,7 @@ class AssistantRouter:
                                         request: Request,
                                         therapist_id: str = None,
                                         patient_id: str = None,
-                                        summary_configuration: model.SummaryConfiguration = model.SummaryConfiguration.UNDEFINED,
+                                        briefing_configuration: model.BriefingConfiguration = model.BriefingConfiguration.UNDEFINED,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -137,7 +137,7 @@ class AssistantRouter:
                                                               request=request,
                                                               therapist_id=therapist_id,
                                                               patient_id=patient_id,
-                                                              summary_configuration=summary_configuration,
+                                                              briefing_configuration=briefing_configuration,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
@@ -276,7 +276,12 @@ class AssistantRouter:
             self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                              body=body,
                                                              datastore_access_token=datastore_access_token,
-                                                             datastore_refresh_token=datastore_refresh_token)
+                                                             datastore_refresh_token=datastore_refresh_token,
+                                                             session_id=session_id,
+                                                             endpoint_name=self.SESSIONS_ENDPOINT,
+                                                             method=logging.API_METHOD_POST,
+                                                             environment=self._environment,
+                                                             )
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -345,7 +350,10 @@ class AssistantRouter:
             self._assistant_manager.update_session(auth_manager=self._auth_manager,
                                                    body=body,
                                                    datastore_access_token=datastore_access_token,
-                                                   datastore_refresh_token=datastore_refresh_token)
+                                                   datastore_refresh_token=datastore_refresh_token,
+                                                   environment=self._environment,
+                                                   endpoint_name=self.SESSIONS_ENDPOINT,
+                                                   method=logging.API_METHOD_PUT)
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -608,7 +616,7 @@ class AssistantRouter:
     request – the incoming request object.
     therapist_id – the id associated with the user.
     patient_id – the id associated with the patient whose presession tray will be fetched.
-    summary_configuration – the summary configuration.
+    briefing_configuration – the summary configuration.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -619,7 +627,7 @@ class AssistantRouter:
                                               request: Request,
                                               therapist_id: str,
                                               patient_id: str,
-                                              summary_configuration: model.SummaryConfiguration,
+                                              briefing_configuration: model.BriefingConfiguration,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -647,7 +655,7 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
-            assert summary_configuration != model.SummaryConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for summary_configuration.'''
+            assert briefing_configuration != model.BriefingConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for briefing_configuration.'''
 
             json_response = self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                            therapist_id=therapist_id,
@@ -656,7 +664,7 @@ class AssistantRouter:
                                                                            endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                            api_method=logging.API_METHOD_GET,
                                                                            auth_manager=self._auth_manager,
-                                                                           configuration=summary_configuration,
+                                                                           configuration=briefing_configuration,
                                                                            datastore_access_token=datastore_access_token,
                                                                            datastore_refresh_token=datastore_refresh_token)
 

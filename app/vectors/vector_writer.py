@@ -6,11 +6,14 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
 from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from llama_index.vector_stores.pinecone import PineconeVectorStore
+from openai import OpenAI
 from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
-from . import data_cleaner
+from . import data_cleaner, message_templates
+from .vector_query import LLM_MODEL
+from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
 
 """
@@ -21,11 +24,26 @@ index_id – the index name that should be used to insert the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 date – the session_date to be used as metadata.
+endpoint_name – the endpoint_name that invoked this flow.
+method – the api method that was used to invoke this flow.
+patient_name – the patient's full name.
+auth_manager – the auth manager to be leveraged internally.
+kwargs – the optional set of parameters.
 """
-def insert_session_vectors(index_id, namespace, text, date):
+def insert_session_vectors(index_id,
+                           namespace,
+                           text,
+                           date,
+                           endpoint_name,
+                           method,
+                           patient_name,
+                           auth_manager,
+                           **kwargs):
     try:
         assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
+        session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+        environment = None if "environment" not in kwargs else kwargs["environment"]
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         
         # If index already exists, this will silently fail so we can continue writing to it
@@ -55,10 +73,20 @@ def insert_session_vectors(index_id, namespace, text, date):
             doc = Document()
             doc.id_ = f"{date}-{chunk_index}-{uuid.uuid1()}"
             doc.set_content(data_cleaner.clean_up_text(chunk))
+
+            session_summary = _summarize_session_entry(session_notes=chunk,
+                                                       session_id=session_id,
+                                                       endpoint_name=endpoint_name,
+                                                       therapist_id=index_id,
+                                                       method=method,
+                                                       patient_name=patient_name,
+                                                       environment=environment,
+                                                       auth_manager=auth_manager)
             doc.metadata.update({
-                "session_date": date
+                "session_date": date,
+                "session_summary": session_summary,
             })
-            doc.embedding = embed_model.get_text_embedding(chunk)
+            doc.embedding = embed_model.get_text_embedding(session_summary)
             vectors.append(doc)
 
         vector_store.add(vectors)
@@ -128,8 +156,21 @@ index_id – the index that should be used to update the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 date – the session_date to be used as metadata.
+endpoint_name – the endpoint_name that invoked this flow.
+method – the api method that was used to invoke this flow.
+patient_name – the patient's full name.
+auth_manager – the auth manager to be leveraged internally.
+kwargs – the optional set of parameters.
 """
-def update_session_vectors(index_id, namespace, text, date):
+def update_session_vectors(index_id,
+                           namespace,
+                           text,
+                           date,
+                           endpoint_name,
+                           method,
+                           patient_name,
+                           auth_manager,
+                           **kwargs):
     try:
         assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
 
@@ -137,13 +178,74 @@ def update_session_vectors(index_id, namespace, text, date):
         delete_session_vectors(index_id, namespace, date)
 
         # Insert the fresh data
-        insert_session_vectors(index_id, namespace, text, date)
+        insert_session_vectors(index_id=index_id,
+                               namespace=namespace,
+                               text=text,
+                               date=date,
+                               endpoint_name=endpoint_name,
+                               method=method,
+                               patient_name=patient_name,
+                               auth_manager=auth_manager,
+                               kwargs=kwargs)
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:
         raise Exception(str(e))
 
 # Private
+
+"""
+Summarizes a session entry for faster fetching.
+
+Arguments:
+session_text – the text associated with the session notes.
+session_id – the session id.
+endpoint_name – the endpoint that was invoked.
+therapist_id – the therapist_id.
+method – the API method that was invoked.
+environment – the current running environment.
+auth_manager – the auth manager to be leveraged internally.
+patient_name – the patient's full name.
+session_id – the session id.
+"""
+def _summarize_session_entry(session_notes: str,
+                             endpoint_name: str,
+                             therapist_id: str,
+                             method: str,
+                             environment: str,
+                             auth_manager: AuthManagerBaseClass,
+                             patient_name: str,
+                             session_id: str = None,
+                             ) -> str:
+    try:
+        metadata = {
+            "environment": environment,
+            "user": therapist_id,
+            "endpoint_name": endpoint_name,
+            "method": method,
+        }
+        if session_id is not None:
+            metadata['session_id'] = str(session_id)
+
+        messages = [
+                {"role": "system", "content": message_templates.create_system_session_summary_message()},
+                {"role": "user", "content": message_templates.create_user_session_summary_message(session_notes=session_notes, patient_name=patient_name)}
+        ]
+
+        is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+        api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+        headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                llm_model=LLM_MODEL) if is_monitoring_proxy_reachable else None
+        llm = OpenAI(base_url=api_base,
+                    default_headers=headers)
+
+        completion = llm.chat.completions.create(
+            model=LLM_MODEL,
+            messages=messages
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        raise Exception(e)
 
 """
 Creates an index in the datastore. If index name already exists, the method will fail silently.

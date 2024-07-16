@@ -5,7 +5,7 @@ from llama_index.core.llms import ChatMessage, MessageRole
 from num2words import num2words
 from pytz import timezone
 
-from ..internal.model import SummaryConfiguration
+from ..internal.model import BriefingConfiguration
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
 
 # Text QA Prompt
@@ -13,11 +13,11 @@ from ..internal.utilities.general_utilities import gender_has_default_pronouns
 def __create_system_qa_message() -> str:
     return '''A therapist is using you to ask questions about their patients' notes. 
     Your job is to answer the therapist's questions based on the information context you find from the sessions' data.
-    For any information you reference, always outline the session date found in the metadata. If no session information is found, do not mention any dates.
-    If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer.
-    Responses with "There's no mention of that in the notes" or "Based on the context I don't have an answer" or no documents returned are considered poor responses.
-    Responses where the question appears to be answered are considered good. Responses that contain detailed answers are considered the best.
-    Also, use your own judgement in analyzing if the question asked is actually answered in the response.'''
+    You should always look first at the session_summary value found in the metadata to understand whether a given document is related to the question.
+    If the session_summary value is related to the question, you should make use of that document to generate your response. 
+    To answer a question in the best way possible, you should find the documents that are most related to the question. 
+    For any information you reference, always outline the session_date value found in the metadata. If no session information is found, do not mention any session dates.
+    If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer.'''
 
 def __create_user_qa_message(language_code: str, patient_gender: str, patient_name: str) -> str:
     message_content = (
@@ -99,27 +99,27 @@ def create_system_greeting_message(therapist_name: str, tz_identifier: str, lang
 def create_user_greeting_message() -> str:
     return f'''Write a welcoming message for the user. Your response should not go over 180 characters.'''
 
-# Summary Prompt
+# Briefing Prompt
 
-def __create_system_summary_message(language_code: str, summary_configuration: SummaryConfiguration) -> str:
-    summary_configuration_format_param = ", structured in bullet points" if summary_configuration != SummaryConfiguration.FULL_SUMMARY else ""
+def __create_system_briefing_message(language_code: str, briefing_configuration: BriefingConfiguration) -> str:
+    briefing_configuration_format_param = ", structured in bullet points" if briefing_configuration != BriefingConfiguration.FULL_SUMMARY else ""
     main_instruction = f'''A mental health practitioner is entering our Practice Management Platform.
     They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
     Your job is to provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. If there's no data for a particular section, simply omit it, and summarize the information that you do find.
-    Each section may take up to 800 characters. You may use the session date found in the metadata for navigating through the sessions' data.
-    Particularly for patients with a short session history, use only the information you find from the metadata session dates (even if it results in a shorter summary).
-    The "less is more" principle applies. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value{summary_configuration_format_param}.
+    Each section may take up to 800 characters. You may use the session_date value found in the metadata for navigating through the sessions' data.
+    Use only the information you find based on the metadata session_date values (even if it results in a shorter summary).
+    We're aiming for accuracy and quality, not quantity. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value{briefing_configuration_format_param}.
     It is very important that the summary response is written using language code {language_code}.'''
     json_example = r'''\nFor example, a response for language code es-419 would look like: {{"summary": "Sesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo."}}'''
     return main_instruction + json_example
 
-def __create_user_summary_message(therapist_name: str,
+def __create_user_briefing_message(therapist_name: str,
                                   therapist_gender: str,
                                   patient_name: str,
                                   patient_gender: str,
                                   session_number: int,
                                   language_code: str,
-                                  summary_configuration: SummaryConfiguration) -> str:
+                                  briefing_configuration: BriefingConfiguration) -> str:
     try:
         ordinal_session_number = num2words(session_number, to='ordinal_num')
         context_paragraph =('''We have provided context information below. \n
@@ -137,38 +137,38 @@ def __create_user_summary_message(therapist_name: str,
         content_params = f"\nIt is very important that the summary is written using language code {language_code}"
         message = context_paragraph + instruction + name_params + gender_params + content_params
 
-        if summary_configuration.value == "full_summary":
+        if briefing_configuration.value == "full_summary":
             message += f"\nStart by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time."
 
         return message
     except Exception as e:
         raise Exception(e)
 
-def create_summary_template(language_code: str,
-                            patient_name: str,
-                            patient_gender: str,
-                            therapist_name: str,
-                            therapist_gender: str,
-                            session_number: int,
-                            configuration: SummaryConfiguration) -> ChatPromptTemplate:
-    summary_message_templates = [
+def create_briefing_template(language_code: str,
+                             patient_name: str,
+                             patient_gender: str,
+                             therapist_name: str,
+                             therapist_gender: str,
+                             session_number: int,
+                             configuration: BriefingConfiguration) -> ChatPromptTemplate:
+    briefing_message_templates = [
         ChatMessage(
             role=MessageRole.SYSTEM,
-            content=__create_system_summary_message(language_code=language_code,
-                                                    summary_configuration=configuration),
+            content=__create_system_briefing_message(language_code=language_code,
+                                                    briefing_configuration=configuration),
         ),
         ChatMessage(
             role=MessageRole.USER,
-            content=__create_user_summary_message(language_code=language_code,
+            content=__create_user_briefing_message(language_code=language_code,
                                                   patient_name=patient_name,
                                                   patient_gender=patient_gender,
                                                   therapist_name=therapist_name,
                                                   therapist_gender=therapist_gender,
                                                   session_number=session_number,
-                                                  summary_configuration=configuration),
+                                                  briefing_configuration=configuration),
         ),
     ]
-    return ChatPromptTemplate(summary_message_templates)
+    return ChatPromptTemplate(briefing_message_templates)
 
 # Question Suggestions
 
@@ -267,3 +267,18 @@ def create_frequent_topics_template(language_code: str,
         ),
     ]
     return ChatPromptTemplate(frequent_topics_templates)
+
+# Session Entry Summary Prompt
+
+def create_system_session_summary_message() -> str:
+    return '''A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform.
+    Your job is to come up with a short summary about the session notes to be used as a label for quick retrievals in the future.
+    Ideally, by just looking at your summary one should know exactly what information is contained in the full set of notes.
+    It is very important that you don't mention the patient's name inside the summary for privacy purposes. Refer to the patient as "the patient".
+    When generating the output you should use a format that you consider ideal for navigating data quickly. Imagine you are going to be consuming the summary yourself.'''
+
+def create_user_session_summary_message(session_notes: str, patient_name: str) -> str:
+    return f'''Write a summary label for the session notes below.
+    It is very important that you don't mention the patient's name, {patient_name}, inside the summary for privacy purposes.
+    Refer to the patient as "the patient".
+    Here are the raw notes:\n{session_notes}.'''

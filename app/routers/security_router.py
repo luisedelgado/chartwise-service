@@ -150,7 +150,7 @@ class SecurityRouter:
                                      method=logging.API_METHOD_POST)
             return auth_token
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(detail=str(e), status_code=status_code)
 
     """
