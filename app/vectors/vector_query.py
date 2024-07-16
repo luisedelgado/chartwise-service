@@ -121,7 +121,7 @@ class VectorQueryWorker:
                         auth_manager: AuthManagerBaseClass,
                         ) -> str:
         try:
-            caching_shard_key = (therapist_id + "-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (therapist_id + "-greeting-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user": therapist_id,
