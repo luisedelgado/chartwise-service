@@ -19,6 +19,7 @@ from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..internal import logging, security
+from ..internal.model import SessionNotesSource
 from ..internal.utilities import datetime_handler, general_utilities
 
 class AudioProcessingRouter:
@@ -214,15 +215,17 @@ class AudioProcessingRouter:
                 "therapist_id": therapist_id,
                 "patient_id": patient_id,
                 "last_updated": now_timestamp,
-                "source": "full_session_recording",
+                "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
             }).execute()
 
+            logs_description = f"job_id={job_id}"
             logging.log_api_response(session_id=session_id,
-                                    endpoint_name=self.DIARIZATION_ENDPOINT,
-                                    patient_id=patient_id,
-                                    therapist_id=therapist_id,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+                                     endpoint_name=self.DIARIZATION_ENDPOINT,
+                                     patient_id=patient_id,
+                                     therapist_id=therapist_id,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=post_api_method,
+                                     description=logs_description)
 
             return {"job_id": job_id}
         except Exception as e:

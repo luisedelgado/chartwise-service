@@ -40,6 +40,14 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                        datastore_refresh_token: str):
         ...
 
+    def adapt_session_notes_to_soap(self,
+                                    auth_manager: AuthManagerBaseClass,
+                                    therapist_id: str,
+                                    session_notes_text: str,
+                                    endpoint_name: str,
+                                    method: str,) -> str:
+        return ""
+
     def delete_all_sessions_for_patient(self,
                                         therapist_id: str,
                                         patient_id: str):

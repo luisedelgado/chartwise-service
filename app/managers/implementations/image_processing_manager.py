@@ -63,30 +63,33 @@ class ImageProcessingManager(ImageProcessingManagerBaseClass):
             raise Exception(str(e))
 
     def extract_text(self, document_id: str) -> str:
-        base_url = os.getenv("DOCUPANDA_BASE_URL")
-        document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
-        url = base_url + document_endpoint + "/" + document_id
+        try:
+            base_url = os.getenv("DOCUPANDA_BASE_URL")
+            document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
+            url = base_url + document_endpoint + "/" + document_id
 
-        headers = {
-            "accept": "application/json",
-            "X-API-Key": os.getenv("DOCUPANDA_API_KEY")
-        }
+            headers = {
+                "accept": "application/json",
+                "X-API-Key": os.getenv("DOCUPANDA_API_KEY")
+            }
 
-        response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers)
 
-        if response.status_code != status.HTTP_200_OK:
-            raise HTTPException(status_code=response.status_code,
-                                detail=response.text)
+            if response.status_code != status.HTTP_200_OK:
+                raise HTTPException(status_code=response.status_code,
+                                    detail=response.text)
 
-        json_response = response.json()
+            json_response = response.json()
 
-        if json_response['status'] == 'processing':
-            raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,
-                                detail="Image textraction is still being processed")
+            if json_response['status'] == 'processing':
+                raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,
+                                    detail="Image textraction is still being processed")
 
-        text_sections = json_response['result']['pages'][0]['sections']
-        full_text = ""
-        for section in text_sections:
-            full_text = full_text + section['text'] + " "
+            text_sections = json_response['result']['pages'][0]['sections']
+            full_text = ""
+            for section in text_sections:
+                full_text = full_text + section['text'] + " "
 
-        return full_text
+            return full_text
+        except Exception as e:
+            raise Exception(e)

@@ -8,6 +8,10 @@ class SessionNotesSource(Enum):
     NOTES_IMAGE = "notes_image"
     MANUAL_INPUT = "manual_input"
 
+class SessionNotesTemplate(Enum):
+    FREE_FORM = "free_form"
+    SOAP = "soap"
+
 class SessionNotesInsert(BaseModel):
     therapist_id: str
     patient_id: str

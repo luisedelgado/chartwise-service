@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from pinecone import NotFoundException
 from supabase import Client
 
 from ...api.assistant_base_class import AssistantManagerBaseClass
@@ -123,6 +122,28 @@ class AssistantManager(AssistantManagerBaseClass):
             vector_writer.delete_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id,
                                                  date=session_date_formatted)
+        except Exception as e:
+            raise Exception(e)
+
+    def adapt_session_notes_to_soap(self,
+                                    auth_manager: AuthManagerBaseClass,
+                                    therapist_id: str,
+                                    session_notes_text: str,
+                                    endpoint_name: str,
+                                    method: str,) -> str:
+        try:
+            soap_report = VectorQueryWorker().create_soap_report(text=session_notes_text,
+                                                                therapist_id=therapist_id,
+                                                                endpoint_name=endpoint_name,
+                                                                method=method,
+                                                                auth_manager=auth_manager)
+            error_message = "Something went wrong in generating a response. Please try again"
+            assert 'subjective' in soap_report, error_message
+            assert 'objective' in soap_report, error_message
+            assert 'assessment' in soap_report, error_message
+            assert 'plan' in soap_report, error_message
+
+            return soap_report
         except Exception as e:
             raise Exception(e)
 
@@ -272,33 +293,36 @@ class AssistantManager(AssistantManagerBaseClass):
                                                   diarization: str,
                                                   endpoint_name: str,
                                                   method: str,):
-        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-        datastore_client = auth_manager.datastore_admin_instance()
-        response = datastore_client.table('session_reports').update({
-            "notes_text": summary,
-            "session_diarization": diarization,
-            "last_updated": now_timestamp,
-        }).eq('session_diarization_job_id', job_id).execute()
+        try:
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            datastore_client = auth_manager.datastore_admin_instance()
+            response = datastore_client.table('session_reports').update({
+                "notes_text": summary,
+                "session_diarization": diarization,
+                "last_updated": now_timestamp,
+            }).eq('session_diarization_job_id', job_id).execute()
 
-        session_date_raw = response.dict()['data'][0]['session_date']
-        session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
-        therapist_id = response.dict()['data'][0]['therapist_id']
-        patient_id = response.dict()['data'][0]['patient_id']
+            session_date_raw = response.dict()['data'][0]['session_date']
+            session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
+            therapist_id = response.dict()['data'][0]['therapist_id']
+            patient_id = response.dict()['data'][0]['patient_id']
 
-        query_result = datastore_client.from_('patients').select('*').eq('id', patient_id).execute()
-        query_result_dict = query_result.dict()
-        patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
-                                      query_result_dict['data'][0]['last_name']])
+            query_result = datastore_client.from_('patients').select('*').eq('id', patient_id).execute()
+            query_result_dict = query_result.dict()
+            patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
+                                        query_result_dict['data'][0]['last_name']])
 
-        # Upload vector embeddings
-        vector_writer.insert_session_vectors(index_id=therapist_id,
-                                             namespace=patient_id,
-                                             text=summary,
-                                             patient_name=patient_full_name,
-                                             date=session_date_formatted,
-                                             auth_manager=auth_manager,
-                                             endpoint_name=endpoint_name,
-                                             method=method)
+            # Upload vector embeddings
+            vector_writer.insert_session_vectors(index_id=therapist_id,
+                                                namespace=patient_id,
+                                                text=summary,
+                                                patient_name=patient_full_name,
+                                                date=session_date_formatted,
+                                                auth_manager=auth_manager,
+                                                endpoint_name=endpoint_name,
+                                                method=method)
+        except Exception as e:
+            raise Exception(e)
 
     def create_patient_summary(self,
                                therapist_id: str,
