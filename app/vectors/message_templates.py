@@ -282,3 +282,16 @@ def create_user_session_summary_message(session_notes: str, patient_name: str) -
     It is very important that you don't mention the patient's name, {patient_name}, inside the summary for privacy purposes.
     Refer to the patient as "the patient".
     Here are the raw notes:\n{session_notes}.'''
+
+# SOAP Template Prompt
+
+def create_system_soap_template_message() -> str:
+    return '''A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform.
+    Your job is to adapt their session notes into the SOAP format. The acronym SOAP stands for Subjective, Objective, Assessment, and Plan.
+    You should take what the practitioner wrote, and break it down into each of these sections.
+    If there is a section that can't be populated because there isn't enough information from the session notes, just leave it blank.
+    Return a JSON object with four keys, "subjective", "objective", "assessment", and "plan". The keys should be written in English.
+    You should detect the language in which the session notes was written, and use the same language for generating each key's respective string value within the JSON object.'''
+
+def create_user_soap_template_message(session_notes: str) -> str:
+    return f'''Adapt the following session notes into the SOAP format:\n{session_notes}.'''

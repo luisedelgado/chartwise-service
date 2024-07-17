@@ -387,6 +387,50 @@ class VectorQueryWorker:
         except Exception as e:
             raise Exception(e)
 
+    """
+    Creates and returns a SOAP report with the incoming data.
+
+    Arguments:
+    text – the text to be adapted to a SOAP format.
+    therapist_id – the therapist_id.
+    method – the API method that was invoked.
+    endpoint_name – the endpoint that was invoked.
+    auth_manager – the auth manager to be leveraged internally.
+    """
+    def create_soap_report(self,
+                           text: str,
+                           therapist_id: str,
+                           endpoint_name: str,
+                           method: str,
+                           auth_manager: AuthManagerBaseClass,
+                           ) -> str:
+        try:
+            metadata = {
+                "user": therapist_id,
+                "endpoint_name": endpoint_name,
+                "method": method,
+            }
+
+            messages = [
+                {"role": "system", "content": message_templates.create_system_soap_template_message()},
+                {"role": "user", "content": message_templates.create_user_soap_template_message(session_notes=text)}
+            ]
+
+            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                   llm_model=LLM_MODEL) if is_monitoring_proxy_reachable else None
+            llm = OpenAI(base_url=api_base,
+                        default_headers=headers)
+
+            completion = llm.chat.completions.create(
+                model=LLM_MODEL,
+                messages=messages
+            )
+            return completion.choices[0].message
+        except Exception as e:
+            raise Exception(e)
+
     # Private
 
     """
