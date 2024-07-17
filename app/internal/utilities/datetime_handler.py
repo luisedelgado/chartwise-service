@@ -9,8 +9,7 @@ The valid format is considered to be %m-%d-%Y
 """
 def is_valid_date(date_input: str) -> bool:
     try:
-        datetime.strptime(date_input, DATE_FORMAT)
-        return True
+        return datetime.strptime(date_input, DATE_FORMAT).date() <= datetime.now().date()
     except:
         return False
 

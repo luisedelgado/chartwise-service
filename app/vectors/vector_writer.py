@@ -40,7 +40,7 @@ def insert_session_vectors(index_id,
                            auth_manager,
                            **kwargs):
     try:
-        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
+        assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
         session_id = None if "session_id" not in kwargs else kwargs["session_id"]
         environment = None if "environment" not in kwargs else kwargs["environment"]
@@ -108,7 +108,7 @@ date – the optional value to be used as a filtering prefix.
 def delete_session_vectors(index_id, namespace, date=None):
     try:
         if date is not None:
-            assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
+            assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         index = pc.Index(index_id)
@@ -172,7 +172,7 @@ def update_session_vectors(index_id,
                            auth_manager,
                            **kwargs):
     try:
-        assert datetime_handler.is_valid_date(date), "The incoming date is not in a valid format."
+        assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
         # Delete the outdated data
         delete_session_vectors(index_id, namespace, date)

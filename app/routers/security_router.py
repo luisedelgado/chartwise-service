@@ -239,7 +239,7 @@ class SecurityRouter:
         try:
             assert body.signup_mechanism != model.SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,
@@ -315,7 +315,7 @@ class SecurityRouter:
                                 endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,

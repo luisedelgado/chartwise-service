@@ -208,7 +208,7 @@ class AudioProcessingRouter:
                                 endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
-            assert datetime_handler.is_valid_date(session_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(session_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 

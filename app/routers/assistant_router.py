@@ -272,7 +272,7 @@ class AssistantRouter:
 
         try:
             assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
-            assert datetime_handler.is_valid_date(body.date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             session_notes_id = self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                 body=body,
@@ -346,7 +346,7 @@ class AssistantRouter:
                                 method=put_api_method)
 
         try:
-            assert datetime_handler.is_valid_date(body.date), "Received invalid date"
+            assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
             self._assistant_manager.update_session(auth_manager=self._auth_manager,
@@ -811,7 +811,7 @@ class AssistantRouter:
         try:
             assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
@@ -892,7 +892,7 @@ class AssistantRouter:
             assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
             assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. The expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
