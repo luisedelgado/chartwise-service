@@ -205,7 +205,7 @@ class ImageProcessingRouter:
                                      http_status_code=status.HTTP_200_OK,
                                      method=get_api_method)
 
-            return soap_textraction
+            return {"soap_textraction": soap_textraction}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

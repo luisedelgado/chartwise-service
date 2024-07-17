@@ -19,7 +19,7 @@ from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..internal import logging, security
-from ..internal.model import SessionNotesSource
+from ..internal.model import SessionNotesSource, SessionNotesTemplate
 from ..internal.utilities import datetime_handler, general_utilities
 
 class AudioProcessingRouter:
@@ -48,6 +48,7 @@ class AudioProcessingRouter:
                                            request: Request,
                                            therapist_id: Annotated[str, Form()],
                                            patient_id: Annotated[str, Form()],
+                                           template: Annotated[SessionNotesTemplate, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -55,6 +56,7 @@ class AudioProcessingRouter:
                                                                  request=request,
                                                                  therapist_id=therapist_id,
                                                                  patient_id=patient_id,
+                                                                 template=template,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
                                                                  session_id=session_id)
@@ -93,6 +95,7 @@ class AudioProcessingRouter:
     request – the incoming request object.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
+    template – the template to be used for generating the output.
     audio_file – the audio file for which the transcription will be created.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
@@ -102,6 +105,7 @@ class AudioProcessingRouter:
                                                  request: Request,
                                                  therapist_id: Annotated[str, Form()],
                                                  patient_id: Annotated[str, Form()],
+                                                 template: Annotated[SessionNotesTemplate, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
                                                  session_id: Annotated[Union[str, None], Cookie()]):
@@ -127,7 +131,12 @@ class AudioProcessingRouter:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
-            transcript = await self._audio_processing_manager.transcribe_audio_file(auth_manager=self._auth_manager,
+            transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
+                                                                                    auth_manager=self._auth_manager,
+                                                                                    template=template,
+                                                                                    therapist_id=therapist_id,
+                                                                                    endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                                                                                    api_method=post_api_method,
                                                                                     audio_file=audio_file)
 
             logging.log_api_response(session_id=session_id,
@@ -137,7 +146,8 @@ class AudioProcessingRouter:
                                      http_status_code=status.HTTP_200_OK,
                                      method=post_api_method)
 
-            return {"transcript": transcript}
+            key = "soap_transcript" if template == SessionNotesTemplate.SOAP else "transcript"
+            return {key: transcript}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)

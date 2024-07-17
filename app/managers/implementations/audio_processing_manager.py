@@ -10,14 +10,22 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
-from ...internal.utilities import file_copiers
+from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
+from ...internal.model import SessionNotesTemplate
+from ...internal.utilities import file_copiers
+from ...vectors.vector_query import VectorQueryWorker
 
 class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def transcribe_audio_file(self,
                                     auth_manager: AuthManagerBaseClass,
+                                    assistant_manager: AssistantManagerBaseClass,
+                                    template: SessionNotesTemplate,
+                                    therapist_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
@@ -50,6 +58,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
                 assert response.status_code == 200, f"{response.status_code}: {response.text}"
                 json_response = response.json()
+                transcript = "Need to index the correct object to return the transcript"
             except Exception as e:
                 status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
                 raise HTTPException(status_code=status_code,
@@ -57,7 +66,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             finally:
                 await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
         else:
-            # Process local copy with DeepgramClient
+            # Process local copy with DeepgramSDK
             try:
                 deepgram = DeepgramClient(os.getenv("DG_API_KEY"))
 
@@ -90,7 +99,15 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             finally:
                 await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
 
-            return transcript
+            if template == SessionNotesTemplate.FREE_FORM:
+                return transcript
+
+            assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
+            return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                 therapist_id=therapist_id,
+                                                                 session_notes_text=transcript,
+                                                                 endpoint_name=endpoint_name,
+                                                                 method=api_method)
 
     # Speechmatics
 

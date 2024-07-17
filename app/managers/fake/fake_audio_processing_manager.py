@@ -1,12 +1,19 @@
 from fastapi import File, UploadFile
 
+from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
+from ...internal.model import SessionNotesTemplate
 
 class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def transcribe_audio_file(self,
+                                    assistant_manager: AssistantManagerBaseClass,
                                     auth_manager: AuthManagerBaseClass,
+                                    template: SessionNotesTemplate,
+                                    therapist_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
                                     audio_file: UploadFile = File(...)) -> str:
         return self.FAKE_TRANSCRIPTION_RESULT
 
