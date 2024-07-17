@@ -262,7 +262,7 @@ class SecurityRouter:
                                      http_status_code=status.HTTP_200_OK,
                                      method=post_api_method)
 
-            return {}
+            return {"therapist_id": body.id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

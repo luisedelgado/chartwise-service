@@ -23,18 +23,19 @@ class AssistantManager(AssistantManagerBaseClass):
                                  session_id: str,
                                  endpoint_name: str,
                                  method: str,
-                                 environment: str,):
+                                 environment: str,) -> str:
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            datastore_client.table('session_reports').insert({
+            insert_result = datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
                 "session_date": body.date,
                 "patient_id": body.patient_id,
                 "source": body.source.value,
                 "last_updated": now_timestamp,
                 "therapist_id": body.therapist_id}).execute()
+            session_notes_id = insert_result.dict()['data'][0]['id']
 
             query_result = datastore_client.from_('patients').select('*').eq('id', body.patient_id).execute()
             query_result_dict = query_result.dict()
@@ -52,6 +53,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                  auth_manager=auth_manager,
                                                  environment=environment,
                                                  session_id=session_id)
+
+            return session_notes_id
         except Exception as e:
             raise Exception(e)
 

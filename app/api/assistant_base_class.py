@@ -10,6 +10,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Takes care of processing a new session's data.
+    Returns session id.
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
@@ -28,7 +29,7 @@ class AssistantManagerBaseClass(ABC):
                                  session_id: str,
                                  endpoint_name: str,
                                  method: str,
-                                 environment: str):
+                                 environment: str) -> str:
         pass
     
     """
@@ -210,14 +211,15 @@ class AssistantManagerBaseClass(ABC):
     Returns a set of topics (along with frequency percentages) that the incoming patient_id is associated with.
 
     Arguments:
-    response – the response model used for the final response that will be returned.
-    request – the incoming request object.
     therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
+    auth_manager – the auth_manager to be leveraged.
+    environment – the current running environment.
+    session_id – the current session id.
+    endpoint_name – the endpoint name that triggered this query.
+    api_method – the api method that triggered this query.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
-    authorization – the authorization cookie, if exists.
-    session_id – the session_id cookie, if exists.
     """
     def fetch_frequent_topics(therapist_id: str,
                               patient_id: str,

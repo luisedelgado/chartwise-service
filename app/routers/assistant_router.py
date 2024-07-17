@@ -274,15 +274,15 @@ class AssistantRouter:
             assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. The expected format is mm-dd-yyyy"
 
-            self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
-                                                             body=body,
-                                                             datastore_access_token=datastore_access_token,
-                                                             datastore_refresh_token=datastore_refresh_token,
-                                                             session_id=session_id,
-                                                             endpoint_name=self.SESSIONS_ENDPOINT,
-                                                             method=post_api_method,
-                                                             environment=self._environment,
-                                                             )
+            session_notes_id = self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
+                                                                                body=body,
+                                                                                datastore_access_token=datastore_access_token,
+                                                                                datastore_refresh_token=datastore_refresh_token,
+                                                                                session_id=session_id,
+                                                                                endpoint_name=self.SESSIONS_ENDPOINT,
+                                                                                method=post_api_method,
+                                                                                environment=self._environment,
+                                                                                )
 
             logging.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -291,7 +291,7 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
 
-            return {}
+            return {"session_id": session_notes_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
@@ -834,7 +834,7 @@ class AssistantRouter:
                                      patient_id=patient_id,
                                      http_status_code=status.HTTP_200_OK)
 
-            return {}
+            return {"patient_id": patient_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

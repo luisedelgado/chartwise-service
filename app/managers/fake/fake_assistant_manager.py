@@ -19,8 +19,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                  session_id: str,
                                  endpoint_name: str,
                                  method: str,
-                                 evironment: str):
+                                 evironment: str) -> str:
         self.fake_insert_text = body.text
+        return self.FAKE_SESSION_NOTES_ID
 
     def update_session(self,
                        auth_manager: AuthManagerBaseClass,
