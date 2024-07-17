@@ -137,8 +137,6 @@ class AudioProcessingRouter:
                                                                                     auth_manager=self._auth_manager,
                                                                                     template=template,
                                                                                     therapist_id=therapist_id,
-                                                                                    endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                                                                                    api_method=post_api_method,
                                                                                     audio_file=audio_file)
 
             logging.log_api_response(session_id=session_id,

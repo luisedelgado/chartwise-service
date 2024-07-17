@@ -12,6 +12,7 @@ FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
 DUMMY_WAV_FILE_LOCATION = "app/tests/data/maluma.wav"
 AUDIO_WAV_FILETYPE = "audio/wav"
 ENVIRONMENT = "testing"
+SOAP_TEMPLATE = "soap"
 
 class TestingHarnessAudioProcessingRouter:
 
@@ -40,11 +41,12 @@ class TestingHarnessAudioProcessingRouter:
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
+                                   "template": SOAP_TEMPLATE
                                },
                                files=files)
         assert response.status_code == 401
 
-    def test_invoke_transcription_with_valid_auth(self):
+    def test_invoke_free_form_transcription_with_valid_auth(self):
         files = {
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
@@ -52,6 +54,7 @@ class TestingHarnessAudioProcessingRouter:
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
+                                   "template": "free_form"
                                },
                                files=files,
                                cookies={
@@ -59,6 +62,25 @@ class TestingHarnessAudioProcessingRouter:
                                })
         assert response.status_code == 200
         assert response.json() == {"transcript": self.audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
+        assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
+        assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
+
+    def test_invoke_free_form_transcription_with_valid_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
+                                   "template": SOAP_TEMPLATE
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": FAKE_AUTH_COOKIE,
+                               })
+        assert response.status_code == 200
+        assert response.json() == {"soap_transcript": self.audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
         assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
         assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
 
@@ -71,6 +93,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
+                                   "template": SOAP_TEMPLATE
                                },
                                files=files)
         assert response.status_code == 401
@@ -84,6 +107,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10/24/2020",
+                                   "template": SOAP_TEMPLATE
                                },
                                files=files,
                                cookies={
@@ -100,6 +124,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10/24/2020",
+                                   "template": SOAP_TEMPLATE
                                },
                                files=files,
                                cookies={
@@ -118,6 +143,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10-24-2020",
+                                   "template": SOAP_TEMPLATE
                                },
                                files=files,
                                cookies={
