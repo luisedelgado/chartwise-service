@@ -393,22 +393,16 @@ class VectorQueryWorker:
     Arguments:
     text – the text to be adapted to a SOAP format.
     therapist_id – the therapist_id.
-    method – the API method that was invoked.
-    endpoint_name – the endpoint that was invoked.
     auth_manager – the auth manager to be leveraged internally.
     """
     def create_soap_report(self,
                            text: str,
                            therapist_id: str,
-                           endpoint_name: str,
-                           method: str,
                            auth_manager: AuthManagerBaseClass,
                            ) -> str:
         try:
             metadata = {
                 "user": therapist_id,
-                "endpoint_name": endpoint_name,
-                "method": method,
             }
 
             messages = [

@@ -12,8 +12,6 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
                                     auth_manager: AuthManagerBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
-                                    endpoint_name: str,
-                                    api_method: str,
                                     audio_file: UploadFile = File(...)) -> str:
         return self.FAKE_TRANSCRIPTION_RESULT
 

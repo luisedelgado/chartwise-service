@@ -43,9 +43,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
     def adapt_session_notes_to_soap(self,
                                     auth_manager: AuthManagerBaseClass,
                                     therapist_id: str,
-                                    session_notes_text: str,
-                                    endpoint_name: str,
-                                    method: str,) -> str:
+                                    session_notes_text: str) -> str:
         return ""
 
     def delete_all_sessions_for_patient(self,

@@ -75,14 +75,10 @@ class AssistantManagerBaseClass(ABC):
     auth_manager – the auth_manager to be leveraged.
     therapist_id – the id associated with the therapist user.
     session_notes_text – the session notes to be adapted into SOAP.
-    endpoint_name – the name of the endpoint that triggered this flow.
-    api_method – the api method of the endpoint that triggered this flow.
     """
     def adapt_session_notes_to_soap(auth_manager: AuthManagerBaseClass,
                                     therapist_id: str,
-                                    session_notes_text: str,
-                                    endpoint_name: str,
-                                    method: str,) -> str:
+                                    session_notes_text: str) -> str:
         pass
 
     """

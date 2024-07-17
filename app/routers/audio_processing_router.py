@@ -67,6 +67,7 @@ class AudioProcessingRouter:
                                   session_date: Annotated[str, Form()],
                                   therapist_id: Annotated[str, Form()],
                                   patient_id: Annotated[str, Form()],
+                                  template: Annotated[SessionNotesTemplate, Form()],
                                   audio_file: UploadFile = File(...),
                                   datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -77,6 +78,7 @@ class AudioProcessingRouter:
                                                         session_date=session_date,
                                                         therapist_id=therapist_id,
                                                         patient_id=patient_id,
+                                                        template=template,
                                                         audio_file=audio_file,
                                                         datastore_access_token=datastore_access_token,
                                                         datastore_refresh_token=datastore_refresh_token,
@@ -167,6 +169,7 @@ class AudioProcessingRouter:
     request – the incoming request object.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
+    template – the template to be used for generating the output.
     audio_file – the audio file for which the diarized transcription will be created.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -179,6 +182,7 @@ class AudioProcessingRouter:
                                         session_date: Annotated[str, Form()],
                                         therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
+                                        template: Annotated[SessionNotesTemplate, Form()],
                                         audio_file: UploadFile,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()],
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -220,7 +224,8 @@ class AudioProcessingRouter:
             datastore_client: Client = self._auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                                   refresh_token=datastore_refresh_token)
             datastore_client.table('session_reports').insert({
-                "session_diarization_job_id": job_id,
+                "diarization_job_id": job_id,
+                "diarization_template": template.value,
                 "session_date": session_date,
                 "therapist_id": therapist_id,
                 "patient_id": patient_id,
@@ -278,9 +283,7 @@ class AudioProcessingRouter:
             self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                               job_id=job_id,
                                                                               summary=summary,
-                                                                              diarization=diarization,
-                                                                              endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
-                                                                              method=logging.API_METHOD_POST)
+                                                                              diarization=diarization)
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)

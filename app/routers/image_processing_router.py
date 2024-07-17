@@ -184,19 +184,17 @@ class ImageProcessingRouter:
 
             if template == SessionNotesTemplate.FREE_FORM:
                 logging.log_api_response(session_id=session_id,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=get_api_method)
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id,
+                                         endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                                         http_status_code=status.HTTP_200_OK,
+                                         method=get_api_method)
                 return {"textraction": textraction}
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             soap_textraction = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                              therapist_id=therapist_id,
-                                                                              session_notes_text=textraction,
-                                                                              endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                                                              method=get_api_method)
+                                                                                   therapist_id=therapist_id,
+                                                                                   session_notes_text=textraction)
 
             logging.log_api_response(session_id=session_id,
                                      therapist_id=therapist_id,

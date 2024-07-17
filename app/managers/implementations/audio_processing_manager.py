@@ -24,8 +24,6 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                     assistant_manager: AssistantManagerBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
-                                    endpoint_name: str,
-                                    api_method: str,
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
@@ -105,9 +103,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                  therapist_id=therapist_id,
-                                                                 session_notes_text=transcript,
-                                                                 endpoint_name=endpoint_name,
-                                                                 method=api_method)
+                                                                 session_notes_text=transcript)
 
     # Speechmatics
 

@@ -14,16 +14,12 @@ class AudioProcessingManagerBaseClass(ABC):
     assistant_manager – the assistant manager to be leveraged internally.
     template – the template to be used for returning the output.
     therapist_id – the therapist id associated with the audio file.
-    endpoint_name – the name of the endpoint that triggered this flow.
-    api_method – the method of the api that triggered this flow.
     audio_file – the audio file to be transcribed.
     """
     async def transcribe_audio_file(auth_manager: AuthManagerBaseClass,
                                     assistant_manager: AssistantManagerBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
-                                    endpoint_name: str,
-                                    api_method: str,
                                     audio_file: UploadFile = File(...)) -> str:
         pass
 
