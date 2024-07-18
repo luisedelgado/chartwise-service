@@ -11,7 +11,18 @@ from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
-from ..internal import logging, model, security
+from ..internal import logging, security
+from ..internal.model import (AssistantQuery,
+                              BriefingConfiguration,
+                              Gender,
+                              PatientConsentmentChannel,
+                              PatientInsertPayload,
+                              PatientUpdatePayload,
+                              SessionNotesInsert,
+                              SessionNotesSource,
+                              SessionNotesTemplate,
+                              SessionNotesUpdate,
+                              TemplatePayload)
 from ..internal.utilities import datetime_handler, general_utilities
 
 class AssistantRouter:
@@ -23,6 +34,7 @@ class AssistantRouter:
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
     PATIENTS_ENDPOINT = "/v1/patients"
     TOPICS_ENDPOINT = "/v1/topics"
+    TEMPLATES_ENDPOINT = "/v1/templates"
     ROUTER_TAG = "assistant"
 
     def __init__(self,
@@ -40,7 +52,7 @@ class AssistantRouter:
     """
     def _register_routes(self):
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def insert_new_session(body: model.SessionNotesInsert,
+        async def insert_new_session(body: SessionNotesInsert,
                                      request: Request,
                                      response: Response,
                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -56,7 +68,7 @@ class AssistantRouter:
                                                            session_id=session_id)
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def update_session(body: model.SessionNotesUpdate,
+        async def update_session(body: SessionNotesUpdate,
                                  request: Request,
                                  response: Response,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -90,7 +102,7 @@ class AssistantRouter:
                                                        session_id=session_id)
 
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def execute_assistant_query(query: model.AssistantQuery,
+        async def execute_assistant_query(query: AssistantQuery,
                                           response: Response,
                                           request: Request,
                                           datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -128,7 +140,7 @@ class AssistantRouter:
                                         request: Request,
                                         therapist_id: str = None,
                                         patient_id: str = None,
-                                        briefing_configuration: model.BriefingConfiguration = model.BriefingConfiguration.UNDEFINED,
+                                        briefing_configuration: BriefingConfiguration = BriefingConfiguration.UNDEFINED,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -164,7 +176,7 @@ class AssistantRouter:
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
                               request: Request,
-                              body: model.PatientInsertPayload,
+                              body: PatientInsertPayload,
                               datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                               datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                               authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -180,7 +192,7 @@ class AssistantRouter:
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
                                  request: Request,
-                                 body: model.PatientUpdatePayload,
+                                 body: PatientUpdatePayload,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -229,6 +241,20 @@ class AssistantRouter:
                                                               authorization=authorization,
                                                               session_id=session_id)
 
+        @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def transform_session_with_template(response: Response,
+                                                  request: Request,
+                                                  body: TemplatePayload,
+                                                  authorization: Annotated[Union[str, None], Cookie()] = None,
+                                                  session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._transform_session_with_template_internal(response=response,
+                                                                        request=request,
+                                                                        therapist_id=body.therapist_id,
+                                                                        session_notes_text=body.session_notes_text,
+                                                                        template=body.template,
+                                                                        authorization=authorization,
+                                                                        session_id=session_id)
+
     """
     Stores a new session report.
 
@@ -242,7 +268,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _insert_new_session_internal(self,
-                                           body: model.SessionNotesInsert,
+                                           body: SessionNotesInsert,
                                            request: Request,
                                            response: Response,
                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -271,7 +297,7 @@ class AssistantRouter:
                                 method=post_api_method,)
 
         try:
-            assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
+            assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             session_notes_id = self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
@@ -318,7 +344,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _update_session_internal(self,
-                                       body: model.SessionNotesUpdate,
+                                       body: SessionNotesUpdate,
                                        request: Request,
                                        response: Response,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -347,7 +373,7 @@ class AssistantRouter:
 
         try:
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert body.source != model.SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
+            assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
             self._assistant_manager.update_session(auth_manager=self._auth_manager,
                                                    body=body,
@@ -476,7 +502,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
-                                                query: model.AssistantQuery,
+                                                query: AssistantQuery,
                                                 request: Request,
                                                 response: Response,
                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -632,7 +658,7 @@ class AssistantRouter:
                                               request: Request,
                                               therapist_id: str,
                                               patient_id: str,
-                                              briefing_configuration: model.BriefingConfiguration,
+                                              briefing_configuration: BriefingConfiguration,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -661,7 +687,7 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
-            assert briefing_configuration != model.BriefingConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for briefing_configuration.'''
+            assert briefing_configuration != BriefingConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for briefing_configuration.'''
 
             json_response = self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                            therapist_id=therapist_id,
@@ -783,7 +809,7 @@ class AssistantRouter:
     async def _add_patient_internal(self,
                                     response: Response,
                                     request: Request,
-                                    body: model.PatientInsertPayload,
+                                    body: PatientInsertPayload,
                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                     authorization: Annotated[Union[str, None], Cookie()],
@@ -809,8 +835,8 @@ class AssistantRouter:
                                 therapist_id=body.therapist_id)
 
         try:
-            assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
@@ -862,7 +888,7 @@ class AssistantRouter:
     async def _update_patient_internal(self,
                                        response: Response,
                                        request: Request,
-                                       body: model.PatientUpdatePayload,
+                                       body: PatientUpdatePayload,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -890,8 +916,8 @@ class AssistantRouter:
 
         try:
             assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
-            assert body.consentment_channel != model.PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
@@ -1015,14 +1041,14 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _fetch_frequent_topics_internal(self,
-                                             response: Response,
-                                             request: Request,
-                                             therapist_id: str,
-                                             patient_id: str,
-                                             datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                             authorization: Annotated[Union[str, None], Cookie()],
-                                             session_id: Annotated[Union[str, None], Cookie()]):
+                                              response: Response,
+                                              request: Request,
+                                              therapist_id: str,
+                                              patient_id: str,
+                                              datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                              authorization: Annotated[Union[str, None], Cookie()],
+                                              session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -1074,5 +1100,68 @@ class AssistantRouter:
                             error_code=status_code,
                             description=description,
                             method=get_api_method)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Adapts an incoming set of session notes into the SOAP format and returns the result.
+
+    Arguments:
+    response – the response model used for the final response that will be returned.
+    request – the incoming request object.
+    therapist_id – the id associated with the therapist user.
+    session_notes_text – the session notes to be adapted into SOAP.
+    template – the template to be applied.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _transform_session_with_template_internal(self,
+                                                        response: Response,
+                                                        request: Request,
+                                                        therapist_id: str,
+                                                        session_notes_text: str,
+                                                        template: SessionNotesTemplate,
+                                                        authorization: Annotated[Union[str, None], Cookie()],
+                                                        session_id: Annotated[Union[str, None], Cookie()]):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        try:
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     request=request,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=status_code, detail=str(e))
+
+        post_api_method = logging.API_METHOD_POST
+        logging.log_api_request(session_id=session_id,
+                                method=post_api_method,
+                                endpoint_name=self.TEMPLATES_ENDPOINT,
+                                therapist_id=therapist_id,)
+
+        try:
+            assert len(session_notes_text or '') > 0, "Empty session_notes_text param"
+            assert len(therapist_id or '') > 0, "Empty therapist_id param"
+            assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
+
+            soap_notes = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
+                                                                             therapist_id=therapist_id,
+                                                                             session_notes_text=session_notes_text)
+            logging.log_api_response(session_id=session_id,
+                                     endpoint_name=self.TEMPLATES_ENDPOINT,
+                                     therapist_id=therapist_id,
+                                     http_status_code=status.HTTP_200_OK,
+                                     method=post_api_method)
+
+            return {"soap_notes": soap_notes}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            logging.log_error(session_id=session_id,
+                              endpoint_name=self.TEMPLATES_ENDPOINT,
+                              error_code=status_code,
+                              description=description,
+                              method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)

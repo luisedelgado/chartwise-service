@@ -28,6 +28,11 @@ class SessionNotesUpdate(BaseModel):
     diarization: str = None
     text: str
 
+class TemplatePayload(BaseModel):
+    session_notes_text: str
+    template: SessionNotesTemplate = SessionNotesTemplate.SOAP
+    therapist_id: str
+
 class AssistantQuery(BaseModel):
     patient_id: str
     therapist_id: str
