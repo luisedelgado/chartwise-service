@@ -800,3 +800,60 @@ class TestingHarnessAssistantRouter:
                                         "therapist_id": self.auth_manager.FAKE_USER_ID,
                                     })
         assert response.status_code == 200
+
+    def test_transform_with_template_with_missing_auth(self):
+        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
+                                    json={
+                                        "template": "soap",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "session_notes_text": "My fake session notes"
+                                    })
+        assert response.status_code == 401
+
+    def test_transform_with_template_with_empty_therapist_id(self):
+        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
+                                    json={
+                                        "template": "soap",
+                                        "therapist_id": "",
+                                        "session_notes_text": "My fake session notes"
+                                    },
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },)
+        assert response.status_code == 400
+
+    def test_transform_with_template_with_free_form_value(self):
+        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
+                                    json={
+                                        "template": "free_form",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "session_notes_text": "My fake session notes"
+                                    },
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },)
+        assert response.status_code == 400
+
+    def test_transform_with_template_with_empty_notes(self):
+        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
+                                    json={
+                                        "template": "soap",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "session_notes_text": ""
+                                    },
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },)
+        assert response.status_code == 400
+
+    def test_transform_with_template_success(self):
+        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
+                                    json={
+                                        "template": "soap",
+                                        "therapist_id": self.auth_manager.FAKE_USER_ID,
+                                        "session_notes_text": "My fake session notes"
+                                    },
+                                    cookies={
+                                        "authorization": FAKE_AUTH_COOKIE,
+                                    },)
+        assert response.status_code == 200
