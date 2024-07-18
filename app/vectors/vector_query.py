@@ -421,7 +421,7 @@ class VectorQueryWorker:
                 model=LLM_MODEL,
                 messages=messages
             )
-            return eval(str(completion.choices[0].message.content))
+            return completion.choices[0].message.content
         except Exception as e:
             raise Exception(e)
 

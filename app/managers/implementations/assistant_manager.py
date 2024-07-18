@@ -134,12 +134,6 @@ class AssistantManager(AssistantManagerBaseClass):
             soap_report = VectorQueryWorker().create_soap_report(text=session_notes_text,
                                                                  therapist_id=therapist_id,
                                                                  auth_manager=auth_manager)
-            error_message = "Something went wrong in generating a response. Please try again"
-            assert 'subjective' in soap_report, error_message
-            assert 'objective' in soap_report, error_message
-            assert 'assessment' in soap_report, error_message
-            assert 'plan' in soap_report, error_message
-
             return soap_report
         except Exception as e:
             raise Exception(e)

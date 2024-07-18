@@ -294,8 +294,8 @@ def create_system_soap_template_message() -> str:
     "Plan" is the set of actions proposed either by the practitioner or the patient for addressing the patient's problem(s).
     You should take what the practitioner wrote, and break it down into each of these sections. You may paraphrase information if you believe it will make it more readable.
     If there is a section that can't be populated because there isn't enough information from the session notes, just leave it blank.
-    Return a JSON object with four keys, "subjective", "objective", "assessment", and "plan". The keys should be written in English.
-    You should detect the language in which the session notes was written, and use the same language for generating each key's respective string value within the JSON object.'''
+    Return the new SOAP session notes as a string, with double line breaks between each category (Subjective, Objective, Assessment, and Plan), and single line breaks between a category's header and its content.
+    It is very important that category headers are written in English but the category's content should be generated in the same language in which the practitioner's session notes were written.'''
 
 def create_user_soap_template_message(session_notes: str) -> str:
     return f'''Adapt the following session notes into the SOAP format:\n{session_notes}.'''
