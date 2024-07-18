@@ -54,7 +54,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                 with open(audio_copy_result.file_copy_full_path, 'rb') as audio_file:
                     response = requests.post(endpoint_configuration, headers=headers, data=audio_file)
 
-                assert response.status_code == 200, f"{response.status_code}: {response.text}"
+                assert response.status_code == 200, f"{response.text}"
                 json_response = response.json()
                 transcript = "Need to index the correct object to return the transcript"
             except Exception as e:
