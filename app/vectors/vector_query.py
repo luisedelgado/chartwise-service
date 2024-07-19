@@ -177,20 +177,20 @@ class VectorQueryWorker:
     configuration – the configuration to be used for creating the summary.
     """
     def create_briefing(self,
-                       index_id: str,
-                       namespace: str,
-                       environment: str,
-                       language_code: str,
-                       session_id: str,
-                       endpoint_name: str,
-                       method: str,
-                       patient_name: str,
-                       patient_gender: str,
-                       therapist_name: str,
-                       therapist_gender: str,
-                       session_number: int,
-                       auth_manager: AuthManagerBaseClass,
-                       configuration: BriefingConfiguration) -> str:
+                        index_id: str,
+                        namespace: str,
+                        environment: str,
+                        language_code: str,
+                        session_id: str,
+                        endpoint_name: str,
+                        method: str,
+                        patient_name: str,
+                        patient_gender: str,
+                        therapist_name: str,
+                        therapist_gender: str,
+                        session_number: int,
+                        auth_manager: AuthManagerBaseClass,
+                        configuration: BriefingConfiguration) -> str:
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             assert pc.describe_index(index_id).status['ready']

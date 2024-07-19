@@ -317,7 +317,7 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
 
-            return {"session_id": session_notes_id}
+            return {"session_report_id": session_notes_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
