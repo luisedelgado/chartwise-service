@@ -689,16 +689,16 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert briefing_configuration != BriefingConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for briefing_configuration.'''
 
-            json_response = self._assistant_manager.create_patient_summary(patient_id=patient_id,
-                                                                           therapist_id=therapist_id,
-                                                                           environment=self._environment,
-                                                                           session_id=session_id,
-                                                                           endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                           api_method=get_api_method,
-                                                                           auth_manager=self._auth_manager,
-                                                                           configuration=briefing_configuration,
-                                                                           datastore_access_token=datastore_access_token,
-                                                                           datastore_refresh_token=datastore_refresh_token)
+            json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
+                                                                                 therapist_id=therapist_id,
+                                                                                 environment=self._environment,
+                                                                                 session_id=session_id,
+                                                                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                                                                 api_method=get_api_method,
+                                                                                 auth_manager=self._auth_manager,
+                                                                                 configuration=briefing_configuration,
+                                                                                 datastore_access_token=datastore_access_token,
+                                                                                 datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.PRESESSION_TRAY_ENDPOINT,

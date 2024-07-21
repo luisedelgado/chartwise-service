@@ -13,6 +13,7 @@ from openai.types import Completion
 from pinecone import Pinecone
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
+from portkey_ai import Portkey
 
 from ..internal.model import BriefingConfiguration
 from . import data_cleaner, message_templates
@@ -184,90 +185,21 @@ class VectorQueryWorker:
     auth_manager – the auth manager to be leveraged internally.
     configuration – the configuration to be used for creating the summary.
     """
-    def create_briefing(self,
-                        index_id: str,
-                        namespace: str,
-                        environment: str,
-                        language_code: str,
-                        session_id: str,
-                        endpoint_name: str,
-                        method: str,
-                        patient_name: str,
-                        patient_gender: str,
-                        therapist_name: str,
-                        therapist_gender: str,
-                        session_number: int,
-                        auth_manager: AuthManagerBaseClass,
-                        configuration: BriefingConfiguration) -> str:
-        try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-            assert pc.describe_index(index_id).status['ready']
-
-            index = pc.Index(index_id)
-            vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
-
-            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
-            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
-
-            caching_shard_key = (namespace + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            metadata = {
-                "environment": environment,
-                "user": index_id,
-                "patient": namespace,
-                "session_id": str(session_id),
-                "caching_shard_key": caching_shard_key,
-                "endpoint_name": endpoint_name,
-                "method": method,
-                "language_code": language_code,
-            }
-
-            cache_ttl = 86400 # 24 hours
-            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                   caching_shard_key=caching_shard_key,
-                                                                   llm_model=LLM_MODEL,
-                                                                   cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
-
-            llm = llama_index_OpenAI(model=LLM_MODEL,
-                                     temperature=0,
-                                     api_base=api_base,
-                                     default_headers=headers)
-            query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_system_message_briefing(language_code=language_code,
-                                                                                  therapist_name=therapist_name,
-                                                                                  therapist_gender=therapist_gender,
-                                                                                  patient_name=patient_name,
-                                                                                  patient_gender=patient_gender,
-                                                                                  session_number=session_number),
-                llm=llm,
-                streaming=True,
-            )
-            query_input = message_templates.create_user_briefing_message(patient_name=patient_name,
-                                                                         language_code=language_code,
-                                                                         configuration=configuration)
-            response = query_engine.query(query_input)
-            return eval(str(response))
-        except NotFoundException as e:
-            # Index is not defined in the vector db
-            raise Exception("Index does not exist. Cannot create summary until a valid index is sent")
-        except Exception as e:
-            raise Exception(e)
-
-    async def create_briefing_with_gpt4omini(self,
-                                             index_id: str,
-                                             namespace: str,
-                                             environment: str,
-                                             language_code: str,
-                                             session_id: str,
-                                             endpoint_name: str,
-                                             method: str,
-                                             patient_name: str,
-                                             patient_gender: str,
-                                             therapist_name: str,
-                                             therapist_gender: str,
-                                             session_number: int,
-                                             auth_manager: AuthManagerBaseClass,
-                                             configuration: BriefingConfiguration) -> str:
+    async def create_briefing(self,
+                              index_id: str,
+                              namespace: str,
+                              environment: str,
+                              language_code: str,
+                              session_id: str,
+                              endpoint_name: str,
+                              method: str,
+                              patient_name: str,
+                              patient_gender: str,
+                              therapist_name: str,
+                              therapist_gender: str,
+                              session_number: int,
+                              auth_manager: AuthManagerBaseClass,
+                              configuration: BriefingConfiguration) -> str:
         try:
             pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
             assert index_id in pc.list_indexes().names(), "Index not found"
@@ -296,17 +228,23 @@ class VectorQueryWorker:
                                                                                                     language_code=language_code,
                                                                                                     configuration=configuration))
 
-            # api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
-            # openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
-            #                        base_url=api_base)
+            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                   base_url=api_base,
+                                   default_headers=proxy_headers)
 
-            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-            response = openai_client.embeddings.create(input=[query_input],
-                                                            #   extra_headers=proxy_headers,
-                                                              model="text-embedding-3-small")
-            query_embeddings = [embedding['embedding'] for embedding in response.dict()['data']]
+            portkey = Portkey(
+                api_key=os.environ.get("PORTKEY_API_KEY"),
+                virtual_key=os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
+            )
 
-            query_result = index.query(vector=query_embeddings,
+            query_data = portkey.embeddings.create(
+                encoding_format='float',
+                input=query_input,
+                model=EMBEDDING_MODEL
+            ).data
+            embeddings = [item.embedding for item in query_data]
+            query_result = index.query(vector=embeddings,
                                        top_k=10,
                                        namespace=namespace,
                                        include_metadata=True)
@@ -352,7 +290,6 @@ class VectorQueryWorker:
                     {"role": "user", "content": query_input},
                 ],
                 temperature=0,
-                # extra_headers=proxy_headers,
                 max_tokens=max_tokens
             )
 

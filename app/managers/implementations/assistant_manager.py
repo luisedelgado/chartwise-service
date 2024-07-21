@@ -332,17 +332,17 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def create_patient_summary(self,
-                               therapist_id: str,
-                               patient_id: str,
-                               auth_manager: AuthManagerBaseClass,
-                               environment: str,
-                               session_id: str,
-                               endpoint_name: str,
-                               api_method: str,
-                               configuration: BriefingConfiguration,
-                               datastore_access_token: str,
-                               datastore_refresh_token: str):
+    async def create_patient_summary(self,
+                                     therapist_id: str,
+                                     patient_id: str,
+                                     auth_manager: AuthManagerBaseClass,
+                                     environment: str,
+                                     session_id: str,
+                                     endpoint_name: str,
+                                     api_method: str,
+                                     configuration: BriefingConfiguration,
+                                     datastore_access_token: str,
+                                     datastore_refresh_token: str):
         try:
             datastore_client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                     refresh_token=datastore_refresh_token)
@@ -363,20 +363,20 @@ class AssistantManager(AssistantManagerBaseClass):
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", patient_id).execute()
             session_number = 1 + len(number_session_response.dict()['data'])
 
-            result = VectorQueryWorker().create_briefing(index_id=therapist_id,
-                                                         namespace=patient_id,
-                                                         environment=environment,
-                                                         language_code=language_code,
-                                                         session_id=session_id,
-                                                         endpoint_name=endpoint_name,
-                                                         method=api_method,
-                                                         patient_name=patient_name,
-                                                         patient_gender=patient_gender,
-                                                         therapist_name=therapist_name,
-                                                         therapist_gender=therapist_gender,
-                                                         session_number=session_number,
-                                                         auth_manager=auth_manager,
-                                                         configuration=configuration)
+            result = await VectorQueryWorker().create_briefing(index_id=therapist_id,
+                                                               namespace=patient_id,
+                                                               environment=environment,
+                                                               language_code=language_code,
+                                                               session_id=session_id,
+                                                               endpoint_name=endpoint_name,
+                                                               method=api_method,
+                                                               patient_name=patient_name,
+                                                               patient_gender=patient_gender,
+                                                               therapist_name=therapist_name,
+                                                               therapist_gender=therapist_gender,
+                                                               session_number=session_number,
+                                                               auth_manager=auth_manager,
+                                                               configuration=configuration)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result

@@ -78,17 +78,17 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                               datastore_refresh_token: str):
         ...
 
-    def create_patient_summary(self,
-                               therapist_id: str,
-                               patient_id: str,
-                               auth_manager: AuthManagerBaseClass,
-                               environment: str,
-                               session_id: str,
-                               endpoint_name: str,
-                               api_method: str,
-                               configuration: BriefingConfiguration,
-                               datastore_access_token: str,
-                               datastore_refresh_token: str):
+    async def create_patient_summary(self,
+                                     therapist_id: str,
+                                     patient_id: str,
+                                     auth_manager: AuthManagerBaseClass,
+                                     environment: str,
+                                     session_id: str,
+                                     endpoint_name: str,
+                                     api_method: str,
+                                     configuration: BriefingConfiguration,
+                                     datastore_access_token: str,
+                                     datastore_refresh_token: str):
         ...
 
     def fetch_question_suggestions(self,

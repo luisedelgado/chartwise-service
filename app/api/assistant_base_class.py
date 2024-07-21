@@ -164,16 +164,16 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def create_patient_summary(therapist_id: str,
-                               patient_id: str,
-                               auth_manager: AuthManagerBaseClass,
-                               environment: str,
-                               session_id: str,
-                               endpoint_name: str,
-                               api_method: str,
-                               configuration: BriefingConfiguration,
-                               datastore_access_token: str,
-                               datastore_refresh_token: str):
+    async def create_patient_summary(therapist_id: str,
+                                     patient_id: str,
+                                     auth_manager: AuthManagerBaseClass,
+                                     environment: str,
+                                     session_id: str,
+                                     endpoint_name: str,
+                                     api_method: str,
+                                     configuration: BriefingConfiguration,
+                                     datastore_access_token: str,
+                                     datastore_refresh_token: str):
         pass
 
     """
