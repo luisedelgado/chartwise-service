@@ -1,4 +1,6 @@
-import os
+import asyncio, json, os
+
+import cohere, tiktoken
 
 from datetime import datetime
 from llama_index.core import VectorStoreIndex
@@ -6,15 +8,21 @@ from llama_index.llms.openai import OpenAI as llama_index_OpenAI
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
+from openai.resources import Completions, Embeddings
+from openai.types import Completion
+from pinecone import Pinecone
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
 from ..internal.model import BriefingConfiguration
-from . import message_templates
+from . import data_cleaner, message_templates
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
 
 LLM_MODEL = "gpt-3.5-turbo"
+LLM_MODEL_NEW = "gpt-4o-mini"
+EMBEDDING_MODEL = "text-embedding-3-small"
+GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 
 class VectorQueryWorker:
 
@@ -225,23 +233,131 @@ class VectorQueryWorker:
                                      api_base=api_base,
                                      default_headers=headers)
             query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_briefing_template(language_code=language_code,
-                                                                            patient_name=patient_name,
-                                                                            patient_gender=patient_gender,
-                                                                            therapist_name=therapist_name,
-                                                                            therapist_gender=therapist_gender,
-                                                                            session_number=session_number,
-                                                                            configuration=configuration),
+                text_qa_template=message_templates.create_system_message_briefing(language_code=language_code,
+                                                                                  therapist_name=therapist_name,
+                                                                                  therapist_gender=therapist_gender,
+                                                                                  patient_name=patient_name,
+                                                                                  patient_gender=patient_gender,
+                                                                                  session_number=session_number),
                 llm=llm,
                 streaming=True,
             )
-            query_input = self._create_user_message_for_briefing_request(briefing_configuration=configuration,
-                                                                         patient_name=patient_name)
+            query_input = message_templates.create_user_briefing_message(patient_name=patient_name,
+                                                                         language_code=language_code,
+                                                                         configuration=configuration)
             response = query_engine.query(query_input)
             return eval(str(response))
         except NotFoundException as e:
             # Index is not defined in the vector db
             raise Exception("Index does not exist. Cannot create summary until a valid index is sent")
+        except Exception as e:
+            raise Exception(e)
+
+    async def create_briefing_with_gpt4omini(self,
+                                             index_id: str,
+                                             namespace: str,
+                                             environment: str,
+                                             language_code: str,
+                                             session_id: str,
+                                             endpoint_name: str,
+                                             method: str,
+                                             patient_name: str,
+                                             patient_gender: str,
+                                             therapist_name: str,
+                                             therapist_gender: str,
+                                             session_number: int,
+                                             auth_manager: AuthManagerBaseClass,
+                                             configuration: BriefingConfiguration) -> str:
+        try:
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+            assert index_id in pc.list_indexes().names(), "Index not found"
+
+            index = pc.Index(index_id)
+            caching_shard_key = (namespace + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            metadata = {
+                "environment": environment,
+                "user": index_id,
+                "patient": namespace,
+                "session_id": str(session_id),
+                "caching_shard_key": caching_shard_key,
+                "endpoint_name": endpoint_name,
+                "method": method,
+                "language_code": language_code,
+            }
+
+            cache_ttl = 86400 # 24 hours
+            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+            proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                         caching_shard_key=caching_shard_key,
+                                                                         llm_model=LLM_MODEL_NEW,
+                                                                         cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
+
+            query_input = data_cleaner.clean_up_text(message_templates.create_user_briefing_message(patient_name=patient_name,
+                                                                                                    language_code=language_code,
+                                                                                                    configuration=configuration))
+
+            # api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+            # openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+            #                        base_url=api_base)
+
+            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+            response = openai_client.embeddings.create(input=[query_input],
+                                                            #   extra_headers=proxy_headers,
+                                                              model="text-embedding-3-small")
+            query_embeddings = [embedding['embedding'] for embedding in response.dict()['data']]
+
+            query_result = index.query(vector=query_embeddings,
+                                       top_k=10,
+                                       namespace=namespace,
+                                       include_metadata=True)
+
+            retrieved_docs = []
+            for match in query_result.to_dict()['matches']:
+                #TODO: Change this so we are storing text in metadata instead of relying on _nodecontent
+                metadata = match['metadata']
+                node_content = metadata['_node_content']
+                text = json.loads(node_content)['text']
+                retrieved_docs.append({"id": match['id'], "text": text})
+
+            co = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+            candidates = [{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs]
+            rerank_response = await co.rerank(
+                model="rerank-multilingual-v3.0",
+                query=query_input,
+                documents=candidates,
+                return_documents=True,
+                top_n=3,
+            )
+
+            # Combine the system prompt, retrieved documents, and user's query
+            system_prompt = message_templates.create_system_message_briefing(language_code=language_code,
+                                                                             therapist_name=therapist_name,
+                                                                             therapist_gender=therapist_gender,
+                                                                             patient_name=patient_name,
+                                                                             patient_gender=patient_gender,
+                                                                             session_number=session_number)
+
+            context = "\n".join([result.document.text for result in rerank_response.results])
+            context_paragraph =(f'''Documents:\nWe have provided context information below.\n
+                                ---------------------\n{context}\n---------------------\n''')
+            full_prompt = f"{system_prompt}\n{context_paragraph}\n{query_input}"
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(full_prompt))
+            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            response: Completion = openai_client.chat.completions.create(
+                model=LLM_MODEL_NEW,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": context_paragraph},
+                    {"role": "user", "content": query_input},
+                ],
+                temperature=0,
+                # extra_headers=proxy_headers,
+                max_tokens=max_tokens
+            )
+
+            response_text = (response.choices[0].message.content.strip())
+            return eval(str(response_text))
         except Exception as e:
             raise Exception(e)
 
@@ -424,28 +540,3 @@ class VectorQueryWorker:
             return completion.choices[0].message.content
         except Exception as e:
             raise Exception(e)
-
-    # Private
-
-    """
-    Returns a user prompt to be used for creating a briefing, based on the incoming BriefingConfiguration object.
-
-    Arguments:
-    briefing_configuration – the configuration that is being used for generating the summary.
-    """
-    def _create_user_message_for_briefing_request(self,
-                                                  patient_name: str,
-                                                  briefing_configuration: BriefingConfiguration) -> str:
-        value = briefing_configuration.value
-        if value == "undefined":
-           raise Exception("Received 'undefined' as a BriefingConfiguration value.")
-        elif value == "full_summary":
-            return f"Write a summary about {patient_name}'s session history. Your response should not go over 600 characters."
-        elif value == "primary_topics":
-            return f"What are the three primary topics associated with {patient_name}'s session history? Each bullet point should not take more than 50 characters."
-        elif value == "emotional_state":
-            return f"What are three signals that have come up in sessions about {patient_name}'s emotional state? Each bullet point should not take more than 50 characters."
-        elif value == "symptoms":
-            return f"What are three symptoms that {patient_name} has manifested during sessions? Each bullet point should not take more than 50 characters."
-        else:
-            raise Exception(f"Untracked BriefingConfiguration value: {briefing_configuration}")

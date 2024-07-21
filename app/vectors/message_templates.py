@@ -101,74 +101,54 @@ def create_user_greeting_message() -> str:
 
 # Briefing Prompt
 
-def __create_system_briefing_message(language_code: str, briefing_configuration: BriefingConfiguration) -> str:
-    briefing_configuration_format_param = ", structured in bullet points" if briefing_configuration != BriefingConfiguration.FULL_SUMMARY else ""
-    main_instruction = f'''A mental health practitioner is entering our Practice Management Platform.
-    They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
-    Your job is to provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. If there's no data for a particular section, simply omit it, and summarize the information that you do find.
-    Each section may take up to 800 characters. You may use the session_date value found in the metadata for navigating through the sessions' data.
-    Use only the information you find based on the metadata session_date values (even if it results in a shorter summary).
-    We're aiming for accuracy and quality, not quantity. Return a JSON object with a single key, 'summary', written in English, and the summary response as its only value{briefing_configuration_format_param}.
-    It is very important that the summary response is written using language code {language_code}.'''
-    json_example = r'''\nFor example, a response for language code es-419 would look like: {{"summary": "Sesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo."}}'''
-    return main_instruction + json_example
-
-def __create_user_briefing_message(therapist_name: str,
-                                  therapist_gender: str,
-                                  patient_name: str,
-                                  patient_gender: str,
-                                  session_number: int,
-                                  language_code: str,
-                                  briefing_configuration: BriefingConfiguration) -> str:
+def create_system_message_briefing(language_code: str,
+                                   therapist_name: str,
+                                   therapist_gender: str,
+                                   patient_name: str,
+                                   patient_gender: str,
+                                   session_number: int) -> str | None:
     try:
         ordinal_session_number = num2words(session_number, to='ordinal_num')
-        context_paragraph =('''We have provided context information below. \n
-                            ---------------------\n
-                            {context_str}
-                            \n---------------------\n''')
-        instruction = "{query_str}"
-        name_params = f"\nAddress the therapist by their name, {therapist_name}, and the patient by theirs, which is {patient_name}.\n"
+        main_instruction = f'''A mental health practitioner is entering our Practice Management Platform.
+        They are about to meet with an existing patient, and need to quickly refreshen on the patient's history.
+        Your job is to provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes.
+        If there's no data for a particular section, simply omit it, and summarize the information that you do find.
+        Each section may take up to 800 characters. You may use the session_date value found in the metadata for navigating through the sessions' data.
+        Use only the information you find based on the metadata session_date values (even if it results in a shorter summary).
+        We're aiming for accuracy and quality, not quantity.
+        Address the therapist by their name, {therapist_name}, and the patient by theirs, which is {patient_name}.
+        Start by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time.'''
         gender_params = ""
         if gender_has_default_pronouns(therapist_gender):
             gender_params += f"For reference, {therapist_name} is a {therapist_gender}. "
         if gender_has_default_pronouns(patient_gender):
             gender_params += f"For reference, {patient_name} is a {patient_gender}. "
-
-        content_params = f"\nIt is very important that the summary is written using language code {language_code}"
-        message = context_paragraph + instruction + name_params + gender_params + content_params
-
-        if briefing_configuration.value == "full_summary":
-            message += f"\nStart by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time."
-
-        return message
+        output_format = f'''\nReturn a JSON object with a single key, 'summary', written in English, and the summary response as its only value.
+        It is very important that the summary response is written using language code {language_code}.'''
+        output_example = r'''\nFor example, a response for language code es-419 would look like: {{"summary": "Sesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo."}}'''
+        return main_instruction + gender_params + output_format + output_example
     except Exception as e:
         raise Exception(e)
 
-def create_briefing_template(language_code: str,
-                             patient_name: str,
-                             patient_gender: str,
-                             therapist_name: str,
-                             therapist_gender: str,
-                             session_number: int,
-                             configuration: BriefingConfiguration) -> ChatPromptTemplate:
-    briefing_message_templates = [
-        ChatMessage(
-            role=MessageRole.SYSTEM,
-            content=__create_system_briefing_message(language_code=language_code,
-                                                    briefing_configuration=configuration),
-        ),
-        ChatMessage(
-            role=MessageRole.USER,
-            content=__create_user_briefing_message(language_code=language_code,
-                                                  patient_name=patient_name,
-                                                  patient_gender=patient_gender,
-                                                  therapist_name=therapist_name,
-                                                  therapist_gender=therapist_gender,
-                                                  session_number=session_number,
-                                                  briefing_configuration=configuration),
-        ),
-    ]
-    return ChatPromptTemplate(briefing_message_templates)
+def create_user_briefing_message(patient_name: str,
+                                 language_code: str,
+                                 configuration: BriefingConfiguration) -> str:
+    try:
+        instruction = ""
+        if configuration == BriefingConfiguration.FULL_SUMMARY:
+            instruction = f'''I'm coming up to speed with {patient_name}'s session notes.
+            What do I need to remember, and what would be good avenues to explore in our upcoming session?'''
+        elif configuration == BriefingConfiguration.PRIMARY_TOPICS:
+            instruction = f'''I'm coming up to speed with {patient_name}'s session notes.
+            What are the three primary topics associated with {patient_name}'s session history?
+            Each bullet point should not take more than 50 characters.'''
+        else:
+            raise Exception("Invalid briefing configuration.")
+
+        language_params = f"\n It is very important that your output is written using language code {language_code}"
+        return (instruction + language_params)
+    except Exception as e:
+        raise Exception(e)
 
 # Question Suggestions
 

@@ -56,8 +56,6 @@ class LogoutData(BaseModel):
 class BriefingConfiguration(Enum):
     UNDEFINED = "undefined"
     PRIMARY_TOPICS = "primary_topics"
-    EMOTIONAL_STATE = "emotional_state"
-    SYMPTOMS = "symptoms"
     FULL_SUMMARY = "full_summary"
 
 class PatientConsentmentChannel(Enum):

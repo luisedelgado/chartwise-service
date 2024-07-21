@@ -12,7 +12,7 @@ from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner, message_templates
-from .vector_query import LLM_MODEL
+from .vector_query import EMBEDDING_MODEL, LLM_MODEL
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
 
@@ -56,8 +56,8 @@ def insert_session_vectors(index_id,
         vector_store.namespace = namespace
 
         embed_model = OpenAIEmbedding(mode=OpenAIEmbeddingMode.SIMILARITY_MODE,
-                                      model=OpenAIEmbeddingModelType.TEXT_EMBED_3_SMALL,
-                                      api_key=os.environ.get('OPENAI_API_KEY'))
+                                        model=EMBEDDING_MODEL,
+                                        api_key=os.environ.get('OPENAI_API_KEY'))
 
         enc = tiktoken.get_encoding("cl100k_base")
         splitter = RecursiveCharacterTextSplitter(
@@ -86,6 +86,7 @@ def insert_session_vectors(index_id,
                 "session_date": date,
                 "session_summary": session_summary,
             })
+
             doc.embedding = embed_model.get_text_embedding(session_summary)
             vectors.append(doc)
 
