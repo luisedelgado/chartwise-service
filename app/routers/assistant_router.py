@@ -535,14 +535,14 @@ class AssistantRouter:
             assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
             assert len(query.text or '') > 0, "Invalid text in payload"
 
-            response = self._assistant_manager.query_session(auth_manager=self._auth_manager,
-                                                             query=query,
-                                                             session_id=session_id,
-                                                             api_method=post_api_method,
-                                                             endpoint_name=self.QUERIES_ENDPOINT,
-                                                             environment=self._environment,
-                                                             datastore_access_token=datastore_access_token,
-                                                             datastore_refresh_token=datastore_refresh_token)
+            response = await self._assistant_manager.query_session(auth_manager=self._auth_manager,
+                                                                   query=query,
+                                                                   session_id=session_id,
+                                                                   api_method=post_api_method,
+                                                                   endpoint_name=self.QUERIES_ENDPOINT,
+                                                                   environment=self._environment,
+                                                                   datastore_access_token=datastore_access_token,
+                                                                   datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      therapist_id=query.therapist_id,
@@ -765,15 +765,15 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            json_questions = self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
-                                                                                patient_id=patient_id,
-                                                                                auth_manager=self._auth_manager,
-                                                                                environment=self._environment,
-                                                                                session_id=session_id,
-                                                                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                                                                api_method=get_api_method,
-                                                                                datastore_access_token=datastore_access_token,
-                                                                                datastore_refresh_token=datastore_refresh_token)
+            json_questions = await self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
+                                                                                      patient_id=patient_id,
+                                                                                      auth_manager=self._auth_manager,
+                                                                                      environment=self._environment,
+                                                                                      session_id=session_id,
+                                                                                      endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                                                                      api_method=get_api_method,
+                                                                                      datastore_access_token=datastore_access_token,
+                                                                                      datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
@@ -1074,15 +1074,15 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            json_topics = self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
-                                                                        patient_id=patient_id,
-                                                                        auth_manager=self._auth_manager,
-                                                                        environment=self._environment,
-                                                                        session_id=session_id,
-                                                                        endpoint_name=self.TOPICS_ENDPOINT,
-                                                                        api_method=get_api_method,
-                                                                        datastore_access_token=datastore_access_token,
-                                                                        datastore_refresh_token=datastore_refresh_token)
+            json_topics = await self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
+                                                                              patient_id=patient_id,
+                                                                              auth_manager=self._auth_manager,
+                                                                              environment=self._environment,
+                                                                              session_id=session_id,
+                                                                              endpoint_name=self.TOPICS_ENDPOINT,
+                                                                              api_method=get_api_method,
+                                                                              datastore_access_token=datastore_access_token,
+                                                                              datastore_refresh_token=datastore_refresh_token)
 
             logging.log_api_response(session_id=session_id,
                                      endpoint_name=self.TOPICS_ENDPOINT,

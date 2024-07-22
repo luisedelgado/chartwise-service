@@ -55,15 +55,15 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                           id: str):
         ...
 
-    def query_session(self,
-                      auth_manager: AuthManagerBaseClass,
-                      query: AssistantQuery,
-                      session_id: str,
-                      api_method: str,
-                      endpoint_name: str,
-                      environment: str,
-                      datastore_access_token: str,
-                      datastore_refresh_token: str):
+    async def query_session(self,
+                            auth_manager: AuthManagerBaseClass,
+                            query: AssistantQuery,
+                            session_id: str,
+                            api_method: str,
+                            endpoint_name: str,
+                            environment: str,
+                            datastore_access_token: str,
+                            datastore_refresh_token: str):
         ...
 
     def fetch_todays_greeting(self,
@@ -91,16 +91,16 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                      datastore_refresh_token: str):
         ...
 
-    def fetch_question_suggestions(self,
-                                   therapist_id: str,
-                                   patient_id: str,
-                                   auth_manager: AuthManagerBaseClass,
-                                   environment: str,
-                                   session_id: str,
-                                   endpoint_name: str,
-                                   api_method: str,
-                                   datastore_access_token: str,
-                                   datastore_refresh_token: str):
+    async def fetch_question_suggestions(self,
+                                         therapist_id: str,
+                                         patient_id: str,
+                                         auth_manager: AuthManagerBaseClass,
+                                         environment: str,
+                                         session_id: str,
+                                         endpoint_name: str,
+                                         api_method: str,
+                                         datastore_access_token: str,
+                                         datastore_refresh_token: str):
         ...
 
     def update_diarization_with_notification_data(self,
@@ -112,14 +112,14 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   method: str,):
         self.fake_processed_diarization_result = diarization
 
-    def fetch_frequent_topics(self,
-                              therapist_id: str,
-                              patient_id: str,
-                              auth_manager: AuthManagerBaseClass,
-                              environment: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              api_method: str,
-                              datastore_access_token: str,
-                              datastore_refresh_token: str):
+    async def fetch_frequent_topics(self,
+                                    therapist_id: str,
+                                    patient_id: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    environment: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str):
         pass

@@ -4,7 +4,6 @@ import tiktoken
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
-from llama_index.embeddings.openai import (OpenAIEmbedding, OpenAIEmbeddingMode, OpenAIEmbeddingModelType)
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
 from pinecone import ServerlessSpec, PineconeApiException
@@ -12,7 +11,8 @@ from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner, message_templates
-from .vector_query import EMBEDDING_MODEL, LLM_MODEL
+from .embeddings import create_embeddings
+from .vector_query import LLM_MODEL
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
 
@@ -55,10 +55,6 @@ def insert_session_vectors(index_id,
         vector_store = PineconeVectorStore(pinecone_index=index)
         vector_store.namespace = namespace
 
-        embed_model = OpenAIEmbedding(mode=OpenAIEmbeddingMode.SIMILARITY_MODE,
-                                        model=EMBEDDING_MODEL,
-                                        api_key=os.environ.get('OPENAI_API_KEY'))
-
         enc = tiktoken.get_encoding("cl100k_base")
         splitter = RecursiveCharacterTextSplitter(
             separators=["\n\n", "\n", " ", ""],
@@ -72,9 +68,11 @@ def insert_session_vectors(index_id,
         for chunk_index, chunk in enumerate(chunks):
             doc = Document()
             doc.id_ = f"{date}-{chunk_index}-{uuid.uuid1()}"
-            doc.set_content(data_cleaner.clean_up_text(chunk))
 
-            session_summary = _summarize_session_entry(session_notes=chunk,
+            chunk_text = data_cleaner.clean_up_text(chunk)
+            doc.set_content(chunk_text)
+
+            session_summary = _summarize_session_entry(session_notes=chunk_text,
                                                        session_id=session_id,
                                                        endpoint_name=endpoint_name,
                                                        therapist_id=index_id,
@@ -85,9 +83,11 @@ def insert_session_vectors(index_id,
             doc.metadata.update({
                 "session_date": date,
                 "session_summary": session_summary,
+                "session_text": chunk_text
             })
 
-            doc.embedding = embed_model.get_text_embedding(session_summary)
+            doc.embedding = create_embeddings(text=session_summary,
+                                              auth_manager=auth_manager)
             vectors.append(doc)
 
         vector_store.add(vectors)

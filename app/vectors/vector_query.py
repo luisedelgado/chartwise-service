@@ -1,28 +1,19 @@
-import asyncio, json, os
+import os
 
 import cohere, tiktoken
 
 from datetime import datetime
-from llama_index.core import VectorStoreIndex
-from llama_index.llms.openai import OpenAI as llama_index_OpenAI
-from llama_index.postprocessor.cohere_rerank import CohereRerank
-from llama_index.vector_stores.pinecone import PineconeVectorStore
 from openai import OpenAI
-from openai.resources import Completions, Embeddings
 from openai.types import Completion
 from pinecone import Pinecone
-from pinecone.exceptions import NotFoundException
-from pinecone.grpc import PineconeGRPC
-from portkey_ai import Portkey
 
 from ..internal.model import BriefingConfiguration
 from . import data_cleaner, message_templates
+from .embeddings import create_embeddings
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
 
-LLM_MODEL = "gpt-3.5-turbo"
-LLM_MODEL_NEW = "gpt-4o-mini"
-EMBEDDING_MODEL = "text-embedding-3-small"
+LLM_MODEL = "gpt-4o-mini"
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 
 class VectorQueryWorker:
@@ -36,7 +27,7 @@ class VectorQueryWorker:
     namespace – the namespace within the index that should be queried.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient's gender.
-    input – the input for the query.
+    query_input – the user input for the query.
     response_language_code – the language code to be used in the response.
     session_id – the session id.
     endpoint_name – the endpoint that was invoked.
@@ -44,29 +35,23 @@ class VectorQueryWorker:
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def query_store(self,
-                    index_id: str,
-                    namespace: str,
-                    patient_name: str,
-                    patient_gender: str,
-                    input: str,
-                    response_language_code: str,
-                    session_id: str,
-                    endpoint_name: str,
-                    method: str,
-                    environment: str,
-                    auth_manager: AuthManagerBaseClass) -> str:
+    async def query_store(self,
+                          index_id: str,
+                          namespace: str,
+                          patient_name: str,
+                          patient_gender: str,
+                          query_input: str,
+                          response_language_code: str,
+                          session_id: str,
+                          endpoint_name: str,
+                          method: str,
+                          environment: str,
+                          auth_manager: AuthManagerBaseClass) -> str:
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-            assert pc.describe_index(index_id).status['ready']
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+            assert index_id in pc.list_indexes().names(), "Index not found"
 
             index = pc.Index(index_id)
-            vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-
-            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
-            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
-
             metadata = {
                 "environment": environment,
                 "user": index_id,
@@ -78,26 +63,62 @@ class VectorQueryWorker:
                 "method": method,
             }
 
-            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                   llm_model=LLM_MODEL) if is_monitoring_proxy_reachable else None
+            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+            proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                         llm_model=LLM_MODEL) if is_monitoring_proxy_reachable else None
 
-            llm = llama_index_OpenAI(model=LLM_MODEL,
-                                     temperature=0,
-                                     api_base=api_base,
-                                     default_headers=headers)
-            query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_chat_prompt_template(language_code=response_language_code,
-                                                                               patient_name=patient_name,
-                                                                               patient_gender=patient_gender),
-                refine_template=message_templates.create_refine_prompt_template(response_language_code),
-                llm=llm,
-                streaming=True,
-                similarity_top_k=10,
-                node_postprocessors=[CohereRerank(api_key=os.environ.get("COHERE_API_KEY"), top_n=3)],
+            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                   base_url=api_base,
+                                   default_headers=proxy_headers)
+
+            embeddings = create_embeddings(auth_manager=auth_manager,
+                                           text=query_input)
+            query_result = index.query(vector=embeddings,
+                                       top_k=10,
+                                       namespace=namespace,
+                                       include_metadata=True)
+
+            retrieved_docs = []
+            for match in query_result.to_dict()['matches']:
+                metadata = match['metadata']
+                text = metadata['vector_text']
+                retrieved_docs.append({"id": match['id'], "text": text})
+
+            cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+            candidates = [{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs]
+            rerank_response = await cohere_client.rerank(
+                model="rerank-multilingual-v3.0",
+                query=query_input,
+                documents=candidates,
+                return_documents=True,
+                top_n=3,
             )
 
-            response = query_engine.query(input)
-            return str(response)
+            # Combine the system prompt, retrieved documents, and user's query
+            system_prompt = message_templates.create_qa_system_message()
+            context = "\n".join([result.document.text for result in rerank_response.results])
+            user_prompt = message_templates.create_qa_user_message(context=context,
+                                                                   language_code=response_language_code,
+                                                                   patient_gender=patient_gender,
+                                                                   patient_name=patient_name,
+                                                                   query_input=query_input)
+            full_prompt = f"{system_prompt}\n{user_prompt}"
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(full_prompt))
+            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            response: Completion = openai_client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0,
+                max_tokens=max_tokens
+            )
+
+            response_text = response.choices[0].message.content.strip()
+            return response_text
         except Exception as e:
             raise Exception(e)
 
@@ -157,8 +178,7 @@ class VectorQueryWorker:
                                                                    caching_shard_key=caching_shard_key,
                                                                    llm_model=LLM_MODEL,
                                                                    cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
-            llm = OpenAI(base_url=api_base,
-                        default_headers=headers)
+            llm = OpenAI(base_url=api_base, default_headers=headers)
 
             completion = llm.chat.completions.create(
                 model=LLM_MODEL,
@@ -221,7 +241,7 @@ class VectorQueryWorker:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
                                                                          caching_shard_key=caching_shard_key,
-                                                                         llm_model=LLM_MODEL_NEW,
+                                                                         llm_model=LLM_MODEL,
                                                                          cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
             query_input = data_cleaner.clean_up_text(message_templates.create_user_briefing_message(patient_name=patient_name,
@@ -233,17 +253,8 @@ class VectorQueryWorker:
                                    base_url=api_base,
                                    default_headers=proxy_headers)
 
-            portkey = Portkey(
-                api_key=os.environ.get("PORTKEY_API_KEY"),
-                virtual_key=os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
-            )
-
-            query_data = portkey.embeddings.create(
-                encoding_format='float',
-                input=query_input,
-                model=EMBEDDING_MODEL
-            ).data
-            embeddings = [item.embedding for item in query_data]
+            embeddings = create_embeddings(auth_manager=auth_manager,
+                                           text=query_input)
             query_result = index.query(vector=embeddings,
                                        top_k=10,
                                        namespace=namespace,
@@ -251,15 +262,13 @@ class VectorQueryWorker:
 
             retrieved_docs = []
             for match in query_result.to_dict()['matches']:
-                #TODO: Change this so we are storing text in metadata instead of relying on _nodecontent
                 metadata = match['metadata']
-                node_content = metadata['_node_content']
-                text = json.loads(node_content)['text']
+                text = metadata['vector_text']
                 retrieved_docs.append({"id": match['id'], "text": text})
 
-            co = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+            cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
             candidates = [{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs]
-            rerank_response = await co.rerank(
+            rerank_response = await cohere_client.rerank(
                 model="rerank-multilingual-v3.0",
                 query=query_input,
                 documents=candidates,
@@ -283,7 +292,7 @@ class VectorQueryWorker:
             max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             response: Completion = openai_client.chat.completions.create(
-                model=LLM_MODEL_NEW,
+                model=LLM_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "system", "content": context_paragraph},
@@ -313,25 +322,22 @@ class VectorQueryWorker:
     patient_gender – the patient gender.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def create_question_suggestions(self,
-                                    index_id: str,
-                                    namespace: str,
-                                    environment: str,
-                                    language_code: str,
-                                    session_id: str,
-                                    endpoint_name: str,
-                                    method: str,
-                                    patient_name: str,
-                                    patient_gender: str,
-                                    auth_manager: AuthManagerBaseClass) -> str:
+    async def create_question_suggestions(self,
+                                          index_id: str,
+                                          namespace: str,
+                                          environment: str,
+                                          language_code: str,
+                                          session_id: str,
+                                          endpoint_name: str,
+                                          method: str,
+                                          patient_name: str,
+                                          patient_gender: str,
+                                          auth_manager: AuthManagerBaseClass) -> str:
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-            assert pc.describe_index(index_id).status['ready']
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+            assert index_id in pc.list_indexes().names(), "Index not found"
 
             index = pc.Index(index_id)
-            vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
-
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
 
@@ -348,24 +354,64 @@ class VectorQueryWorker:
             }
 
             cache_ttl = 86400 # 24 hours
-            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                   caching_shard_key=caching_shard_key,
-                                                                   llm_model=LLM_MODEL,
-                                                                   cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
+            proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                         caching_shard_key=caching_shard_key,
+                                                                         llm_model=LLM_MODEL,
+                                                                         cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
-            llm = llama_index_OpenAI(model=LLM_MODEL,
-                                     temperature=0,
-                                     api_base=api_base,
-                                     default_headers=headers)
-            query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_question_suggestions_template(language_code=language_code,
-                                                                                        patient_name=patient_name,
-                                                                                        patient_gender=patient_gender),
-                llm=llm,
-                streaming=True,
+            api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
+            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                   base_url=api_base,
+                                   default_headers=proxy_headers)
+
+            query_input = f"What are 3 questions that I could ask about {patient_name}'s session history?"
+            embeddings = create_embeddings(auth_manager=auth_manager,
+                                           text=query_input)
+            query_result = index.query(vector=embeddings,
+                                       top_k=10,
+                                       namespace=namespace,
+                                       include_metadata=True)
+
+            retrieved_docs = []
+            for match in query_result.to_dict()['matches']:
+                metadata = match['metadata']
+                text = metadata['vector_text']
+                retrieved_docs.append({"id": match['id'], "text": text})
+
+            cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+            candidates = [{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs]
+            rerank_response = await cohere_client.rerank(
+                model="rerank-multilingual-v3.0",
+                query=query_input,
+                documents=candidates,
+                return_documents=True,
+                top_n=3,
             )
-            response = query_engine.query(f"What are 3 questions that I could ask about {patient_name}'s session history?")
-            return eval(str(response))
+
+            # Combine the system prompt, retrieved documents, and user's query
+            system_prompt = message_templates.create_question_suggestions_system_message(language_code=language_code)
+            context = "\n".join([result.document.text for result in rerank_response.results])
+            user_prompt = message_templates.create_question_suggestions_user_message(context=context,
+                                                                                     language_code=language_code,
+                                                                                     patient_gender=patient_gender,
+                                                                                     patient_name=patient_name,
+                                                                                     query_input=query_input)
+            full_prompt = f"{system_prompt}\n{user_prompt}"
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(full_prompt))
+            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            response: Completion = openai_client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0,
+                max_tokens=max_tokens
+            )
+
+            response_text = response.choices[0].message.content.strip()
+            return eval(str(response_text))
         except Exception as e:
             raise Exception(e)
 
@@ -384,25 +430,22 @@ class VectorQueryWorker:
     patient_gender – the patient gender.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def fetch_frequent_topics(self,
-                              index_id: str,
-                              namespace: str,
-                              environment: str,
-                              language_code: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              method: str,
-                              patient_name: str,
-                              patient_gender: str,
-                              auth_manager: AuthManagerBaseClass) -> str:
+    async def fetch_frequent_topics(self,
+                                    index_id: str,
+                                    namespace: str,
+                                    environment: str,
+                                    language_code: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    method: str,
+                                    patient_name: str,
+                                    patient_gender: str,
+                                    auth_manager: AuthManagerBaseClass) -> str:
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-            assert pc.describe_index(index_id).status['ready']
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+            assert index_id in pc.list_indexes().names(), "Index not found"
 
             index = pc.Index(index_id)
-            vector_store = PineconeVectorStore(pinecone_index=index, namespace=namespace)
-            vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store, similarity_top_k=3)
-
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
             api_base = auth_manager.get_monitoring_proxy_url() if is_monitoring_proxy_reachable else None
 
@@ -419,24 +462,64 @@ class VectorQueryWorker:
             }
 
             cache_ttl = 86400 # 24 hours
-            headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+            proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
                                                                    caching_shard_key=caching_shard_key,
                                                                    llm_model=LLM_MODEL,
                                                                    cache_max_age=cache_ttl) if is_monitoring_proxy_reachable else None
 
-            llm = llama_index_OpenAI(model=LLM_MODEL,
-                                     temperature=0,
-                                     api_base=api_base,
-                                     default_headers=headers)
-            query_engine = vector_index.as_query_engine(
-                text_qa_template=message_templates.create_frequent_topics_template(language_code=language_code,
-                                                                                   patient_name=patient_name,
-                                                                                   patient_gender=patient_gender),
-                llm=llm,
-                streaming=True,
+
+            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                   base_url=api_base,
+                                   default_headers=proxy_headers)
+
+            query_input = f"What are the 3 topics that come up the most during {patient_name}'s sessions?"
+            embeddings = create_embeddings(auth_manager=auth_manager,
+                                           text=query_input)
+            query_result = index.query(vector=embeddings,
+                                       top_k=10,
+                                       namespace=namespace,
+                                       include_metadata=True)
+
+            retrieved_docs = []
+            for match in query_result.to_dict()['matches']:
+                metadata = match['metadata']
+                text = metadata['vector_text']
+                retrieved_docs.append({"id": match['id'], "text": text})
+
+            cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+            candidates = [{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs]
+            rerank_response = await cohere_client.rerank(
+                model="rerank-multilingual-v3.0",
+                query=query_input,
+                documents=candidates,
+                return_documents=True,
+                top_n=3,
             )
-            response = query_engine.query(f"What are the 3 topics that {patient_name} talks the most about during sessions?")
-            return eval(str(response))
+
+            # Combine the system prompt, retrieved documents, and user's query
+            system_prompt = message_templates.create_frequent_topics_system_message(language_code=language_code)
+            context = "\n".join([result.document.text for result in rerank_response.results])
+            user_prompt = message_templates.create_user_frequent_topics_message(language_code=language_code,
+                                                                                context=context,
+                                                                                patient_name=patient_name,
+                                                                                query_input=query_input,
+                                                                                patient_gender=patient_gender)
+            full_prompt = f"{system_prompt}\n{user_prompt}"
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(full_prompt))
+            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            response: Completion = openai_client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0,
+                max_tokens=max_tokens
+            )
+
+            response_text = response.choices[0].message.content.strip()
+            return eval(str(response_text))
         except Exception as e:
             raise Exception(e)
 

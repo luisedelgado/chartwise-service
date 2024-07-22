@@ -114,14 +114,14 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def query_session(auth_manager: AuthManagerBaseClass,
-                      query: AssistantQuery,
-                      session_id: str,
-                      api_method: str,
-                      endpoint_name: str,
-                      environment: str,
-                      datastore_access_token: str,
-                      datastore_refresh_token: str):
+    async def query_session(auth_manager: AuthManagerBaseClass,
+                            query: AssistantQuery,
+                            session_id: str,
+                            api_method: str,
+                            endpoint_name: str,
+                            environment: str,
+                            datastore_access_token: str,
+                            datastore_refresh_token: str):
         pass
 
     """
@@ -190,15 +190,15 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def fetch_question_suggestions(therapist_id: str,
-                                   patient_id: str,
-                                   auth_manager: AuthManagerBaseClass,
-                                   environment: str,
-                                   session_id: str,
-                                   endpoint_name: str,
-                                   api_method: str,
-                                   datastore_access_token: str,
-                                   datastore_refresh_token: str):
+    async def fetch_question_suggestions(therapist_id: str,
+                                         patient_id: str,
+                                         auth_manager: AuthManagerBaseClass,
+                                         environment: str,
+                                         session_id: str,
+                                         endpoint_name: str,
+                                         api_method: str,
+                                         datastore_access_token: str,
+                                         datastore_refresh_token: str):
         pass
 
     """
@@ -234,13 +234,13 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     """
-    def fetch_frequent_topics(therapist_id: str,
-                              patient_id: str,
-                              auth_manager: AuthManagerBaseClass,
-                              environment: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              api_method: str,
-                              datastore_access_token: str,
-                              datastore_refresh_token: str):
+    async def fetch_frequent_topics(therapist_id: str,
+                                    patient_id: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    environment: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str):
         pass
