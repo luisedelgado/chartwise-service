@@ -12,6 +12,7 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
                                     auth_manager: AuthManagerBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
+                                    session_id: str,
                                     audio_file: UploadFile = File(...)) -> str:
         return self.FAKE_TRANSCRIPTION_RESULT
 
@@ -24,6 +25,7 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
+                                 session_id: str,
                                  audio_file: UploadFile = File(...)) -> str:
         return self.FAKE_JOB_ID
 

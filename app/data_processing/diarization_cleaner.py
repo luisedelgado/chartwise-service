@@ -3,7 +3,8 @@ import json
 from fastapi import status
 from typing import Dict
 
-from ..internal import logging
+from ..api.auth_base_class import AuthManagerBaseClass
+from ..internal.logging import Logger
 
 """
 Class meant to be used for cleaning diarization records.
@@ -20,10 +21,9 @@ class DiarizationCleaner:
 
     Arguments:
     input – the diarization input.
-    session_id – the current session id.
-    invoking_endpoint – the endpoint that invoked this codepath.
+    auth_manager – the auth manager to be leveraged internally.
     """
-    def clean_transcription(self, input: str) -> str:
+    def clean_transcription(self, input: str, auth_manager: AuthManagerBaseClass) -> str:
         self._current_speaker = input[0]["alternatives"][0]["speaker"]
         for obj in input:
             speaker = obj["alternatives"][0]["speaker"]
@@ -37,8 +37,8 @@ class DiarizationCleaner:
                 has_attaches_to = True
                 attaches_to = obj["attaches_to"]
                 if attaches_to.lower() != "previous":
-                    logging.log_diarization_event(error_code=status.HTTP_417_EXPECTATION_FAILED,
-                                                  description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
+                    Logger(auth_manager=auth_manager).log_diarization_event(error_code=status.HTTP_417_EXPECTATION_FAILED,
+                                                                            description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
 
             if "is_eos" in obj:
                 has_end_of_sentence = True

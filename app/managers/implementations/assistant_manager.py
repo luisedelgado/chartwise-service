@@ -20,10 +20,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
                                  datastore_refresh_token: str,
-                                 session_id: str,
-                                 endpoint_name: str,
-                                 method: str,
-                                 environment: str,) -> str:
+                                 session_id: str) -> str:
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -37,21 +34,12 @@ class AssistantManager(AssistantManagerBaseClass):
                 "therapist_id": body.therapist_id}).execute()
             session_notes_id = insert_result.dict()['data'][0]['id']
 
-            query_result = datastore_client.from_('patients').select('*').eq('id', body.patient_id).execute()
-            query_result_dict = query_result.dict()
-            patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
-                                          query_result_dict['data'][0]['last_name']])
-
             # Upload vector embeddings
             vector_writer.insert_session_vectors(index_id=body.therapist_id,
                                                  namespace=body.patient_id,
                                                  text=body.text,
                                                  date=body.date,
-                                                 patient_name=patient_full_name,
-                                                 endpoint_name=endpoint_name,
-                                                 method=method,
                                                  auth_manager=auth_manager,
-                                                 environment=environment,
                                                  session_id=session_id)
 
             return session_notes_id
@@ -63,9 +51,7 @@ class AssistantManager(AssistantManagerBaseClass):
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
                        datastore_refresh_token: str,
-                       environment: str,
-                       endpoint_name: str,
-                       method: str):
+                       session_id: str):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -82,22 +68,14 @@ class AssistantManager(AssistantManagerBaseClass):
             update_result_dict = update_result.dict()
             session_date_raw = update_result_dict['data'][0]['session_date']
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
-            patient_id = update_result_dict['data'][0]['patient_id']
-
-            patient_query = datastore_client.from_('patients').select('*').eq('id', patient_id).execute().dict()
-            patient_full_name = " ".join([patient_query['data'][0]['first_name'],
-                                          patient_query['data'][0]['last_name']])
 
             # Upload vector embeddings
             vector_writer.update_session_vectors(index_id=body.therapist_id,
-                                                namespace=body.patient_id,
-                                                text=body.text,
-                                                date=session_date_formatted,
-                                                environment=environment,
-                                                endpoint_name=endpoint_name,
-                                                method=method,
-                                                patient_name=patient_full_name,
-                                                auth_manager=auth_manager,)
+                                                 namespace=body.patient_id,
+                                                 text=body.text,
+                                                 date=session_date_formatted,
+                                                 auth_manager=auth_manager,
+                                                 session_id=session_id)
         except Exception as e:
             raise Exception(e)
 
@@ -129,11 +107,13 @@ class AssistantManager(AssistantManagerBaseClass):
     def adapt_session_notes_to_soap(self,
                                     auth_manager: AuthManagerBaseClass,
                                     therapist_id: str,
-                                    session_notes_text: str) -> str:
+                                    session_notes_text: str,
+                                    session_id: str) -> str:
         try:
             soap_report = VectorQueryWorker().create_soap_report(text=session_notes_text,
                                                                  therapist_id=therapist_id,
-                                                                 auth_manager=auth_manager)
+                                                                 auth_manager=auth_manager,
+                                                                 session_id=session_id)
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -281,9 +261,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str,
-                                                  endpoint_name: str,
-                                                  method: str,):
+                                                  diarization: str):
         try:
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client = auth_manager.datastore_admin_instance()
@@ -315,20 +293,16 @@ class AssistantManager(AssistantManagerBaseClass):
                     "diarization_job_id": None,
                 }).eq('diarization_job_id', job_id).execute()
 
-            query_result = datastore_client.from_('patients').select('*').eq('id', patient_id).execute()
-            query_result_dict = query_result.dict()
-            patient_full_name = " ".join([query_result_dict['data'][0]['first_name'],
-                                        query_result_dict['data'][0]['last_name']])
+            query_response = datastore_client.from_('diarization_logs').select('*').eq('job_id', job_id).execute()
+            assert (0 != len((query_response).data)), "Expected to find a response."
 
-            # Upload vector embeddings
+            session_id = query_response.dict()['data'][0]['session_id']
             vector_writer.insert_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id,
                                                  text=summary,
-                                                 patient_name=patient_full_name,
                                                  date=session_date_formatted,
                                                  auth_manager=auth_manager,
-                                                 endpoint_name=endpoint_name,
-                                                 method=method)
+                                                 session_id=session_id)
         except Exception as e:
             raise Exception(e)
 
@@ -423,8 +397,6 @@ class AssistantManager(AssistantManagerBaseClass):
 
             error_message = "Something went wrong in generating a response. Please try again"
             assert 'topics' in response, error_message
-            assert 'topic' in response['topics'][0], error_message
-            assert 'percentage' in response['topics'][0], error_message
             return response
         except Exception as e:
             raise Exception(e)

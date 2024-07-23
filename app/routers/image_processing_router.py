@@ -12,7 +12,8 @@ from typing import Annotated, Union
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.image_processing_base_class import ImageProcessingManagerBaseClass
-from ..internal import logging, security
+from ..internal import security
+from ..internal.logging import Logger
 from ..internal.model import SessionNotesTemplate
 from ..internal.utilities import general_utilities
 
@@ -101,12 +102,13 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                method=post_api_method,
-                                patient_id=patient_id,
-                                therapist_id=therapist_id,
-                                endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               method=post_api_method,
+                               patient_id=patient_id,
+                               therapist_id=therapist_id,
+                               endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
@@ -116,23 +118,23 @@ class ImageProcessingRouter:
                                                                                             image=image)
 
             logs_description = f"document_id={document_id}"
-            logging.log_api_response(session_id=session_id,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method,
-                                     description=logs_description)
+            logger.log_api_response(session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method,
+                                    description=logs_description)
 
             return {"document_id": document_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -168,12 +170,13 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        get_api_method = logging.API_METHOD_GET
-        logging.log_api_request(session_id=session_id,
-                                method=get_api_method,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
-                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        get_api_method = logger.API_METHOD_GET
+        logger.log_api_request(session_id=session_id,
+                               method=get_api_method,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,
+                               endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Missing therapist_id param."
@@ -183,35 +186,36 @@ class ImageProcessingRouter:
             textraction = self._image_processing_manager.extract_text(document_id)
 
             if template == SessionNotesTemplate.FREE_FORM:
-                logging.log_api_response(session_id=session_id,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id,
-                                         endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                         http_status_code=status.HTTP_200_OK,
-                                         method=get_api_method)
+                logger.log_api_response(session_id=session_id,
+                                        therapist_id=therapist_id,
+                                        patient_id=patient_id,
+                                        endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                                        http_status_code=status.HTTP_200_OK,
+                                        method=get_api_method)
                 return {"textraction": textraction}
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             soap_textraction = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
                                                                                    therapist_id=therapist_id,
+                                                                                   session_id=session_id,
                                                                                    session_notes_text=textraction)
 
-            logging.log_api_response(session_id=session_id,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=get_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=get_api_method)
 
             return {"soap_textraction": soap_textraction}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              therapist_id=therapist_id,
-                              patient_id=patient_id,
-                              endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=get_api_method)
+            logger.log_error(session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
+                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
             raise HTTPException(status_code=status_code, detail=description)

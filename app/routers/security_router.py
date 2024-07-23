@@ -12,7 +12,8 @@ from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.assistant_base_class import AssistantManagerBaseClass
-from ..internal import logging, model, security
+from ..internal import model, security
+from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, general_utilities
 
 class SecurityRouter:
@@ -127,11 +128,12 @@ class SecurityRouter:
                             secure=True,
                             samesite="none")
 
-            post_api_method = logging.API_METHOD_POST
-            logging.log_api_request(session_id=session_id,
-                                    method=post_api_method,
-                                    endpoint_name=self.TOKEN_ENDPOINT,
-                                    therapist_id=body.user_id)
+            logger = Logger(auth_manager=self._auth_manager)
+            post_api_method = logger.API_METHOD_POST
+            logger.log_api_request(session_id=session_id,
+                                   method=post_api_method,
+                                   endpoint_name=self.TOKEN_ENDPOINT,
+                                   therapist_id=body.user_id)
 
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
                                                                                         datastore_access_token=body.datastore_access_token,
@@ -143,11 +145,11 @@ class SecurityRouter:
                                                                   response=response,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.TOKEN_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     therapist_id=body.user_id,
-                                     method=post_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.TOKEN_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    therapist_id=body.user_id,
+                                    method=post_api_method)
             return auth_token
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -180,19 +182,20 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=therapist_id,
-                                method=post_api_method,
-                                endpoint_name=self.LOGOUT_ENDPOINT,)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=therapist_id,
+                               method=post_api_method,
+                               endpoint_name=self.LOGOUT_ENDPOINT,)
 
         self._auth_manager.logout(response)
 
-        logging.log_api_response(session_id=session_id,
-                                 therapist_id=therapist_id,
-                                 endpoint_name=self.LOGOUT_ENDPOINT,
-                                 http_status_code=status.HTTP_200_OK,
-                                 method=post_api_method)
+        logger.log_api_response(session_id=session_id,
+                                therapist_id=therapist_id,
+                                endpoint_name=self.LOGOUT_ENDPOINT,
+                                http_status_code=status.HTTP_200_OK,
+                                method=post_api_method)
 
         return {}
 
@@ -230,11 +233,12 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                method=post_api_method,
-                                therapist_id=body.id,
-                                endpoint_name=self.THERAPISTS_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               method=post_api_method,
+                               therapist_id=body.id,
+                               endpoint_name=self.THERAPISTS_ENDPOINT)
 
         try:
             assert body.signup_mechanism != model.SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
@@ -256,21 +260,21 @@ class SecurityRouter:
                 "language_preference": body.language_code_preference,
             }).execute()
 
-            logging.log_api_response(therapist_id=body.id,
-                                     session_id=session_id,
-                                     endpoint_name=self.THERAPISTS_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method)
+            logger.log_api_response(therapist_id=body.id,
+                                    session_id=session_id,
+                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method)
 
             return {"therapist_id": body.id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.THERAPISTS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -308,11 +312,12 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        put_api_method = logging.API_METHOD_PUT
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=body.id,
-                                method=put_api_method,
-                                endpoint_name=self.THERAPISTS_ENDPOINT)
+        logger = Logger(self._auth_manager)
+        put_api_method = logger.API_METHOD_PUT
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=body.id,
+                               method=put_api_method,
+                               endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
             assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -330,20 +335,20 @@ class SecurityRouter:
                 "language_preference": body.language_code_preference,
             }).eq('id', body.id).execute()
 
-            logging.log_api_response(therapist_id=body.id,
-                                     session_id=session_id,
-                                     endpoint_name=self.THERAPISTS_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=put_api_method)
+            logger.log_api_response(therapist_id=body.id,
+                                    session_id=session_id,
+                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=put_api_method)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.THERAPISTS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=put_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=put_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -384,11 +389,12 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        delete_api_method = logging.API_METHOD_DELETE
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=therapist_id,
-                                method=delete_api_method,
-                                endpoint_name=self.THERAPISTS_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        delete_api_method = logger.API_METHOD_DELETE
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=therapist_id,
+                               method=delete_api_method,
+                               endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
             datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,
                                                                                   access_token=datastore_access_token)
@@ -406,20 +412,20 @@ class SecurityRouter:
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
-            logging.log_account_deletion(therapist_id=therapist_id)
-            logging.log_api_response(therapist_id=therapist_id,
-                                     session_id=session_id,
-                                     endpoint_name=self.THERAPISTS_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=delete_api_method)
+            logger.log_account_deletion(therapist_id=therapist_id)
+            logger.log_api_response(therapist_id=therapist_id,
+                                    session_id=session_id,
+                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=delete_api_method)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.THERAPISTS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=delete_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)

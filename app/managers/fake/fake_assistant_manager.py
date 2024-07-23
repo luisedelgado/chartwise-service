@@ -16,10 +16,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
                                  datastore_refresh_token: str,
-                                 session_id: str,
-                                 endpoint_name: str,
-                                 method: str,
-                                 evironment: str) -> str:
+                                 session_id: str) -> str:
         self.fake_insert_text = body.text
         return self.FAKE_SESSION_NOTES_ID
 
@@ -28,9 +25,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
                        datastore_refresh_token: str,
-                       environment: str,
-                       endpoint_name: str,
-                       method: str):
+                       session_id: str):
         ...
 
     def delete_session(self,
@@ -43,7 +38,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
     def adapt_session_notes_to_soap(self,
                                     auth_manager: AuthManagerBaseClass,
                                     therapist_id: str,
-                                    session_notes_text: str) -> str:
+                                    session_notes_text: str,
+                                    session_id: str) -> str:
         return ""
 
     def delete_all_sessions_for_patient(self,

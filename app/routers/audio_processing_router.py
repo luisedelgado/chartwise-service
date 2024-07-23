@@ -18,7 +18,8 @@ from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal import logging, security
+from ..internal import security
+from ..internal.logging import Logger
 from ..internal.model import SessionNotesSource, SessionNotesTemplate
 from ..internal.utilities import datetime_handler, general_utilities
 
@@ -122,12 +123,13 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                method=post_api_method,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
-                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               method=post_api_method,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,
+                               endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
@@ -137,25 +139,26 @@ class AudioProcessingRouter:
                                                                                     auth_manager=self._auth_manager,
                                                                                     template=template,
                                                                                     therapist_id=therapist_id,
+                                                                                    session_id=session_id,
                                                                                     audio_file=audio_file)
 
-            logging.log_api_response(session_id=session_id,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method)
 
             key = "soap_transcript" if template == SessionNotesTemplate.SOAP else "transcript"
             return {key: transcript}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -200,12 +203,13 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                patient_id=patient_id,
-                                therapist_id=therapist_id,
-                                method=post_api_method,
-                                endpoint_name=self.DIARIZATION_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               patient_id=patient_id,
+                               therapist_id=therapist_id,
+                               method=post_api_method,
+                               endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
             assert datetime_handler.is_valid_date(session_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -215,6 +219,7 @@ class AudioProcessingRouter:
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
                                                                                   session_auth_token=authorization,
+                                                                                  session_id=session_id,
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)
 
@@ -232,25 +237,25 @@ class AudioProcessingRouter:
             }).execute()
 
             logs_description = f"job_id={job_id}"
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.DIARIZATION_ENDPOINT,
-                                     patient_id=patient_id,
-                                     therapist_id=therapist_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method,
-                                     description=logs_description)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.DIARIZATION_ENDPOINT,
+                                    patient_id=patient_id,
+                                    therapist_id=therapist_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method,
+                                    description=logs_description)
 
             return {"job_id": job_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.DIARIZATION_ENDPOINT,
-                              error_code=status_code,
-                              patient_id=patient_id,
-                              therapist_id=therapist_id,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.DIARIZATION_ENDPOINT,
+                             error_code=status_code,
+                             patient_id=patient_id,
+                             therapist_id=therapist_id,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -276,7 +281,8 @@ class AudioProcessingRouter:
             json_data = json.loads(json.dumps(raw_data))
             job_id = json_data["job"]["id"]
             summary = json_data["summary"]["content"]
-            diarization = DiarizationCleaner().clean_transcription(json_data["results"])
+            diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
+                                                                   auth_manager=self._auth_manager)
 
             self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                               job_id=job_id,
@@ -287,7 +293,13 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logging.log_diarization_event(error_code=status_code, description=description)
+            logger = Logger(auth_manager=self._auth_manager)
+            logger.log_error(endpoint_name=self.DIARIZATION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=logger.API_METHOD_POST)
+            logger.log_diarization_event(error_code=status_code,
+                                         description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
         return {}

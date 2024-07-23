@@ -11,7 +11,8 @@ from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
-from ..internal import logging, security
+from ..internal import security
+from ..internal.logging import Logger
 from ..internal.model import (AssistantQuery,
                               BriefingConfiguration,
                               Gender,
@@ -289,12 +290,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                patient_id=body.patient_id,
-                                therapist_id=body.therapist_id,
-                                endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=post_api_method,)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               patient_id=body.patient_id,
+                               therapist_id=body.therapist_id,
+                               endpoint_name=self.SESSIONS_ENDPOINT,
+                               method=post_api_method,)
 
         try:
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
@@ -304,13 +306,9 @@ class AssistantRouter:
                                                                                 body=body,
                                                                                 datastore_access_token=datastore_access_token,
                                                                                 datastore_refresh_token=datastore_refresh_token,
-                                                                                session_id=session_id,
-                                                                                endpoint_name=self.SESSIONS_ENDPOINT,
-                                                                                method=post_api_method,
-                                                                                environment=self._environment,
-                                                                                )
+                                                                                session_id=session_id)
 
-            logging.log_api_response(session_id=session_id,
+            logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
                                     patient_id=body.patient_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
@@ -321,13 +319,13 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                            therapist_id=body.therapist_id,
-                            patient_id=body.patient_id,
-                            endpoint_name=self.SESSIONS_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             therapist_id=body.therapist_id,
+                             patient_id=body.patient_id,
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -365,11 +363,12 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        put_api_method = logging.API_METHOD_PUT
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=body.therapist_id,
-                                endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=put_api_method)
+        logger = Logger(auth_manager=self._auth_manager)
+        put_api_method = logger.API_METHOD_PUT
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=body.therapist_id,
+                               endpoint_name=self.SESSIONS_ENDPOINT,
+                               method=put_api_method)
 
         try:
             assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -379,11 +378,9 @@ class AssistantRouter:
                                                    body=body,
                                                    datastore_access_token=datastore_access_token,
                                                    datastore_refresh_token=datastore_refresh_token,
-                                                   environment=self._environment,
-                                                   endpoint_name=self.SESSIONS_ENDPOINT,
-                                                   method=put_api_method)
+                                                   session_id=session_id)
 
-            logging.log_api_response(session_id=session_id,
+            logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -393,12 +390,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                            therapist_id=body.therapist_id,
-                            endpoint_name=self.SESSIONS_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=put_api_method)
+            logger.log_error(session_id=session_id,
+                             therapist_id=body.therapist_id,
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=put_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -438,12 +435,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        delete_api_method = logging.API_METHOD_DELETE
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=therapist_id,
-                                session_report_id=session_report_id,
-                                endpoint_name=self.SESSIONS_ENDPOINT,
-                                method=delete_api_method)
+        logger = Logger(auth_manager=self._auth_manager)
+        delete_api_method = logger.API_METHOD_DELETE
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=therapist_id,
+                               session_report_id=session_report_id,
+                               endpoint_name=self.SESSIONS_ENDPOINT,
+                               method=delete_api_method)
 
         try:
             assert len(session_report_id or '') > 0, "Received invalid session_report_id"
@@ -451,13 +449,13 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              therapist_id=therapist_id,
-                              session_report_id=session_report_id,
-                              endpoint_name=self.SESSIONS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=delete_api_method)
+            logger.log_error(session_id=session_id,
+                             therapist_id=therapist_id,
+                             session_report_id=session_report_id,
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -468,23 +466,23 @@ class AssistantRouter:
                                                    datastore_access_token=datastore_access_token,
                                                    datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     therapist_id=therapist_id,
-                                     session_report_id=session_report_id,
-                                     endpoint_name=self.SESSIONS_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=delete_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    session_report_id=session_report_id,
+                                    endpoint_name=self.SESSIONS_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=delete_api_method)
 
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                            session_report_id=session_report_id,
-                            endpoint_name=self.SESSIONS_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=delete_api_method)
+            logger.log_error(session_id=session_id,
+                             session_report_id=session_report_id,
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -523,12 +521,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                therapist_id=query.therapist_id,
-                                patient_id=query.patient_id,
-                                endpoint_name=self.QUERIES_ENDPOINT,
-                                method=post_api_method)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               therapist_id=query.therapist_id,
+                               patient_id=query.patient_id,
+                               endpoint_name=self.QUERIES_ENDPOINT,
+                               method=post_api_method)
 
         try:
             assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
@@ -544,22 +543,22 @@ class AssistantRouter:
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     therapist_id=query.therapist_id,
-                                     patient_id=query.patient_id,
-                                     endpoint_name=self.QUERIES_ENDPOINT,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    therapist_id=query.therapist_id,
+                                    patient_id=query.patient_id,
+                                    endpoint_name=self.QUERIES_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method)
             return response
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              patient_id=query.patient_id,
-                              endpoint_name=self.QUERIES_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             patient_id=query.patient_id,
+                             endpoint_name=self.QUERIES_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -599,13 +598,14 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
+        logger = Logger(auth_manager=self._auth_manager)
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
-        get_api_method = logging.API_METHOD_GET
-        logging.log_api_request(session_id=session_id,
-                                method=get_api_method,
-                                therapist_id=therapist_id,
-                                endpoint_name=self.GREETINGS_ENDPOINT,
-                                description=logs_description)
+        get_api_method = logger.API_METHOD_GET
+        logger.log_api_request(session_id=session_id,
+                               method=get_api_method,
+                               therapist_id=therapist_id,
+                               endpoint_name=self.GREETINGS_ENDPOINT,
+                               description=logs_description)
 
         try:
             assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
@@ -620,22 +620,22 @@ class AssistantRouter:
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.GREETINGS_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     description=logs_description,
-                                     method=get_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.GREETINGS_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    description=logs_description,
+                                    method=get_api_method)
 
             return {"message": result}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.GREETINGS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=get_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.GREETINGS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -677,12 +677,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        get_api_method = logging.API_METHOD_GET
-        logging.log_api_request(session_id=session_id,
-                                method=get_api_method,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
-                                endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        get_api_method = logger.API_METHOD_GET
+        logger.log_api_request(session_id=session_id,
+                               method=get_api_method,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,
+                               endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
@@ -700,21 +701,21 @@ class AssistantRouter:
                                                                                  datastore_access_token=datastore_access_token,
                                                                                  datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=get_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=get_api_method)
             return json_response
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=get_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -754,12 +755,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        get_api_method = logging.API_METHOD_GET
-        logging.log_api_request(session_id=session_id,
-                                method=get_api_method,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
-                                endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        get_api_method = logger.API_METHOD_GET
+        logger.log_api_request(session_id=session_id,
+                               method=get_api_method,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,
+                               endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT)
 
         try:
             assert len(patient_id or '') > 0, "Missing patient_id param"
@@ -775,22 +777,22 @@ class AssistantRouter:
                                                                                       datastore_access_token=datastore_access_token,
                                                                                       datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=get_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=get_api_method)
 
             return json_questions
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=get_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -828,11 +830,12 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                method=post_api_method,
-                                endpoint_name=self.PATIENTS_ENDPOINT,
-                                therapist_id=body.therapist_id)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               method=post_api_method,
+                               endpoint_name=self.PATIENTS_ENDPOINT,
+                               therapist_id=body.therapist_id)
 
         try:
             assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
@@ -853,23 +856,23 @@ class AssistantRouter:
             }).execute()
             patient_id = response.dict()['data'][0]['id']
 
-            logging.log_api_response(session_id=session_id,
-                                     method=post_api_method,
-                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                     therapist_id=body.therapist_id,
-                                     patient_id=patient_id,
-                                     http_status_code=status.HTTP_200_OK)
+            logger.log_api_response(session_id=session_id,
+                                    method=post_api_method,
+                                    endpoint_name=self.PATIENTS_ENDPOINT,
+                                    therapist_id=body.therapist_id,
+                                    patient_id=patient_id,
+                                    http_status_code=status.HTTP_200_OK)
 
             return {"patient_id": patient_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.PATIENTS_ENDPOINT,
-                              error_code=status_code,
-                              therapist_id=body.therapist_id,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             error_code=status_code,
+                             therapist_id=body.therapist_id,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -907,12 +910,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        put_api_method = logging.API_METHOD_PUT
-        logging.log_api_request(session_id=session_id,
-                                method=put_api_method,
-                                endpoint_name=self.PATIENTS_ENDPOINT,
-                                therapist_id=body.therapist_id,
-                                patient_id=body.patient_id)
+        logger = Logger(auth_manager=self._auth_manager)
+        put_api_method = logger.API_METHOD_PUT
+        logger.log_api_request(session_id=session_id,
+                               method=put_api_method,
+                               endpoint_name=self.PATIENTS_ENDPOINT,
+                               therapist_id=body.therapist_id,
+                               patient_id=body.patient_id)
 
         try:
             assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
@@ -933,23 +937,23 @@ class AssistantRouter:
                 "consentment_channel": body.consentment_channel.value,
             }).eq('id', body.patient_id).execute()
 
-            logging.log_api_response(session_id=session_id,
-                                     method=put_api_method,
-                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                     therapist_id=body.therapist_id,
-                                     patient_id=body.patient_id,
-                                     http_status_code=status.HTTP_200_OK)
+            logger.log_api_response(session_id=session_id,
+                                    method=put_api_method,
+                                    endpoint_name=self.PATIENTS_ENDPOINT,
+                                    therapist_id=body.therapist_id,
+                                    patient_id=body.patient_id,
+                                    http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.PATIENTS_ENDPOINT,
-                              error_code=status_code,
-                              therapist_id=body.therapist_id,
-                              patient_id=body.patient_id,
-                              description=description,
-                              method=put_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             error_code=status_code,
+                             therapist_id=body.therapist_id,
+                             patient_id=body.patient_id,
+                             description=description,
+                             method=put_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -989,12 +993,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        delete_api_method = logging.API_METHOD_DELETE
-        logging.log_api_request(session_id=session_id,
-                                method=delete_api_method,
-                                endpoint_name=self.PATIENTS_ENDPOINT,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,)
+        logger = Logger(auth_manager=self._auth_manager)
+        delete_api_method = logger.API_METHOD_DELETE
+        logger.log_api_request(session_id=session_id,
+                               method=delete_api_method,
+                               endpoint_name=self.PATIENTS_ENDPOINT,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,)
 
         try:
             assert len(patient_id or '') > 0, "Missing patient_id param"
@@ -1007,23 +1012,23 @@ class AssistantRouter:
 
             self._assistant_manager.delete_all_sessions_for_patient(therapist_id=therapist_id, patient_id=patient_id)
 
-            logging.log_api_response(session_id=session_id,
-                                     method=delete_api_method,
-                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     http_status_code=status.HTTP_200_OK)
+            logger.log_api_response(session_id=session_id,
+                                    method=delete_api_method,
+                                    endpoint_name=self.PATIENTS_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.PATIENTS_ENDPOINT,
-                              error_code=status_code,
-                              therapist_id=therapist_id,
-                              patient_id=patient_id,
-                              description=description,
-                              method=delete_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             error_code=status_code,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
+                             description=description,
+                             method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -1063,12 +1068,13 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        get_api_method = logging.API_METHOD_GET
-        logging.log_api_request(session_id=session_id,
-                                method=get_api_method,
-                                therapist_id=therapist_id,
-                                patient_id=patient_id,
-                                endpoint_name=self.TOPICS_ENDPOINT)
+        logger = Logger(auth_manager=self._auth_manager)
+        get_api_method = logger.API_METHOD_GET
+        logger.log_api_request(session_id=session_id,
+                               method=get_api_method,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id,
+                               endpoint_name=self.TOPICS_ENDPOINT)
 
         try:
             assert len(patient_id or '') > 0, "Missing patient_id param"
@@ -1084,22 +1090,22 @@ class AssistantRouter:
                                                                               datastore_access_token=datastore_access_token,
                                                                               datastore_refresh_token=datastore_refresh_token)
 
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.TOPICS_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     patient_id=patient_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=get_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.TOPICS_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=get_api_method)
 
             return json_topics
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logging.log_error(session_id=session_id,
-                            endpoint_name=self.TOPICS_ENDPOINT,
-                            error_code=status_code,
-                            description=description,
-                            method=get_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.TOPICS_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -1134,11 +1140,12 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        post_api_method = logging.API_METHOD_POST
-        logging.log_api_request(session_id=session_id,
-                                method=post_api_method,
-                                endpoint_name=self.TEMPLATES_ENDPOINT,
-                                therapist_id=therapist_id,)
+        logger = Logger(auth_manager=self._auth_manager)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(session_id=session_id,
+                               method=post_api_method,
+                               endpoint_name=self.TEMPLATES_ENDPOINT,
+                               therapist_id=therapist_id,)
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"
@@ -1147,21 +1154,22 @@ class AssistantRouter:
 
             soap_notes = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
                                                                              therapist_id=therapist_id,
+                                                                             session_id=session_id,
                                                                              session_notes_text=session_notes_text)
-            logging.log_api_response(session_id=session_id,
-                                     endpoint_name=self.TEMPLATES_ENDPOINT,
-                                     therapist_id=therapist_id,
-                                     http_status_code=status.HTTP_200_OK,
-                                     method=post_api_method)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.TEMPLATES_ENDPOINT,
+                                    therapist_id=therapist_id,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method)
 
             return {"soap_notes": soap_notes}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logging.log_error(session_id=session_id,
-                              endpoint_name=self.TEMPLATES_ENDPOINT,
-                              error_code=status_code,
-                              description=description,
-                              method=post_api_method)
+            logger.log_error(session_id=session_id,
+                             endpoint_name=self.TEMPLATES_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)

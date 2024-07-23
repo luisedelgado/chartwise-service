@@ -18,18 +18,12 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
-    endpoint_name – the endpoint name that invoked this api.
-    method – the api method that invoked this flow.
-    environment – the current environment.
     """
     def process_new_session_data(auth_manager: AuthManagerBaseClass,
                                  body: SessionNotesInsert,
                                  datastore_access_token: str,
                                  datastore_refresh_token: str,
-                                 session_id: str,
-                                 endpoint_name: str,
-                                 method: str,
-                                 environment: str) -> str:
+                                 session_id: str) -> str:
         pass
     
     """
@@ -40,17 +34,13 @@ class AssistantManagerBaseClass(ABC):
     body – the new data associated with the session.
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
-    environment – the current environment.
-    endpoint_name – the endpoint that triggered this api.
-    method – the api method that invoked this flow.
+    session_id – the session id.
     """
     def update_session(auth_manager: AuthManagerBaseClass,
                        body: SessionNotesUpdate,
                        datastore_access_token: str,
                        datastore_refresh_token: str,
-                       environment: str,
-                       endpoint_name: str,
-                       method: str):
+                       session_id: str):
         pass
 
     """
@@ -75,10 +65,12 @@ class AssistantManagerBaseClass(ABC):
     auth_manager – the auth_manager to be leveraged.
     therapist_id – the id associated with the therapist user.
     session_notes_text – the session notes to be adapted into SOAP.
+    session_id – the session id
     """
     def adapt_session_notes_to_soap(auth_manager: AuthManagerBaseClass,
                                     therapist_id: str,
-                                    session_notes_text: str) -> str:
+                                    session_notes_text: str,
+                                    session_id: str) -> str:
         pass
 
     """

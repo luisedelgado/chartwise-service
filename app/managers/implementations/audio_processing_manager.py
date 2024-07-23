@@ -13,9 +13,9 @@ from speechmatics.batch_client import BatchClient
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
+from ...internal.logging import Logger
 from ...internal.model import SessionNotesTemplate
 from ...internal.utilities import file_copiers
-from ...vectors.vector_query import VectorQueryWorker
 
 class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
@@ -24,6 +24,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                     assistant_manager: AssistantManagerBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
+                                    session_id: str,
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
@@ -103,7 +104,8 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                  therapist_id=therapist_id,
-                                                                 session_notes_text=transcript)
+                                                                 session_notes_text=transcript,
+                                                                 session_id=session_id)
 
     # Speechmatics
 
@@ -139,7 +141,9 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                  auth_manager: AuthManagerBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
+                                 session_id: str,
                                  audio_file: UploadFile = File(...)) -> str:
+        logger = Logger(auth_manager=auth_manager)
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)
@@ -169,7 +173,10 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
                 assert response.status_code == 201, f"Got HTTP code {response.status_code} while uploading the audio file"
                 json_response = response.json()
-                return json_response['id']
+                job_id = json_response['id']
+                logger.log_diarization_event(session_id=session_id,
+                                             job_id=job_id)
+                return job_id
             except Exception as e:
                 status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
                 raise HTTPException(status_code=status_code,
@@ -187,10 +194,12 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             )
             with BatchClient(settings) as client:
                 try:
-                    return client.submit_job(
+                    job_id = client.submit_job(
                         audio=audio_copy_result.file_copy_full_path,
                         transcription_config=config,
                     )
+                    logger.log_diarization_event(session_id=session_id,
+                                                 job_id=job_id)
                 except Exception as e:
                     status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
                     raise HTTPException(status_code=status_code,
