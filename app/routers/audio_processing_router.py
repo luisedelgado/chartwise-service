@@ -272,6 +272,7 @@ class AudioProcessingRouter:
         except:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
+        logger = Logger(auth_manager=self._auth_manager)
         try:
             request_status_code = request.query_params["status"]
             id = request.query_params["id"]
@@ -284,7 +285,6 @@ class AudioProcessingRouter:
             diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
                                                                    auth_manager=self._auth_manager)
 
-            logger = Logger(auth_manager=self._auth_manager)
             self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                               job_id=job_id,
                                                                               summary=summary,
