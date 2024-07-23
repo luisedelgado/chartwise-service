@@ -499,16 +499,22 @@ class VectorQueryWorker:
             return "There is no session data associated with the patient. They may have not gone through their first session yet."
 
         retrieved_docs = []
-        for match in matches:
+        for match_index, match in enumerate(matches):
             metadata = match['metadata']
-            text = metadata['session_text']
-            retrieved_docs.append({"id": match['id'], "text": text})
+            session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
+            session_summary = "".join(["session_summary = ",f"{metadata['session_summary']}\n"])
+            session_text = "".join(["session_text = ",f"{metadata['session_text']}\n"])
+            session_full_context = "".join([session_date,
+                                            session_summary,
+                                            session_text,
+                                            "\n"])
+            retrieved_docs.append({"id": match['id'], "text": session_full_context})
 
         cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
         rerank_response = await cohere_client.rerank(
             model="rerank-multilingual-v3.0",
             query=query_input,
-            documents=[{"text": doc['text'], "id": doc['id']} for doc in retrieved_docs],
+            documents=retrieved_docs,
             return_documents=True,
             top_n=rerank_top_n,
         )

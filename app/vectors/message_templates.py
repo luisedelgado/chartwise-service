@@ -124,11 +124,9 @@ class PromptCrafter:
     def _create_qa_system_message(self) -> str:
         return '''A therapist is using you to ask questions about their patients' notes. 
         Your job is to answer the therapist's questions based on the information context you find from the sessions' data.
-        You may use the session_date value found in the metadata for navigating through the sessions' data.
-        You should always look first at the session_summary value found in the metadata to understand whether a given document is related to the question.
-        If the session_summary value is related to the question, you should use it along session_text value to generate your response. 
-        To answer a question in the best way possible, you should find the documents that are most related to the question. 
-        For any information you reference, make sure you always outline the session_date value found in the metadata. If no session information is found, do not mention any session dates.
+        When evaluating the context, for each session you should always look first at the session_summary value to understand whether a given document is related to the question.
+        If the session_summary value is related to the question, you should use it along the session_text value to generate your response. 
+        When answering a question, you should always outline the session_date associated with the information you are providing. If no session information is found, do not mention any session dates.
         If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer.'''
 
     def _create_qa_user_message(self,
