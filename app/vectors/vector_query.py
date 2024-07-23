@@ -499,7 +499,7 @@ class VectorQueryWorker:
             return "There is no session data associated with the patient. They may have not gone through their first session yet."
 
         retrieved_docs = []
-        for match_index, match in enumerate(matches):
+        for match in matches:
             metadata = match['metadata']
             session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
             session_summary = "".join(["session_summary = ",f"{metadata['session_summary']}\n"])
