@@ -121,7 +121,7 @@ class AssistantRouter:
         @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
                                  request: Request,
-                                 client_tz_identifier: str = None,
+                                 client_timezone_identifier: str = None,
                                  therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -129,7 +129,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_greeting_internal(response=response,
                                                        request=request,
-                                                       client_tz_identifier=client_tz_identifier,
+                                                       client_tz_identifier=client_timezone_identifier,
                                                        therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
@@ -300,7 +300,9 @@ class AssistantRouter:
 
         try:
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
-            assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert datetime_handler.is_valid_date(date_input=body.date,
+                                                  tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             session_notes_id = self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                 body=body,
@@ -371,7 +373,9 @@ class AssistantRouter:
                                method=put_api_method)
 
         try:
-            assert datetime_handler.is_valid_date(body.date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert datetime_handler.is_valid_date(date_input=body.date,
+                                                  tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
             self._assistant_manager.update_session(auth_manager=self._auth_manager,

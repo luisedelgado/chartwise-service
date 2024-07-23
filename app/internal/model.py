@@ -17,6 +17,7 @@ class SessionNotesInsert(BaseModel):
     patient_id: str
     text: str
     date: str
+    client_timezone_identifier: str
     source: SessionNotesSource
 
 class SessionNotesUpdate(BaseModel):
@@ -24,6 +25,7 @@ class SessionNotesUpdate(BaseModel):
     patient_id: str
     date: str
     session_notes_id: str
+    client_timezone_identifier: str
     source: SessionNotesSource
     diarization: str = None
     text: str

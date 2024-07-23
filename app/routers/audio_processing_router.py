@@ -68,6 +68,7 @@ class AudioProcessingRouter:
                                   session_date: Annotated[str, Form()],
                                   therapist_id: Annotated[str, Form()],
                                   patient_id: Annotated[str, Form()],
+                                  tz_identifier: Annotated[str, Form()],
                                   template: Annotated[SessionNotesTemplate, Form()],
                                   audio_file: UploadFile = File(...),
                                   datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -79,6 +80,7 @@ class AudioProcessingRouter:
                                                         session_date=session_date,
                                                         therapist_id=therapist_id,
                                                         patient_id=patient_id,
+                                                        tz_identifier=tz_identifier,
                                                         template=template,
                                                         audio_file=audio_file,
                                                         datastore_access_token=datastore_access_token,
@@ -183,6 +185,7 @@ class AudioProcessingRouter:
                                         session_date: Annotated[str, Form()],
                                         therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
+                                        tz_identifier: Annotated[str, Form()],
                                         template: Annotated[SessionNotesTemplate, Form()],
                                         audio_file: UploadFile,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -212,7 +215,9 @@ class AudioProcessingRouter:
                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
-            assert datetime_handler.is_valid_date(session_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert general_utilities.is_valid_timezone_identifier(tz_identifier), "Invalid timezone identifier parameter"
+            assert datetime_handler.is_valid_date(date_input=session_date,
+                                                  tz_identifier=tz_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 

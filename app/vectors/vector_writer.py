@@ -33,8 +33,6 @@ def insert_session_vectors(index_id: str,
                            auth_manager: AuthManagerBaseClass,
                            session_id: str):
     try:
-        assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         
         # If index already exists, this will silently fail so we can continue writing to it
@@ -96,9 +94,6 @@ date – the optional value to be used as a filtering prefix.
 """
 def delete_session_vectors(index_id, namespace, date=None):
     try:
-        if date is not None:
-            assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         index = pc.Index(index_id)
         assert pc.describe_index(index_id).status['ready']
@@ -155,8 +150,6 @@ def update_session_vectors(index_id: str,
                            auth_manager: AuthManagerBaseClass,
                            session_id: str):
     try:
-        assert datetime_handler.is_valid_date(date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-
         # Delete the outdated data
         delete_session_vectors(index_id, namespace, date)
 
