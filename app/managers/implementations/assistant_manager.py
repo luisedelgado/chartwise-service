@@ -7,8 +7,7 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
                                SessionNotesTemplate,
-                               SessionNotesUpdate,
-                               BriefingConfiguration,)
+                               SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import VectorQueryWorker
@@ -315,7 +314,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     configuration: BriefingConfiguration,
                                      datastore_access_token: str,
                                      datastore_refresh_token: str):
         try:
@@ -350,8 +348,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                therapist_name=therapist_name,
                                                                therapist_gender=therapist_gender,
                                                                session_number=session_number,
-                                                               auth_manager=auth_manager,
-                                                               configuration=configuration)
+                                                               auth_manager=auth_manager)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result

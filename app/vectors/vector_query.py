@@ -7,7 +7,6 @@ from openai import OpenAI
 from openai.types import Completion
 from pinecone import Pinecone
 
-from ..internal.model import BriefingConfiguration
 from .message_templates import PromptCrafter, PromptScenario
 from .embeddings import create_embeddings
 from ..api.auth_base_class import AuthManagerBaseClass
@@ -169,7 +168,6 @@ class VectorQueryWorker:
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
     auth_manager – the auth manager to be leveraged internally.
-    configuration – the configuration to be used for creating the summary.
     """
     async def create_briefing(self,
                               index_id: str,
@@ -184,19 +182,10 @@ class VectorQueryWorker:
                               therapist_name: str,
                               therapist_gender: str,
                               session_number: int,
-                              auth_manager: AuthManagerBaseClass,
-                              configuration: BriefingConfiguration) -> str:
+                              auth_manager: AuthManagerBaseClass) -> str:
         try:
-            query_input = ""
-            if configuration == BriefingConfiguration.FULL_SUMMARY:
-                query_input = f'''I'm coming up to speed with {patient_name}'s session notes.
-                What do I need to remember, and what would be good avenues to explore in our upcoming session?'''
-            elif configuration == BriefingConfiguration.PRIMARY_TOPICS:
-                query_input = f'''I'm coming up to speed with {patient_name}'s session notes.
-                What are the three primary topics associated with {patient_name}'s session history?
-                Each bullet point should not take more than 50 characters.'''
-            else:
-                raise Exception("Invalid briefing configuration.")
+            query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
+            "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
 
             context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
                                                                                  query_input=query_input,
@@ -496,7 +485,8 @@ class VectorQueryWorker:
 
         matches = query_result.to_dict()['matches']
         if len(matches) == 0:
-            return "There is no session data associated with the patient. They may have not gone through their first session yet."
+            return ("There is no session data associated with the patient. "
+            "They may have not gone through their first session yet.")
 
         retrieved_docs = []
         for match in matches:

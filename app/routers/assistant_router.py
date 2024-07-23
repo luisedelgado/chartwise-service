@@ -14,7 +14,6 @@ from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import (AssistantQuery,
-                              BriefingConfiguration,
                               Gender,
                               PatientConsentmentChannel,
                               PatientInsertPayload,
@@ -141,7 +140,6 @@ class AssistantRouter:
                                         request: Request,
                                         therapist_id: str = None,
                                         patient_id: str = None,
-                                        briefing_configuration: BriefingConfiguration = BriefingConfiguration.UNDEFINED,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -150,7 +148,6 @@ class AssistantRouter:
                                                               request=request,
                                                               therapist_id=therapist_id,
                                                               patient_id=patient_id,
-                                                              briefing_configuration=briefing_configuration,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
@@ -651,7 +648,6 @@ class AssistantRouter:
     request – the incoming request object.
     therapist_id – the id associated with the user.
     patient_id – the id associated with the patient whose presession tray will be fetched.
-    briefing_configuration – the summary configuration.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -662,7 +658,6 @@ class AssistantRouter:
                                               request: Request,
                                               therapist_id: str,
                                               patient_id: str,
-                                              briefing_configuration: BriefingConfiguration,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -692,7 +687,6 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
-            assert briefing_configuration != BriefingConfiguration.UNDEFINED, '''Invalid parameter 'undefined' for briefing_configuration.'''
 
             json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                                  therapist_id=therapist_id,
@@ -701,7 +695,6 @@ class AssistantRouter:
                                                                                  endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                                  api_method=get_api_method,
                                                                                  auth_manager=self._auth_manager,
-                                                                                 configuration=briefing_configuration,
                                                                                  datastore_access_token=datastore_access_token,
                                                                                  datastore_refresh_token=datastore_refresh_token)
 

@@ -93,7 +93,8 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
-                                   "template": SOAP_TEMPLATE
+                                   "template": SOAP_TEMPLATE,
+                                   "client_timezone_identifier": "UTC"
                                },
                                files=files)
         assert response.status_code == 401
@@ -107,7 +108,8 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10/24/2020",
-                                   "template": SOAP_TEMPLATE
+                                   "template": SOAP_TEMPLATE,
+                                   "client_timezone_identifier": "UTC"
                                },
                                files=files,
                                cookies={
@@ -124,7 +126,28 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10/24/2020",
-                                   "template": SOAP_TEMPLATE
+                                   "template": SOAP_TEMPLATE,
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": FAKE_AUTH_COOKIE,
+                                   "datastore_access_token": FAKE_AUTH_COOKIE,
+                                   "datastore_refresh_token": FAKE_AUTH_COOKIE,
+                               })
+        assert response.status_code == 417
+
+    def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": self.auth_manager.FAKE_USER_ID,
+                                   "session_date": "10-24-2020",
+                                   "template": SOAP_TEMPLATE,
+                                   "client_timezone_identifier": "gfhhfhdfhhs"
                                },
                                files=files,
                                cookies={
@@ -143,7 +166,8 @@ class TestingHarnessAudioProcessingRouter:
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": self.auth_manager.FAKE_USER_ID,
                                    "session_date": "10-24-2020",
-                                   "template": SOAP_TEMPLATE
+                                   "template": SOAP_TEMPLATE,
+                                   "client_timezone_identifier": "UTC"
                                },
                                files=files,
                                cookies={

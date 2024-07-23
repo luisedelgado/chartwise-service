@@ -55,11 +55,6 @@ class LoginData(BaseModel):
 class LogoutData(BaseModel):
     therapist_id: str
 
-class BriefingConfiguration(Enum):
-    UNDEFINED = "undefined"
-    PRIMARY_TOPICS = "primary_topics"
-    FULL_SUMMARY = "full_summary"
-
 class PatientConsentmentChannel(Enum):
     UNDEFINED = "undefined"
     VERBAL = "verbal"

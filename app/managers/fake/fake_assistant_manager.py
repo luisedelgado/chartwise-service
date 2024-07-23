@@ -2,8 +2,7 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
-                               SessionNotesUpdate,
-                               BriefingConfiguration,)
+                               SessionNotesUpdate)
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
@@ -82,7 +81,6 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     configuration: BriefingConfiguration,
                                      datastore_access_token: str,
                                      datastore_refresh_token: str):
         ...

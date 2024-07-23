@@ -3,8 +3,7 @@ from abc import ABC
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               SessionNotesInsert,
-                              SessionNotesUpdate,
-                              BriefingConfiguration)
+                              SessionNotesUpdate)
 
 class AssistantManagerBaseClass(ABC):
 
@@ -152,7 +151,6 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    configuration – the configuration for creating the summary.
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
@@ -163,7 +161,6 @@ class AssistantManagerBaseClass(ABC):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     configuration: BriefingConfiguration,
                                      datastore_access_token: str,
                                      datastore_refresh_token: str):
         pass
