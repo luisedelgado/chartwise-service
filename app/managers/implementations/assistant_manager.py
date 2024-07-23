@@ -261,7 +261,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str):
+                                                  diarization: str) -> str:
         try:
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client = auth_manager.datastore_admin_instance()
@@ -303,6 +303,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                  date=session_date_formatted,
                                                  auth_manager=auth_manager,
                                                  session_id=session_id)
+            return session_id
         except Exception as e:
             raise Exception(e)
 

@@ -285,12 +285,14 @@ class AudioProcessingRouter:
             diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
                                                                    auth_manager=self._auth_manager)
 
-            self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
-                                                                              job_id=job_id,
-                                                                              summary=summary,
-                                                                              diarization=diarization,
-                                                                              endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
-                                                                              method=logger.API_METHOD_POST)
+            session_id = self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
+                                                                                           job_id=job_id,
+                                                                                           summary=summary,
+                                                                                           diarization=diarization)
+            logger.log_api_response(session_id=session_id,
+                                    endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=logger.API_METHOD_POST)
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)

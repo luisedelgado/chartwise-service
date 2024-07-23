@@ -103,10 +103,9 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str,
-                                                  endpoint_name: str,
-                                                  method: str,):
+                                                  diarization: str) -> str:
         self.fake_processed_diarization_result = diarization
+        return ""
 
     async def fetch_frequent_topics(self,
                                     therapist_id: str,

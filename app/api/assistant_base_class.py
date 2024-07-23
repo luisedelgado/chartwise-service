@@ -195,21 +195,18 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Updates a diarization entry with data coming from Speechmatics' notification service.
+    Returns the session ID associated with the request.
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     job_id – the id of the job that ran.
     summary – the session summary.
     diarization – the diarized session.
-    endpoint_name – the endpoint name that triggered this query.
-    method – the api method that triggered this query.
     """
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
                                                   job_id: str,
                                                   summary: str,
-                                                  diarization: str,
-                                                  endpoint_name: str,
-                                                  method: str):
+                                                  diarization: str) -> str:
         pass
 
     """
