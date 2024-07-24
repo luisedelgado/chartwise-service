@@ -463,6 +463,7 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Received invalid therapist_id param"
             self._assistant_manager.delete_session(auth_manager=self._auth_manager,
+                                                   therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
                                                    datastore_access_token=datastore_access_token,
                                                    datastore_refresh_token=datastore_refresh_token)
@@ -923,6 +924,10 @@ class AssistantRouter:
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
+
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', body.therapist_id).eq('id', body.patient_id).execute()
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
             datastore_client.table('patients').update({
                 "first_name": body.first_name,
                 "middle_name": body.middle_name,
@@ -1004,6 +1009,10 @@ class AssistantRouter:
 
             datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
                                                                                   datastore_refresh_token)
+
+            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id', patient_id).execute()
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
             delete_response = datastore_client.table('patients').delete().eq('id', patient_id).execute().dict()
             assert len(delete_response['data']) > 0, "No patient found with the incoming patient_id"
 

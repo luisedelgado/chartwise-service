@@ -55,6 +55,9 @@ class AssistantManager(AssistantManagerBaseClass):
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
 
+            report_query = datastore_client.from_('session_reports').select('*').eq('id', body.session_notes_id).eq('therapist_id', body.therapist_id).eq('patient_id', body.patient_id).execute()
+            assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
+
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             update_result = datastore_client.table('session_reports').update({
                 "notes_text": body.text,
@@ -80,12 +83,16 @@ class AssistantManager(AssistantManagerBaseClass):
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
+                       therapist_id: str,
                        session_report_id: str,
                        datastore_access_token: str,
                        datastore_refresh_token: str):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
+
+            report_query = datastore_client.from_('session_reports').select('*').eq('id', session_report_id).eq('therapist_id', therapist_id).execute()
+            assert (0 != len((report_query).data)), "The incoming therapist_id isn't associated with the session_report_id."
 
             delete_result = datastore_client.table('session_reports').delete().eq('id', session_report_id).execute()
             delete_result_dict = delete_result.dict()

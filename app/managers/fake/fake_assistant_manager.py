@@ -29,6 +29,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
+                       therapist_id: str,
                        session_report_id: str,
                        datastore_access_token: str,
                        datastore_refresh_token: str):

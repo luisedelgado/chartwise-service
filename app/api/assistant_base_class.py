@@ -47,11 +47,13 @@ class AssistantManagerBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
+    therapist_id – the therapist_id associated with the session report.
     session_report_id – the id associated with the session to be deleted.
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
     def delete_session(auth_manager: AuthManagerBaseClass,
+                       therapist_id: str,
                        session_report_id: str,
                        datastore_access_token: str,
                        datastore_refresh_token: str):
