@@ -183,7 +183,7 @@ class PromptCrafter:
             raise Exception(str(e))
 
     def _create_greeting_user_message(self) -> str:
-        return f"Write a welcoming message for the user. Your response should not go over 180 characters."
+        return f"Write a welcoming message for the practitioner. Your response should not go over 180 characters."
 
     # Briefing Prompt
 
@@ -239,7 +239,7 @@ class PromptCrafter:
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\nIt is very important that your output is written using language code {language_code}. "
-                f"Given this information, please answer the user's question:\n{query_input}"
+                f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
             raise Exception(e)
@@ -287,7 +287,7 @@ class PromptCrafter:
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\n{patient_info} "
                 f"It is very important that each question is written using language code {language_code}, and that it remains under 50 characters of length. "
-                f"Given this information, please answer the user's question:\n{query_input}"
+                f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
             raise Exception(e)
@@ -338,7 +338,7 @@ class PromptCrafter:
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"{patient_info} "
                 f"It is very important that each topic is written using language code {language_code}, and that it remain under 25 characters of length. "
-                f"Given this information, please answer the user's question:\n{query_input}"
+                f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
             raise Exception(e)
@@ -346,12 +346,10 @@ class PromptCrafter:
     # Session Entry Summary Prompt
 
     def _create_session_summary_system_message(self) -> str:
-        return (
+         return (
             "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
-            "Your job is to come up with a short summary about the session notes to be used as a label for quick retrievals in the future. "
-            "Ideally, by just looking at your summary one should know exactly what information is contained in the full set of notes. "
-            "When generating the output you should use a format that you consider ideal for navigating data quickly. "
-            "Imagine you are going to be consuming the summary yourself. "
+            "Your job is to come up with a short summary about the session notes to help the practitioner save time whenever they decide to revise the session in the future. "
+            "Ideally, by just looking at your summary, the practitioner should know exactly what information is contained in the detailed notes. "
         )
 
     def _create_session_summary_user_message(self,
@@ -360,7 +358,7 @@ class PromptCrafter:
         try:
             assert len(session_date or '') > 0, "Missing session_date param for building user message"
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
-            return (f"Write a summary for the session notes below:\n\n{session_notes}")
+            return (f"Summarize the session notes below:\n\n{session_notes}")
         except Exception as e:
             raise Exception(e)
 
