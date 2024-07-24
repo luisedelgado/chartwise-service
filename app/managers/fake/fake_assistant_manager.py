@@ -2,7 +2,8 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
-                               SessionNotesUpdate)
+                               SessionNotesUpdate,
+                               TimePeriod)
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
@@ -114,6 +115,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
+                                    time_period: TimePeriod,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
         pass

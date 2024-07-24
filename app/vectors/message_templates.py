@@ -144,14 +144,14 @@ class PromptCrafter:
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
 
             if gender_has_default_pronouns(patient_gender):
-                patient_context = f"For reference, the patient is a {patient_gender}, and their name is {patient_name}."
+                patient_info = f"For reference, the patient is a {patient_gender}, and their name is {patient_name}."
             else:
-                patient_context = f"For reference, the patient's name is {patient_name}."
+                patient_info = f"For reference, the patient's name is {patient_name}."
 
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\nIt is very important that you craft your response using language code {language_code}.\n"
-                f"{patient_context}"
+                f"{patient_info}"
                 f"\nGiven this information, please answer the question: {query_input}\n"
             )
         except Exception as e:
@@ -280,12 +280,12 @@ class PromptCrafter:
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
 
             if gender_has_default_pronouns(patient_gender):
-                patient_context = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}."
+                patient_info = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}."
             else:
-                patient_context = f"\nFor reference, the patient's name is {patient_name}."
+                patient_info = f"\nFor reference, the patient's name is {patient_name}."
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
-                f"\n{patient_context} "
+                f"\n{patient_info} "
                 f"It is very important that each question is written using language code {language_code}, and that it remains under 50 characters of length. "
                 f"Given this information, please answer the user's question:\n{query_input}"
             )
@@ -300,11 +300,12 @@ class PromptCrafter:
 
             return (
                 "A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. "
-                "They want to gain insight into what are the most frequent topics that the patient has spoken about in their whole session history. "
-                "Your job is to provide the practitioner with the patient's three most frequent topics, as well as the topic's respective percentage. "
-                "For example, for a patient that has spoken equally about three topics, each topic porcentage would be 33.3%. "
-                "Do not return topics with 0%, instead return only the topics that have more than 0%. "
-                "It is very important that the percentages of the three topics add up to 100%, and that the string value for each topic remain under 25 characters of length. "
+                "They want to gain insight into what are the three most frequent topics that the patient has spoken about in a given time frame. "
+                "Your job is to provide the practitioner with the set of frequent topics, as well as each topic's respective percentage. "
+                "Do not return topics that fall outside of the specified time frame. "
+                "For example, for a patient that has spoken equally about three topics, each topic's percentage would be 33.3%. "
+                "It is very important that the sum of the percentages add up 100%. It shouldn't be below nor above. Please double check the math. "
+                "Additionally, the string value for each topic should remain under 25 characters of length. "
                 "\nReturn only a JSON object with a single key titled 'topics', written in English, and its only value being an array containing up to three objects. "
                 f"Each object should have two keys titled 'topic' and 'percentage', written in English, and the content of each key's value needs to be written in language code {language_code}. "
                 "If based on the context, you determine that there is no data associated with the patient for whatever reason, the 'topics' array should be empty. "
@@ -330,12 +331,12 @@ class PromptCrafter:
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
 
             if gender_has_default_pronouns(patient_gender):
-                patient_context = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}. "
+                patient_info = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}. "
             else:
-                patient_context = f"\nFor reference, the patient's name is {patient_name}. "
+                patient_info = f"\nFor reference, the patient's name is {patient_name}. "
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
-                f"{patient_context} "
+                f"{patient_info} "
                 f"It is very important that each topic is written using language code {language_code}, and that it remain under 25 characters of length. "
                 f"Given this information, please answer the user's question:\n{query_input}"
             )

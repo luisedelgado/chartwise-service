@@ -10,6 +10,7 @@ from pinecone import Pinecone
 from .message_templates import PromptCrafter, PromptScenario
 from .embeddings import create_embeddings
 from ..api.auth_base_class import AuthManagerBaseClass
+from ..internal.model import TimePeriod
 from ..internal.utilities import datetime_handler
 
 LLM_MODEL = "gpt-4o-mini"
@@ -323,6 +324,7 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
+    time_period – the time period in which the set of frequent topics should be fetched.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def fetch_frequent_topics(self,
@@ -335,9 +337,11 @@ class VectorQueryWorker:
                                     method: str,
                                     patient_name: str,
                                     patient_gender: str,
+                                    time_period: TimePeriod,
                                     auth_manager: AuthManagerBaseClass) -> str:
         try:
-            query_input = f"What are the 3 topics that come up the most during {patient_name}'s sessions?"
+            starting_date_boundary, ending_date_boundary = datetime_handler.date_boundaries_for_time_period(time_period)
+            query_input = f"What are the 3 topics that came up the most in {patient_name}'s sessions between {starting_date_boundary} and {ending_date_boundary}?"
             context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
                                                                                  query_input=query_input,
                                                                                  index_id=index_id,

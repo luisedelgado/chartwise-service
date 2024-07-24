@@ -22,7 +22,8 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesSource,
                               SessionNotesTemplate,
                               SessionNotesUpdate,
-                              TemplatePayload)
+                              TemplatePayload,
+                              TimePeriod)
 from ..internal.utilities import datetime_handler, general_utilities
 
 class AssistantRouter:
@@ -226,6 +227,7 @@ class AssistantRouter:
                                         request: Request,
                                         patient_id: str = None,
                                         therapist_id: str = None,
+                                        time_period: TimePeriod = TimePeriod.LAST_3_MONTHS.value,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -234,6 +236,7 @@ class AssistantRouter:
                                                               request=request,
                                                               patient_id=patient_id,
                                                               therapist_id=therapist_id,
+                                                              time_period=time_period,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
@@ -1046,6 +1049,7 @@ class AssistantRouter:
     request – the incoming request object.
     therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
+    time_period – the time period for which the set of frequent topics should be fetched.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -1056,6 +1060,7 @@ class AssistantRouter:
                                               request: Request,
                                               therapist_id: str,
                                               patient_id: str,
+                                              time_period: TimePeriod,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -1093,6 +1098,7 @@ class AssistantRouter:
                                                                               session_id=session_id,
                                                                               endpoint_name=self.TOPICS_ENDPOINT,
                                                                               api_method=get_api_method,
+                                                                              time_period=time_period,
                                                                               datastore_access_token=datastore_access_token,
                                                                               datastore_refresh_token=datastore_refresh_token)
 

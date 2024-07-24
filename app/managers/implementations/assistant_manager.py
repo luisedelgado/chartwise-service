@@ -7,7 +7,8 @@ from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                SessionNotesInsert,
                                SessionNotesTemplate,
-                               SessionNotesUpdate)
+                               SessionNotesUpdate,
+                               TimePeriod)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import VectorQueryWorker
@@ -388,6 +389,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
+                                    time_period: TimePeriod,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
         try:
@@ -415,6 +417,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                        method=api_method,
                                                                        environment=environment,
                                                                        auth_manager=auth_manager,
+                                                                       time_period=time_period,
                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                        patient_gender=patient_gender)
 
