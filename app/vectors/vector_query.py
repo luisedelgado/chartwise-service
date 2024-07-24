@@ -192,7 +192,7 @@ class VectorQueryWorker:
                                                                                  index_id=index_id,
                                                                                  namespace=namespace,
                                                                                  query_top_k=10,
-                                                                                 rerank_top_n=3)
+                                                                                 rerank_top_n=5)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -269,7 +269,7 @@ class VectorQueryWorker:
                                                                                  index_id=index_id,
                                                                                  namespace=namespace,
                                                                                  query_top_k=10,
-                                                                                 rerank_top_n=3)
+                                                                                 rerank_top_n=5)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -343,7 +343,7 @@ class VectorQueryWorker:
                                                                                  index_id=index_id,
                                                                                  namespace=namespace,
                                                                                  query_top_k=10,
-                                                                                 rerank_top_n=3)
+                                                                                 rerank_top_n=5)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,

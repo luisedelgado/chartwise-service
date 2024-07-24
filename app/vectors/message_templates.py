@@ -304,7 +304,7 @@ class PromptCrafter:
                 "Your job is to provide the practitioner with the patient's three most frequent topics, as well as the topic's respective percentage. "
                 "For example, for a patient that has spoken equally about three topics, each topic porcentage would be 33.3%. "
                 "Do not return topics with 0%, instead return only the topics that have more than 0%. "
-                "It is very important that the string value for each topic remain under 25 characters of length. "
+                "It is very important that the percentages of the three topics add up to 100%, and that the string value for each topic remain under 25 characters of length. "
                 "\nReturn only a JSON object with a single key titled 'topics', written in English, and its only value being an array containing up to three objects. "
                 f"Each object should have two keys titled 'topic' and 'percentage', written in English, and the content of each key's value needs to be written in language code {language_code}. "
                 "If based on the context, you determine that there is no data associated with the patient for whatever reason, the 'topics' array should be empty. "
