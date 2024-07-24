@@ -49,23 +49,23 @@ class FakeAuthWrapper:
 class FakeSupabaseOperationResult:
 
     def __init__(self, operation_obj = None):
-        self._operation_obj = operation_obj
+        self.data = operation_obj
 
-    _operation_obj = None
+    data = None
 
     def execute(self):
-        return FakeSupabaseOperationResult(self._operation_obj)
+        return FakeSupabaseOperationResult(self.data)
 
     def eq(self, left, right):
-        self._operation_obj = right
+        self.data = right
         return FakeSupabaseOperationResult(right)
 
     def dict(self):
         data = [{
             "id": 0
         }]
-        if self._operation_obj is not None:
-            data.append(self._operation_obj)
+        if self.data is not None:
+            data.append(self.data)
         return {
             "data": data
         }
@@ -83,12 +83,18 @@ class FakeSupabaseTable:
     def delete(self):
         return FakeSupabaseOperationResult()
 
+    def select(self, value: str):
+        if value == '*':
+            return FakeSupabaseOperationResult(operation_obj=[value])
+        return FakeSupabaseOperationResult()
+
 class FakeSupabaseClient(Client):
 
     fake_role: str = None
     FAKE_AUTH_TOKEN: str = None
     fake_refresh_token: str = None
     fake_user_id: str = None
+    postgrest: str = None
 
     def __init__(self):
         pass
@@ -101,4 +107,7 @@ class FakeSupabaseClient(Client):
                                fake_user_id=self.fake_user_id)
 
     def table(self, table_name):
+        return FakeSupabaseTable(table_name)
+
+    def from_(self, table_name):
         return FakeSupabaseTable(table_name)
