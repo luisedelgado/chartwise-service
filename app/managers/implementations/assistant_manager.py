@@ -70,32 +70,30 @@ class AssistantManager(AssistantManagerBaseClass):
             report_query = datastore_client.from_('session_reports').select('*').eq('id', body.session_notes_id).eq('therapist_id', body.therapist_id).eq('patient_id', body.patient_id).execute()
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
 
-            summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
-                                                                  therapist_id=body.therapist_id,
-                                                                  session_date=body.date,
-                                                                  auth_manager=auth_manager,
-                                                                  session_id=session_id)
+            original_session_date_raw = report_query.dict()['data'][0]['session_date']
+            original_session_date_formatted = datetime_handler.convert_to_internal_date_format(original_session_date_raw)
+            session_summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
+                                                                          therapist_id=body.therapist_id,
+                                                                          session_date=body.date,
+                                                                          auth_manager=auth_manager,
+                                                                          session_id=session_id)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            update_result = datastore_client.table('session_reports').update({
+            datastore_client.table('session_reports').update({
                 "notes_text": body.text,
-                "notes_summary": summary,
+                "notes_summary": session_summary,
                 "last_updated": now_timestamp,
                 "source": body.source.value,
                 "session_date": body.date,
                 "diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
-            update_result_dict = update_result.dict()
-            session_date_raw = update_result_dict['data'][0]['session_date']
-            session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
-
             # Upload vector embeddings
             vector_writer.update_session_vectors(index_id=body.therapist_id,
                                                  namespace=body.patient_id,
                                                  text=body.text,
-                                                 summary=summary,
-                                                 date=session_date_formatted,
+                                                 summary=session_summary,
+                                                 date=original_session_date_formatted,
                                                  auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)

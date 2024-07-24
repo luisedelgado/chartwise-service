@@ -359,9 +359,7 @@ class PromptCrafter:
         try:
             assert len(session_date or '') > 0, "Missing session_date param for building user message"
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
-            return (
-                "Write a summary label for the session notes below. "
-                f"The session date was {session_date}.\nHere are the raw notes:\n\n{session_notes}")
+            return (f"Write a summary for the session notes below:\n\n{session_notes}")
         except Exception as e:
             raise Exception(e)
 
