@@ -23,9 +23,21 @@ class AssistantManager(AssistantManagerBaseClass):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
+
+            patient_query = datastore_client.from_('patients').select('*').eq('id', body.patient_id).eq('therapist_id', body.therapist_id).execute()
+            patient_therapist_match = (0 != len((patient_query).data))
+            assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+
+            summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
+                                                                  therapist_id=body.therapist_id,
+                                                                  session_date=body.date,
+                                                                  auth_manager=auth_manager,
+                                                                  session_id=session_id)
+
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
+                "notes_summary": summary,
                 "session_date": body.date,
                 "patient_id": body.patient_id,
                 "source": body.source.value,
@@ -37,9 +49,9 @@ class AssistantManager(AssistantManagerBaseClass):
             vector_writer.insert_session_vectors(index_id=body.therapist_id,
                                                  namespace=body.patient_id,
                                                  text=body.text,
+                                                 summary=summary,
                                                  date=body.date,
-                                                 auth_manager=auth_manager,
-                                                 session_id=session_id)
+                                                 auth_manager=auth_manager)
 
             return session_notes_id
         except Exception as e:
@@ -58,9 +70,16 @@ class AssistantManager(AssistantManagerBaseClass):
             report_query = datastore_client.from_('session_reports').select('*').eq('id', body.session_notes_id).eq('therapist_id', body.therapist_id).eq('patient_id', body.patient_id).execute()
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
 
+            summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
+                                                                  therapist_id=body.therapist_id,
+                                                                  session_date=body.date,
+                                                                  auth_manager=auth_manager,
+                                                                  session_id=session_id)
+
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             update_result = datastore_client.table('session_reports').update({
                 "notes_text": body.text,
+                "notes_summary": summary,
                 "last_updated": now_timestamp,
                 "source": body.source.value,
                 "session_date": body.date,
@@ -75,9 +94,9 @@ class AssistantManager(AssistantManagerBaseClass):
             vector_writer.update_session_vectors(index_id=body.therapist_id,
                                                  namespace=body.patient_id,
                                                  text=body.text,
+                                                 summary=summary,
                                                  date=session_date_formatted,
-                                                 auth_manager=auth_manager,
-                                                 session_id=session_id)
+                                                 auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -306,6 +325,7 @@ class AssistantManager(AssistantManagerBaseClass):
             vector_writer.insert_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id,
                                                  text=summary,
+                                                 summary=summary,
                                                  date=session_date_formatted,
                                                  auth_manager=auth_manager,
                                                  session_id=session_id)

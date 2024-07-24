@@ -12,8 +12,6 @@ from pinecone.grpc import PineconeGRPC
 from ..api.auth_base_class import AuthManagerBaseClass
 from . import data_cleaner
 from .embeddings import create_embeddings
-from .vector_query import VectorQueryWorker
-from ..internal.utilities import datetime_handler
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
@@ -22,16 +20,16 @@ Arguments:
 index_id – the index name that should be used to insert the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
+summary – the summary about the session text.
 date – the session_date to be used as metadata.
 auth_manager – the auth manager to be leveraged internally.
-session_id – the session id.
 """
 def insert_session_vectors(index_id: str,
                            namespace: str,
                            text: str,
+                           summary: str,
                            date: str,
-                           auth_manager: AuthManagerBaseClass,
-                           session_id: str):
+                           auth_manager: AuthManagerBaseClass):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
         
@@ -60,19 +58,13 @@ def insert_session_vectors(index_id: str,
 
             chunk_text = data_cleaner.clean_up_text(chunk)
             doc.set_content(chunk_text)
-
-            session_summary = VectorQueryWorker().summarize_session_entry(session_text=chunk_text,
-                                                                          therapist_id=index_id,
-                                                                          session_date=date,
-                                                                          auth_manager=auth_manager,
-                                                                          session_id=session_id)
             doc.metadata.update({
                 "session_date": date,
-                "session_summary": session_summary,
+                "session_summary": summary,
                 "session_text": chunk_text
             })
 
-            doc.embedding = create_embeddings(text=session_summary,
+            doc.embedding = create_embeddings(text=summary,
                                               auth_manager=auth_manager)
             vectors.append(doc)
 
@@ -139,16 +131,16 @@ Arguments:
 index_id – the index that should be used to update the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
+summary – the summary associated with the session text.
 date – the session_date to be used as metadata.
 auth_manager – the auth manager to be leveraged internally.
-session_id – the session_id.
 """
 def update_session_vectors(index_id: str,
                            namespace: str,
                            text: str,
+                           summary: str,
                            date: str,
-                           auth_manager: AuthManagerBaseClass,
-                           session_id: str):
+                           auth_manager: AuthManagerBaseClass):
     try:
         # Delete the outdated data
         delete_session_vectors(index_id, namespace, date)
@@ -157,9 +149,9 @@ def update_session_vectors(index_id: str,
         insert_session_vectors(index_id=index_id,
                                namespace=namespace,
                                text=text,
+                               summary=summary,
                                date=date,
-                               auth_manager=auth_manager,
-                               session_id=session_id)
+                               auth_manager=auth_manager)
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
     except Exception as e:
