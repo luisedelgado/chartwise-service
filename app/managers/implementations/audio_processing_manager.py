@@ -28,8 +28,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                                     audio_file: UploadFile = File(...)) -> str:
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
 
-        # TODO: Flip negation once Portkey integration works.
-        if not auth_manager.is_monitoring_proxy_reachable():
+        if auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
@@ -56,8 +55,8 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                     response = requests.post(endpoint_configuration, headers=headers, data=audio_file)
 
                 assert response.status_code == 200, f"{response.text}"
-                json_response = response.json()
-                transcript = "Need to index the correct object to return the transcript"
+                response_body = json.loads(response.text)
+                transcript = response_body['results']['channels'][0]['alternatives'][0]['transcript']
             except Exception as e:
                 status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
                 raise HTTPException(status_code=status_code,
@@ -98,14 +97,14 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             finally:
                 await file_copiers.clean_up_files([audio_copy_result.file_copy_full_path])
 
-            if template == SessionNotesTemplate.FREE_FORM:
-                return transcript
+        if template == SessionNotesTemplate.FREE_FORM:
+            return transcript
 
-            assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
-            return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                 therapist_id=therapist_id,
-                                                                 session_notes_text=transcript,
-                                                                 session_id=session_id)
+        assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
+        return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                therapist_id=therapist_id,
+                                                                session_notes_text=transcript,
+                                                                session_id=session_id)
 
     # Speechmatics
 
