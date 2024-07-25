@@ -11,21 +11,21 @@ class FakeAssistantManager(AssistantManagerBaseClass):
     fake_processed_diarization_result: str = None
     fake_insert_text: str = None
 
-    def process_new_session_data(self,
-                                 auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert,
-                                 datastore_access_token: str,
-                                 datastore_refresh_token: str,
-                                 session_id: str) -> str:
+    async def process_new_session_data(self,
+                                       auth_manager: AuthManagerBaseClass,
+                                       body: SessionNotesInsert,
+                                       datastore_access_token: str,
+                                       datastore_refresh_token: str,
+                                       session_id: str) -> str:
         self.fake_insert_text = body.text
         return self.FAKE_SESSION_NOTES_ID
 
-    def update_session(self,
-                       auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str,
-                       session_id: str):
+    async def update_session(self,
+                             auth_manager: AuthManagerBaseClass,
+                             body: SessionNotesUpdate,
+                             datastore_access_token: str,
+                             datastore_refresh_token: str,
+                             session_id: str):
         ...
 
     def delete_session(self,
@@ -48,8 +48,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                         patient_id: str):
         ...
 
-    def delete_all_sessions_for_therapist(self,
-                                          id: str):
+    def delete_all_sessions_for_therapist(self, id: str):
         ...
 
     async def query_session(self,

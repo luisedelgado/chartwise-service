@@ -15,12 +15,12 @@ from ...vectors.vector_query import VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
 
-    def process_new_session_data(self,
-                                 auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert,
-                                 datastore_access_token: str,
-                                 datastore_refresh_token: str,
-                                 session_id: str) -> str:
+    async def process_new_session_data(self,
+                                       auth_manager: AuthManagerBaseClass,
+                                       body: SessionNotesInsert,
+                                       datastore_access_token: str,
+                                       datastore_refresh_token: str,
+                                       session_id: str) -> str:
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -29,16 +29,19 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_therapist_match = (0 != len((patient_query).data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-            summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
-                                                                  therapist_id=body.therapist_id,
-                                                                  session_date=body.date,
-                                                                  auth_manager=auth_manager,
-                                                                  session_id=session_id)
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            assert (0 != len((therapist_query).data))
 
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+            mini_summary = VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
+                                                                           therapist_id=body.therapist_id,
+                                                                           language_code=language_code,
+                                                                           auth_manager=auth_manager,
+                                                                           session_id=session_id)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
-                "notes_summary": summary,
+                "notes_mini_summary": mini_summary,
                 "session_date": body.date,
                 "patient_id": body.patient_id,
                 "source": body.source.value,
@@ -47,23 +50,23 @@ class AssistantManager(AssistantManagerBaseClass):
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
-            vector_writer.insert_session_vectors(index_id=body.therapist_id,
-                                                 namespace=body.patient_id,
-                                                 text=body.text,
-                                                 summary=summary,
-                                                 date=body.date,
-                                                 auth_manager=auth_manager)
+            await vector_writer.insert_session_vectors(index_id=body.therapist_id,
+                                                       namespace=body.patient_id,
+                                                       text=body.text,
+                                                       date=body.date,
+                                                       auth_manager=auth_manager,
+                                                       session_id=session_id)
 
             return session_notes_id
         except Exception as e:
             raise Exception(e)
 
-    def update_session(self,
-                       auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str,
-                       session_id: str):
+    async def update_session(self,
+                             auth_manager: AuthManagerBaseClass,
+                             body: SessionNotesUpdate,
+                             datastore_access_token: str,
+                             datastore_refresh_token: str,
+                             session_id: str):
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -71,31 +74,36 @@ class AssistantManager(AssistantManagerBaseClass):
             report_query = datastore_client.from_('session_reports').select('*').eq('id', body.session_notes_id).eq('therapist_id', body.therapist_id).eq('patient_id', body.patient_id).execute()
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
 
-            original_session_date_raw = report_query.dict()['data'][0]['session_date']
-            original_session_date_formatted = datetime_handler.convert_to_internal_date_format(original_session_date_raw)
-            session_summary = VectorQueryWorker().summarize_session_entry(session_text=body.text,
-                                                                          therapist_id=body.therapist_id,
-                                                                          session_date=body.date,
-                                                                          auth_manager=auth_manager,
-                                                                          session_id=session_id)
+            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            assert (0 != len((therapist_query).data))
+
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+            mini_summary = VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
+                                                                           therapist_id=body.therapist_id,
+                                                                           language_code=language_code,
+                                                                           auth_manager=auth_manager,
+                                                                           session_id=session_id)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client.table('session_reports').update({
                 "notes_text": body.text,
-                "notes_summary": session_summary,
+                "notes_mini_summary": mini_summary,
                 "last_updated": now_timestamp,
                 "source": body.source.value,
                 "session_date": body.date,
                 "diarization": body.diarization,
             }).eq('id', body.session_notes_id).execute()
 
-            # Upload vector embeddings
-            vector_writer.update_session_vectors(index_id=body.therapist_id,
-                                                 namespace=body.patient_id,
-                                                 text=body.text,
-                                                 summary=session_summary,
-                                                 date=original_session_date_formatted,
-                                                 auth_manager=auth_manager)
+            original_session_date_raw = report_query.dict()['data'][0]['session_date']
+            original_session_date_formatted = datetime_handler.convert_to_internal_date_format(original_session_date_raw)
+
+            # Upload vector embeddings with the original session date since that's what was used for insertion.
+            await vector_writer.update_session_vectors(index_id=body.therapist_id,
+                                                       namespace=body.patient_id,
+                                                       text=body.text,
+                                                       session_id=session_id,
+                                                       date=original_session_date_formatted,
+                                                       auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -146,15 +154,13 @@ class AssistantManager(AssistantManagerBaseClass):
                                         therapist_id: str,
                                         patient_id: str):
         try:
-            vector_writer.delete_session_vectors(index_id=therapist_id,
-                                                 namespace=patient_id)
+            vector_writer.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
         except Exception as e:
             # Index doesn't exist, failing silently. Patient is being deleted prior to having any
             # data in our vector db
             pass
 
-    def delete_all_sessions_for_therapist(self,
-                                          id: str):
+    def delete_all_sessions_for_therapist(self, id: str):
         try:
             vector_writer.delete_index(id)
         except Exception as e:
@@ -281,11 +287,11 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def update_diarization_with_notification_data(self,
-                                                  auth_manager: AuthManagerBaseClass,
-                                                  job_id: str,
-                                                  summary: str,
-                                                  diarization: str) -> str:
+    async def update_diarization_with_notification_data(self,
+                                                        auth_manager: AuthManagerBaseClass,
+                                                        job_id: str,
+                                                        diarization_summary: str,
+                                                        diarization: str) -> str:
         try:
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client = auth_manager.datastore_admin_instance()
@@ -299,35 +305,34 @@ class AssistantManager(AssistantManagerBaseClass):
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
             if template == SessionNotesTemplate.SOAP.value:
-                soap_summary = self.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                therapist_id=therapist_id,
-                                                                session_notes_text=summary)
+                soap_notes = self.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                              therapist_id=therapist_id,
+                                                              session_notes_text=diarization_summary)
                 datastore_client.table('session_reports').update({
-                    "notes_text": soap_summary,
+                    "notes_text": soap_notes,
+                    "diarization_summary": diarization_summary,
                     "diarization": diarization,
                     "last_updated": now_timestamp,
-                    "diarization_job_id": None,
                 }).eq('diarization_job_id', job_id).execute()
             else:
                 assert template == SessionNotesTemplate.FREE_FORM.value, f"Unexpected template: {template}"
                 datastore_client.table('session_reports').update({
-                    "notes_text": summary,
+                    "notes_text": diarization_summary,
+                    "diarization_summary": diarization_summary,
                     "diarization": diarization,
                     "last_updated": now_timestamp,
-                    "diarization_job_id": None,
                 }).eq('diarization_job_id', job_id).execute()
 
             query_response = datastore_client.from_('diarization_logs').select('*').eq('job_id', job_id).execute()
             assert (0 != len((query_response).data)), "Expected to find a response."
 
             session_id = query_response.dict()['data'][0]['session_id']
-            vector_writer.insert_session_vectors(index_id=therapist_id,
-                                                 namespace=patient_id,
-                                                 text=summary,
-                                                 summary=summary,
-                                                 date=session_date_formatted,
-                                                 auth_manager=auth_manager,
-                                                 session_id=session_id)
+            await vector_writer.insert_session_vectors(index_id=therapist_id,
+                                                       namespace=patient_id,
+                                                       text=diarization_summary,
+                                                       date=session_date_formatted,
+                                                       auth_manager=auth_manager,
+                                                       session_id=session_id)
             return session_id
         except Exception as e:
             raise Exception(e)

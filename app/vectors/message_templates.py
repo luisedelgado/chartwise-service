@@ -7,14 +7,15 @@ from pytz import timezone
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
 
 class PromptScenario(Enum):
-    UNDEFINED = "undefined"
-    QUERY = "query"
+    CHUNK_SUMMARY = "chunk_summary"
     GREETING = "greeting"
     PRESESSION_BRIEFING = "presession_briefing"
+    QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
-    TOPICS = "frequent_topics"
-    SESSION_SUMMARY = "session_summary"
+    SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
+    TOPICS = "frequent_topics"
+    UNDEFINED = "undefined"
 
 class PromptCrafter:
 
@@ -66,14 +67,15 @@ class PromptCrafter:
                                                              patient_name=patient_name,
                                                              patient_gender=patient_gender,
                                                              query_input=query_input)
-        elif scenario == PromptScenario.SESSION_SUMMARY:
-            session_date = None if 'session_date' not in kwargs else kwargs['session_date']
-            session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
-            return self._create_session_summary_user_message(session_notes=session_notes,
-                                                             session_date=session_date)
+        elif scenario == PromptScenario.CHUNK_SUMMARY:
+            chunk_text = None if 'chunk_text' not in kwargs else kwargs['chunk_text']
+            return self._create_chunk_summary_user_message(chunk_text=chunk_text)
         elif scenario == PromptScenario.SOAP_TEMPLATE:
             session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
             return self._create_soap_template_user_message(session_notes=session_notes)
+        elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
+            session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
+            return self._create_session_mini_summary_user_message(session_notes=session_notes)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -111,10 +113,13 @@ class PromptCrafter:
         elif scenario == PromptScenario.TOPICS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_frequent_topics_system_message(language_code=language_code)
-        elif scenario == PromptScenario.SESSION_SUMMARY:
-            return self._create_session_summary_system_message()
+        elif scenario == PromptScenario.CHUNK_SUMMARY:
+            return self._create_chunk_summary_system_message()
         elif scenario == PromptScenario.SOAP_TEMPLATE:
             return self._create_soap_template_system_message()
+        elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            return self._create_session_mini_summary_system_message(language_code=language_code)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -213,9 +218,10 @@ class PromptCrafter:
                     "They are about to meet with an existing patient, and need to quickly refreshen on the patient's history. "
                     "Your job is to provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. "
                     "If there's no data for filling either section, simply omit it, and summarize the information that you do find. "
-                    "Each section may take up to 800 characters. "
                     "Use only the information you find based on the session_summary and session_text values (even if it results in a shorter summary). "
+                    "The total length of the summary may take up to 1600 characters. "
                     "We're aiming for accuracy and quality, not quantity. "
+                    "End the summary with suggestions on what would be good avenues to explore in the upcoming session. "
                     f"Address the therapist by their name, {therapist_name}, and the patient by theirs, which is {patient_name}. "
                     f"Start by reminding the therapist that they are seeing {patient_name} for the {ordinal_session_number} time. "
                     f"{gender_params}\n"
@@ -345,20 +351,23 @@ class PromptCrafter:
 
     # Session Entry Summary Prompt
 
-    def _create_session_summary_system_message(self) -> str:
+    def _create_chunk_summary_system_message(self) -> str:
          return (
             "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
-            "Your job is to come up with a short summary about the session notes to help the practitioner save time whenever they decide to revise the session in the future. "
-            "Ideally, by just looking at your summary, the practitioner should know exactly what information is contained in the detailed notes. "
+            "We have implemented a Retrieval Augmented Generation system, for which we are using a chunking approach to break up the practitioner's session notes. "
+            "The goal is to create embeddings out of each chunk, and insert it in a vector database. "
+            "Your job is to come up with a short summary about the chunk you'll be given. "
+            "Keep in mind the chunk may contain only a subset of the session notes' information. "
+            "Your summary is meant to be used for enabling a quick retrieval whenever the practitioner searches for information that's contained in this chunk. "
+            "Ideally, by just looking at your summary our platform's search retriever should know exactly what information is contained in the chunk. "
+            "Your output should be generated in English, regardless of what language the chunk is written in. "
         )
 
-    def _create_session_summary_user_message(self,
-                                             session_notes: str,
-                                             session_date: str) -> str:
+    def _create_chunk_summary_user_message(self,
+                                           chunk_text: str) -> str:
         try:
-            assert len(session_date or '') > 0, "Missing session_date param for building user message"
-            assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
-            return (f"Summarize the session notes below:\n\n{session_notes}")
+            assert len(chunk_text or '') > 0, "Missing chunk_text param for building user message"
+            return (f"Summarize the following chunk:\n\n{chunk_text}")
         except Exception as e:
             raise Exception(e)
 
@@ -385,5 +394,26 @@ class PromptCrafter:
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return f"Adapt the following session notes into the SOAP format:\n\n{session_notes}."
+        except Exception as e:
+            raise Exception(e)
+
+    def _create_session_mini_summary_system_message(self, language_code: str):
+        try:
+            assert len(language_code or '') > 0, "Missing language_code param for building system message"
+            return (
+                "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
+                "Our platform includes a Sessions table that shows a 'preview' of every session notes' entry. "
+                "This preview is essentially a 'mini summary' of the session notes, and should be no longer than 50 characters. "
+                "Your job is to come up with this mini summary. "
+                "\nWhile you only have 50 characters, the goal is that by reading the mini summary, the practitioner should have a clear idea of what information is contained in the full session notes. "
+                f"It is very important that your output is generated using language code {language_code}. "
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    def _create_session_mini_summary_user_message(self, session_notes: str):
+        try:
+            assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
+            return (f"Summarize the following session notes:\n\n{session_notes}")
         except Exception as e:
             raise Exception(e)

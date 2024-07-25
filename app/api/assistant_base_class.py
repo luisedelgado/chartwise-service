@@ -19,11 +19,11 @@ class AssistantManagerBaseClass(ABC):
     datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
     """
-    def process_new_session_data(auth_manager: AuthManagerBaseClass,
-                                 body: SessionNotesInsert,
-                                 datastore_access_token: str,
-                                 datastore_refresh_token: str,
-                                 session_id: str) -> str:
+    async def process_new_session_data(auth_manager: AuthManagerBaseClass,
+                                       body: SessionNotesInsert,
+                                       datastore_access_token: str,
+                                       datastore_refresh_token: str,
+                                       session_id: str) -> str:
         pass
     
     """
@@ -36,11 +36,11 @@ class AssistantManagerBaseClass(ABC):
     datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
     """
-    def update_session(auth_manager: AuthManagerBaseClass,
-                       body: SessionNotesUpdate,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str,
-                       session_id: str):
+    async def update_session(auth_manager: AuthManagerBaseClass,
+                             body: SessionNotesUpdate,
+                             datastore_access_token: str,
+                             datastore_refresh_token: str,
+                             session_id: str):
         pass
 
     """
@@ -91,8 +91,7 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     id – the id associated with the therapist whose sessions are to be deleted.
     """
-    def delete_all_sessions_for_therapist(self,
-                                          id: str):
+    def delete_all_sessions_for_therapist(id: str):
         pass
 
     """

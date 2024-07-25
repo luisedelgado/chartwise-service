@@ -304,11 +304,11 @@ class AssistantRouter:
             assert datetime_handler.is_valid_date(date_input=body.date,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            session_notes_id = self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
-                                                                                body=body,
-                                                                                datastore_access_token=datastore_access_token,
-                                                                                datastore_refresh_token=datastore_refresh_token,
-                                                                                session_id=session_id)
+            session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
+                                                                                      body=body,
+                                                                                      datastore_access_token=datastore_access_token,
+                                                                                      datastore_refresh_token=datastore_refresh_token,
+                                                                                      session_id=session_id)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -378,11 +378,11 @@ class AssistantRouter:
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            self._assistant_manager.update_session(auth_manager=self._auth_manager,
-                                                   body=body,
-                                                   datastore_access_token=datastore_access_token,
-                                                   datastore_refresh_token=datastore_refresh_token,
-                                                   session_id=session_id)
+            await self._assistant_manager.update_session(auth_manager=self._auth_manager,
+                                                         body=body,
+                                                         datastore_access_token=datastore_access_token,
+                                                         datastore_refresh_token=datastore_refresh_token,
+                                                         session_id=session_id)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,

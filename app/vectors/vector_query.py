@@ -426,33 +426,72 @@ class VectorQueryWorker:
             raise Exception(e)
 
     """
-    Summarizes a session entry for faster fetching.
+    Summarizes a chunk for faster fetching.
 
     Arguments:
-    session_text – the text associated with the session notes.
+    chunk_text – the text associated with the incoming chunk.
     therapist_id – the therapist_id.
     auth_manager – the auth manager to be leveraged internally.
-    session_date – the session date.
     session_id – the session id.
     """
-    def summarize_session_entry(self,
-                                session_text: str,
-                                therapist_id: str,
-                                auth_manager: AuthManagerBaseClass,
-                                session_date: str,
-                                session_id: str) -> str:
+    def summarize_chunk(self,
+                        chunk_text: str,
+                        therapist_id: str,
+                        auth_manager: AuthManagerBaseClass,
+                        session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
-            user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_SUMMARY,
-                                                                       session_notes=session_text,
-                                                                       session_date=session_date)
-            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SESSION_SUMMARY)
+            user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.CHUNK_SUMMARY,
+                                                                       chunk_text=chunk_text)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.CHUNK_SUMMARY)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
                 "user": therapist_id,
                 "session_id": str(session_id)
+            }
+
+            return self._trigger_chat_completion_internal(metadata=metadata,
+                                                          max_tokens=max_tokens,
+                                                          messages=[
+                                                              {"role": "system", "content": system_prompt},
+                                                              {"role": "user", "content": user_prompt},
+                                                          ],
+                                                          expects_json_response=False,
+                                                          auth_manager=auth_manager)
+        except Exception as e:
+            raise Exception(e)
+
+    """
+    Creates a 'mini' summary of the incoming session notes.
+
+    Arguments:
+    session_text – the text associated with the session notes.
+    therapist_id – the therapist_id.
+    language_code – the language_code to be used for generating the response.
+    auth_manager – the auth manager to be leveraged internally.
+    session_id – the session id.
+    """
+    def create_session_mini_summary(self,
+                                    session_notes: str,
+                                    therapist_id: str,
+                                    language_code: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    session_id: str) -> str:
+        try:
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_MINI_SUMMARY,
+                                                                       session_notes=session_notes)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SESSION_MINI_SUMMARY,
+                                                                           language_code=language_code)
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            metadata = {
+                "user": therapist_id,
+                "session_id": str(session_id),
+                "language_code": language_code,
             }
 
             return self._trigger_chat_completion_internal(metadata=metadata,
@@ -504,7 +543,9 @@ class VectorQueryWorker:
                                             "\n"])
             retrieved_docs.append({"id": match['id'], "text": session_full_context})
 
-        cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+        # TODO: Uncomment when we start paying for Cohere
+        # cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+        cohere_client = cohere.AsyncClient("SiJ2j9R07lxKnDrpLiq5fWDcE1kbPrYVX0k5QYLa")
         rerank_response = await cohere_client.rerank(
             model="rerank-multilingual-v3.0",
             query=query_input,

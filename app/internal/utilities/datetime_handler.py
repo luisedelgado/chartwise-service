@@ -6,6 +6,7 @@ from ...internal.model import TimePeriod
 
 DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
 DATE_FORMAT = "%m-%d-%Y"
+MONTH_YEAR_FORMAT = "%B %Y"
 
 """
 Returns a flag representing whether or not the incoming date is valid.
@@ -44,7 +45,7 @@ def date_boundaries_for_time_period(time_period: TimePeriod):
 
     if time_period == TimePeriod.LAST_12_MONTHS:
         starting_date_boundary = "their first session"
-        return (starting_date_boundary, ending_date_boundary.date())
+        return (starting_date_boundary, ending_date_boundary.date().strftime(MONTH_YEAR_FORMAT))
 
     if time_period == TimePeriod.LAST_3_MONTHS:
         starting_date_boundary = ending_date_boundary - timedelta(days=90)
@@ -55,5 +56,5 @@ def date_boundaries_for_time_period(time_period: TimePeriod):
     else:
         raise Exception("Untracked time period")
 
-    return (starting_date_boundary.strftime(DATE_FORMAT),
-            ending_date_boundary.strftime(DATE_FORMAT))
+    return (starting_date_boundary.strftime(MONTH_YEAR_FORMAT),
+            ending_date_boundary.strftime(MONTH_YEAR_FORMAT))
