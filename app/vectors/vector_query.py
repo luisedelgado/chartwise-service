@@ -544,8 +544,7 @@ class VectorQueryWorker:
             retrieved_docs.append({"id": match['id'], "text": session_full_context})
 
         # TODO: Uncomment when we start paying for Cohere
-        # cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
-        cohere_client = cohere.AsyncClient("SiJ2j9R07lxKnDrpLiq5fWDcE1kbPrYVX0k5QYLa")
+        cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
         rerank_response = await cohere_client.rerank(
             model="rerank-multilingual-v3.0",
             query=query_input,
