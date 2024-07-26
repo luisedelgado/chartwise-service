@@ -46,7 +46,7 @@ class VectorQueryWorker:
                           endpoint_name: str,
                           method: str,
                           environment: str,
-                          auth_manager: AuthManagerBaseClass) -> str:
+                          auth_manager: AuthManagerBaseClass):
         try:
             context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
                                                                                  query_input=query_input,
