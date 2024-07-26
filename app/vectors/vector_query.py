@@ -3,7 +3,7 @@ import os
 import cohere, tiktoken
 
 from datetime import datetime
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from openai.types import Completion
 from pinecone import Pinecone
 
@@ -77,14 +77,15 @@ class VectorQueryWorker:
                 "method": method,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=False,
-                                                          auth_manager=auth_manager)
+            async for part in self._stream_chat_completion_internal(metadata=metadata,
+                                                                    max_tokens=max_tokens,
+                                                                    messages=[
+                                                                        {"role": "system", "content": system_prompt},
+                                                                        {"role": "user", "content": user_prompt},
+                                                                    ],
+                                                                    auth_manager=auth_manager):
+                yield part
+
         except Exception as e:
             raise Exception(e)
 
@@ -593,5 +594,49 @@ class VectorQueryWorker:
 
             response_text = response.choices[0].message.content.strip()
             return response_text if not expects_json_response else eval(str(response_text))
+        except Exception as e:
+            raise Exception(e)
+
+    async def _stream_chat_completion_internal(self,
+                                               metadata: dict,
+                                               max_tokens: int,
+                                               messages: list,
+                                               auth_manager: AuthManagerBaseClass,
+                                               cache_configuration: dict = None):
+        try:
+            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+
+            if is_monitoring_proxy_reachable:
+                assert (cache_configuration is None or
+                        ('cache_max_age' in cache_configuration and
+                         'caching_shard_key' in cache_configuration), "Missing expected values in caching configuration")
+
+                api_base = auth_manager.get_monitoring_proxy_url()
+                cache_max_age = None if (cache_configuration is None or 'cache_max_age' not in cache_configuration) else cache_configuration['cache_max_age']
+                caching_shard_key = None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration) else cache_configuration['caching_shard_key']
+                proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                             caching_shard_key=caching_shard_key,
+                                                                             cache_max_age=cache_max_age,
+                                                                             llm_model=LLM_MODEL)
+            else:
+                api_base = None
+                proxy_headers = None
+
+            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                        default_headers=proxy_headers,
+                                        base_url=api_base)
+
+            response: Completion = await openai_client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=messages,
+                temperature=0,
+                stream=True,
+                max_tokens=max_tokens
+            )
+
+            async for part in response:
+                if 'choices' in part:
+                    yield part["choices"][0]["text"]
+
         except Exception as e:
             raise Exception(e)

@@ -5,7 +5,8 @@ from fastapi import (APIRouter,
                      HTTPException,
                      Request,
                      Response,
-                     status,)
+                     status)
+from fastapi.responses import StreamingResponse
 from supabase import Client
 from typing import Annotated, Union
 
@@ -110,13 +111,14 @@ class AssistantRouter:
                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._execute_assistant_query_internal(query=query,
-                                                                request=request,
-                                                                response=response,
-                                                                datastore_access_token=datastore_access_token,
-                                                                datastore_refresh_token=datastore_refresh_token,
-                                                                authorization=authorization,
-                                                                session_id=session_id)
+            return StreamingResponse(self._execute_assistant_query_internal(query=query,
+                                                                            request=request,
+                                                                            response=response,
+                                                                            datastore_access_token=datastore_access_token,
+                                                                            datastore_refresh_token=datastore_refresh_token,
+                                                                            authorization=authorization,
+                                                                            session_id=session_id),
+                                     media_type="text/plain")
 
         @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
@@ -539,14 +541,15 @@ class AssistantRouter:
             assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
             assert len(query.text or '') > 0, "Invalid text in payload"
 
-            response = await self._assistant_manager.query_session(auth_manager=self._auth_manager,
-                                                                   query=query,
-                                                                   session_id=session_id,
-                                                                   api_method=post_api_method,
-                                                                   endpoint_name=self.QUERIES_ENDPOINT,
-                                                                   environment=self._environment,
-                                                                   datastore_access_token=datastore_access_token,
-                                                                   datastore_refresh_token=datastore_refresh_token)
+            async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
+                                                                    query=query,
+                                                                    session_id=session_id,
+                                                                    api_method=post_api_method,
+                                                                    endpoint_name=self.QUERIES_ENDPOINT,
+                                                                    environment=self._environment,
+                                                                    datastore_access_token=datastore_access_token,
+                                                                    datastore_refresh_token=datastore_refresh_token):
+                yield part
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=query.therapist_id,
@@ -554,7 +557,6 @@ class AssistantRouter:
                                     endpoint_name=self.QUERIES_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
-            return response
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

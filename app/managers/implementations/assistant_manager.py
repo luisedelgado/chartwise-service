@@ -194,19 +194,18 @@ class AssistantManager(AssistantManagerBaseClass):
             assert (0 != len((therapist_query).data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            response = await VectorQueryWorker().query_store(index_id=query.therapist_id,
-                                                             namespace=query.patient_id,
-                                                             patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                             patient_gender=patient_gender,
-                                                             query_input=query.text,
-                                                             response_language_code=language_code,
-                                                             session_id=session_id,
-                                                             endpoint_name=endpoint_name,
-                                                             method=api_method,
-                                                             environment=environment,
-                                                             auth_manager=auth_manager)
-
-            return {"response": response}
+            async for part in VectorQueryWorker().query_store(index_id=query.therapist_id,
+                                                              namespace=query.patient_id,
+                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                              patient_gender=patient_gender,
+                                                              query_input=query.text,
+                                                              response_language_code=language_code,
+                                                              session_id=session_id,
+                                                              endpoint_name=endpoint_name,
+                                                              method=api_method,
+                                                              environment=environment,
+                                                              auth_manager=auth_manager):
+                yield part
         except Exception as e:
             raise Exception(e)
 
