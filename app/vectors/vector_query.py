@@ -3,7 +3,7 @@ import os
 import cohere, tiktoken
 
 from datetime import datetime
-from openai import AsyncOpenAI, OpenAI
+from openai import AsyncOpenAI
 from openai.types import Completion
 from pinecone import Pinecone
 
@@ -554,13 +554,13 @@ class VectorQueryWorker:
         )
         return "\n".join([result.document.text for result in rerank_response.results])
 
-    def _trigger_chat_completion_internal(self,
-                                          metadata: dict,
-                                          max_tokens: int,
-                                          messages: list,
-                                          expects_json_response: bool,
-                                          auth_manager: AuthManagerBaseClass,
-                                          cache_configuration: dict = None):
+    async def _trigger_chat_completion_internal(self,
+                                                metadata: dict,
+                                                max_tokens: int,
+                                                messages: list,
+                                                expects_json_response: bool,
+                                                auth_manager: AuthManagerBaseClass,
+                                                cache_configuration: dict = None):
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 
@@ -580,11 +580,11 @@ class VectorQueryWorker:
                 api_base = None
                 proxy_headers = None
 
-            openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
-                                   default_headers=proxy_headers,
-                                   base_url=api_base)
+            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
+                                        default_headers=proxy_headers,
+                                        base_url=api_base)
 
-            response: Completion = openai_client.chat.completions.create(
+            response: Completion = await openai_client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=messages,
                 temperature=0,
