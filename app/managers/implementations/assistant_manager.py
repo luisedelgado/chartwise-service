@@ -33,11 +33,11 @@ class AssistantManager(AssistantManagerBaseClass):
             assert (0 != len((therapist_query).data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
-                                                                           therapist_id=body.therapist_id,
-                                                                           language_code=language_code,
-                                                                           auth_manager=auth_manager,
-                                                                           session_id=session_id)
+            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
+                                                                                 therapist_id=body.therapist_id,
+                                                                                 language_code=language_code,
+                                                                                 auth_manager=auth_manager,
+                                                                                 session_id=session_id)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
@@ -78,11 +78,11 @@ class AssistantManager(AssistantManagerBaseClass):
             assert (0 != len((therapist_query).data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
-                                                                           therapist_id=body.therapist_id,
-                                                                           language_code=language_code,
-                                                                           auth_manager=auth_manager,
-                                                                           session_id=session_id)
+            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
+                                                                                 therapist_id=body.therapist_id,
+                                                                                 language_code=language_code,
+                                                                                 auth_manager=auth_manager,
+                                                                                 session_id=session_id)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             datastore_client.table('session_reports').update({
@@ -136,16 +136,16 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def adapt_session_notes_to_soap(self,
-                                    auth_manager: AuthManagerBaseClass,
-                                    therapist_id: str,
-                                    session_notes_text: str,
-                                    session_id: str) -> str:
+    async def adapt_session_notes_to_soap(self,
+                                          auth_manager: AuthManagerBaseClass,
+                                          therapist_id: str,
+                                          session_notes_text: str,
+                                          session_id: str) -> str:
         try:
-            soap_report = VectorQueryWorker().create_soap_report(text=session_notes_text,
-                                                                 therapist_id=therapist_id,
-                                                                 auth_manager=auth_manager,
-                                                                 session_id=session_id)
+            soap_report = await VectorQueryWorker().create_soap_report(text=session_notes_text,
+                                                                       therapist_id=therapist_id,
+                                                                       auth_manager=auth_manager,
+                                                                       session_id=session_id)
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -209,16 +209,16 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def fetch_todays_greeting(self,
-                              client_tz_identifier: str,
-                              therapist_id: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              api_method: str,
-                              environment: str,
-                              auth_manager: AuthManagerBaseClass,
-                              datastore_access_token: str,
-                              datastore_refresh_token: str) -> str:
+    async def fetch_todays_greeting(self,
+                                    client_tz_identifier: str,
+                                    therapist_id: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
+                                    environment: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str) -> str:
         try:
             datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
                                                                             refresh_token=datastore_refresh_token)
@@ -229,16 +229,16 @@ class AssistantManager(AssistantManagerBaseClass):
             addressing_name = therapist_query_dict['data'][0]["first_name"]
             language_code = therapist_query_dict['data'][0]["language_preference"]
             therapist_gender = therapist_query_dict['data'][0]["gender"]
-            result = VectorQueryWorker().create_greeting(therapist_name=addressing_name,
-                                                         therapist_gender=therapist_gender,
-                                                         language_code=language_code,
-                                                         tz_identifier=client_tz_identifier,
-                                                         session_id=session_id,
-                                                         endpoint_name=endpoint_name,
-                                                         therapist_id=therapist_id,
-                                                         method=api_method,
-                                                         environment=environment,
-                                                         auth_manager=auth_manager)
+            result = await VectorQueryWorker().create_greeting(therapist_name=addressing_name,
+                                                               therapist_gender=therapist_gender,
+                                                               language_code=language_code,
+                                                               tz_identifier=client_tz_identifier,
+                                                               session_id=session_id,
+                                                               endpoint_name=endpoint_name,
+                                                               therapist_id=therapist_id,
+                                                               method=api_method,
+                                                               environment=environment,
+                                                               auth_manager=auth_manager)
             return result
         except Exception as e:
             raise Exception(e)
@@ -304,9 +304,9 @@ class AssistantManager(AssistantManagerBaseClass):
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
             if template == SessionNotesTemplate.SOAP.value:
-                soap_notes = self.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                              therapist_id=therapist_id,
-                                                              session_notes_text=diarization_summary)
+                soap_notes = await self.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                    therapist_id=therapist_id,
+                                                                    session_notes_text=diarization_summary)
                 datastore_client.table('session_reports').update({
                     "notes_text": soap_notes,
                     "diarization_summary": diarization_summary,

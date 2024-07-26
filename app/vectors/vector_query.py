@@ -105,18 +105,17 @@ class VectorQueryWorker:
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def create_greeting(self,
-                        therapist_name: str,
-                        therapist_gender: str,
-                        language_code: str,
-                        tz_identifier: str,
-                        session_id: str,
-                        endpoint_name: str,
-                        therapist_id: str,
-                        method: str,
-                        environment: str,
-                        auth_manager: AuthManagerBaseClass,
-                        ) -> str:
+    async def create_greeting(self,
+                              therapist_name: str,
+                              therapist_gender: str,
+                              language_code: str,
+                              tz_identifier: str,
+                              session_id: str,
+                              endpoint_name: str,
+                              therapist_id: str,
+                              method: str,
+                              environment: str,
+                              auth_manager: AuthManagerBaseClass) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.GREETING)
@@ -140,18 +139,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          cache_configuration={
-                                                            'cache_max_age': 86400, # 24 hours
-                                                            'caching_shard_key': caching_shard_key,
-                                                          },
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=False,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                cache_configuration={
+                                                                    'cache_max_age': 86400, # 24 hours
+                                                                    'caching_shard_key': caching_shard_key,
+                                                                },
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=False,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -223,18 +222,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          cache_configuration={
-                                                            'cache_max_age': 86400, # 24 hours
-                                                            'caching_shard_key': caching_shard_key,
-                                                          },
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=True,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                cache_configuration={
+                                                                    'cache_max_age': 86400, # 24 hours
+                                                                    'caching_shard_key': caching_shard_key,
+                                                                },
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=True,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -297,18 +296,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          cache_configuration={
-                                                            'cache_max_age': 86400, # 24 hours
-                                                            'caching_shard_key': caching_shard_key,
-                                                          },
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=True,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                cache_configuration={
+                                                                    'cache_max_age': 86400, # 24 hours
+                                                                    'caching_shard_key': caching_shard_key,
+                                                                },
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=True,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -374,18 +373,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          cache_configuration={
-                                                            'cache_max_age': 86400, # 24 hours
-                                                            'caching_shard_key': caching_shard_key,
-                                                          },
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=True,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                cache_configuration={
+                                                                    'cache_max_age': 86400, # 24 hours
+                                                                    'caching_shard_key': caching_shard_key,
+                                                                },
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=True,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -397,11 +396,11 @@ class VectorQueryWorker:
     therapist_id – the therapist_id.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def create_soap_report(self,
-                           text: str,
-                           therapist_id: str,
-                           auth_manager: AuthManagerBaseClass,
-                           session_id: str) -> str:
+    async def create_soap_report(self,
+                                 text: str,
+                                 therapist_id: str,
+                                 auth_manager: AuthManagerBaseClass,
+                                 session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE,
@@ -415,14 +414,14 @@ class VectorQueryWorker:
                 "session_id": str(session_id),
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=False,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=False,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -435,11 +434,11 @@ class VectorQueryWorker:
     auth_manager – the auth manager to be leveraged internally.
     session_id – the session id.
     """
-    def summarize_chunk(self,
-                        chunk_text: str,
-                        therapist_id: str,
-                        auth_manager: AuthManagerBaseClass,
-                        session_id: str) -> str:
+    async def summarize_chunk(self,
+                              chunk_text: str,
+                              therapist_id: str,
+                              auth_manager: AuthManagerBaseClass,
+                              session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.CHUNK_SUMMARY,
@@ -453,14 +452,14 @@ class VectorQueryWorker:
                 "session_id": str(session_id)
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=False,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=False,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -474,12 +473,12 @@ class VectorQueryWorker:
     auth_manager – the auth manager to be leveraged internally.
     session_id – the session id.
     """
-    def create_session_mini_summary(self,
-                                    session_notes: str,
-                                    therapist_id: str,
-                                    language_code: str,
-                                    auth_manager: AuthManagerBaseClass,
-                                    session_id: str) -> str:
+    async def create_session_mini_summary(self,
+                                          session_notes: str,
+                                          therapist_id: str,
+                                          language_code: str,
+                                          auth_manager: AuthManagerBaseClass,
+                                          session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_MINI_SUMMARY,
@@ -495,14 +494,14 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return self._trigger_chat_completion_internal(metadata=metadata,
-                                                          max_tokens=max_tokens,
-                                                          messages=[
-                                                              {"role": "system", "content": system_prompt},
-                                                              {"role": "user", "content": user_prompt},
-                                                          ],
-                                                          expects_json_response=False,
-                                                          auth_manager=auth_manager)
+            return await self._trigger_chat_completion_internal(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=False,
+                                                                auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 

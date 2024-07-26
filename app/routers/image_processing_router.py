@@ -195,10 +195,10 @@ class ImageProcessingRouter:
                 return {"textraction": textraction}
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
-            soap_textraction = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                   therapist_id=therapist_id,
-                                                                                   session_id=session_id,
-                                                                                   session_notes_text=textraction)
+            soap_textraction = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
+                                                                                         therapist_id=therapist_id,
+                                                                                         session_id=session_id,
+                                                                                         session_notes_text=textraction)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=therapist_id,

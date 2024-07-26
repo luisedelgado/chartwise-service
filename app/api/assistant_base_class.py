@@ -69,10 +69,10 @@ class AssistantManagerBaseClass(ABC):
     session_notes_text – the session notes to be adapted into SOAP.
     session_id – the session id
     """
-    def adapt_session_notes_to_soap(auth_manager: AuthManagerBaseClass,
-                                    therapist_id: str,
-                                    session_notes_text: str,
-                                    session_id: str) -> str:
+    async def adapt_session_notes_to_soap(auth_manager: AuthManagerBaseClass,
+                                          therapist_id: str,
+                                          session_notes_text: str,
+                                          session_id: str) -> str:
         pass
 
     """
@@ -131,15 +131,15 @@ class AssistantManagerBaseClass(ABC):
     datastore_access_token – the datastore access token to be used.
     datastore_refresh_token – the datastore refresh token to be used.
     """
-    def fetch_todays_greeting(client_tz_identifier: str,
-                              therapist_id: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              api_method: str,
-                              environment: str,
-                              auth_manager: AuthManagerBaseClass,
-                              datastore_access_token: str,
-                              datastore_refresh_token: str):
+    async def fetch_todays_greeting(client_tz_identifier: str,
+                                    therapist_id: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
+                                    environment: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str):
         pass
 
     """

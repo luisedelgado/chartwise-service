@@ -36,11 +36,11 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                        datastore_refresh_token: str):
         ...
 
-    def adapt_session_notes_to_soap(self,
-                                    auth_manager: AuthManagerBaseClass,
-                                    therapist_id: str,
-                                    session_notes_text: str,
-                                    session_id: str) -> str:
+    async def adapt_session_notes_to_soap(self,
+                                          auth_manager: AuthManagerBaseClass,
+                                          therapist_id: str,
+                                          session_notes_text: str,
+                                          session_id: str) -> str:
         return ""
 
     def delete_all_sessions_for_patient(self,
@@ -62,16 +62,16 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                             datastore_refresh_token: str):
         ...
 
-    def fetch_todays_greeting(self,
-                              client_tz_identifier: str,
-                              therapist_id: str,
-                              session_id: str,
-                              endpoint_name: str,
-                              api_method: str,
-                              environment: str,
-                              auth_manager: AuthManagerBaseClass,
-                              datastore_access_token: str,
-                              datastore_refresh_token: str):
+    async def fetch_todays_greeting(self,
+                                    client_tz_identifier: str,
+                                    therapist_id: str,
+                                    session_id: str,
+                                    endpoint_name: str,
+                                    api_method: str,
+                                    environment: str,
+                                    auth_manager: AuthManagerBaseClass,
+                                    datastore_access_token: str,
+                                    datastore_refresh_token: str):
         ...
 
     async def create_patient_summary(self,

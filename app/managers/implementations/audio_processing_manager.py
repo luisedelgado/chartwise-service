@@ -101,10 +101,10 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
             return transcript
 
         assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
-        return assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                therapist_id=therapist_id,
-                                                                session_notes_text=transcript,
-                                                                session_id=session_id)
+        return await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                   therapist_id=therapist_id,
+                                                                   session_notes_text=transcript,
+                                                                   session_id=session_id)
 
     # Speechmatics
 

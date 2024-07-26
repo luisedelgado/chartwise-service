@@ -617,15 +617,15 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
 
-            result = self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
-                                                                   therapist_id=therapist_id,
-                                                                   session_id=session_id,
-                                                                   endpoint_name=self.GREETINGS_ENDPOINT,
-                                                                   api_method=get_api_method,
-                                                                   environment=self._environment,
-                                                                   auth_manager=self._auth_manager,
-                                                                   datastore_access_token=datastore_access_token,
-                                                                   datastore_refresh_token=datastore_refresh_token)
+            result = await self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
+                                                                         therapist_id=therapist_id,
+                                                                         session_id=session_id,
+                                                                         endpoint_name=self.GREETINGS_ENDPOINT,
+                                                                         api_method=get_api_method,
+                                                                         environment=self._environment,
+                                                                         auth_manager=self._auth_manager,
+                                                                         datastore_access_token=datastore_access_token,
+                                                                         datastore_refresh_token=datastore_refresh_token)
 
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,
@@ -1166,10 +1166,10 @@ class AssistantRouter:
             assert len(therapist_id or '') > 0, "Empty therapist_id param"
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
-            soap_notes = self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                             therapist_id=therapist_id,
-                                                                             session_id=session_id,
-                                                                             session_notes_text=session_notes_text)
+            soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
+                                                                                   therapist_id=therapist_id,
+                                                                                   session_id=session_id,
+                                                                                   session_notes_text=session_notes_text)
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.TEMPLATES_ENDPOINT,
                                     therapist_id=therapist_id,

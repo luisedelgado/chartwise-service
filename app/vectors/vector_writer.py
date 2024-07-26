@@ -61,10 +61,10 @@ async def insert_session_vectors(index_id: str,
             chunk_text = data_cleaner.clean_up_text(chunk)
             doc.set_content(chunk_text)
 
-            chunk_summary = vector_query_worker.summarize_chunk(chunk_text=chunk_text,
-                                                                therapist_id=index_id,
-                                                                auth_manager=auth_manager,
-                                                                session_id=session_id)
+            chunk_summary = await vector_query_worker.summarize_chunk(chunk_text=chunk_text,
+                                                                      therapist_id=index_id,
+                                                                      auth_manager=auth_manager,
+                                                                      session_id=session_id)
 
             doc.metadata.update({
                 "session_date": date,
