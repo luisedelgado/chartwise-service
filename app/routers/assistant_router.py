@@ -110,12 +110,30 @@ class AssistantRouter:
                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+            if not self._auth_manager.access_token_is_valid(authorization):
+                raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+            if datastore_access_token is None or datastore_refresh_token is None:
+                raise security.DATASTORE_TOKENS_ERROR
+
+            try:
+                await self._auth_manager.refresh_session(user_id=query.therapist_id,
+                                                         request=request,
+                                                         response=response)
+            except Exception as e:
+                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+                raise HTTPException(status_code=status_code, detail=str(e))
+
+            try:
+                assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
+                assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
+                assert len(query.text or '') > 0, "Invalid text in payload"
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
             return StreamingResponse(self._execute_assistant_query_internal(query=query,
-                                                                            request=request,
-                                                                            response=response,
                                                                             datastore_access_token=datastore_access_token,
                                                                             datastore_refresh_token=datastore_refresh_token,
-                                                                            authorization=authorization,
                                                                             session_id=session_id),
                                      media_type="text/plain")
 
@@ -496,35 +514,15 @@ class AssistantRouter:
 
     Arguments:
     query – the query that will be executed.
-    request – the incoming request object.
-    response – the response model with which to create the final response.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
-    authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
                                                 query: AssistantQuery,
-                                                request: Request,
-                                                response: Response,
                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                                authorization: Annotated[Union[str, None], Cookie()],
                                                 session_id: Annotated[Union[str, None], Cookie()]):
-        if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
-
-        if datastore_access_token is None or datastore_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
-
-        try:
-            await self._auth_manager.refresh_session(user_id=query.therapist_id,
-                                                     request=request,
-                                                     response=response)
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
         logger = Logger(auth_manager=self._auth_manager)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
@@ -534,10 +532,6 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
-            assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
-            assert len(query.text or '') > 0, "Invalid text in payload"
-
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
@@ -555,16 +549,13 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
         except Exception as e:
-            description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            yield "I'm having trouble finding an answer for you right now. Please try again later."
             logger.log_error(session_id=session_id,
                              patient_id=query.patient_id,
                              endpoint_name=self.QUERIES_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
+                             error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
+                             description=str(e),
                              method=post_api_method)
-            raise HTTPException(status_code=status_code,
-                                detail=description)
 
     """
     Returns a new greeting to the user.
