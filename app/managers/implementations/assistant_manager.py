@@ -500,20 +500,3 @@ class AssistantManager(AssistantManagerBaseClass):
             return response
         except Exception as e:
             raise Exception(e)
-
-    def fetch_preexisting_history(self,
-                                  therapist_id: str,
-                                  patient_id: str,
-                                  auth_manager: AuthManagerBaseClass,
-                                  datastore_access_token: str,
-                                  datastore_refresh_token: str):
-        try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-            patient_query = datastore_client.from_('patients').select('*').eq('id', patient_id).eq('therapist_id', therapist_id).execute()
-            patient_therapist_match = (0 != len((patient_query).data))
-            assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
-
-            return patient_query.dict()['data'][0]['pre_existing_history']
-        except Exception as e:
-            raise Exception(e)

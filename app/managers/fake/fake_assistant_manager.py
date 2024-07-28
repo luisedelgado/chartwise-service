@@ -134,11 +134,3 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
         pass
-
-    def fetch_preexisting_history(self,
-                                  therapist_id: str,
-                                  patient_id: str,
-                                  auth_manager: AuthManagerBaseClass,
-                                  datastore_access_token: str,
-                                  datastore_refresh_token: str):
-        pass

@@ -267,20 +267,3 @@ class AssistantManagerBaseClass(ABC):
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
         pass
-
-    """
-    Returns a set of topics (along with frequency percentages) that the incoming patient_id is associated with.
-
-    Arguments:
-    therapist_id – the id associated with the therapist user.
-    patient_id – the id associated with the patient.
-    auth_manager – the auth manager to be leveraged internally.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
-    """
-    def fetch_preexisting_history(therapist_id: str,
-                                  patient_id: str,
-                                  auth_manager: AuthManagerBaseClass,
-                                  datastore_access_token: str,
-                                  datastore_refresh_token: str):
-        pass
