@@ -39,6 +39,12 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  language_code=language_code,
                                                                                  auth_manager=auth_manager,
                                                                                  session_id=session_id)
+
+            datastore_client.table('patients').update({
+                "last_session": body.date,
+                "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
+            }).eq('id', body.patient_id).execute()
+
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = datastore_client.table('session_reports').insert({
                 "notes_text": body.text,
