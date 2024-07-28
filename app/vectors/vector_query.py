@@ -48,12 +48,12 @@ class VectorQueryWorker:
                           environment: str,
                           auth_manager: AuthManagerBaseClass):
         try:
-            context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
-                                                                                 query_input=query_input,
-                                                                                 index_id=index_id,
-                                                                                 namespace=namespace,
-                                                                                 query_top_k=10,
-                                                                                 rerank_top_n=3)
+            context = await self._get_vector_store_context(auth_manager=auth_manager,
+                                                           query_input=query_input,
+                                                           index_id=index_id,
+                                                           namespace=namespace,
+                                                           query_top_k=10,
+                                                           rerank_top_n=3)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
@@ -188,12 +188,12 @@ class VectorQueryWorker:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
 
-            context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
-                                                                                 query_input=query_input,
-                                                                                 index_id=index_id,
-                                                                                 namespace=namespace,
-                                                                                 query_top_k=10,
-                                                                                 rerank_top_n=5)
+            context = await self._get_vector_store_context(auth_manager=auth_manager,
+                                                           query_input=query_input,
+                                                           index_id=index_id,
+                                                           namespace=namespace,
+                                                           query_top_k=10,
+                                                           rerank_top_n=5)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -265,12 +265,12 @@ class VectorQueryWorker:
                                           auth_manager: AuthManagerBaseClass) -> str:
         try:
             query_input = f"What are 3 questions that I could ask about {patient_name}'s session history?"
-            context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
-                                                                                 query_input=query_input,
-                                                                                 index_id=index_id,
-                                                                                 namespace=namespace,
-                                                                                 query_top_k=10,
-                                                                                 rerank_top_n=5)
+            context = await self._get_vector_store_context(auth_manager=auth_manager,
+                                                           query_input=query_input,
+                                                           index_id=index_id,
+                                                           namespace=namespace,
+                                                           query_top_k=10,
+                                                           rerank_top_n=5)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -339,12 +339,12 @@ class VectorQueryWorker:
                                     auth_manager: AuthManagerBaseClass) -> str:
         try:
             query_input = f"What are the 3 topics that come up the most in {patient_name}'s sessions?"
-            context = await self._get_context_from_semantically_matching_vectors(auth_manager=auth_manager,
-                                                                                 query_input=query_input,
-                                                                                 index_id=index_id,
-                                                                                 namespace=namespace,
-                                                                                 query_top_k=10,
-                                                                                 rerank_top_n=5)
+            context = await self._get_vector_store_context(auth_manager=auth_manager,
+                                                           query_input=query_input,
+                                                           index_id=index_id,
+                                                           namespace=namespace,
+                                                           query_top_k=10,
+                                                           rerank_top_n=5)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -504,38 +504,42 @@ class VectorQueryWorker:
 
     # Private
 
-    async def _get_context_from_semantically_matching_vectors(self,
-                                                              auth_manager: AuthManagerBaseClass,
-                                                              query_input: str,
-                                                              index_id: str,
-                                                              namespace: str,
-                                                              query_top_k: int,
-                                                              rerank_top_n: int,) -> str:
+    async def _get_vector_store_context(self,
+                                        auth_manager: AuthManagerBaseClass,
+                                        query_input: str,
+                                        index_id: str,
+                                        namespace: str,
+                                        query_top_k: int,
+                                        rerank_top_n: int,) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
-        assert index_id in pc.list_indexes().names(), "Index not found"
-
-        index = pc.Index(index_id)
         embeddings = create_embeddings(auth_manager=auth_manager,
                                        text=query_input)
-
-        query_result = index.query(vector=embeddings,
-                                   top_k=query_top_k,
-                                   namespace=namespace,
-                                   include_metadata=True)
-        query_matches = query_result.to_dict()['matches']
 
         # Fetch patient's historical context
         found_historical_context, historical_context = self._fetch_historical_context(index=index, namespace=namespace)
         historical_context = (("Here's an outline of the patient's pre-existing history, written by the therapist:\n" + historical_context)
                               if found_historical_context else "")
 
+        missing_session_data_error = "".join([
+            historical_context,
+            "\nThere's no data from patient sessions. " if not found_historical_context else "\nBeyond this pre-existing context, there's no data from actual patient sessions. ",
+            "They may have not gone through their first session since the practitioner added them to the platform. ",
+        ])
+
+        # There's no session data, return a message explaining this, and offer the historical context, if exists.
+        if index_id not in pc.list_indexes().names():
+            return missing_session_data_error
+
+        index = pc.Index(index_id)
+        query_result = index.query(vector=embeddings,
+                                   top_k=query_top_k,
+                                   namespace=namespace,
+                                   include_metadata=True)
+        query_matches = query_result.to_dict()['matches']
+
         # There's no session data, return a message explaining this, and offer the historical context, if exists.
         if len(query_matches) == 0:
-            return "".join([
-                historical_context,
-                "\nThere's no data from patient sessions. " if not found_historical_context else "\nBeyond this pre-existing context, there's no data from actual patient sessions. ",
-                "They may have not gone through their first session since the practitioner added them to the platform. ",
-            ])
+            return missing_session_data_error
 
         retrieved_docs = [historical_context] if found_historical_context else []
         for match in query_matches:
