@@ -45,7 +45,8 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                           session_id: str) -> str:
         pass
 
-    async def update_patient(auth_manager: AuthManagerBaseClass,
+    async def update_patient(self,
+                             auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
                              datastore_access_token: str,
                              datastore_refresh_token: str,
