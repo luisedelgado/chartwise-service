@@ -307,9 +307,8 @@ class PromptCrafter:
 
             return (
                 "A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. "
-                "They want to gain insight into what are the three most frequent topics that the patient has spoken about in a given time frame. "
+                "They want to gain insight into what are the three topics that the patient brings up the most during sessions. "
                 "Your job is to provide the practitioner with the set of frequent topics, as well as each topic's respective percentage. "
-                "Do not return topics that fall outside of the specified time frame. "
                 "For example, for a patient that has spoken equally about three topics, each topic's percentage would be 33.3%. "
                 "It is very important that the sum of the percentages add up 100%. It shouldn't be below nor above. Please double check the math. "
                 "Additionally, the string value for each topic should remain under 25 characters of length. "

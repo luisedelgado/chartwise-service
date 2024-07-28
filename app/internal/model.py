@@ -12,12 +12,6 @@ class SessionNotesTemplate(Enum):
     FREE_FORM = "free_form"
     SOAP = "soap"
 
-class TimePeriod(Enum):
-    LAST_3_MONTHS = "last 3 months"
-    LAST_6_MONTHS = "last 6 months"
-    LAST_9_MONTHS = "last 9 months"
-    LAST_12_MONTHS = "last 12 months and beyond"
-
 class SessionNotesInsert(BaseModel):
     therapist_id: str
     patient_id: str

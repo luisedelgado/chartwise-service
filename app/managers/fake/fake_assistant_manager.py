@@ -4,8 +4,7 @@ from ...internal.model import (AssistantQuery,
                                PatientInsertPayload,
                                PatientUpdatePayload,
                                SessionNotesInsert,
-                               SessionNotesUpdate,
-                               TimePeriod)
+                               SessionNotesUpdate)
 
 class FakeAssistantManager(AssistantManagerBaseClass):
 
@@ -131,7 +130,14 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    time_period: TimePeriod,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
+        pass
+
+    def fetch_preexisting_history(self,
+                                  therapist_id: str,
+                                  patient_id: str,
+                                  auth_manager: AuthManagerBaseClass,
+                                  datastore_access_token: str,
+                                  datastore_refresh_token: str):
         pass

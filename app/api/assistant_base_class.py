@@ -5,8 +5,7 @@ from ..internal.model import (AssistantQuery,
                               PatientInsertPayload,
                               PatientUpdatePayload,
                               SessionNotesInsert,
-                              SessionNotesUpdate,
-                              TimePeriod)
+                              SessionNotesUpdate)
 
 class AssistantManagerBaseClass(ABC):
 
@@ -255,7 +254,6 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    time_period – the time period for which the set of frequent topics should be fetched.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     """
@@ -266,7 +264,23 @@ class AssistantManagerBaseClass(ABC):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    time_period: TimePeriod,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
+        pass
+
+    """
+    Returns a set of topics (along with frequency percentages) that the incoming patient_id is associated with.
+
+    Arguments:
+    therapist_id – the id associated with the therapist user.
+    patient_id – the id associated with the patient.
+    auth_manager – the auth manager to be leveraged internally.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
+    """
+    def fetch_preexisting_history(therapist_id: str,
+                                  patient_id: str,
+                                  auth_manager: AuthManagerBaseClass,
+                                  datastore_access_token: str,
+                                  datastore_refresh_token: str):
         pass

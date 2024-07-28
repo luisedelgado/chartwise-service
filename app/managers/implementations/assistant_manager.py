@@ -9,8 +9,7 @@ from ...internal.model import (AssistantQuery,
                                PatientUpdatePayload,
                                SessionNotesInsert,
                                SessionNotesTemplate,
-                               SessionNotesUpdate,
-                               TimePeriod)
+                               SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import VectorQueryWorker
@@ -153,6 +152,7 @@ class AssistantManager(AssistantManagerBaseClass):
                 "last_name": payload.last_name,
                 "birth_date": payload.birth_date,
                 "email": payload.email,
+                "pre_existing_history": payload.pre_existing_history,
                 "gender": payload.gender.value,
                 "phone_number": payload.phone_number,
                 "therapist_id": payload.therapist_id,
@@ -187,6 +187,7 @@ class AssistantManager(AssistantManagerBaseClass):
             "middle_name": payload.middle_name,
             "last_name": payload.last_name,
             "birth_date": payload.birth_date,
+            "pre_existing_history": payload.pre_existing_history,
             "email": payload.email,
             "gender": payload.gender.value,
             "phone_number": payload.phone_number,
@@ -458,7 +459,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    time_period: TimePeriod,
                                     datastore_access_token: str,
                                     datastore_refresh_token: str):
         try:
@@ -486,12 +486,28 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                        method=api_method,
                                                                        environment=environment,
                                                                        auth_manager=auth_manager,
-                                                                       time_period=time_period,
                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                        patient_gender=patient_gender)
 
             error_message = "Something went wrong in generating a response. Please try again"
             assert 'topics' in response, error_message
             return response
+        except Exception as e:
+            raise Exception(e)
+
+    def fetch_preexisting_history(self,
+                                  therapist_id: str,
+                                  patient_id: str,
+                                  auth_manager: AuthManagerBaseClass,
+                                  datastore_access_token: str,
+                                  datastore_refresh_token: str):
+        try:
+            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
+                                                                            refresh_token=datastore_refresh_token)
+            patient_query = datastore_client.from_('patients').select('*').eq('id', patient_id).eq('therapist_id', therapist_id).execute()
+            patient_therapist_match = (0 != len((patient_query).data))
+            assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+
+            return patient_query.dict()['data'][0]['pre_existing_history']
         except Exception as e:
             raise Exception(e)
