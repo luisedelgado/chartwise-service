@@ -1,6 +1,8 @@
 import os, uuid
 import tiktoken
 
+from enum import Enum
+
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
@@ -12,7 +14,11 @@ from pinecone.grpc import PineconeGRPC
 from ..api.auth_base_class import AuthManagerBaseClass
 from . import data_cleaner
 from .embeddings import create_embeddings
-from .vector_query import VectorQueryWorker
+from .vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
+
+class VectorIntakeScenario(Enum):
+    HISTORICAL_CONTEXT = "historical_context"
+    NEW_SESSION = "NEW_SESSION"
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
@@ -21,16 +27,18 @@ Arguments:
 index_id – the index name that should be used to insert the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
-date – the session_date to be used as metadata.
 session_id – the session_id.
+scenario – the scenario under which this request was made.
 auth_manager – the auth manager to be leveraged internally.
+therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
 """
 async def insert_session_vectors(index_id: str,
                                  namespace: str,
                                  text: str,
-                                 date: str,
                                  session_id: str,
-                                 auth_manager: AuthManagerBaseClass):
+                                 scenario: VectorIntakeScenario,
+                                 auth_manager: AuthManagerBaseClass,
+                                 therapy_session_date: str = None):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
 
@@ -41,7 +49,6 @@ async def insert_session_vectors(index_id: str,
 
         index = pc.Index(index_id)
         vector_store = PineconeVectorStore(pinecone_index=index)
-        vector_store.namespace = namespace
 
         enc = tiktoken.get_encoding("cl100k_base")
         splitter = RecursiveCharacterTextSplitter(
@@ -56,7 +63,6 @@ async def insert_session_vectors(index_id: str,
         vectors = []
         for chunk_index, chunk in enumerate(chunks):
             doc = Document()
-            doc.id_ = f"{date}-{chunk_index}-{uuid.uuid1()}"
 
             chunk_text = data_cleaner.clean_up_text(chunk)
             doc.set_content(chunk_text)
@@ -66,11 +72,25 @@ async def insert_session_vectors(index_id: str,
                                                                       auth_manager=auth_manager,
                                                                       session_id=session_id)
 
-            doc.metadata.update({
-                "session_date": date,
-                "session_summary": chunk_summary,
-                "session_text": chunk_text
-            })
+            if scenario == VectorIntakeScenario.NEW_SESSION:
+                vector_store.namespace = namespace
+                doc.id_ = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
+                doc.metadata.update({
+                    "session_date": therapy_session_date,
+                    "chunk_summary": chunk_summary,
+                    "chunk_text": chunk_text
+                })
+            elif scenario == VectorIntakeScenario.HISTORICAL_CONTEXT:
+                vector_store.namespace = "".join([namespace,
+                                                  "-",
+                                                  PRE_EXISTING_HISTORY_PREFIX])
+                doc.id_ = f"{PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
+                doc.metadata.update({
+                    "pre_existing_history_summary": chunk_summary,
+                    "pre_existing_history_text": chunk_text
+                })
+            else:
+                raise Exception(f"Untracked scenario: {scenario.value}")
 
             doc.embedding = create_embeddings(text=chunk_summary,
                                               auth_manager=auth_manager)
@@ -144,11 +164,12 @@ session_id – the session_id.
 auth_manager – the auth manager to be leveraged internally.
 """
 async def update_session_vectors(index_id: str,
-                                 namespace: str,
-                                 text: str,
-                                 date: str,
-                                 session_id: str,
-                                 auth_manager: AuthManagerBaseClass):
+                           namespace: str,
+                           text: str,
+                           date: str,
+                           scenario: VectorIntakeScenario,
+                           session_id: str,
+                           auth_manager: AuthManagerBaseClass):
     try:
         # Delete the outdated data
         delete_session_vectors(index_id, namespace, date)
@@ -157,7 +178,8 @@ async def update_session_vectors(index_id: str,
         await insert_session_vectors(index_id=index_id,
                                      namespace=namespace,
                                      text=text,
-                                     date=date,
+                                     scenario=scenario,
+                                     therapy_session_date=date,
                                      session_id=session_id,
                                      auth_manager=auth_manager)
     except PineconeApiException as e:

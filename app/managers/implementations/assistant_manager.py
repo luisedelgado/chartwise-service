@@ -5,12 +5,14 @@ from supabase import Client
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
+                               PatientInsertPayload,
                                SessionNotesInsert,
                                SessionNotesTemplate,
                                SessionNotesUpdate,
                                TimePeriod)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
+from ...vectors.vector_writer import VectorIntakeScenario
 from ...vectors.vector_query import VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
@@ -53,7 +55,8 @@ class AssistantManager(AssistantManagerBaseClass):
             await vector_writer.insert_session_vectors(index_id=body.therapist_id,
                                                        namespace=body.patient_id,
                                                        text=body.text,
-                                                       date=body.date,
+                                                       therapy_session_date=body.date,
+                                                       scenario=VectorIntakeScenario.NEW_SESSION,
                                                        auth_manager=auth_manager,
                                                        session_id=session_id)
 
@@ -133,6 +136,40 @@ class AssistantManager(AssistantManagerBaseClass):
             vector_writer.delete_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id,
                                                  date=session_date_formatted)
+        except Exception as e:
+            raise Exception(e)
+
+    async def add_patient(self,
+                          auth_manager: AuthManagerBaseClass,
+                          payload: PatientInsertPayload,
+                          datastore_access_token: str,
+                          datastore_refresh_token: str,
+                          session_id: str) -> str:
+        try:
+            datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
+                                                                            datastore_refresh_token)
+            response = datastore_client.table('patients').insert({
+                "first_name": payload.first_name,
+                "middle_name": payload.middle_name,
+                "last_name": payload.last_name,
+                "birth_date": payload.birth_date,
+                "email": payload.email,
+                "gender": payload.gender.value,
+                "phone_number": payload.phone_number,
+                "therapist_id": payload.therapist_id,
+                "consentment_channel": payload.consentment_channel.value,
+            }).execute()
+            patient_id = response.dict()['data'][0]['id']
+
+            if len(payload.pre_existing_history or '') > 0:
+                await vector_writer.insert_session_vectors(index_id=payload.therapist_id,
+                                                           namespace=patient_id,
+                                                           text=payload.pre_existing_history,
+                                                           scenario=VectorIntakeScenario.HISTORICAL_CONTEXT,
+                                                           auth_manager=auth_manager,
+                                                           session_id=session_id)
+
+            return patient_id
         except Exception as e:
             raise Exception(e)
 
@@ -329,7 +366,8 @@ class AssistantManager(AssistantManagerBaseClass):
             await vector_writer.insert_session_vectors(index_id=therapist_id,
                                                        namespace=patient_id,
                                                        text=diarization_summary,
-                                                       date=session_date_formatted,
+                                                       scenario=VectorIntakeScenario.NEW_SESSION,
+                                                       therapy_session_date=session_date_formatted,
                                                        auth_manager=auth_manager,
                                                        session_id=session_id)
             return session_id

@@ -127,10 +127,11 @@ class PromptCrafter:
 
     def _create_qa_system_message(self) -> str:
         return (
-        "A therapist is using you to ask questions about their patients' notes. "
+        "A therapist is entering our Practice Management Platform, and is using you to ask questions about their patients' notes. "
         "Your job is to answer the therapist's questions based on the information context you find from the sessions' data. "
-        "When evaluating the context, for each session you should always look first at the session_summary value to understand whether a given document is related to the question. "
-        "If the session_summary value is related to the question, you should use it along the session_text value to generate your response. "
+        "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
+        "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
+        "Additionally, if you find values for pre_existing_history_text and pre_existing_history_summary, make use of them as well since they describe the patient's pre-existing history prior to being added to our platform. "
         "When answering a question, you should always outline the session_date associated with the information you are providing. If no session information is found, do not mention any session dates. "
         "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
     )
@@ -218,11 +219,11 @@ class PromptCrafter:
                     "They are about to meet with an existing patient, and need to quickly refreshen on the patient's history. "
                     "Your job is to 'prep' the practitioner for the session. "
                     f"It is very important that you start by saluting the practitioner, {therapist_name}, and reminding them that they are seeing {patient_name}, the patient, for the {ordinal_session_number} time. "
-                    f"{gender_params}\n"
+                    f"{gender_params}"
                     "\n\nYou should then provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. "
                     "When populating Most Recent Sessions, use the session_date value found in the context to determine which are the most recent session(s). "
                     "You should double-check the session dates for precision. For reference, the date format for session_date is mm-dd-yyyy. "
-                    "Use only the information you find based on the session_summary and session_text values. "
+                    "Use only the information you find based on the chunk_summary and chunk_text values. "
                     "End the summary with suggestions on what would be good avenues to explore in the upcoming session. "
                     "The total length of the summary may take up to 1600 characters. "
                     "Return only a JSON object with a single key, 'summary', written in English, and the summary response as its only value. "

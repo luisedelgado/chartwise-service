@@ -2,6 +2,7 @@ from abc import ABC
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
+                              PatientInsertPayload,
                               SessionNotesInsert,
                               SessionNotesUpdate,
                               TimePeriod)
@@ -10,7 +11,7 @@ class AssistantManagerBaseClass(ABC):
 
     """
     Takes care of processing a new session's data.
-    Returns session id.
+    Returns the session notes' id.
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
@@ -25,7 +26,7 @@ class AssistantManagerBaseClass(ABC):
                                        datastore_refresh_token: str,
                                        session_id: str) -> str:
         pass
-    
+
     """
     Takes care of updating a session's data.
 
@@ -58,6 +59,23 @@ class AssistantManagerBaseClass(ABC):
                        session_report_id: str,
                        datastore_access_token: str,
                        datastore_refresh_token: str):
+        pass
+
+    """
+    Adds a new patient and returns the patient id.
+
+    Arguments:
+    auth_manager – the auth_manager to be leveraged.
+    payload – the payload containing the data with which to create the patient.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
+    session_id – the session id.
+    """
+    async def add_patient(auth_manager: AuthManagerBaseClass,
+                          payload: PatientInsertPayload,
+                          datastore_access_token: str,
+                          datastore_refresh_token: str,
+                          session_id: str) -> str:
         pass
 
     """

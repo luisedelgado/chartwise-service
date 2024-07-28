@@ -845,19 +845,11 @@ class AssistantRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            datastore_client: Client = self._auth_manager.datastore_user_instance(datastore_access_token,
-                                                                                  datastore_refresh_token)
-            response = datastore_client.table('patients').insert({
-                "first_name": body.first_name,
-                "middle_name": body.middle_name,
-                "last_name": body.last_name,
-                "birth_date": body.birth_date,
-                "email": body.email,
-                "gender": body.gender.value,
-                "phone_number": body.phone_number,
-                "consentment_channel": body.consentment_channel.value,
-            }).execute()
-            patient_id = response.dict()['data'][0]['id']
+            patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
+                                                                   payload=body,
+                                                                   datastore_access_token=datastore_access_token,
+                                                                   datastore_refresh_token=datastore_refresh_token,
+                                                                   session_id=session_id)
 
             logger.log_api_response(session_id=session_id,
                                     method=post_api_method,

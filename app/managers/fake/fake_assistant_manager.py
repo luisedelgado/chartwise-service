@@ -1,6 +1,7 @@
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
+                               PatientInsertPayload,
                                SessionNotesInsert,
                                SessionNotesUpdate,
                                TimePeriod)
@@ -35,6 +36,14 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                        datastore_access_token: str,
                        datastore_refresh_token: str):
         ...
+
+    async def add_patient(self,
+                          auth_manager: AuthManagerBaseClass,
+                          payload: PatientInsertPayload,
+                          datastore_access_token: str,
+                          datastore_refresh_token: str,
+                          session_id: str) -> str:
+        pass
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManagerBaseClass,

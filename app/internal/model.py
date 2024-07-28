@@ -71,6 +71,7 @@ class PatientInsertPayload(BaseModel):
     middle_name: str = None
     last_name: str
     birth_date: str
+    pre_existing_history: str = None
     gender: Gender
     email: str
     phone_number: str
@@ -83,6 +84,7 @@ class PatientUpdatePayload(BaseModel):
     middle_name: str = None
     last_name: str
     birth_date: str
+    pre_existing_history: str = None
     gender: Gender
     email: str
     phone_number: str
