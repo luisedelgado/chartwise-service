@@ -6,13 +6,13 @@ from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.model import (AssistantQuery,
                                PatientInsertPayload,
+                               PatientUpdatePayload,
                                SessionNotesInsert,
                                SessionNotesTemplate,
                                SessionNotesUpdate,
                                TimePeriod)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
-from ...vectors.vector_writer import VectorIntakeScenario
 from ...vectors.vector_query import VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
@@ -56,7 +56,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        namespace=body.patient_id,
                                                        text=body.text,
                                                        therapy_session_date=body.date,
-                                                       scenario=VectorIntakeScenario.NEW_SESSION,
                                                        auth_manager=auth_manager,
                                                        session_id=session_id)
 
@@ -162,16 +161,44 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_id = response.dict()['data'][0]['id']
 
             if len(payload.pre_existing_history or '') > 0:
-                await vector_writer.insert_session_vectors(index_id=payload.therapist_id,
-                                                           namespace=patient_id,
-                                                           text=payload.pre_existing_history,
-                                                           scenario=VectorIntakeScenario.HISTORICAL_CONTEXT,
-                                                           auth_manager=auth_manager,
-                                                           session_id=session_id)
+                await vector_writer.insert_preexisting_history_vectors(index_id=payload.therapist_id,
+                                                                       namespace=patient_id,
+                                                                       text=payload.pre_existing_history,
+                                                                       auth_manager=auth_manager,
+                                                                       session_id=session_id)
 
             return patient_id
         except Exception as e:
             raise Exception(e)
+
+    async def update_patient(auth_manager: AuthManagerBaseClass,
+                             payload: PatientUpdatePayload,
+                             datastore_access_token: str,
+                             datastore_refresh_token: str,
+                             session_id: str):
+        datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
+                                                                        datastore_refresh_token)
+
+        patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', payload.therapist_id).eq('id', payload.patient_id).execute()
+        assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
+        datastore_client.table('patients').update({
+            "first_name": payload.first_name,
+            "middle_name": payload.middle_name,
+            "last_name": payload.last_name,
+            "birth_date": payload.birth_date,
+            "email": payload.email,
+            "gender": payload.gender.value,
+            "phone_number": payload.phone_number,
+            "consentment_channel": payload.consentment_channel.value,
+        }).eq('id', payload.patient_id).execute()
+
+        if len(payload.pre_existing_history) > 0:
+            await vector_writer.update_preexisting_history_vectors(index_id=payload.therapist_id,
+                                                                   namespace=payload.patient_id,
+                                                                   text=payload.pre_existing_history,
+                                                                   session_id=session_id,
+                                                                   auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManagerBaseClass,
@@ -187,13 +214,14 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def delete_all_sessions_for_patient(self,
+    def delete_all_data_for_patient(self,
                                         therapist_id: str,
                                         patient_id: str):
         try:
             vector_writer.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
+            vector_writer.delete_preexisting_history_vectors(index_id=therapist_id, namespace=patient_id)
         except Exception as e:
-            # Index doesn't exist, failing silently. Patient is being deleted prior to having any
+            # Index doesn't exist, failing silently. Patient may have been queued for deletion prior to having any
             # data in our vector db
             pass
 
@@ -366,7 +394,6 @@ class AssistantManager(AssistantManagerBaseClass):
             await vector_writer.insert_session_vectors(index_id=therapist_id,
                                                        namespace=patient_id,
                                                        text=diarization_summary,
-                                                       scenario=VectorIntakeScenario.NEW_SESSION,
                                                        therapy_session_date=session_date_formatted,
                                                        auth_manager=auth_manager,
                                                        session_id=session_id)

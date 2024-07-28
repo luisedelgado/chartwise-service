@@ -3,6 +3,7 @@ from abc import ABC
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               PatientInsertPayload,
+                              PatientUpdatePayload,
                               SessionNotesInsert,
                               SessionNotesUpdate,
                               TimePeriod)
@@ -79,6 +80,23 @@ class AssistantManagerBaseClass(ABC):
         pass
 
     """
+    Updates a patient.
+
+    Arguments:
+    auth_manager – the auth_manager to be leveraged.
+    payload – the payload containing the data with which to update the patient.
+    datastore_access_token – the datastore access token to be used.
+    datastore_refresh_token – the datastore refresh token to be used.
+    session_id – the session id.
+    """
+    async def update_patient(auth_manager: AuthManagerBaseClass,
+                             payload: PatientUpdatePayload,
+                             datastore_access_token: str,
+                             datastore_refresh_token: str,
+                             session_id: str):
+        pass
+
+    """
     Adapts the incoming session notes to the SOAP format, and returns the result.
 
     Arguments:
@@ -100,7 +118,7 @@ class AssistantManagerBaseClass(ABC):
     therapist_id – the therapist associated with the patient sessions to be deleted.
     patient_id – the patient_id associated with the sessions to be deleted.
     """
-    def delete_all_sessions_for_patient(therapist_id: str, patient_id: str):
+    def delete_all_data_for_patient(therapist_id: str, patient_id: str):
         pass
 
     """
