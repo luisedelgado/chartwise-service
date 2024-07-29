@@ -1,4 +1,4 @@
-import uuid
+import json, uuid
 
 from fastapi import (APIRouter,
                      Cookie,
@@ -549,7 +549,7 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
         except Exception as e:
-            yield "I'm having trouble finding an answer for you right now. Please try again later."
+            yield json.dumps({"error": str(e)})
             logger.log_error(session_id=session_id,
                              patient_id=query.patient_id,
                              endpoint_name=self.QUERIES_ENDPOINT,

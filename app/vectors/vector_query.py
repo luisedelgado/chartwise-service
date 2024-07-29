@@ -512,25 +512,26 @@ class VectorQueryWorker:
                                         query_top_k: int,
                                         rerank_top_n: int,) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+
+        missing_session_data_error = ("There's no data from patient sessions. "
+                                      "They may have not gone through their first session since the practitioner added them to the platform. ")
+        if index_id not in pc.list_indexes().names():
+            return missing_session_data_error
+
+        index = pc.Index(index_id)
         embeddings = create_embeddings(auth_manager=auth_manager,
                                        text=query_input)
 
         # Fetch patient's historical context
         found_historical_context, historical_context = self._fetch_historical_context(index=index, namespace=namespace)
-        historical_context = (("Here's an outline of the patient's pre-existing history, written by the therapist:\n" + historical_context)
-                              if found_historical_context else "")
 
-        missing_session_data_error = "".join([
-            historical_context,
-            "\nThere's no data from patient sessions. " if not found_historical_context else "\nBeyond this pre-existing context, there's no data from actual patient sessions. ",
-            "They may have not gone through their first session since the practitioner added them to the platform. ",
-        ])
+        if found_historical_context:
+            historical_context = ("Here's an outline of the patient's pre-existing history, written by the therapist:\n" + historical_context)
+            missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
+                                          "They may have not gone through their first session since the practitioner added them to the platform. ")
+        else:
+            historical_context = ""
 
-        # There's no session data, return a message explaining this, and offer the historical context, if exists.
-        if index_id not in pc.list_indexes().names():
-            return missing_session_data_error
-
-        index = pc.Index(index_id)
         query_result = index.query(vector=embeddings,
                                    top_k=query_top_k,
                                    namespace=namespace,
