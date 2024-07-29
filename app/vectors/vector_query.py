@@ -201,7 +201,7 @@ class VectorQueryWorker:
                                                            index_id=index_id,
                                                            namespace=namespace,
                                                            query_top_k=10,
-                                                           rerank_top_n=5,
+                                                           rerank_top_n=4,
                                                            session_date_override=session_date_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
@@ -555,8 +555,10 @@ class VectorQueryWorker:
         if len(query_matches) == 0:
             return missing_session_data_error
 
+        query_matches_ids = []
         retrieved_docs = [historical_context] if found_historical_context else []
         for match in query_matches:
+            query_matches_ids.append(match['id'])
             metadata = match['metadata']
             session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
             chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
@@ -575,7 +577,8 @@ class VectorQueryWorker:
             return_documents=True,
             top_n=rerank_top_n,
         )
-        reranked_docs = "\n".join([result.document.text for result in rerank_response.results])
+        reranked_response_results = rerank_response.results
+        reranked_docs = "\n".join([result.document.text for result in reranked_response_results])
 
         # Add vectors associated with the session date override.
         if session_date_override is not None:
@@ -597,6 +600,11 @@ class VectorQueryWorker:
             # Have vectors for session date override. Append it to current reranked_docs value.
             for vector_id in vectors:
                 vector_data = vectors[vector_id]
+
+                filtered_reranked_response = list(filter(lambda result: result.document.id == vector_data['id'], reranked_response_results))
+                if len(filtered_reranked_response) > 0:
+                    continue
+
                 metadata = vector_data['metadata']
                 session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
                 chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
