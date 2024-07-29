@@ -141,7 +141,7 @@ class PromptCrafter:
         else:
             patient_info = f"For reference, the patient's name is {patient_name}."
 
-        last_session_date_param = "" if len(last_session_date or '') == 0 else f"Keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)}."
+        last_session_date_param = "" if len(last_session_date or '') == 0 else f"Keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
         return (
             "A mental health practitioner is entering our Practice Management Platform, and is using you to ask questions about a patient's session history based on the practitioner's own session notes. "
             f"{patient_info} "
@@ -150,7 +150,7 @@ class PromptCrafter:
             "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
             "Additionally, if you find values for pre_existing_history_text and pre_existing_history_summary, make use of them as well since they describe the patient's pre-existing history prior to being added to our platform. "
             f"{last_session_date_param} "
-            "When answering a question, you should always outline the session_date associated with the information you are providing. If no session information is found, do not mention any session dates. "
+            "When answering a question, you should always outline the session_date associated with the information you are providing (mm-dd-yyyy). If no session information is found, do not mention any session dates. "
             "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
         )
 
@@ -223,7 +223,7 @@ class PromptCrafter:
             if gender_has_default_pronouns(patient_gender):
                 gender_params += f"For reference, {patient_name} is a {patient_gender}. "
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)}."
+            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
             return (
                     "A mental health practitioner is entering our Practice Management Platform. "
                     "They are about to meet with an existing patient, and need to quickly refreshen on the patient's session history. "
