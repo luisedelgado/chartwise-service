@@ -428,6 +428,7 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_response_dict = patient_response.dict()
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']
+            last_session_date = patient_response_dict['data'][0]['last_session']
 
             therapist_response = datastore_client.table('therapists').select('*').eq("id", therapist_id).execute()
             therapist_response_dict = therapist_response.dict()
@@ -450,7 +451,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                therapist_name=therapist_name,
                                                                therapist_gender=therapist_gender,
                                                                session_number=session_number,
-                                                               auth_manager=auth_manager)
+                                                               auth_manager=auth_manager,
+                                                               last_session_date=last_session_date)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result

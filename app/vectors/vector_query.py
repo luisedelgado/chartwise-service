@@ -169,6 +169,7 @@ class VectorQueryWorker:
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
     auth_manager – the auth manager to be leveraged internally.
+    last_session_date – the last session that the patient had (None if yet to have first session).
     """
     async def create_briefing(self,
                               index_id: str,
@@ -183,7 +184,8 @@ class VectorQueryWorker:
                               therapist_name: str,
                               therapist_gender: str,
                               session_number: int,
-                              auth_manager: AuthManagerBaseClass) -> str:
+                              auth_manager: AuthManagerBaseClass,
+                              last_session_date: str = None) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
@@ -206,7 +208,8 @@ class VectorQueryWorker:
                                                                            therapist_gender=therapist_gender,
                                                                            patient_name=patient_name,
                                                                            patient_gender=patient_gender,
-                                                                           session_number=session_number)
+                                                                           session_number=session_number,
+                                                                           last_session_date=last_session_date)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
@@ -570,6 +573,7 @@ class VectorQueryWorker:
         historial_context_namespace = ("".join([namespace,
                                                   "-",
                                                   PRE_EXISTING_HISTORY_PREFIX]))
+        context_vector_ids = []
         for list_ids in index.list(namespace=historial_context_namespace):
             context_vector_ids = list_ids
 

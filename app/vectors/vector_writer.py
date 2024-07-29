@@ -167,6 +167,7 @@ def delete_session_vectors(index_id, namespace, date=None):
         index = pc.Index(index_id)
         assert pc.describe_index(index_id).status['ready']
 
+        ids_to_delete = []
         if date is None:
             # Delete all vectors inside namespace
             for list_ids in index.list(namespace=namespace):
@@ -199,6 +200,7 @@ def delete_preexisting_history_vectors(index_id, namespace):
         namespace = "".join([namespace,
                              "-",
                              PRE_EXISTING_HISTORY_PREFIX])
+        ids_to_delete = []
         for list_ids in index.list(namespace=namespace):
             ids_to_delete = list_ids
 

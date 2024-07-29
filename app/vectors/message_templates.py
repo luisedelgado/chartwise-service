@@ -5,6 +5,7 @@ from num2words import num2words
 from pytz import timezone
 
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
+from ..internal.utilities.datetime_handler import convert_to_internal_date_format
 
 class PromptScenario(Enum):
     CHUNK_SUMMARY = "chunk_summary"
@@ -101,12 +102,14 @@ class PromptCrafter:
             therapist_name = None if 'therapist_name' not in kwargs else kwargs['therapist_name']
             therapist_gender = None if 'therapist_gender' not in kwargs else kwargs['therapist_gender']
             session_number = None if 'session_number' not in kwargs else kwargs['session_number']
+            last_session_date = None if 'last_session_date' not in kwargs else kwargs['last_session_date']
             return self._create_briefing_system_message(language_code=language_code,
                                                         therapist_name=therapist_name,
                                                         therapist_gender=therapist_gender,
                                                         patient_name=patient_name,
                                                         patient_gender=patient_gender,
-                                                        session_number=session_number)
+                                                        session_number=session_number,
+                                                        last_session_date=last_session_date)
         elif scenario == PromptScenario.QUESTION_SUGGESTIONS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_question_suggestions_system_message(language_code=language_code)
@@ -199,7 +202,8 @@ class PromptCrafter:
                                         therapist_gender: str,
                                         patient_name: str,
                                         patient_gender: str,
-                                        session_number: int) -> str | None:
+                                        session_number: int,
+                                        last_session_date: str = None) -> str | None:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
@@ -214,17 +218,20 @@ class PromptCrafter:
             if gender_has_default_pronouns(patient_gender):
                 gender_params += f"For reference, {patient_name} is a {patient_gender}. "
             ordinal_session_number = num2words(session_number, to='ordinal_num')
+            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)}."
             return (
                     "A mental health practitioner is entering our Practice Management Platform. "
                     "They are about to meet with an existing patient, and need to quickly refreshen on the patient's history. "
                     "Your job is to 'prep' the practitioner for the session. "
-                    f"It is very important that you start by saluting the practitioner, {therapist_name}, and reminding them that they are seeing {patient_name}, the patient, for the {ordinal_session_number} time. "
+                    f"It is a hard requirement that you start by saluting the practitioner, {therapist_name}, and reminding them that they are seeing {patient_name}, the patient, for the {ordinal_session_number} time. "
                     f"{gender_params}"
                     "\n\nYou should then provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. "
+                    "If you determine it's the first time the therapist will meet with the patient, ignore the summary categorization, and just suggest strategies on how to establish a solid foundation. "
                     "When populating Most Recent Sessions, use the session_date value found in the context to determine which are the most recent session(s). "
                     "You should double-check the session dates for precision. For reference, the date format for session_date is mm-dd-yyyy. "
+                    f"{last_session_date_param} "
+                    "If you're generating a summary for a patient that has already met with the therapist, you should end it with suggestions on what would be good avenues to explore in the upcoming session. "
                     "Use only the information you find based on the chunk_summary and chunk_text values. "
-                    "End the summary with suggestions on what would be good avenues to explore in the upcoming session. "
                     "The total length of the summary may take up to 1600 characters. "
                     "Return only a JSON object with a single key, 'summary', written in English, and the summary response as its only value. "
                     f"It is very important that the summary response is written using language code {language_code}. "
