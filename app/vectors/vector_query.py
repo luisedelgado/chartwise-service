@@ -16,6 +16,12 @@ LLM_MODEL = "gpt-4o-mini"
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
+class BriefingSessionDateOverride:
+    def __init__(self, output_prefix_override, output_suffix_override, session_date):
+        self.output_prefix_override = output_prefix_override
+        self.output_suffix_override = output_suffix_override
+        self.session_date = session_date
+
 class VectorQueryWorker:
 
     """
@@ -185,7 +191,7 @@ class VectorQueryWorker:
                               therapist_gender: str,
                               session_number: int,
                               auth_manager: AuthManagerBaseClass,
-                              last_session_date: str = None) -> str:
+                              session_date_override: BriefingSessionDateOverride = None) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
@@ -195,13 +201,16 @@ class VectorQueryWorker:
                                                            index_id=index_id,
                                                            namespace=namespace,
                                                            query_top_k=10,
-                                                           rerank_top_n=5)
+                                                           rerank_top_n=5,
+                                                           session_date_override=session_date_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
                                                                        patient_name=patient_name,
                                                                        query_input=query_input,
                                                                        context=context)
+
+            last_session_date = None if session_date_override is None else session_date_override.session_date
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                            language_code=language_code,
                                                                            therapist_name=therapist_name,
@@ -513,7 +522,8 @@ class VectorQueryWorker:
                                         index_id: str,
                                         namespace: str,
                                         query_top_k: int,
-                                        rerank_top_n: int,) -> str:
+                                        rerank_top_n: int,
+                                        session_date_override: BriefingSessionDateOverride = None) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
         missing_session_data_error = ("There's no data from patient sessions. "
@@ -565,7 +575,42 @@ class VectorQueryWorker:
             return_documents=True,
             top_n=rerank_top_n,
         )
-        return "\n".join([result.document.text for result in rerank_response.results])
+        reranked_docs = "\n".join([result.document.text for result in rerank_response.results])
+
+        # Add vectors associated with the session date override.
+        if session_date_override is not None:
+            session_date_override_vector_ids = []
+            list_operation_prefix = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
+                session_date_override_vector_ids = list_ids
+
+            # Didn't find any vectors for that day, return unchanged reranked_docs
+            if len(session_date_override_vector_ids) == 0:
+                return reranked_docs
+
+            session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
+                                                             namespace=namespace)
+            vectors = session_date_override_fetch_result['vectors']
+            if len(vectors) == 0:
+                return reranked_docs
+
+            # Have vectors for session date override. Append it to current reranked_docs value.
+            for vector_id in vectors:
+                vector_data = vectors[vector_id]
+                metadata = vector_data['metadata']
+                session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
+                chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
+                chunk_text = "".join(["chunk_text = ",f"{metadata['chunk_text']}\n"])
+                session_date_override_context = "".join([session_date_override.output_prefix_override,
+                                                         session_date,
+                                                         chunk_summary,
+                                                         chunk_text,
+                                                         session_date_override.output_suffix_override,
+                                                         "\n"])
+                reranked_docs = "\n".join([reranked_docs,
+                                           session_date_override_context])
+
+        return reranked_docs
 
     def _fetch_historical_context(self,
                                   index: Index,

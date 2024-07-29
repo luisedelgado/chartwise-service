@@ -12,7 +12,7 @@ from ...internal.model import (AssistantQuery,
                                SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
-from ...vectors.vector_query import VectorQueryWorker
+from ...vectors.vector_query import BriefingSessionDateOverride, VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
 
@@ -439,7 +439,15 @@ class AssistantManager(AssistantManagerBaseClass):
             number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", patient_id).execute()
             session_number = 1 + len(number_session_response.dict()['data'])
 
-            result = await VectorQueryWorker().create_briefing(index_id=therapist_id,
+            if len(last_session_date or '') > 0:
+                vector_query_worker = VectorQueryWorker()
+                session_date_override = BriefingSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                                                                    output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                                                                    session_date=last_session_date)
+            else:
+                session_date_override = None
+
+            result = await vector_query_worker.create_briefing(index_id=therapist_id,
                                                                namespace=patient_id,
                                                                environment=environment,
                                                                language_code=language_code,
@@ -452,7 +460,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                therapist_gender=therapist_gender,
                                                                session_number=session_number,
                                                                auth_manager=auth_manager,
-                                                               last_session_date=last_session_date)
+                                                               session_date_override=session_date_override)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result
