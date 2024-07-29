@@ -16,7 +16,7 @@ LLM_MODEL = "gpt-4o-mini"
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
-class BriefingSessionDateOverride:
+class IncludeSessionDateOverride:
     def __init__(self, output_prefix_override, output_suffix_override, session_date):
         self.output_prefix_override = output_prefix_override
         self.output_suffix_override = output_suffix_override
@@ -40,6 +40,7 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
+    last_session_date – the last session that the patient had (None if yet to have first session).
     """
     async def query_store(self,
                           index_id: str,
@@ -52,23 +53,28 @@ class VectorQueryWorker:
                           endpoint_name: str,
                           method: str,
                           environment: str,
-                          auth_manager: AuthManagerBaseClass):
+                          auth_manager: AuthManagerBaseClass,
+                          session_date_override: IncludeSessionDateOverride = None):
         try:
             context = await self._get_vector_store_context(auth_manager=auth_manager,
                                                            query_input=query_input,
                                                            index_id=index_id,
                                                            namespace=namespace,
                                                            query_top_k=10,
-                                                           rerank_top_n=3)
+                                                           rerank_top_n=3,
+                                                           session_date_override=session_date_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
                                                                        context=context,
                                                                        language_code=response_language_code,
-                                                                       patient_gender=patient_gender,
-                                                                       patient_name=patient_name,
                                                                        query_input=query_input)
-            system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY)
+
+            last_session_date = None if session_date_override is None else session_date_override.session_date
+            system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY,
+                                                                           patient_gender=patient_gender,
+                                                                           patient_name=patient_name,
+                                                                           last_session_date=last_session_date)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
@@ -191,7 +197,7 @@ class VectorQueryWorker:
                               therapist_gender: str,
                               session_number: int,
                               auth_manager: AuthManagerBaseClass,
-                              session_date_override: BriefingSessionDateOverride = None) -> str:
+                              session_date_override: IncludeSessionDateOverride = None) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
@@ -523,7 +529,7 @@ class VectorQueryWorker:
                                         namespace: str,
                                         query_top_k: int,
                                         rerank_top_n: int,
-                                        session_date_override: BriefingSessionDateOverride = None) -> str:
+                                        session_date_override: IncludeSessionDateOverride = None) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
         missing_session_data_error = ("There's no data from patient sessions. "

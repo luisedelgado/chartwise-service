@@ -12,7 +12,7 @@ from ...internal.model import (AssistantQuery,
                                SessionNotesUpdate)
 from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
-from ...vectors.vector_query import BriefingSessionDateOverride, VectorQueryWorker
+from ...vectors.vector_query import IncludeSessionDateOverride, VectorQueryWorker
 
 class AssistantManager(AssistantManagerBaseClass):
 
@@ -261,12 +261,21 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_first_name = patient_query_dict['data'][0]['first_name']
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
+            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+
+            if len(patient_last_session_date or '') > 0:
+                session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                                                                    output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                                                                    session_date=patient_last_session_date)
+            else:
+                session_date_override = None
 
             therapist_query = datastore_client.from_('therapists').select('*').eq('id', query.therapist_id).execute()
             assert (0 != len((therapist_query).data))
-
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            async for part in VectorQueryWorker().query_store(index_id=query.therapist_id,
+
+            vector_query_worker = VectorQueryWorker()
+            async for part in vector_query_worker.query_store(index_id=query.therapist_id,
                                                               namespace=query.patient_id,
                                                               patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                               patient_gender=patient_gender,
@@ -276,7 +285,8 @@ class AssistantManager(AssistantManagerBaseClass):
                                                               endpoint_name=endpoint_name,
                                                               method=api_method,
                                                               environment=environment,
-                                                              auth_manager=auth_manager):
+                                                              auth_manager=auth_manager,
+                                                              session_date_override=session_date_override):
                 yield part
         except Exception as e:
             raise Exception(e)
@@ -441,7 +451,7 @@ class AssistantManager(AssistantManagerBaseClass):
 
             if len(last_session_date or '') > 0:
                 vector_query_worker = VectorQueryWorker()
-                session_date_override = BriefingSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
                                                                     output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
                                                                     session_date=last_session_date)
             else:

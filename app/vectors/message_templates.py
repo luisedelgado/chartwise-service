@@ -27,13 +27,9 @@ class PromptCrafter:
         if scenario == PromptScenario.QUERY:
             context = None if 'context' not in kwargs else kwargs['context']
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
             query_input = None if 'query_input' not in kwargs else kwargs['query_input']
             return self._create_qa_user_message(context=context,
                                                 language_code=language_code,
-                                                patient_gender=patient_gender,
-                                                patient_name=patient_name,
                                                 query_input=query_input)
         elif scenario == PromptScenario.GREETING:
             return self._create_greeting_user_message()
@@ -85,7 +81,12 @@ class PromptCrafter:
             raise Exception("Received undefined prompt scenario for retrieving the user message")
 
         if scenario == PromptScenario.QUERY:
-            return self._create_qa_system_message()
+            last_session_date = None if 'last_session_date' not in kwargs else kwargs['last_session_date']
+            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
+            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
+            return self._create_qa_system_message(last_session_date=last_session_date,
+                                                  patient_name=patient_name,
+                                                  patient_gender=patient_gender)
         elif scenario == PromptScenario.GREETING:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             tz_identifier = None if 'tz_identifier' not in kwargs else kwargs['tz_identifier']
@@ -128,39 +129,43 @@ class PromptCrafter:
 
     # Text QA Prompt
 
-    def _create_qa_system_message(self) -> str:
+    def _create_qa_system_message(self,
+                                  patient_name: str,
+                                  patient_gender: str,
+                                  last_session_date: str = None) -> str:
+        assert len(patient_gender or '') > 0, "Missing patient_gender param for building system message"
+        assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
+
+        if gender_has_default_pronouns(patient_gender):
+            patient_info = f"For reference, the patient is a {patient_gender}, and their name is {patient_name}."
+        else:
+            patient_info = f"For reference, the patient's name is {patient_name}."
+
+        last_session_date_param = "" if len(last_session_date or '') == 0 else f"Keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)}."
         return (
-        "A therapist is entering our Practice Management Platform, and is using you to ask questions about their patients' notes. "
-        "Your job is to answer the therapist's questions based on the information context you find from the sessions' data. "
-        "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
-        "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
-        "Additionally, if you find values for pre_existing_history_text and pre_existing_history_summary, make use of them as well since they describe the patient's pre-existing history prior to being added to our platform. "
-        "When answering a question, you should always outline the session_date associated with the information you are providing. If no session information is found, do not mention any session dates. "
-        "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
-    )
+            "A mental health practitioner is entering our Practice Management Platform, and is using you to ask questions about a patient's session history based on the practitioner's own session notes. "
+            f"{patient_info} "
+            "Your job is to answer the practitioner's questions based on the information context you find from the context data. "
+            "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
+            "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
+            "Additionally, if you find values for pre_existing_history_text and pre_existing_history_summary, make use of them as well since they describe the patient's pre-existing history prior to being added to our platform. "
+            f"{last_session_date_param} "
+            "When answering a question, you should always outline the session_date associated with the information you are providing. If no session information is found, do not mention any session dates. "
+            "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
+        )
 
     def _create_qa_user_message(self,
                                 context: str,
                                 language_code: str,
-                                patient_gender: str,
-                                patient_name: str,
                                 query_input: str) -> str:
         try:
             assert len(context or '') > 0, "Missing context param for building user message"
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
-            assert len(patient_gender or '') > 0, "Missing patient_gender param for building user message"
-            assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
-
-            if gender_has_default_pronouns(patient_gender):
-                patient_info = f"For reference, the patient is a {patient_gender}, and their name is {patient_name}."
-            else:
-                patient_info = f"For reference, the patient's name is {patient_name}."
 
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\nIt is very important that you craft your response using language code {language_code}.\n"
-                f"{patient_info}"
                 f"\nGiven this information, please answer the question: {query_input}\n"
             )
         except Exception as e:
