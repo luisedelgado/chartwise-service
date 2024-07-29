@@ -41,7 +41,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  session_id=session_id)
 
             datastore_client.table('patients').update({
-                "last_session": body.date,
+                "last_session_date": body.date,
                 "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
             }).eq('id', body.patient_id).execute()
 
@@ -428,7 +428,7 @@ class AssistantManager(AssistantManagerBaseClass):
             patient_response_dict = patient_response.dict()
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']
-            last_session_date = patient_response_dict['data'][0]['last_session']
+            last_session_date = patient_response_dict['data'][0]['last_session_date']
 
             therapist_response = datastore_client.table('therapists').select('*').eq("id", therapist_id).execute()
             therapist_response_dict = therapist_response.dict()
