@@ -672,10 +672,6 @@ class VectorQueryWorker:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 
             if is_monitoring_proxy_reachable:
-                assert (cache_configuration is None or
-                        ('cache_max_age' in cache_configuration and
-                         'caching_shard_key' in cache_configuration), "Missing expected values in caching configuration")
-
                 api_base = auth_manager.get_monitoring_proxy_url()
                 cache_max_age = None if (cache_configuration is None or 'cache_max_age' not in cache_configuration) else cache_configuration['cache_max_age']
                 caching_shard_key = None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration) else cache_configuration['caching_shard_key']
@@ -713,10 +709,6 @@ class VectorQueryWorker:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 
             if is_monitoring_proxy_reachable:
-                assert (cache_configuration is None or
-                        ('cache_max_age' in cache_configuration and
-                         'caching_shard_key' in cache_configuration), "Missing expected values in caching configuration")
-
                 api_base = auth_manager.get_monitoring_proxy_url()
                 cache_max_age = None if (cache_configuration is None or 'cache_max_age' not in cache_configuration) else cache_configuration['cache_max_age']
                 caching_shard_key = None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration) else cache_configuration['caching_shard_key']

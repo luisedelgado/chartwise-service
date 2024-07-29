@@ -25,4 +25,5 @@ app = EndpointServiceCoordinator(routers=[
                                     ImageProcessingRouter(assistant_manager=assistant_manager,
                                                           auth_manager=auth_manager,
                                                           image_processing_manager=image_processing_manager).router,
-                                ]).service_app
+                                ],
+                                 environment=environment).app
