@@ -27,8 +27,9 @@ class TestingHarnessImageProcessingRouter:
                                                                                 auth_manager=self.auth_manager,
                                                                                 image_processing_manager=self.image_processing_manager).router,
                                                           SecurityRouter(auth_manager=self.auth_manager,
-                                                                         assistant_manager=self.assistant_manager).router])
-        self.client = TestClient(coordinator.service_app)
+                                                                         assistant_manager=self.assistant_manager).router],
+                                                 environment="dev")
+        self.client = TestClient(coordinator.app)
 
     def test_invoke_image_upload_with_no_auth(self):
         files = {

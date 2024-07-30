@@ -27,8 +27,9 @@ class TestingHarnessAssistantRouter:
                                                                           auth_manager=self.auth_manager,
                                                                           assistant_manager=self.assistant_manager).router,
                                                           SecurityRouter(auth_manager=self.auth_manager,
-                                                                         assistant_manager=self.assistant_manager).router])
-        self.client = TestClient(coordinator.service_app)
+                                                                         assistant_manager=self.assistant_manager).router],
+                                                 environment="dev")
+        self.client = TestClient(coordinator.app)
 
     def test_insert_new_session_with_invalid_auth(self):
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,

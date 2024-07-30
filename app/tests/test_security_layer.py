@@ -20,8 +20,9 @@ class TestingHarnessSecurityRouter:
         self.audio_processing_manager = ManagerFactory.create_audio_processing_manager(ENVIRONMENT)
 
         coordinator = EndpointServiceCoordinator(routers=[SecurityRouter(auth_manager=self.auth_manager,
-                                                                         assistant_manager=self.assistant_manager).router])
-        self.client = TestClient(coordinator.service_app)
+                                                                         assistant_manager=self.assistant_manager).router],
+                                                 environment="dev")
+        self.client = TestClient(coordinator.app)
 
     def test_login_for_token_with_invalid_auth_token(self):
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
