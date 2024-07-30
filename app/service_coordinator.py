@@ -1,4 +1,4 @@
-import os, time
+import asyncio, os, time
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,32 +63,41 @@ class EndpointServiceCoordinator:
             raise HTTPException(detail=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def initialize_routes(self):
-        self.app.middleware("http")(self.log_latency)
+        self.app.middleware("http")(self.measure_latency)
 
-    async def log_latency(self, request: Request, call_next):
-        try:
-            request_body = await request.json()
-        except Exception:
-            request_body = {}
-
+    async def measure_latency(self, request: Request, call_next):
         start_time = time.time()
         response = await call_next(request)
         end_time = time.time()
 
         # We're not logging latency in environments other than prod.
-        if self.environment is not "prod":
+        if self.environment != "prod":
             return response
 
-        latency_milliseconds = (end_time - start_time) * 1000
-        latency_payload = {
-            "latency_ms": f"{latency_milliseconds:.2f}",
-            "request_url": str(request.url),
-            "request_method": request.method
-        }
+        async def log_latency():
+            latency_milliseconds = (end_time - start_time) * 1000
+            latency_ms = f"{latency_milliseconds:.2f}"
+            latency_payload = {
+                "latency_ms": latency_ms,
+                "request_url": str(request.url),
+                "request_method": request.method
+            }
 
-        user_id = None if 'user_id' not in request_body else request_body['user_id']
-        if user_id is not None:
-            latency_payload['user_id'] = user_id
+            try:
+                request_body = await request.json()
+            except Exception:
+                request_body = {}
 
-        self.datastore_client.table('latency_logs').insert(latency_payload).execute()
+            try:
+                user_id = None if 'user_id' not in request_body else request_body['user_id']
+                if user_id is not None:
+                    latency_payload['user_id'] = user_id
+
+                self.datastore_client.table('latency_logs').insert(latency_payload).execute()
+            except Exception:
+                # Fail silently
+                pass
+
+        # Schedule the background task
+        asyncio.create_task(log_latency())
         return response
