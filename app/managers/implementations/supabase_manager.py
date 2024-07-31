@@ -56,8 +56,20 @@ class SupabaseManager(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def get_user(self):
+        try:
+            return self.client.auth.get_user()
+        except Exception as e:
+            raise Exception(e)
+
     def refresh_session(self):
         try:
             return self.client.auth.refresh_session()
+        except Exception as e:
+            raise Exception(e)
+
+    def sign_out(self):
+        try:
+            self.client.auth.sign_out()
         except Exception as e:
             raise Exception(e)

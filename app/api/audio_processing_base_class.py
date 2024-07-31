@@ -2,6 +2,7 @@ from abc import ABC
 
 from fastapi import File, UploadFile
 
+from ..api.supabase_base_class import SupabaseBaseClass
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import SessionNotesTemplate
@@ -40,12 +41,14 @@ class AudioProcessingManagerBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth manager to be leveraged internally.
+    supabase_manager – the supabase manager to leverage internally.
     session_auth_token – the access_token associated with the current server session.
     endpoint_url – the endpoint url to be used for making the request.
     session_id – the session id.
     audio_file – the audio file to be diarized.
     """
     async def diarize_audio_file(auth_manager: AuthManagerBaseClass,
+                                 supabase_manager: SupabaseBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  session_id: str,

@@ -11,7 +11,6 @@ from fastapi import (APIRouter,
                      Request,
                      status,
                      UploadFile)
-from supabase import Client
 from typing import Annotated, Union
 
 from ..api.assistant_base_class import AssistantManagerBaseClass
@@ -129,7 +128,7 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -211,7 +210,7 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                patient_id=patient_id,
@@ -228,23 +227,25 @@ class AudioProcessingRouter:
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
+                                                                                  supabase_manager=self._supabase_manager_factory.supabase_admin_manager(),
                                                                                   session_auth_token=authorization,
                                                                                   session_id=session_id,
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)
 
+            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
+                                                                                    refresh_token=datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            datastore_client: Client = self._auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
-            datastore_client.table('session_reports').insert({
-                "diarization_job_id": job_id,
-                "diarization_template": template.value,
-                "session_date": session_date,
-                "therapist_id": therapist_id,
-                "patient_id": patient_id,
-                "last_updated": now_timestamp,
-                "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
-            }).execute()
+            supabase_manager.insert(table_name="session_reports",
+                                    payload={
+                                        "diarization_job_id": job_id,
+                                        "diarization_template": template.value,
+                                        "session_date": session_date,
+                                        "therapist_id": therapist_id,
+                                        "patient_id": patient_id,
+                                        "last_updated": now_timestamp,
+                                        "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
+                                    })
 
             logs_description = f"job_id={job_id}"
             logger.log_api_response(session_id=session_id,
@@ -282,7 +283,7 @@ class AudioProcessingRouter:
         except:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         try:
             request_status_code = request.query_params["status"]
             id = request.query_params["id"]
@@ -293,9 +294,11 @@ class AudioProcessingRouter:
             job_id = json_data["job"]["id"]
             summary = json_data["summary"]["content"]
             diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
-                                                                   auth_manager=self._auth_manager)
+                                                                   supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
 
+            supabase_admin_manager = self._supabase_manager_factory.supabase_admin_manager()
             session_id = self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
+                                                                                           supabase_manager=supabase_admin_manager,
                                                                                            job_id=job_id,
                                                                                            summary=summary,
                                                                                            diarization=diarization)

@@ -1,5 +1,6 @@
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
+from ...api.supabase_base_class import SupabaseBaseClass
 from ...internal.model import (AssistantQuery,
                                PatientInsertPayload,
                                PatientUpdatePayload,
@@ -15,42 +16,37 @@ class FakeAssistantManager(AssistantManagerBaseClass):
     async def process_new_session_data(self,
                                        auth_manager: AuthManagerBaseClass,
                                        body: SessionNotesInsert,
-                                       datastore_access_token: str,
-                                       datastore_refresh_token: str,
-                                       session_id: str) -> str:
+                                       session_id: str,
+                                       supabase_manager: SupabaseBaseClass) -> str:
         self.fake_insert_text = body.text
         return self.FAKE_SESSION_NOTES_ID
 
     async def update_session(self,
                              auth_manager: AuthManagerBaseClass,
                              body: SessionNotesUpdate,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
         ...
 
     def delete_session(self,
                        auth_manager: AuthManagerBaseClass,
                        therapist_id: str,
                        session_report_id: str,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       supabase_manager: SupabaseBaseClass):
         ...
 
     async def add_patient(self,
                           auth_manager: AuthManagerBaseClass,
                           payload: PatientInsertPayload,
-                          datastore_access_token: str,
-                          datastore_refresh_token: str,
-                          session_id: str) -> str:
+                          session_id: str,
+                          supabase_manager: SupabaseBaseClass) -> str:
         pass
 
     async def update_patient(self,
                              auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
         pass
 
     async def adapt_session_notes_to_soap(self,
@@ -75,8 +71,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                             api_method: str,
                             endpoint_name: str,
                             environment: str,
-                            datastore_access_token: str,
-                            datastore_refresh_token: str):
+                            supabase_manager: SupabaseBaseClass):
         ...
 
     async def fetch_todays_greeting(self,
@@ -87,8 +82,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                     api_method: str,
                                     environment: str,
                                     auth_manager: AuthManagerBaseClass,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str):
+                                    supabase_manager: SupabaseBaseClass):
         ...
 
     async def create_patient_summary(self,
@@ -99,8 +93,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     datastore_access_token: str,
-                                     datastore_refresh_token: str):
+                                     supabase_manager: SupabaseBaseClass):
         ...
 
     async def fetch_question_suggestions(self,
@@ -111,12 +104,12 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                          session_id: str,
                                          endpoint_name: str,
                                          api_method: str,
-                                         datastore_access_token: str,
-                                         datastore_refresh_token: str):
+                                         supabase_manager: SupabaseBaseClass):
         ...
 
     def update_diarization_with_notification_data(self,
                                                   auth_manager: AuthManagerBaseClass,
+                                                  supabase_manager: SupabaseBaseClass,
                                                   job_id: str,
                                                   summary: str,
                                                   diarization: str) -> str:
@@ -131,6 +124,5 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str):
+                                    supabase_manager: SupabaseBaseClass):
         pass

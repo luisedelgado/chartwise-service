@@ -1,9 +1,8 @@
 from datetime import datetime
 
-from supabase import Client
-
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
+from ...api.supabase_base_class import SupabaseBaseClass
 from ...internal.model import (AssistantQuery,
                                PatientInsertPayload,
                                PatientUpdatePayload,
@@ -19,18 +18,23 @@ class AssistantManager(AssistantManagerBaseClass):
     async def process_new_session_data(self,
                                        auth_manager: AuthManagerBaseClass,
                                        body: SessionNotesInsert,
-                                       datastore_access_token: str,
-                                       datastore_refresh_token: str,
-                                       session_id: str) -> str:
+                                       session_id: str,
+                                       supabase_manager: SupabaseBaseClass) -> str:
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-
-            patient_query = datastore_client.from_('patients').select('*').eq('id', body.patient_id).eq('therapist_id', body.therapist_id).execute()
+            patient_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'id': body.patient_id,
+                                                        'therapist_id': body.therapist_id
+                                                    },
+                                                    table_name="patients")
             patient_therapist_match = (0 != len((patient_query).data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'id': body.therapist_id
+                                                      },
+                                                      table_name="therapists")
             assert (0 != len((therapist_query).data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
@@ -40,20 +44,26 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  auth_manager=auth_manager,
                                                                                  session_id=session_id)
 
-            datastore_client.table('patients').update({
-                "last_session_date": body.date,
-                "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
-            }).eq('id', body.patient_id).execute()
+            supabase_manager.update(table_name="patients",
+                                    payload={
+                                        "last_session_date": body.date,
+                                        "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
+                                    },
+                                    filters={
+                                        'id': body.patient_id
+                                    })
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            insert_result = datastore_client.table('session_reports').insert({
-                "notes_text": body.text,
-                "notes_mini_summary": mini_summary,
-                "session_date": body.date,
-                "patient_id": body.patient_id,
-                "source": body.source.value,
-                "last_updated": now_timestamp,
-                "therapist_id": body.therapist_id}).execute()
+            insert_result = supabase_manager.insert(table_name="session_reports",
+                                                    payload={
+                                                        "notes_text": body.text,
+                                                        "notes_mini_summary": mini_summary,
+                                                        "session_date": body.date,
+                                                        "patient_id": body.patient_id,
+                                                        "source": body.source.value,
+                                                        "last_updated": now_timestamp,
+                                                        "therapist_id": body.therapist_id
+                                                    })
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
@@ -71,17 +81,23 @@ class AssistantManager(AssistantManagerBaseClass):
     async def update_session(self,
                              auth_manager: AuthManagerBaseClass,
                              body: SessionNotesUpdate,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-
-            report_query = datastore_client.from_('session_reports').select('*').eq('id', body.session_notes_id).eq('therapist_id', body.therapist_id).eq('patient_id', body.patient_id).execute()
+            report_query = supabase_manager.select(fields="*",
+                                                   table_name="session_reports",
+                                                   filters={
+                                                       'id': body.session_notes_id,
+                                                       'therapist_id': body.therapist_id,
+                                                       'patient_id': body.patient_id
+                                                   })
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
 
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', body.therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      table_name="therapists",
+                                                      filters={
+                                                          'id': body.therapist_id
+                                                      })
             assert (0 != len((therapist_query).data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
@@ -92,14 +108,18 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  session_id=session_id)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            datastore_client.table('session_reports').update({
-                "notes_text": body.text,
-                "notes_mini_summary": mini_summary,
-                "last_updated": now_timestamp,
-                "source": body.source.value,
-                "session_date": body.date,
-                "diarization": body.diarization,
-            }).eq('id', body.session_notes_id).execute()
+            supabase_manager.update(table_name="session_reports",
+                                    payload={
+                                        "notes_text": body.text,
+                                        "notes_mini_summary": mini_summary,
+                                        "last_updated": now_timestamp,
+                                        "source": body.source.value,
+                                        "session_date": body.date,
+                                        "diarization": body.diarization,
+                                    },
+                                    filters={
+                                        'id': body.session_notes_id
+                                    })
 
             original_session_date_raw = report_query.dict()['data'][0]['session_date']
             original_session_date_formatted = datetime_handler.convert_to_internal_date_format(original_session_date_raw)
@@ -118,16 +138,20 @@ class AssistantManager(AssistantManagerBaseClass):
                        auth_manager: AuthManagerBaseClass,
                        therapist_id: str,
                        session_report_id: str,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-
-            report_query = datastore_client.from_('session_reports').select('*').eq('id', session_report_id).eq('therapist_id', therapist_id).execute()
+            report_query = supabase_manager.select(fields="*",
+                                                   table_name="session_reports",
+                                                   filters={
+                                                       'id': session_report_id,
+                                                       'therapist_id': therapist_id
+                                                   })
             assert (0 != len((report_query).data)), "The incoming therapist_id isn't associated with the session_report_id."
 
-            delete_result = datastore_client.table('session_reports').delete().eq('id', session_report_id).execute()
+            delete_result = supabase_manager.delete(table_name="session_reports",
+                                                    filters={
+                                                        'id': session_report_id
+                                                    })
             delete_result_dict = delete_result.dict()
             assert len(delete_result_dict['data']) > 0, "No session found with the incoming session_report_id"
 
@@ -146,24 +170,22 @@ class AssistantManager(AssistantManagerBaseClass):
     async def add_patient(self,
                           auth_manager: AuthManagerBaseClass,
                           payload: PatientInsertPayload,
-                          datastore_access_token: str,
-                          datastore_refresh_token: str,
-                          session_id: str) -> str:
+                          session_id: str,
+                          supabase_manager: SupabaseBaseClass) -> str:
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
-                                                                            datastore_refresh_token)
-            response = datastore_client.table('patients').insert({
-                "first_name": payload.first_name,
-                "middle_name": payload.middle_name,
-                "last_name": payload.last_name,
-                "birth_date": payload.birth_date,
-                "email": payload.email,
-                "pre_existing_history": payload.pre_existing_history,
-                "gender": payload.gender.value,
-                "phone_number": payload.phone_number,
-                "therapist_id": payload.therapist_id,
-                "consentment_channel": payload.consentment_channel.value,
-            }).execute()
+            response = supabase_manager.insert(table_name="patients",
+                                               payload={
+                                                   "first_name": payload.first_name,
+                                                   "middle_name": payload.middle_name,
+                                                   "last_name": payload.last_name,
+                                                   "birth_date": payload.birth_date,
+                                                   "email": payload.email,
+                                                   "pre_existing_history": payload.pre_existing_history,
+                                                   "gender": payload.gender.value,
+                                                   "phone_number": payload.phone_number,
+                                                   "therapist_id": payload.therapist_id,
+                                                   "consentment_channel": payload.consentment_channel.value,
+                                               })
             patient_id = response.dict()['data'][0]['id']
 
             if len(payload.pre_existing_history or '') > 0:
@@ -179,26 +201,31 @@ class AssistantManager(AssistantManagerBaseClass):
 
     async def update_patient(auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
-        datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
-                                                                        datastore_refresh_token)
-
-        patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', payload.therapist_id).eq('id', payload.patient_id).execute()
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
+        patient_query = supabase_manager.select(fields="*",
+                                                filters={
+                                                    'id': payload.patient_id,
+                                                    'therapist_id': payload.therapist_id
+                                                },
+                                                table_name="patients")
         assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
-        datastore_client.table('patients').update({
-            "first_name": payload.first_name,
-            "middle_name": payload.middle_name,
-            "last_name": payload.last_name,
-            "birth_date": payload.birth_date,
-            "pre_existing_history": payload.pre_existing_history,
-            "email": payload.email,
-            "gender": payload.gender.value,
-            "phone_number": payload.phone_number,
-            "consentment_channel": payload.consentment_channel.value,
-        }).eq('id', payload.patient_id).execute()
+        supabase_manager.update(table_name="patients",
+                                payload={
+                                    "first_name": payload.first_name,
+                                    "middle_name": payload.middle_name,
+                                    "last_name": payload.last_name,
+                                    "birth_date": payload.birth_date,
+                                    "pre_existing_history": payload.pre_existing_history,
+                                    "email": payload.email,
+                                    "gender": payload.gender.value,
+                                    "phone_number": payload.phone_number,
+                                    "consentment_channel": payload.consentment_channel.value,
+                                },
+                                filters={
+                                    'id': payload.patient_id
+                                })
 
         if len(payload.pre_existing_history) > 0:
             await vector_writer.update_preexisting_history_vectors(index_id=payload.therapist_id,
@@ -245,15 +272,15 @@ class AssistantManager(AssistantManagerBaseClass):
                             api_method: str,
                             endpoint_name: str,
                             environment: str,
-                            datastore_access_token: str,
-                            datastore_refresh_token: str):
+                            supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(datastore_access_token,
-                                                                            datastore_refresh_token)
-
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
-            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', query.therapist_id).eq('id',
-                                                                                                        query.patient_id).execute()
+            patient_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'id': query.patient_id,
+                                                        'therapist_id': query.therapist_id
+                                                    },
+                                                    table_name="patients")
             patient_therapist_match = (0 != len((patient_query).data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
@@ -270,7 +297,11 @@ class AssistantManager(AssistantManagerBaseClass):
             else:
                 session_date_override = None
 
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', query.therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'id': query.therapist_id
+                                                      },
+                                                      table_name="therapists")
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
@@ -299,12 +330,13 @@ class AssistantManager(AssistantManagerBaseClass):
                                     api_method: str,
                                     environment: str,
                                     auth_manager: AuthManagerBaseClass,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str) -> str:
+                                    supabase_manager: SupabaseBaseClass) -> str:
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'id': therapist_id
+                                                      },
+                                                      table_name="therapists")
             assert (0 != len((therapist_query).data)), "No user was found with the incoming id"
 
             therapist_query_dict = therapist_query.dict()
@@ -333,18 +365,22 @@ class AssistantManager(AssistantManagerBaseClass):
                                          session_id: str,
                                          endpoint_name: str,
                                          api_method: str,
-                                         datastore_access_token: str,
-                                         datastore_refresh_token: str):
+                                         supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                   table_name="therapists",
+                                                   filters={
+                                                       'id': therapist_id
+                                                   })
             assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
-                                                                                                               patient_id).execute()
+            patient_query = supabase_manager.select(fields="*",
+                                                    table_name="patients",
+                                                    filters={
+                                                        'therapist_id': therapist_id,
+                                                        'id': patient_id
+                                                    })
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             patient_query_dict = patient_query.dict()
@@ -370,14 +406,18 @@ class AssistantManager(AssistantManagerBaseClass):
 
     async def update_diarization_with_notification_data(self,
                                                         auth_manager: AuthManagerBaseClass,
+                                                        supabase_manager: SupabaseBaseClass,
                                                         job_id: str,
                                                         diarization_summary: str,
                                                         diarization: str) -> str:
         try:
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            datastore_client = auth_manager.datastore_admin_instance()
 
-            session_query = datastore_client.from_('session_reports').select('*').eq('diarization_job_id', job_id).execute()
+            session_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'diarization_job_id': job_id
+                                                    },
+                                                    table_name="session_reports")
             session_query_dict = session_query.dict()
             therapist_id = session_query_dict['data'][0]['therapist_id']
             patient_id = session_query_dict['data'][0]['patient_id']
@@ -389,22 +429,34 @@ class AssistantManager(AssistantManagerBaseClass):
                 soap_notes = await self.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                     therapist_id=therapist_id,
                                                                     session_notes_text=diarization_summary)
-                datastore_client.table('session_reports').update({
-                    "notes_text": soap_notes,
-                    "diarization_summary": diarization_summary,
-                    "diarization": diarization,
-                    "last_updated": now_timestamp,
-                }).eq('diarization_job_id', job_id).execute()
+                supabase_manager.update(table_name="session_reports",
+                                        payload={
+                                            "notes_text": soap_notes,
+                                            "diarization_summary": diarization_summary,
+                                            "diarization": diarization,
+                                            "last_updated": now_timestamp,
+                                        },
+                                        filters={
+                                            'diarization_job_id': job_id
+                                        })
             else:
                 assert template == SessionNotesTemplate.FREE_FORM.value, f"Unexpected template: {template}"
-                datastore_client.table('session_reports').update({
-                    "notes_text": diarization_summary,
-                    "diarization_summary": diarization_summary,
-                    "diarization": diarization,
-                    "last_updated": now_timestamp,
-                }).eq('diarization_job_id', job_id).execute()
+                supabase_manager.update(table_name="session_reports",
+                                        payload={
+                                            "notes_text": diarization_summary,
+                                            "diarization_summary": diarization_summary,
+                                            "diarization": diarization,
+                                            "last_updated": now_timestamp,
+                                        },
+                                        filters={
+                                            'diarization_job_id': job_id
+                                        })
 
-            query_response = datastore_client.from_('diarization_logs').select('*').eq('job_id', job_id).execute()
+            query_response = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'job_id': job_id
+                                                      },
+                                                      table_name="diarization_logs")
             assert (0 != len((query_response).data)), "Expected to find a response."
 
             session_id = query_response.dict()['data'][0]['session_id']
@@ -426,28 +478,37 @@ class AssistantManager(AssistantManagerBaseClass):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     datastore_access_token: str,
-                                     datastore_refresh_token: str):
+                                     supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                    refresh_token=datastore_refresh_token)
-            patient_response = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
-                                                                                                                  patient_id).execute()
-            assert (0 != len((patient_response).data)), "There isn't a patient-therapist match with the incoming ids."
+            patient_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'therapist_id': therapist_id,
+                                                        'id': patient_id
+                                                    },
+                                                    table_name="patients")
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
-            patient_response_dict = patient_response.dict()
+            patient_response_dict = patient_query.dict()
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']
             last_session_date = patient_response_dict['data'][0]['last_session_date']
 
-            therapist_response = datastore_client.table('therapists').select('*').eq("id", therapist_id).execute()
-            therapist_response_dict = therapist_response.dict()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          "id": therapist_id
+                                                      },
+                                                      table_name="therapists")
+            therapist_response_dict = therapist_query.dict()
             therapist_name = therapist_response_dict['data'][0]['first_name']
             language_code = therapist_response_dict['data'][0]['language_preference']
             therapist_gender = therapist_response_dict['data'][0]['gender']
 
-            number_session_response = datastore_client.table('session_reports').select('*').eq("patient_id", patient_id).execute()
-            session_number = 1 + len(number_session_response.dict()['data'])
+            number_session_query = supabase_manager.select(fields="*",
+                                                           filters={
+                                                               "patient_id": patient_id
+                                                           },
+                                                           table_name="session_reports")
+            session_number = 1 + len(number_session_query.dict()['data'])
 
             if len(last_session_date or '') > 0:
                 vector_query_worker = VectorQueryWorker()
@@ -485,18 +546,22 @@ class AssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str):
+                                    supabase_manager: SupabaseBaseClass):
         try:
-            datastore_client: Client = auth_manager.datastore_user_instance(access_token=datastore_access_token,
-                                                                            refresh_token=datastore_refresh_token)
-
-            therapist_query = datastore_client.from_('therapists').select('*').eq('id', therapist_id).execute()
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'id': therapist_id
+                                                      },
+                                                      table_name="therapists")
             assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            patient_query = datastore_client.from_('patients').select('*').eq('therapist_id', therapist_id).eq('id',
-                                                                                                               patient_id).execute()
+            patient_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'therapist_id': therapist_id,
+                                                        'id': patient_id
+                                                    },
+                                                    table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             patient_query_dict = patient_query.dict()

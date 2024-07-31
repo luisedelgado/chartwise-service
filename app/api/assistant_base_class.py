@@ -1,5 +1,6 @@
 from abc import ABC
 
+from ..api.supabase_base_class import SupabaseBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.model import (AssistantQuery,
                               PatientInsertPayload,
@@ -16,15 +17,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the data associated with the session.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def process_new_session_data(auth_manager: AuthManagerBaseClass,
                                        body: SessionNotesInsert,
-                                       datastore_access_token: str,
-                                       datastore_refresh_token: str,
-                                       session_id: str) -> str:
+                                       session_id: str,
+                                       supabase_manager: SupabaseBaseClass) -> str:
         pass
 
     """
@@ -33,15 +32,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     body – the new data associated with the session.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def update_session(auth_manager: AuthManagerBaseClass,
                              body: SessionNotesUpdate,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -51,14 +48,12 @@ class AssistantManagerBaseClass(ABC):
     auth_manager – the auth_manager to be leveraged.
     therapist_id – the therapist_id associated with the session report.
     session_report_id – the id associated with the session to be deleted.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     def delete_session(auth_manager: AuthManagerBaseClass,
                        therapist_id: str,
                        session_report_id: str,
-                       datastore_access_token: str,
-                       datastore_refresh_token: str):
+                       supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -67,15 +62,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     payload – the payload containing the data with which to create the patient.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def add_patient(auth_manager: AuthManagerBaseClass,
                           payload: PatientInsertPayload,
-                          datastore_access_token: str,
-                          datastore_refresh_token: str,
-                          session_id: str) -> str:
+                          session_id: str,
+                          supabase_manager: SupabaseBaseClass) -> str:
         pass
 
     """
@@ -84,15 +77,13 @@ class AssistantManagerBaseClass(ABC):
     Arguments:
     auth_manager – the auth_manager to be leveraged.
     payload – the payload containing the data with which to update the patient.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
     session_id – the session id.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def update_patient(auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
-                             datastore_access_token: str,
-                             datastore_refresh_token: str,
-                             session_id: str):
+                             session_id: str,
+                             supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -139,8 +130,7 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     endpoint_name – the endpoint name that triggered this query.
     environment – the current running environment.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def query_session(auth_manager: AuthManagerBaseClass,
                             query: AssistantQuery,
@@ -148,8 +138,7 @@ class AssistantManagerBaseClass(ABC):
                             api_method: str,
                             endpoint_name: str,
                             environment: str,
-                            datastore_access_token: str,
-                            datastore_refresh_token: str):
+                            supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -163,8 +152,7 @@ class AssistantManagerBaseClass(ABC):
     api_method – the api method that triggered this query.
     environment – the current running environment.
     auth_manager – the auth_manager to be leveraged.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def fetch_todays_greeting(client_tz_identifier: str,
                                     therapist_id: str,
@@ -173,8 +161,7 @@ class AssistantManagerBaseClass(ABC):
                                     api_method: str,
                                     environment: str,
                                     auth_manager: AuthManagerBaseClass,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str):
+                                    supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -188,8 +175,7 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def create_patient_summary(therapist_id: str,
                                      patient_id: str,
@@ -198,8 +184,7 @@ class AssistantManagerBaseClass(ABC):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
-                                     datastore_access_token: str,
-                                     datastore_refresh_token: str):
+                                     supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -213,8 +198,7 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    datastore_access_token – the datastore access token to be used.
-    datastore_refresh_token – the datastore refresh token to be used.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def fetch_question_suggestions(therapist_id: str,
                                          patient_id: str,
@@ -223,8 +207,7 @@ class AssistantManagerBaseClass(ABC):
                                          session_id: str,
                                          endpoint_name: str,
                                          api_method: str,
-                                         datastore_access_token: str,
-                                         datastore_refresh_token: str):
+                                         supabase_manager: SupabaseBaseClass):
         pass
 
     """
@@ -233,11 +216,13 @@ class AssistantManagerBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth_manager to be leveraged.
+    supabase_manager – the supabase manager to be leveraged internally.
     job_id – the id of the job that ran.
     summary – the session summary.
     diarization – the diarized session.
     """
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
+                                                  supabase_manager: SupabaseBaseClass,
                                                   job_id: str,
                                                   summary: str,
                                                   diarization: str) -> str:
@@ -254,8 +239,7 @@ class AssistantManagerBaseClass(ABC):
     session_id – the current session id.
     endpoint_name – the endpoint name that triggered this query.
     api_method – the api method that triggered this query.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    supabase_manager – the supabase manager to be leveraged internally.
     """
     async def fetch_frequent_topics(therapist_id: str,
                                     patient_id: str,
@@ -264,6 +248,5 @@ class AssistantManagerBaseClass(ABC):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str):
+                                    supabase_manager: SupabaseBaseClass):
         pass

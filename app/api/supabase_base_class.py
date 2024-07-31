@@ -20,5 +20,11 @@ class SupabaseBaseClass(ABC):
                table_name: str):
         pass
 
+    def get_user():
+        pass
+
     def refresh_session():
+        pass
+
+    def sign_out():
         pass

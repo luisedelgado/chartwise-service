@@ -23,6 +23,7 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManagerBaseClass,
+                                 supabase_manager: SupabaseBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  session_id: str,

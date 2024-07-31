@@ -24,5 +24,11 @@ class FakeSupabaseManager(SupabaseBaseClass):
                table_name: str):
         pass
 
+    def get_user(self):
+        pass
+
     def refresh_session(self):
+        pass
+
+    def sign_out(self):
         pass

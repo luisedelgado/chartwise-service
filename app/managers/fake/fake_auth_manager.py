@@ -1,9 +1,9 @@
 from datetime import timedelta
 
 from fastapi import Request, Response
-from supabase import Client
 from typing import Union
 
+from ...api.supabase_base_class import SupabaseBaseClass
 from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.security import Token
@@ -31,11 +31,8 @@ class FakeAuthManager(AuthManagerBaseClass):
 
     def authenticate_datastore_user(self,
                                     user_id: str,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str) -> bool:
-        return (user_id == self.FAKE_USER_ID and
-                datastore_access_token == self.FAKE_DATASTORE_ACCESS_TOKEN and
-                datastore_refresh_token == self.FAKE_DATASTORE_REFRESH_TOKEN)
+                                    supabase_manager: SupabaseBaseClass) -> bool:
+        return (user_id == self.FAKE_USER_ID)
 
     def create_access_token(self,
                             _: dict,
@@ -77,12 +74,6 @@ class FakeAuthManager(AuthManagerBaseClass):
                             secure=True,
                             samesite="none")
         return Token(access_token=self.FAKE_AUTH_TOKEN, token_type="bearer")
-
-    def datastore_user_instance(self, access_token, refresh_token) -> Client:
-        return self.fake_supabase_client
-
-    def datastore_admin_instance(self) -> Client:
-        return self.fake_supabase_client
 
     def get_monitoring_proxy_url(self) -> str:
         return ""

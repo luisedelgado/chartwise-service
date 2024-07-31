@@ -7,7 +7,6 @@ from fastapi import (APIRouter,
                      Response,
                      status,)
 from langcodes import Language
-from supabase import Client
 from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
@@ -131,16 +130,17 @@ class SecurityRouter:
                             secure=True,
                             samesite="none")
 
-            logger = Logger(auth_manager=self._auth_manager)
+            logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
             post_api_method = logger.API_METHOD_POST
             logger.log_api_request(session_id=session_id,
                                    method=post_api_method,
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
+            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=body.datastore_access_token,
+                                                                                    refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
-                                                                                        datastore_access_token=body.datastore_access_token,
-                                                                                        datastore_refresh_token=body.datastore_refresh_token)
+                                                                                        supabase_manager=supabase_manager)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
 
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
@@ -187,7 +187,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
@@ -239,7 +239,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -252,19 +252,20 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,
-                                                                                  access_token=datastore_access_token)
-            datastore_client.table('therapists').insert({
-                "id": body.id,
-                "first_name": body.first_name,
-                "middle_name": body.middle_name,
-                "last_name": body.last_name,
-                "gender": body.gender.value,
-                "birth_date": body.birth_date,
-                "login_mechanism": body.signup_mechanism.value,
-                "email": body.email,
-                "language_preference": body.language_code_preference,
-            }).execute()
+            supabase_manager = self._supabase_manager_factory.supabase_user_manager(refresh_token=datastore_refresh_token,
+                                                                                    access_token=datastore_access_token)
+            supabase_manager.insert(table_name="therapists",
+                                    payload={
+                                        "id": body.id,
+                                        "first_name": body.first_name,
+                                        "middle_name": body.middle_name,
+                                        "last_name": body.last_name,
+                                        "gender": body.gender.value,
+                                        "birth_date": body.birth_date,
+                                        "login_mechanism": body.signup_mechanism.value,
+                                        "email": body.email,
+                                        "language_preference": body.language_code_preference,
+                                    })
 
             logger.log_api_response(therapist_id=body.id,
                                     session_id=session_id,
@@ -330,17 +331,21 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,
-                                                                                  access_token=datastore_access_token)
-            datastore_client.table('therapists').update({
-                "first_name": body.first_name,
-                "middle_name": body.middle_name,
-                "last_name": body.last_name,
-                "gender": body.gender.value,
-                "birth_date": body.birth_date,
-                "email": body.email,
-                "language_preference": body.language_code_preference,
-            }).eq('id', body.id).execute()
+            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
+                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager.update(table_name="therapists",
+                                    payload={
+                                        "first_name": body.first_name,
+                                        "middle_name": body.middle_name,
+                                        "last_name": body.last_name,
+                                        "gender": body.gender.value,
+                                        "birth_date": body.birth_date,
+                                        "email": body.email,
+                                        "language_preference": body.language_code_preference,
+                                    },
+                                    filters={
+                                        'id': body.id
+                                    })
 
             logger.log_api_response(therapist_id=body.id,
                                     session_id=session_id,
@@ -397,22 +402,25 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(auth_manager=self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
                                method=delete_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            datastore_client: Client = self._auth_manager.datastore_user_instance(refresh_token=datastore_refresh_token,
-                                                                                  access_token=datastore_access_token)
+            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
+                                                                                    refresh_token=datastore_refresh_token)
 
             # Delete therapist and all their patients (through cascading)
-            delete_response = datastore_client.table('therapists').delete().eq('id', therapist_id).execute().dict()
+            delete_response = supabase_manager.delete(table_name="therapists",
+                                                      filters={
+                                                          'id': therapist_id
+                                                      })
             assert len(delete_response['data']) > 0, "No therapist found with the incoming id"
 
             # Remove the active session and clear Auth data from client storage.
-            datastore_client.auth.sign_out()
+            supabase_manager.sign_out()
 
             # Delete vectors associated with therapist's patients
             self._assistant_manager.delete_all_sessions_for_therapist(therapist_id)

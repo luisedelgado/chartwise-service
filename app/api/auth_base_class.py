@@ -2,9 +2,9 @@ from abc import ABC
 from datetime import timedelta
 
 from fastapi import Request, Response
-from supabase import Client
 from typing import Union
 
+from ..api.supabase_base_class import SupabaseBaseClass
 from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.security import Token
 
@@ -17,13 +17,11 @@ class AuthManagerBaseClass(ABC):
 
     Arguments:
     user_id – the id associated with the user that's being authenticated.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    supabase_manager – the supabase manager to be used internally. 
     """
     def authenticate_datastore_user(self,
                                     user_id: str,
-                                    datastore_access_token: str,
-                                    datastore_refresh_token: str) -> bool:
+                                    supabase_manager: SupabaseBaseClass) -> bool:
         pass
 
     """
@@ -76,22 +74,6 @@ class AuthManagerBaseClass(ABC):
                               supabase_manager_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
-        pass
-
-    """
-    Returns an active supabase instance based on a user's auth tokens.
-
-    Arguments:
-    access_token – the access_token associated with a live supabase session.
-    refresh_token – the refresh_token associated with a live supabase session.
-    """
-    def datastore_user_instance(access_token, refresh_token) -> Client:
-        pass
-
-    """
-    Returns an active supabase instance with admin priviledges.
-    """
-    def datastore_admin_instance() -> Client:
         pass
 
     """
