@@ -111,7 +111,7 @@ class FakeAssistantManager(AssistantManagerBaseClass):
                                                   auth_manager: AuthManagerBaseClass,
                                                   supabase_manager: SupabaseBaseClass,
                                                   job_id: str,
-                                                  summary: str,
+                                                  diarization_summary: str,
                                                   diarization: str) -> str:
         self.fake_processed_diarization_result = diarization
         return ""

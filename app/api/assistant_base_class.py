@@ -224,7 +224,7 @@ class AssistantManagerBaseClass(ABC):
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
                                                   supabase_manager: SupabaseBaseClass,
                                                   job_id: str,
-                                                  summary: str,
+                                                  diarization_summary: str,
                                                   diarization: str) -> str:
         pass
 

@@ -300,7 +300,7 @@ class AudioProcessingRouter:
             session_id = self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                                            supabase_manager=supabase_admin_manager,
                                                                                            job_id=job_id,
-                                                                                           summary=summary,
+                                                                                           diarization_summary=summary,
                                                                                            diarization=diarization)
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
