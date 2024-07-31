@@ -929,10 +929,10 @@ class AssistantRouter:
 
             supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
-            self._assistant_manager.update_patient(auth_manager=self._auth_manager,
-                                                   payload=body,
-                                                   session_id=session_id,
-                                                   supabase_manager=supabase_manager)
+            await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
+                                                         payload=body,
+                                                         session_id=session_id,
+                                                         supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
                                     method=put_api_method,
@@ -1018,7 +1018,7 @@ class AssistantRouter:
                                                     filters={
                                                         'id': patient_id
                                                     })
-            assert len(delete_result['data']) > 0, "No patient found with the incoming patient_id"
+            assert len(delete_result.dict()['data']) > 0, "No patient found with the incoming patient_id"
 
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id, patient_id=patient_id)
 

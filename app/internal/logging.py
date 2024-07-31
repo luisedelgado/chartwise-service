@@ -4,10 +4,10 @@ from ..api.supabase_base_class import SupabaseBaseClass
 
 class Logger:
 
-    API_METHOD_POST = "post"
-    API_METHOD_PUT = "put"
-    API_METHOD_GET = "get"
-    API_METHOD_DELETE = "delete"
+    API_METHOD_POST = "POST"
+    API_METHOD_PUT = "PUT"
+    API_METHOD_GET = "GET"
+    API_METHOD_DELETE = "DELETE"
 
     def __init__(self, supabase_manager: SupabaseBaseClass):
         self.supabase_manager = supabase_manager

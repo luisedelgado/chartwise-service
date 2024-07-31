@@ -44,7 +44,7 @@ class DiarizationCleaner:
                 has_end_of_sentence = True
                 end_of_sentence = obj["is_eos"]
                 
-            if len(self._current_speaker_content) == 0:
+            if len(self._current_speaker_content or '') == 0:
                 self._entry_start_time = start_time
                 
             # Determine whether or not the current content is attached to a previous token.

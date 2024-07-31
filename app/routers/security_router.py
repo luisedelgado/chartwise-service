@@ -320,7 +320,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(self._auth_manager)
+        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                therapist_id=body.id,
@@ -417,7 +417,7 @@ class SecurityRouter:
                                                       filters={
                                                           'id': therapist_id
                                                       })
-            assert len(delete_response['data']) > 0, "No therapist found with the incoming id"
+            assert len(delete_response.dict()['data']) > 0, "No therapist found with the incoming id"
 
             # Remove the active session and clear Auth data from client storage.
             supabase_manager.sign_out()

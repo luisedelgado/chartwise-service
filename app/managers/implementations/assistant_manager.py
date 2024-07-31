@@ -199,7 +199,8 @@ class AssistantManager(AssistantManagerBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    async def update_patient(auth_manager: AuthManagerBaseClass,
+    async def update_patient(self,
+                             auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
                              session_id: str,
                              supabase_manager: SupabaseBaseClass):
@@ -227,7 +228,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                     'id': payload.patient_id
                                 })
 
-        if len(payload.pre_existing_history) > 0:
+        if len(payload.pre_existing_history or '') > 0:
             await vector_writer.update_preexisting_history_vectors(index_id=payload.therapist_id,
                                                                    namespace=payload.patient_id,
                                                                    text=payload.pre_existing_history,

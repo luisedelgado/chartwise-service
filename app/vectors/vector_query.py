@@ -558,7 +558,7 @@ class VectorQueryWorker:
         query_matches = query_result.to_dict()['matches']
 
         # There's no session data, return a message explaining this, and offer the historical context, if exists.
-        if len(query_matches) == 0:
+        if len(query_matches or []) == 0:
             return missing_session_data_error
 
         query_matches_ids = []
@@ -600,15 +600,16 @@ class VectorQueryWorker:
             session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
                                                              namespace=namespace)
             vectors = session_date_override_fetch_result['vectors']
-            if len(vectors) == 0:
+            if len(vectors or []) == 0:
                 return reranked_docs
 
             # Have vectors for session date override. Append it to current reranked_docs value.
             for vector_id in vectors:
                 vector_data = vectors[vector_id]
 
-                filtered_reranked_response = list(filter(lambda result: result.document.id == vector_data['id'], reranked_response_results))
+                filtered_reranked_response = list(filter(lambda result: result.document.text == vector_data['metadata']['chunk_text'], reranked_response_results))
                 if len(filtered_reranked_response) > 0:
+                    # Skip adding vector since it's already contained.
                     continue
 
                 metadata = vector_data['metadata']
