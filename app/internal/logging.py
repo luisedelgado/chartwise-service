@@ -1,6 +1,7 @@
 import os
 
 from ..api.supabase_base_class import SupabaseBaseClass
+from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 
 class Logger:
 
@@ -9,8 +10,8 @@ class Logger:
     API_METHOD_GET = "GET"
     API_METHOD_DELETE = "DELETE"
 
-    def __init__(self, supabase_manager: SupabaseBaseClass):
-        self.supabase_manager = supabase_manager
+    def __init__(self, supabase_manager_factory: SupabaseFactoryBaseClass):
+        self.supabase_manager = supabase_manager_factory.supabase_admin_manager()
 
     """
     Logs data about an API request.

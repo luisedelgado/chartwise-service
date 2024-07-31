@@ -311,7 +311,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                patient_id=body.patient_id,
@@ -388,7 +388,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                therapist_id=body.therapist_id,
@@ -464,7 +464,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
@@ -533,7 +533,7 @@ class AssistantRouter:
                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                 session_id: Annotated[Union[str, None], Cookie()]):
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                therapist_id=query.therapist_id,
@@ -605,7 +605,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
@@ -684,7 +684,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -762,7 +762,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -839,7 +839,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -913,7 +913,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                method=put_api_method,
@@ -991,7 +991,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                method=delete_api_method,
@@ -1079,7 +1079,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -1153,7 +1153,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,

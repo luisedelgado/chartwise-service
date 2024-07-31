@@ -3,7 +3,7 @@ from fastapi import File, UploadFile
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
-from ...api.supabase_base_class import SupabaseBaseClass
+from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...internal.model import SessionNotesTemplate
 
 class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
@@ -24,7 +24,7 @@ class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManagerBaseClass,
-                                 supabase_manager: SupabaseBaseClass,
+                                 supabase_manager_factory: SupabaseFactoryBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  session_id: str,

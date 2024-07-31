@@ -13,7 +13,7 @@ from speechmatics.batch_client import BatchClient
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
-from ...api.supabase_base_class import SupabaseBaseClass
+from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...internal.logging import Logger
 from ...internal.model import SessionNotesTemplate
 from ...internal.utilities import file_copiers
@@ -139,12 +139,12 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManagerBaseClass,
-                                 supabase_manager: SupabaseBaseClass,
+                                 supabase_manager_factory: SupabaseFactoryBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  session_id: str,
                                  audio_file: UploadFile = File(...)) -> str:
-        logger = Logger(supabase_manager=supabase_manager)
+        logger = Logger(supabase_manager_factory=supabase_manager_factory)
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)

@@ -106,7 +106,7 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -175,7 +175,7 @@ class ImageProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
+        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
