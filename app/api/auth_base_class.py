@@ -5,6 +5,7 @@ from fastapi import Request, Response
 from supabase import Client
 from typing import Union
 
+from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.security import Token
 
 class AuthManagerBaseClass(ABC):
@@ -64,6 +65,7 @@ class AuthManagerBaseClass(ABC):
     user_id – the user for whom to refresh the current session.
     request – the incoming request object.
     response – the response object where we can update cookies.
+    supabase_manager_factory – the supabase object factory to be used internally.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     """
@@ -71,6 +73,7 @@ class AuthManagerBaseClass(ABC):
                               user_id: str,
                               request: Request,
                               response: Response,
+                              supabase_manager_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         pass

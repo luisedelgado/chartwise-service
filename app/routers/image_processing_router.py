@@ -12,6 +12,7 @@ from typing import Annotated, Union
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.image_processing_base_class import ImageProcessingManagerBaseClass
+from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import SessionNotesTemplate
@@ -26,10 +27,12 @@ class ImageProcessingRouter:
     def __init__(self,
                  assistant_manager: AssistantManagerBaseClass,
                  auth_manager: AuthManagerBaseClass,
-                 image_processing_manager: ImageProcessingManagerBaseClass):
+                 image_processing_manager: ImageProcessingManagerBaseClass,
+                 supabase_manager_factory: SupabaseFactoryBaseClass):
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
         self._image_processing_manager = image_processing_manager
+        self._supabase_manager_factory = supabase_manager_factory
         self.router = APIRouter()
         self._register_routes()
 
@@ -97,7 +100,8 @@ class ImageProcessingRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -165,7 +169,8 @@ class ImageProcessingRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))

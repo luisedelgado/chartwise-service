@@ -17,6 +17,7 @@ from typing import Annotated, Union
 from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ..api.auth_base_class import AuthManagerBaseClass
+from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..internal import security
 from ..internal.logging import Logger
@@ -33,10 +34,12 @@ class AudioProcessingRouter:
     def __init__(self,
                 auth_manager: AuthManagerBaseClass,
                 assistant_manager: AssistantManagerBaseClass,
-                audio_processing_manager: AudioProcessingManagerBaseClass):
+                audio_processing_manager: AudioProcessingManagerBaseClass,
+                supabase_manager_factory: SupabaseFactoryBaseClass):
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
+            self._supabase_manager_factory = supabase_manager_factory
             self.router = APIRouter()
             self._register_routes()
 
@@ -120,7 +123,8 @@ class AudioProcessingRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -201,7 +205,8 @@ class AudioProcessingRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))

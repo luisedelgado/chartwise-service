@@ -7,6 +7,8 @@ from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 from supabase import create_client, Client
 from typing import Union
 
+from ...api.supabase_base_class import SupabaseBaseClass
+from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.security import Token
 
@@ -84,6 +86,7 @@ class AuthManager(AuthManagerBaseClass):
                               user_id: str,
                               request: Request,
                               response: Response,
+                              supabase_manager_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
@@ -103,9 +106,9 @@ class AuthManager(AuthManagerBaseClass):
                                     samesite="none")
             # If we have datastore tokens in cookies, let's refresh them.
             elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
-                datastore_client: Client = self.datastore_user_instance(access_token=request.cookies['datastore_access_token'],
-                                                                        refresh_token=request.cookies['datastore_refresh_token'])
-                refresh_session_response = datastore_client.auth.refresh_session().dict()
+                supabase_client: SupabaseBaseClass = supabase_manager_factory.supabase_user_manager(access_token=request.cookies['datastore_access_token'],
+                                                                                                    refresh_token=request.cookies['datastore_refresh_token'])
+                refresh_session_response = supabase_client.refresh_session().dict()
                 assert refresh_session_response['user']['role'] == 'authenticated'
 
                 datastore_access_token = refresh_session_response['session']['access_token']

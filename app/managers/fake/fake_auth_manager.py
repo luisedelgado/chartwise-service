@@ -4,7 +4,7 @@ from fastapi import Request, Response
 from supabase import Client
 from typing import Union
 
-from .fake_supabase_client import FakeSupabaseClient
+from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.security import Token
 
@@ -22,10 +22,10 @@ class FakeAuthManager(AuthManagerBaseClass):
     FAKE_DATASTORE_REFRESH_TOKEN = "fakeDatastoreRefreshToken"
 
     auth_cookie: str = None
-    fake_supabase_client: FakeSupabaseClient
+    # fake_supabase_client: FakeSupabaseClient
 
-    def __init__(self):
-        self.fake_supabase_client = FakeSupabaseClient()
+    # def __init__(self):
+        # self.fake_supabase_client = FakeSupabaseClient()
 
     # Authentication
 
@@ -52,6 +52,7 @@ class FakeAuthManager(AuthManagerBaseClass):
                               user_id: str,
                               request: Request,
                               response: Response,
+                              supabase_manager_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         assert user_id == self.FAKE_USER_ID

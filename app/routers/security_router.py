@@ -12,6 +12,7 @@ from typing import Annotated, Union
 
 from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.assistant_base_class import AssistantManagerBaseClass
+from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import model, security
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, general_utilities
@@ -25,9 +26,11 @@ class SecurityRouter:
 
     def __init__(self,
                  auth_manager: AuthManagerBaseClass,
-                 assistant_manager: AssistantManagerBaseClass):
+                 assistant_manager: AssistantManagerBaseClass,
+                 supabase_manager_factory: SupabaseFactoryBaseClass):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
+        self._supabase_manager_factory = supabase_manager_factory
         self.router = APIRouter()
         self._register_routes()
 
@@ -143,6 +146,7 @@ class SecurityRouter:
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
+                                                                  supabase_manager_factory=self._supabase_manager_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
             logger.log_api_response(session_id=session_id,
@@ -177,7 +181,8 @@ class SecurityRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -228,7 +233,8 @@ class SecurityRouter:
         try:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -307,7 +313,8 @@ class SecurityRouter:
         try:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
-                                                     response=response)
+                                                     response=response,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -384,7 +391,8 @@ class SecurityRouter:
         try:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
-                                                     request=request)
+                                                     request=request,
+                                                     supabase_manager_factory=self._supabase_manager_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
