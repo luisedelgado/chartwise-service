@@ -201,6 +201,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
                     )
                     logger.log_diarization_event(session_id=session_id,
                                                  job_id=job_id)
+                    return job_id
                 except Exception as e:
                     status_code = status.HTTP_417_EXPECTATION_FAILED if type(e) is not HTTPException else e.status_code
                     raise HTTPException(status_code=status_code,

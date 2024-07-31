@@ -297,11 +297,11 @@ class AudioProcessingRouter:
                                                                    supabase_manager=self._supabase_manager_factory.supabase_admin_manager())
 
             supabase_admin_manager = self._supabase_manager_factory.supabase_admin_manager()
-            session_id = self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
-                                                                                           supabase_manager=supabase_admin_manager,
-                                                                                           job_id=job_id,
-                                                                                           diarization_summary=summary,
-                                                                                           diarization=diarization)
+            session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
+                                                                                                 supabase_manager=supabase_admin_manager,
+                                                                                                 job_id=job_id,
+                                                                                                 diarization_summary=summary,
+                                                                                                 diarization=diarization)
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,

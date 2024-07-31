@@ -426,13 +426,52 @@ class AssistantManager(AssistantManagerBaseClass):
             session_date_raw = session_query_dict['data'][0]['session_date']
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
 
+            session_id_query = supabase_manager.select(fields="*",
+                                                       filters={
+                                                           'job_id': job_id
+                                                       },
+                                                       table_name="diarization_logs")
+            assert (0 != len((session_id_query).data)), "Expected to find a response."
+            session_id = session_id_query.dict()['data'][0]['session_id']
+
+            patient_query = supabase_manager.select(fields="*",
+                                                    filters={
+                                                        'id': patient_id,
+                                                        'therapist_id': therapist_id
+                                                    },
+                                                    table_name="patients")
+            assert (0 != len((patient_query).data))
+            therapist_query = supabase_manager.select(fields="*",
+                                                      filters={
+                                                          'id': therapist_id
+                                                      },
+                                                      table_name="therapists")
+            assert (0 != len((therapist_query).data))
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=diarization_summary,
+                                                                                 therapist_id=therapist_id,
+                                                                                 language_code=language_code,
+                                                                                 auth_manager=auth_manager,
+                                                                                 session_id=session_id)
+
+            supabase_manager.update(table_name="patients",
+                                    payload={
+                                        "last_session_date": session_date_formatted,
+                                        "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
+                                    },
+                                    filters={
+                                        'id': patient_id
+                                    })
+
             if template == SessionNotesTemplate.SOAP.value:
                 soap_notes = await self.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                     therapist_id=therapist_id,
-                                                                    session_notes_text=diarization_summary)
+                                                                    session_notes_text=diarization_summary,
+                                                                    session_id=session_id)
                 supabase_manager.update(table_name="session_reports",
                                         payload={
                                             "notes_text": soap_notes,
+                                            "notes_mini_summary": mini_summary,
                                             "diarization_summary": diarization_summary,
                                             "diarization": diarization,
                                             "last_updated": now_timestamp,
@@ -445,6 +484,7 @@ class AssistantManager(AssistantManagerBaseClass):
                 supabase_manager.update(table_name="session_reports",
                                         payload={
                                             "notes_text": diarization_summary,
+                                            "notes_mini_summary": mini_summary,
                                             "diarization_summary": diarization_summary,
                                             "diarization": diarization,
                                             "last_updated": now_timestamp,
@@ -453,14 +493,6 @@ class AssistantManager(AssistantManagerBaseClass):
                                             'diarization_job_id': job_id
                                         })
 
-            query_response = supabase_manager.select(fields="*",
-                                                      filters={
-                                                          'job_id': job_id
-                                                      },
-                                                      table_name="diarization_logs")
-            assert (0 != len((query_response).data)), "Expected to find a response."
-
-            session_id = query_response.dict()['data'][0]['session_id']
             await vector_writer.insert_session_vectors(index_id=therapist_id,
                                                        namespace=patient_id,
                                                        text=diarization_summary,
