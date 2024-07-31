@@ -223,7 +223,7 @@ class PromptCrafter:
             if gender_has_default_pronouns(patient_gender):
                 gender_params += f"For reference, {patient_name} is a {patient_gender}. "
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
+            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session with you was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
             return (
                     "A mental health practitioner is entering our Practice Management Platform. "
                     "They are about to meet with an existing patient, and need to quickly refreshen on the patient's session history. "
