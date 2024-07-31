@@ -3,6 +3,7 @@ from fastapi import File, UploadFile
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
+from ...api.supabase_base_class import SupabaseBaseClass
 from ...internal.model import SessionNotesTemplate
 
 class FakeAudioProcessingManager(AudioProcessingManagerBaseClass):
