@@ -562,7 +562,7 @@ class VectorQueryWorker:
             return missing_session_data_error
 
         query_matches_ids = []
-        retrieved_docs = [historical_context] if found_historical_context else []
+        retrieved_docs = []
         for match in query_matches:
             query_matches_ids.append(match['id'])
             metadata = match['metadata']
@@ -583,11 +583,21 @@ class VectorQueryWorker:
             return_documents=True,
             top_n=rerank_top_n,
         )
+
         reranked_response_results = rerank_response.results
         reranked_docs = "\n".join([result.document.text for result in reranked_response_results])
 
-        # Add vectors associated with the session date override.
-        if session_date_override is not None:
+        if found_historical_context:
+            reranked_docs = "\n".join([reranked_docs, historical_context])
+
+        # Add vectors associated with the session date override if not already retrieved.
+        formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+        override_date_is_already_contained = any(
+            str(result.document.id).startswith(f"{formatted_session_date_override}")
+            for result in reranked_response_results
+        )
+
+        if not override_date_is_already_contained and session_date_override is not None:
             session_date_override_vector_ids = []
             list_operation_prefix = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
             for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
@@ -603,14 +613,9 @@ class VectorQueryWorker:
             if len(vectors or []) == 0:
                 return reranked_docs
 
-            # Have vectors for session date override. Append it to current reranked_docs value.
+            # Have vectors for session date override. Append them to current reranked_docs value.
             for vector_id in vectors:
                 vector_data = vectors[vector_id]
-
-                filtered_reranked_response = list(filter(lambda result: result.document.text == vector_data['metadata']['chunk_text'], reranked_response_results))
-                if len(filtered_reranked_response) > 0:
-                    # Skip adding vector since it's already contained.
-                    continue
 
                 metadata = vector_data['metadata']
                 session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
@@ -648,8 +653,8 @@ class VectorQueryWorker:
         for vector_id in vectors:
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
-            chunk_summary = "".join(["pre_existing_history_summary = ",f"{metadata['pre_existing_history_summary']}\n\n"])
-            chunk_text = "".join(["pre_existing_history_text = ",f"{metadata['pre_existing_history_text']}\n"])
+            chunk_summary = "".join(["pre_existing_history_summary = ",f"{metadata['pre_existing_history_summary']}"])
+            chunk_text = "".join(["\npre_existing_history_text = ",f"{metadata['pre_existing_history_text']}\n"])
             chunk_full_context = "".join([chunk_summary,
                                           chunk_text,
                                           "\n"])

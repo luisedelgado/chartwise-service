@@ -148,7 +148,7 @@ class PromptCrafter:
             "Your job is to answer the practitioner's questions based on the information context you find from the context data. "
             "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
             "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
-            "Additionally, if you find values for pre_existing_history_text and pre_existing_history_summary, make use of them as well since they describe the patient's pre-existing history prior to being added to our platform. "
+            "Additionally, if you find values for pre_existing_history_summary, and it's related to the question, you should use it along the pre_existing_history_text since they describe the patient's pre-existing history (prior to being added to our platform). "
             f"{last_session_date_param} "
             "When answering a question, you should always outline the session_date associated with the information you are providing (mm-dd-yyyy). If no session information is found, do not mention any session dates. "
             "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
