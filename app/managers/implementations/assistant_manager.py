@@ -512,13 +512,13 @@ class AssistantManager(AssistantManagerBaseClass):
             session_number = 1 + len(number_session_query.dict()['data'])
 
             if len(last_session_date or '') > 0:
-                vector_query_worker = VectorQueryWorker()
                 session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
-                                                                    output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                                                                    session_date=last_session_date)
+                                                                   output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                                                                   session_date=last_session_date)
             else:
                 session_date_override = None
 
+            vector_query_worker = VectorQueryWorker()
             result = await vector_query_worker.create_briefing(index_id=therapist_id,
                                                                namespace=patient_id,
                                                                environment=environment,
