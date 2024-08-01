@@ -46,10 +46,14 @@ class AssistantManager:
                                                                                  openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
+            patient_query_dict = patient_query.dict()
+            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_last_session_date = datetime_handler.retrieve_most_recent_date(body.date,
+                                                                                   datetime_handler.convert_to_internal_date_format(patient_last_session_date))
             supabase_manager.update(table_name="patients",
                                     payload={
-                                        "last_session_date": body.date,
-                                        "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
+                                        "last_session_date": patient_last_session_date,
+                                        "total_sessions": (1 + (patient_query_dict['data'][0]['total_sessions'])),
                                     },
                                     filters={
                                         'id': body.patient_id
@@ -474,10 +478,14 @@ class AssistantManager:
                                                                                  openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
+            patient_query_dict = patient_query.dict()
+            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_last_session_date = datetime_handler.retrieve_most_recent_date(session_date_formatted,
+                                                                                   datetime_handler.convert_to_internal_date_format(patient_last_session_date))
             supabase_manager.update(table_name="patients",
                                     payload={
-                                        "last_session_date": session_date_formatted,
-                                        "total_sessions": (1 + (patient_query.dict()['data'][0]['total_sessions'])),
+                                        "last_session_date": patient_last_session_date,
+                                        "total_sessions": (1 + (patient_query_dict['data'][0]['total_sessions'])),
                                     },
                                     filters={
                                         'id': patient_id

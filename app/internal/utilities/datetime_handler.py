@@ -25,6 +25,22 @@ def is_valid_date(date_input: str, tz_identifier: str = None) -> bool:
         return False
 
 """
+Returns a string containing the date that is most recent.
+
+Arguments:
+first_date – the first date to be used for comparison.
+second_date – the second date to be used for comparison.
+"""
+def retrieve_most_recent_date(first_date: str, second_date: str) -> str:
+    try:
+        first_datetime = datetime.strptime(first_date, DATE_FORMAT)
+        second_datetime = datetime.strptime(second_date, DATE_FORMAT)
+        second_is_most_recent_date = first_datetime.date() < second_datetime.date()
+        return second_date if second_is_most_recent_date else first_date
+    except Exception as e:
+        raise Exception("Invalid date formats")
+
+"""
 Returns a formatted version of the incoming date, for internal use.
 The valid format is considered to be %m-%d-%Y
 """
