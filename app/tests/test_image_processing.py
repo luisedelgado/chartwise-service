@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
 
-from ..managers.manager_factory import ManagerFactory
 from ..routers.image_processing_router import ImageProcessingRouter
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator

@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from ..internal.model import Gender
-from ..managers.manager_factory import ManagerFactory
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
