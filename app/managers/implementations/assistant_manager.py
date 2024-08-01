@@ -27,7 +27,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                         'therapist_id': body.therapist_id
                                                     },
                                                     table_name="patients")
-            patient_therapist_match = (0 != len((patient_query).data))
+            patient_therapist_match = (0 != len(patient_query.data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
             therapist_query = supabase_manager.select(fields="*",
@@ -35,7 +35,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                           'id': body.therapist_id
                                                       },
                                                       table_name="therapists")
-            assert (0 != len((therapist_query).data))
+            assert (0 != len(therapist_query.data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
             mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,

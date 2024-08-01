@@ -1,6 +1,14 @@
-from fastapi.testclient import TestClient
+from datetime import timedelta
 
-from ..managers.manager_factory import ManagerFactory
+from fastapi.testclient import TestClient
+from openai import AsyncOpenAI
+
+from ..managers.fake.fake_async_openai import FakeAsyncOpenAI
+from ..managers.fake.fake_supabase_factory_manager import FakeSupabaseManagerFactory
+from ..managers.fake.fake_supabase_manager import FakeSupabaseManager
+from ..managers.implementations.assistant_manager import AssistantManager
+from ..managers.implementations.audio_processing_manager import AudioProcessingManager
+from ..managers.implementations.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -16,89 +24,129 @@ ENVIRONMENT = "testing"
 
 class TestingHarnessAssistantRouter:
 
-    ...
-    # def setup_method(self):
-    #     self.auth_manager = ManagerFactory().create_auth_manager(ENVIRONMENT)
-    #     self.auth_manager.auth_cookie = FAKE_AUTH_COOKIE
+    def setup_method(self):
+        self.auth_manager = AuthManager()
+        self.assistant_manager = AssistantManager()
+        self.audio_processing_manager = AudioProcessingManager()
+        self.fake_supabase_admin_manager = FakeSupabaseManager()
+        self.fake_supabase_user_manager = FakeSupabaseManager()
+        self.fake_supabase_manager_factory = FakeSupabaseManagerFactory(fake_supabase_admin_manager=self.fake_supabase_admin_manager,
+                                                                        fake_supabase_user_manager=self.fake_supabase_user_manager)
+        self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
+                                                                 expires_delta=timedelta(minutes=5))
 
-    #     self.assistant_manager = ManagerFactory.create_assistant_manager(ENVIRONMENT)
-    #     self.audio_processing_manager = ManagerFactory.create_audio_processing_manager(ENVIRONMENT)
+        coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
+                                                                          auth_manager=self.auth_manager,
+                                                                          assistant_manager=self.assistant_manager,
+                                                                          supabase_manager_factory=self.fake_supabase_manager_factory).router,
+                                                          SecurityRouter(auth_manager=self.auth_manager,
+                                                                         assistant_manager=self.assistant_manager,
+                                                                         supabase_manager_factory=self.fake_supabase_manager_factory).router],
+                                                 environment="dev")
+        coordinator.app.dependency_overrides = {
+            AsyncOpenAI(api_key="",
+                        default_headers={},
+                        base_url=""): FakeAsyncOpenAI()
+        }
+        self.client = TestClient(coordinator.app)
 
-    #     coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
-    #                                                                       auth_manager=self.auth_manager,
-    #                                                                       assistant_manager=self.assistant_manager).router,
-    #                                                       SecurityRouter(auth_manager=self.auth_manager,
-    #                                                                      assistant_manager=self.assistant_manager).router],
-    #                                              environment="dev")
-    #     self.client = TestClient(coordinator.app)
+    def test_insert_new_session_with_missing_auth_token(self):
+        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+                               json={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                   "date": "01-01-2020",
+                                   "client_timezone_identifier": "UTC",
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   "source": "manual_input"
+                               })
+        assert response.status_code == 401
 
-    # def test_insert_new_session_with_invalid_auth(self):
-    #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-    #                            json={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": FAKE_THERAPIST_ID,
-    #                                "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-    #                                "date": "01-01-2020",
-    #                                "client_timezone_identifier": "UTC",
-    #                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-    #                                "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-    #                                "source": "manual_input"
-    #                            })
-    #     assert response.status_code == 401
+    def test_insert_new_session_with_auth_token_but_supabase_returns_unathenticated_session(self):
+        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+                               cookies={
+                                    "authorization": self.auth_cookie,
+                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                },
+                                json={
+                                    "patient_id": FAKE_PATIENT_ID,
+                                    "therapist_id": FAKE_THERAPIST_ID,
+                                    "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                    "date": "01-01-2020",
+                                    "client_timezone_identifier": "UTC",
+                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                    "source": "manual_input"
+                               })
+        assert response.status_code == 401
 
-    # def test_insert_new_session_with_valid_auth_but_invalid_date_format(self):
+    def test_insert_new_session_with_valid_authentication_but_invalid_date_format(self):
+        self.fake_supabase_user_manager.return_authenticated_session = True
+        self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "client_timezone_identifier": "UTC",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01/01/2020",
+                                        "source": "manual_input"
+                                    })
+        assert response.status_code == 400
+
+    def test_insert_new_session_with_valid_auth_but_undefined_source(self):
+        self.fake_supabase_user_manager.return_authenticated_session = True
+        self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "client_timezone_identifier": "UTC",
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "date": "01-01-2020",
+                                        "source": "undefined"
+                                    })
+        assert response.status_code == 400
+
+    # def test_insert_new_session_success(self):
+    #     self.fake_supabase_user_manager.return_authenticated_session = True
+    #     self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
+    #     self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
+    #     self.fake_supabase_user_manager.select_returns_data = True
+
+    #     assert self.fake_supabase_user_manager.fake_insert_text == None
+    #     insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
     #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
-    #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "authorization": self.auth_cookie,
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
-    #                                     "client_timezone_identifier": "UTC",
     #                                     "therapist_id": FAKE_THERAPIST_ID,
-    #                                     "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-    #                                     "date": "01/01/2020",
+    #                                     "text": insert_text,
+    #                                     "date": "01-01-2020",
+    #                                     "client_timezone_identifier": "UTC",
     #                                     "source": "manual_input"
     #                                 })
-    #     assert response.status_code == 400
-
-    # def test_insert_new_session_with_valid_auth_but_undefined_source(self):
-    #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-    #                                 cookies={
-    #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
-    #                                 },
-    #                                 json={
-    #                                     "patient_id": FAKE_PATIENT_ID,
-    #                                     "therapist_id": FAKE_THERAPIST_ID,
-    #                                     "client_timezone_identifier": "UTC",
-    #                                     "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-    #                                     "date": "01-01-2020",
-    #                                     "source": "undefined"
-    #                                 })
-    #     assert response.status_code == 400
-
-    # # TODO: Uncomment when async testing is figured out
-    # # def test_insert_new_session_with_valid_auth_and_valid_payload(self):
-    # #     assert self.assistant_manager.fake_insert_text == None
-    # #     insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
-    # #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-    # #                                 cookies={
-    # #                                     "authorization": FAKE_AUTH_COOKIE,
-    # #                                 },
-    # #                                 json={
-    # #                                     "patient_id": FAKE_PATIENT_ID,
-    # #                                     "therapist_id": FAKE_THERAPIST_ID,
-    # #                                     "text": insert_text,
-    # #                                     "date": "01-01-2020",
-    # #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
-    # #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-    # #                                     "source": "manual_input"
-    # #                                 })
-    # #     assert response.status_code == 200
-    # #     assert self.assistant_manager.fake_insert_text == insert_text
+    #     assert response.status_code == 200
+    #     assert self.fake_supabase_user_manager.fake_insert_text == insert_text
 
     # def test_update_session_with_invalid_auth(self):
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
@@ -117,8 +165,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -135,8 +183,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -153,8 +201,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -171,8 +219,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -196,8 +244,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
     #                                     cookies={
     #                                         "authorization": FAKE_AUTH_COOKIE,
-    #                                         "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                         "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                         "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                     },
     #                                     params={
     #                                         "session_report_id": "",
@@ -208,8 +256,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "session_report_id": "4123sdggsdgsdgdsgsdg",
@@ -220,8 +268,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "session_report_id": FAKE_SESSION_REPORT_ID,
@@ -233,8 +281,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "session_report_id": FAKE_SESSION_REPORT_ID,
@@ -268,8 +316,8 @@ class TestingHarnessAssistantRouter:
     # #     response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
     # #                                 cookies={
     # #                                     "authorization": FAKE_AUTH_COOKIE,
-    # #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    # #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    # #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    # #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     # #                                 },
     # #                                 json={
     # #                                     "patient_id": FAKE_PATIENT_ID,
@@ -282,8 +330,8 @@ class TestingHarnessAssistantRouter:
     # #     response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
     # #                                 cookies={
     # #                                     "authorization": FAKE_AUTH_COOKIE,
-    # #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    # #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    # #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    # #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     # #                                 },
     # #                                 json={
     # #                                     "patient_id": "",
@@ -296,8 +344,8 @@ class TestingHarnessAssistantRouter:
     # #     response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
     # #                                 cookies={
     # #                                     "authorization": FAKE_AUTH_COOKIE,
-    # #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    # #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    # #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    # #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     # #                                 },
     # #                                 json={
     # #                                     "patient_id": FAKE_PATIENT_ID,
@@ -310,8 +358,8 @@ class TestingHarnessAssistantRouter:
     # #     response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
     # #                                 cookies={
     # #                                     "authorization": FAKE_AUTH_COOKIE,
-    # #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    # #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    # #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    # #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     # #                                 },
     # #                                 json={
     # #                                     "patient_id": FAKE_PATIENT_ID,
@@ -343,8 +391,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "client_tz_identifier": "boom",
@@ -356,8 +404,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "client_tz_identifier": "boom",
@@ -369,8 +417,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "client_tz_identifier": "boom",
@@ -401,8 +449,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -414,8 +462,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": "",
@@ -427,8 +475,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -459,8 +507,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -472,8 +520,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": "",
@@ -485,8 +533,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -529,8 +577,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "first_name": "Pepito",
@@ -548,8 +596,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "first_name": "Pepito",
@@ -567,8 +615,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "first_name": "Pepito",
@@ -586,8 +634,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "first_name": "Pepito",
@@ -638,8 +686,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": "",
@@ -658,8 +706,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -678,8 +726,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 json={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -717,8 +765,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -730,8 +778,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": "",
@@ -743,8 +791,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -775,8 +823,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,
@@ -788,8 +836,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": "",
@@ -801,8 +849,8 @@ class TestingHarnessAssistantRouter:
     #     response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
     #                                 cookies={
     #                                     "authorization": FAKE_AUTH_COOKIE,
-    #                                     "datastore_access_token": self.auth_manager.FAKE_DATASTORE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": self.auth_manager.FAKE_DATASTORE_REFRESH_TOKEN
+    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
+    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
     #                                 },
     #                                 params={
     #                                     "patient_id": FAKE_PATIENT_ID,

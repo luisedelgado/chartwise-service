@@ -1,18 +1,21 @@
 import os
 
-from .managers.manager_factory import ManagerFactory
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
 from .routers.security_router import SecurityRouter
 from .service_coordinator import EndpointServiceCoordinator
+from .managers.implementations.assistant_manager import AssistantManager
+from .managers.implementations.audio_processing_manager import AudioProcessingManager
+from .managers.implementations.auth_manager import AuthManager
+from .managers.implementations.image_processing_manager import ImageProcessingManager
 from .managers.implementations.supabase_manager_factory import SupabaseManagerFactory
 
 environment = os.environ.get("ENVIRONMENT")
-auth_manager = ManagerFactory().create_auth_manager(environment)
-assistant_manager = ManagerFactory.create_assistant_manager(environment)
-audio_processing_manager = ManagerFactory.create_audio_processing_manager(environment)
-image_processing_manager = ManagerFactory.create_image_processing_manager(environment)
+auth_manager = AuthManager()
+assistant_manager = AssistantManager()
+audio_processing_manager = AudioProcessingManager()
+image_processing_manager = ImageProcessingManager()
 supabase_manager_factory = SupabaseManagerFactory()
 
 app = EndpointServiceCoordinator(routers=[
