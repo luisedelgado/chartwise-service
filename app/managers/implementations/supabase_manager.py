@@ -32,12 +32,16 @@ class SupabaseManager(SupabaseBaseClass):
     def select(self,
                fields: str,
                filters: dict,
-               table_name: str):
+               table_name: str,
+               order_desc_column: str = None):
         try:
             select_operation = self.client.from_(table_name).select(fields)
 
             for key, value in filters.items():
                 select_operation = select_operation.eq(f"{key}", f"{value}")
+
+            if len(order_desc_column or '') > 0:
+                select_operation = select_operation.order(order_desc_column, desc=True)
 
             return select_operation.execute()
         except Exception as e:

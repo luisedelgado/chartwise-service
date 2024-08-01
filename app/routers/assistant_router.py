@@ -498,8 +498,7 @@ class AssistantRouter:
 
             supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
-            self._assistant_manager.delete_session(auth_manager=self._auth_manager,
-                                                   therapist_id=therapist_id,
+            self._assistant_manager.delete_session(therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
                                                    supabase_manager=supabase_manager)
 
@@ -1025,6 +1024,7 @@ class AssistantRouter:
                                                     table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
+            # Cascading will take care of deleting the session notes in Supabase.
             delete_result = supabase_manager.delete(table_name="patients",
                                                     filters={
                                                         'id': patient_id

@@ -145,11 +145,11 @@ class AssistantManager:
             raise Exception(e)
 
     def delete_session(self,
-                       auth_manager: AuthManager,
                        therapist_id: str,
                        session_report_id: str,
                        supabase_manager: SupabaseBaseClass):
         try:
+            # Validate the session report is linked to the therapist id
             report_query = supabase_manager.select(fields="*",
                                                    table_name="session_reports",
                                                    filters={
@@ -157,7 +157,20 @@ class AssistantManager:
                                                        'therapist_id': therapist_id
                                                    })
             assert (0 != len((report_query).data)), "The incoming therapist_id isn't associated with the session_report_id."
+            patient_id = report_query.dict()['data'][0]['patient_id']
 
+            # Grab the most recent session date to determine if we'll have to update it
+            patient_query = supabase_manager.select(fields="*",
+                                        filters={
+                                            'id': patient_id,
+                                            'therapist_id': therapist_id
+                                        },
+                                        table_name="patients")
+            patient_query_dict = patient_query.dict()
+            assert len(patient_query_dict['data']) > 0, "No patient data found"
+            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+
+            # Delete the session notes from Supabase
             delete_result = supabase_manager.delete(table_name="session_reports",
                                                     filters={
                                                         'id': session_report_id
@@ -167,10 +180,32 @@ class AssistantManager:
 
             therapist_id = delete_result_dict['data'][0]['therapist_id']
             patient_id = delete_result_dict['data'][0]['patient_id']
-            session_date_raw = delete_result_dict['data'][0]['session_date']
-            session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date_raw)
+            session_date = delete_result_dict['data'][0]['session_date']
+
+            # If we deleted the last_session_date we were tracking for the patient, we should update what the new last_session_date is
+            if session_date == patient_last_session_date:
+                patient_session_notes_response = supabase_manager.select(fields="*",
+                                                                         table_name="session_reports",
+                                                                         filters={
+                                                                             "patient_id": patient_id
+                                                                         },
+                                                                         order_desc_column="session_date")
+                patient_session_notes_response_dict = patient_session_notes_response.dict()
+                patient_last_session_date = (None if len(patient_session_notes_response_dict['data']) == 0
+                                             else patient_session_notes_response_dict['data'][0]['session_date'])
+
+            # Update total_sessions and last_session_date
+            supabase_manager.update(table_name="patients",
+                                    payload={
+                                        "total_sessions": (patient_query_dict['data'][0]['total_sessions'] - 1),
+                                        "last_session_date": patient_last_session_date,
+                                    },
+                                    filters={
+                                        'id': patient_id
+                                    })
 
             # Delete vector embeddings
+            session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date)
             vector_writer.delete_session_vectors(index_id=therapist_id,
                                                  namespace=patient_id,
                                                  date=session_date_formatted)
@@ -266,8 +301,8 @@ class AssistantManager:
             raise Exception(e)
 
     def delete_all_data_for_patient(self,
-                                        therapist_id: str,
-                                        patient_id: str):
+                                    therapist_id: str,
+                                    patient_id: str):
         try:
             vector_writer.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
             vector_writer.delete_preexisting_history_vectors(index_id=therapist_id, namespace=patient_id)
@@ -556,6 +591,7 @@ class AssistantManager:
             patient_name = patient_response_dict['data'][0]['first_name']
             patient_gender = patient_response_dict['data'][0]['gender']
             last_session_date = patient_response_dict['data'][0]['last_session_date']
+            session_number = 1 + patient_response_dict['data'][0]['total_sessions']
 
             therapist_query = supabase_manager.select(fields="*",
                                                       filters={
@@ -566,13 +602,6 @@ class AssistantManager:
             therapist_name = therapist_response_dict['data'][0]['first_name']
             language_code = therapist_response_dict['data'][0]['language_preference']
             therapist_gender = therapist_response_dict['data'][0]['gender']
-
-            number_session_query = supabase_manager.select(fields="*",
-                                                           filters={
-                                                               "patient_id": patient_id
-                                                           },
-                                                           table_name="session_reports")
-            session_number = 1 + len(number_session_query.dict()['data'])
 
             if len(last_session_date or '') > 0:
                 session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
