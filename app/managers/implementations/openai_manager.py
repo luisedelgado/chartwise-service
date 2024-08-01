@@ -50,12 +50,12 @@ class OpenAIManager(OpenAIBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    async def stream_chat_completion_internal(self,
-                                              metadata: dict,
-                                              max_tokens: int,
-                                              messages: list,
-                                              auth_manager: AuthManager,
-                                              cache_configuration: dict = None):
+    async def stream_chat_completion(self,
+                                     metadata: dict,
+                                     max_tokens: int,
+                                     messages: list,
+                                     auth_manager: AuthManager,
+                                     cache_configuration: dict = None):
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 

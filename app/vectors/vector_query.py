@@ -89,7 +89,7 @@ class VectorQueryWorker:
                 "method": method,
             }
 
-            async for part in self._stream_chat_completion_internal(metadata=metadata,
+            async for part in openai_manager.stream_chat_completion(metadata=metadata,
                                                                     max_tokens=max_tokens,
                                                                     messages=[
                                                                         {"role": "system", "content": system_prompt},
@@ -579,10 +579,8 @@ class VectorQueryWorker:
         if len(query_matches or []) == 0:
             return missing_session_data_error
 
-        query_matches_ids = []
         retrieved_docs = []
         for match in query_matches:
-            query_matches_ids.append(match['id'])
             metadata = match['metadata']
             session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
             chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
@@ -608,14 +606,17 @@ class VectorQueryWorker:
         if found_historical_context:
             reranked_docs = "\n".join([reranked_docs, historical_context])
 
-        # Add vectors associated with the session date override if not already retrieved.
-        formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
-        override_date_is_already_contained = any(
-            str(result.document.id).startswith(f"{formatted_session_date_override}")
-            for result in reranked_response_results
-        )
+        if session_date_override is not None:
+            formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            override_date_is_already_contained = any(
+                str(result.document.id).startswith(f"{formatted_session_date_override}")
+                for result in reranked_response_results
+            )
 
-        if not override_date_is_already_contained and session_date_override is not None:
+            if override_date_is_already_contained:
+                return reranked_docs
+
+            # Add vectors associated with the session date override since they haven't been retrieved yet.
             session_date_override_vector_ids = []
             list_operation_prefix = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
             for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):

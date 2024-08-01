@@ -151,7 +151,7 @@ class PromptCrafter:
             "Additionally, if you find values for pre_existing_history_summary, and it's related to the question, you should use it along the pre_existing_history_text since they describe the patient's pre-existing history (prior to being added to our platform). "
             f"{last_session_date_param} "
             "When answering a question, you should always outline the session_date associated with the information you are providing (mm-dd-yyyy). If no session information is found, do not mention any session dates. "
-            "If the question references a person other than the patient, for whom you can't find information in the session notes, you should strictly say you can't provide an answer. "
+            "If the question can't be answered based on the context from the session notes, you should strictly say you can't provide an answer because that information isn't in the session notes. "
         )
 
     def _create_qa_user_message(self,
@@ -223,19 +223,18 @@ class PromptCrafter:
             if gender_has_default_pronouns(patient_gender):
                 gender_params += f"For reference, {patient_name} is a {patient_gender}. "
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session with you was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
+            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session with {therapist_name} was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
             return (
                     "A mental health practitioner is entering our Practice Management Platform. "
-                    "They are about to meet with an existing patient, and need to quickly refreshen on the patient's session history. "
-                    f"Your job is to 'prep' the practitioner, {therapist_name}. "
-                    f"It is very important that you start by saluting {therapist_name}, and reminding them that they are seeing {patient_name}, the patient, for the {ordinal_session_number} time. "
+                    f"They are about to meet with {patient_name}, an existing patient, and need to quickly refreshen on their session history. "
+                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time. "
                     f"{gender_params}"
-                    "\n\nOnce you've reminded the therapist about the session number, you should provide a summary of the patient's history broken down into two sections: Most Recent Sessions, and Historical Themes. "
-                    "If you determine it's the first time the therapist will meet with the patient, ignore the summary categorization, and just suggest strategies on how to establish a solid foundation. "
+                    f"\n\nOnce you've said hi to {therapist_name}, you job is to provide a summary of {patient_name}'s session history broken down into two sections: Most Recent Sessions, and Historical Themes. "
+                    f"If you determine it's the first time that {therapist_name} will meet with {patient_name}, ignore the summary categorization, and just suggest strategies on how to establish a solid foundation. "
                     "\nWhen populating Most Recent Sessions, use the session_date value found in the context to determine which are the most recent session(s). "
                     "You should double-check the session dates for precision. For reference, the date format for session_date is mm-dd-yyyy. "
                     f"{last_session_date_param} "
-                    "\nIf you're generating a summary for a patient that has already met with the therapist, you should end it with suggestions on what would be good avenues to explore in the upcoming session. "
+                    f"\nIf {patient_name} has already met with {therapist_name}, you should end the summary with suggestions on what would be good avenues to explore during the session that's about to start. "
                     "\nUse only the information you find based on the chunk_summary and chunk_text values. "
                     "The total length of the summary may take up to 1600 characters. "
                     "Return only a JSON object with a single key, 'summary', written in English, and the summary response as its only value. "
