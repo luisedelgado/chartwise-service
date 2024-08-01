@@ -97,24 +97,35 @@ class AssistantManager:
                                                    filters={
                                                        'id': body.session_notes_id,
                                                        'therapist_id': body.therapist_id,
-                                                       'patient_id': body.patient_id
                                                    })
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
+            report_query_dict = report_query.dict()
+            patient_id = report_query_dict['data'][0]['patient_id']
+            current_mini_summary = report_query_dict['data'][0]['notes_mini_summary']
+            current_session_text = report_query_dict['data'][0]['notes_text']
+            current_session_date = report_query_dict['data'][0]['session_date']
+            current_session_date_formatted = datetime_handler.convert_to_internal_date_format(current_session_date)
+            session_text_changed = body.text != current_session_text
+            session_date_changed = current_session_date_formatted != body.date
 
-            therapist_query = supabase_manager.select(fields="*",
-                                                      table_name="therapists",
-                                                      filters={
-                                                          'id': body.therapist_id
-                                                      })
-            assert (0 != len((therapist_query).data))
+            # We only have to generate a new mini_summary if the session text changed.
+            if session_text_changed:
+                therapist_query = supabase_manager.select(fields="*",
+                                                        table_name="therapists",
+                                                        filters={
+                                                            'id': body.therapist_id
+                                                        })
+                assert (0 != len((therapist_query).data))
 
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
-                                                                                 therapist_id=body.therapist_id,
-                                                                                 language_code=language_code,
-                                                                                 auth_manager=auth_manager,
-                                                                                 openai_manager=openai_manager,
-                                                                                 session_id=session_id)
+                language_code = therapist_query.dict()['data'][0]["language_preference"]
+                mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
+                                                                                    therapist_id=body.therapist_id,
+                                                                                    language_code=language_code,
+                                                                                    auth_manager=auth_manager,
+                                                                                    openai_manager=openai_manager,
+                                                                                    session_id=session_id)
+            else:
+                mini_summary = current_mini_summary
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             supabase_manager.update(table_name="session_reports",
@@ -130,17 +141,16 @@ class AssistantManager:
                                         'id': body.session_notes_id
                                     })
 
-            original_session_date_raw = report_query.dict()['data'][0]['session_date']
-            original_session_date_formatted = datetime_handler.convert_to_internal_date_format(original_session_date_raw)
-
-            # Upload vector embeddings with the original session date since that's what was used for insertion.
-            await vector_writer.update_session_vectors(index_id=body.therapist_id,
-                                                       namespace=body.patient_id,
-                                                       text=body.text,
-                                                       session_id=session_id,
-                                                       date=original_session_date_formatted,
-                                                       openai_manager=openai_manager,
-                                                       auth_manager=auth_manager)
+            if session_date_changed or session_text_changed:
+                # Upload vector embeddings with the original session date since that's what was used for insertion.
+                await vector_writer.update_session_vectors(index_id=body.therapist_id,
+                                                           namespace=patient_id,
+                                                           text=body.text,
+                                                           session_id=session_id,
+                                                           old_date=current_session_date_formatted,
+                                                           new_date=body.date,
+                                                           openai_manager=openai_manager,
+                                                           auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -259,6 +269,7 @@ class AssistantManager:
                                                 },
                                                 table_name="patients")
         assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+        current_pre_existing_history = patient_query.dict()['data'][0]['pre_existing_history']
 
         supabase_manager.update(table_name="patients",
                                 payload={
@@ -276,7 +287,7 @@ class AssistantManager:
                                     'id': payload.patient_id
                                 })
 
-        if len(payload.pre_existing_history or '') > 0:
+        if len(payload.pre_existing_history or '') > 0 and payload.pre_existing_history != current_pre_existing_history:
             await vector_writer.update_preexisting_history_vectors(index_id=payload.therapist_id,
                                                                    namespace=payload.patient_id,
                                                                    text=payload.pre_existing_history,

@@ -22,7 +22,6 @@ class SessionNotesInsert(BaseModel):
 
 class SessionNotesUpdate(BaseModel):
     therapist_id: str
-    patient_id: str
     date: str
     session_notes_id: str
     client_timezone_identifier: str

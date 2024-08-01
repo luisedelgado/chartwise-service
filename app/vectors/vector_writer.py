@@ -250,19 +250,20 @@ auth_manager – the auth manager to be leveraged internally.
 async def update_session_vectors(index_id: str,
                                  namespace: str,
                                  text: str,
-                                 date: str,
+                                 old_date: str,
+                                 new_date: str,
                                  session_id: str,
                                  openai_manager: OpenAIManager,
                                  auth_manager: AuthManager):
     try:
         # Delete the outdated data
-        delete_session_vectors(index_id, namespace, date)
+        delete_session_vectors(index_id, namespace, old_date)
 
         # Insert the fresh data
         await insert_session_vectors(index_id=index_id,
                                      namespace=namespace,
                                      text=text,
-                                     therapy_session_date=date,
+                                     therapy_session_date=new_date,
                                      session_id=session_id,
                                      openai_manager=openai_manager,
                                      auth_manager=auth_manager)
