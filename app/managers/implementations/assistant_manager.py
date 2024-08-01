@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from ..implementations.openai_manager import OpenAIManager
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
 from ...api.supabase_base_class import SupabaseBaseClass
@@ -19,6 +20,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                        auth_manager: AuthManagerBaseClass,
                                        body: SessionNotesInsert,
                                        session_id: str,
+                                       openai_manager: OpenAIManager,
                                        supabase_manager: SupabaseBaseClass) -> str:
         try:
             patient_query = supabase_manager.select(fields="*",
@@ -42,6 +44,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  therapist_id=body.therapist_id,
                                                                                  language_code=language_code,
                                                                                  auth_manager=auth_manager,
+                                                                                 openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
             supabase_manager.update(table_name="patients",
@@ -71,6 +74,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        namespace=body.patient_id,
                                                        text=body.text,
                                                        therapy_session_date=body.date,
+                                                       openai_manager=openai_manager,
                                                        auth_manager=auth_manager,
                                                        session_id=session_id)
 
@@ -82,6 +86,7 @@ class AssistantManager(AssistantManagerBaseClass):
                              auth_manager: AuthManagerBaseClass,
                              body: SessionNotesUpdate,
                              session_id: str,
+                             openai_manager: OpenAIManager,
                              supabase_manager: SupabaseBaseClass):
         try:
             report_query = supabase_manager.select(fields="*",
@@ -105,6 +110,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  therapist_id=body.therapist_id,
                                                                                  language_code=language_code,
                                                                                  auth_manager=auth_manager,
+                                                                                 openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -130,6 +136,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        text=body.text,
                                                        session_id=session_id,
                                                        date=original_session_date_formatted,
+                                                       openai_manager=openai_manager,
                                                        auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
@@ -171,6 +178,7 @@ class AssistantManager(AssistantManagerBaseClass):
                           auth_manager: AuthManagerBaseClass,
                           payload: PatientInsertPayload,
                           session_id: str,
+                          openai_manager: OpenAIManager,
                           supabase_manager: SupabaseBaseClass) -> str:
         try:
             response = supabase_manager.insert(table_name="patients",
@@ -193,6 +201,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                        namespace=patient_id,
                                                                        text=payload.pre_existing_history,
                                                                        auth_manager=auth_manager,
+                                                                       openai_manager=openai_manager,
                                                                        session_id=session_id)
 
             return patient_id
@@ -203,6 +212,7 @@ class AssistantManager(AssistantManagerBaseClass):
                              auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
                              session_id: str,
+                             openai_manager: OpenAIManager,
                              supabase_manager: SupabaseBaseClass):
         patient_query = supabase_manager.select(fields="*",
                                                 filters={
@@ -233,10 +243,12 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                    namespace=payload.patient_id,
                                                                    text=payload.pre_existing_history,
                                                                    session_id=session_id,
+                                                                   openai_manager=openai_manager,
                                                                    auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManagerBaseClass,
+                                          openai_manager: OpenAIManager,
                                           therapist_id: str,
                                           session_notes_text: str,
                                           session_id: str) -> str:
@@ -244,6 +256,7 @@ class AssistantManager(AssistantManagerBaseClass):
             soap_report = await VectorQueryWorker().create_soap_report(text=session_notes_text,
                                                                        therapist_id=therapist_id,
                                                                        auth_manager=auth_manager,
+                                                                       openai_manager=openai_manager,
                                                                        session_id=session_id)
             return soap_report
         except Exception as e:
@@ -273,6 +286,7 @@ class AssistantManager(AssistantManagerBaseClass):
                             api_method: str,
                             endpoint_name: str,
                             environment: str,
+                            openai_manager: OpenAIManager,
                             supabase_manager: SupabaseBaseClass):
         try:
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
@@ -318,6 +332,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                               method=api_method,
                                                               environment=environment,
                                                               auth_manager=auth_manager,
+                                                              openai_manager=openai_manager,
                                                               session_date_override=session_date_override):
                 yield part
         except Exception as e:
@@ -330,6 +345,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                     endpoint_name: str,
                                     api_method: str,
                                     environment: str,
+                                    openai_manager: OpenAIManager,
                                     auth_manager: AuthManagerBaseClass,
                                     supabase_manager: SupabaseBaseClass) -> str:
         try:
@@ -353,6 +369,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                therapist_id=therapist_id,
                                                                method=api_method,
                                                                environment=environment,
+                                                               openai_manager=openai_manager,
                                                                auth_manager=auth_manager)
             return result
         except Exception as e:
@@ -366,6 +383,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                          session_id: str,
                                          endpoint_name: str,
                                          api_method: str,
+                                         openai_manager: OpenAIManager,
                                          supabase_manager: SupabaseBaseClass):
         try:
             therapist_query = supabase_manager.select(fields="*",
@@ -397,6 +415,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                              method=api_method,
                                                                              environment=environment,
                                                                              auth_manager=auth_manager,
+                                                                             openai_manager=openai_manager,
                                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                              patient_gender=patient_gender)
 
@@ -408,6 +427,7 @@ class AssistantManager(AssistantManagerBaseClass):
     async def update_diarization_with_notification_data(self,
                                                         auth_manager: AuthManagerBaseClass,
                                                         supabase_manager: SupabaseBaseClass,
+                                                        openai_manager: OpenAIManager,
                                                         job_id: str,
                                                         diarization_summary: str,
                                                         diarization: str) -> str:
@@ -452,6 +472,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                                  therapist_id=therapist_id,
                                                                                  language_code=language_code,
                                                                                  auth_manager=auth_manager,
+                                                                                 openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
             supabase_manager.update(table_name="patients",
@@ -465,6 +486,7 @@ class AssistantManager(AssistantManagerBaseClass):
 
             if template == SessionNotesTemplate.SOAP.value:
                 soap_notes = await self.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                    openai_manager=openai_manager,
                                                                     therapist_id=therapist_id,
                                                                     session_notes_text=diarization_summary,
                                                                     session_id=session_id)
@@ -498,6 +520,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                        text=diarization_summary,
                                                        therapy_session_date=session_date_formatted,
                                                        auth_manager=auth_manager,
+                                                       openai_manager=openai_manager,
                                                        session_id=session_id)
             return session_id
         except Exception as e:
@@ -511,6 +534,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
+                                     openai_manager: OpenAIManager,
                                      supabase_manager: SupabaseBaseClass):
         try:
             patient_query = supabase_manager.select(fields="*",
@@ -564,6 +588,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                therapist_gender=therapist_gender,
                                                                session_number=session_number,
                                                                auth_manager=auth_manager,
+                                                               openai_manager=openai_manager,
                                                                session_date_override=session_date_override)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
@@ -579,6 +604,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
+                                    openai_manager: OpenAIManager,
                                     supabase_manager: SupabaseBaseClass):
         try:
             therapist_query = supabase_manager.select(fields="*",
@@ -609,6 +635,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                        namespace=patient_id,
                                                                        method=api_method,
                                                                        environment=environment,
+                                                                       openai_manager=openai_manager,
                                                                        auth_manager=auth_manager,
                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                        patient_gender=patient_gender)

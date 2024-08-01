@@ -17,6 +17,7 @@ from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import SessionNotesTemplate
 from ..internal.utilities import general_utilities
+from ..managers.implementations.openai_manager import OpenAIManager
 
 class ImageProcessingRouter:
 
@@ -28,11 +29,13 @@ class ImageProcessingRouter:
                  assistant_manager: AssistantManagerBaseClass,
                  auth_manager: AuthManagerBaseClass,
                  image_processing_manager: ImageProcessingManagerBaseClass,
-                 supabase_manager_factory: SupabaseFactoryBaseClass):
+                 supabase_manager_factory: SupabaseFactoryBaseClass,
+                 openai_manager: OpenAIManager):
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
         self._image_processing_manager = image_processing_manager
         self._supabase_manager_factory = supabase_manager_factory
+        self._openai_manager = openai_manager
         self.router = APIRouter()
         self._register_routes()
 
@@ -201,6 +204,7 @@ class ImageProcessingRouter:
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             soap_textraction = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
+                                                                                         openai_manager=self._openai_manager,
                                                                                          therapist_id=therapist_id,
                                                                                          session_id=session_id,
                                                                                          session_notes_text=textraction)

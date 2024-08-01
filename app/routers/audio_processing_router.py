@@ -22,6 +22,7 @@ from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import SessionNotesSource, SessionNotesTemplate
 from ..internal.utilities import datetime_handler, general_utilities
+from ..managers.implementations.openai_manager import OpenAIManager
 
 class AudioProcessingRouter:
 
@@ -34,11 +35,13 @@ class AudioProcessingRouter:
                 auth_manager: AuthManagerBaseClass,
                 assistant_manager: AssistantManagerBaseClass,
                 audio_processing_manager: AudioProcessingManagerBaseClass,
-                supabase_manager_factory: SupabaseFactoryBaseClass):
+                supabase_manager_factory: SupabaseFactoryBaseClass,
+                openai_manager: OpenAIManager):
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
             self._supabase_manager_factory = supabase_manager_factory
+            self._openai_manager = openai_manager
             self.router = APIRouter()
             self._register_routes()
 
@@ -141,6 +144,7 @@ class AudioProcessingRouter:
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
             transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
+                                                                                    openai_manager=self._openai_manager,
                                                                                     auth_manager=self._auth_manager,
                                                                                     template=template,
                                                                                     therapist_id=therapist_id,
@@ -299,6 +303,7 @@ class AudioProcessingRouter:
             supabase_admin_manager = self._supabase_manager_factory.supabase_admin_manager()
             session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                                                  supabase_manager=supabase_admin_manager,
+                                                                                                 openai_manager=self._openai_manager,
                                                                                                  job_id=job_id,
                                                                                                  diarization_summary=summary,
                                                                                                  diarization=diarization)

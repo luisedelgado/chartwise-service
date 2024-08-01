@@ -10,6 +10,7 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
+from ..implementations.openai_manager import OpenAIManager
 from ...api.assistant_base_class import AssistantManagerBaseClass
 from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
 from ...api.auth_base_class import AuthManagerBaseClass
@@ -23,6 +24,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
     async def transcribe_audio_file(self,
                                     auth_manager: AuthManagerBaseClass,
                                     assistant_manager: AssistantManagerBaseClass,
+                                    openai_manager: OpenAIManager,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
                                     session_id: str,
@@ -103,6 +105,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
 
         assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
         return await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                   openai_manager=openai_manager,
                                                                    therapist_id=therapist_id,
                                                                    session_notes_text=transcript,
                                                                    session_id=session_id)

@@ -9,10 +9,10 @@ from pinecone import ServerlessSpec, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 
-from ..api.auth_base_class import AuthManagerBaseClass
 from . import data_cleaner
-from .embeddings import create_embeddings
 from .vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
+from ..api.auth_base_class import AuthManagerBaseClass
+from ..managers.implementations.openai_manager import OpenAIManager
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
@@ -24,6 +24,7 @@ namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 session_id – the session_id.
 auth_manager – the auth manager to be leveraged internally.
+openai_manager – the openai manager to be leveraged internally.
 therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
 """
 async def insert_session_vectors(index_id: str,
@@ -31,6 +32,7 @@ async def insert_session_vectors(index_id: str,
                                  text: str,
                                  session_id: str,
                                  auth_manager: AuthManagerBaseClass,
+                                 openai_manager: OpenAIManager,
                                  therapy_session_date: str = None):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -63,6 +65,7 @@ async def insert_session_vectors(index_id: str,
             chunk_summary = await vector_query_worker.summarize_chunk(chunk_text=chunk_text,
                                                                       therapist_id=index_id,
                                                                       auth_manager=auth_manager,
+                                                                      openai_manager=openai_manager,
                                                                       session_id=session_id)
 
             vector_store.namespace = namespace
@@ -73,8 +76,8 @@ async def insert_session_vectors(index_id: str,
                 "chunk_text": chunk_text
             })
 
-            doc.embedding = create_embeddings(text=chunk_summary,
-                                              auth_manager=auth_manager)
+            doc.embedding = await openai_manager.create_embeddings(text=chunk_summary,
+                                                                   auth_manager=auth_manager)
             vectors.append(doc)
 
         vector_store.add(vectors)
@@ -94,12 +97,14 @@ index_id – the index name that should be used to insert the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 session_id – the session_id.
+openai_manager – the openai manager to be leveraged internally.
 auth_manager – the auth manager to be leveraged internally.
 """
 async def insert_preexisting_history_vectors(index_id: str,
                                              namespace: str,
                                              text: str,
                                              session_id: str,
+                                             openai_manager: OpenAIManager,
                                              auth_manager: AuthManagerBaseClass):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -132,13 +137,14 @@ async def insert_preexisting_history_vectors(index_id: str,
             chunk_summary = await vector_query_worker.summarize_chunk(chunk_text=chunk_text,
                                                                       therapist_id=index_id,
                                                                       auth_manager=auth_manager,
+                                                                      openai_manager=openai_manager,
                                                                       session_id=session_id)
 
             vector_store.namespace = "".join([namespace,
                                                 "-",
                                                 PRE_EXISTING_HISTORY_PREFIX])
             doc.id_ = f"{PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
-            doc.embedding = create_embeddings(text=chunk_summary, auth_manager=auth_manager)
+            doc.embedding = await openai_manager.create_embeddings(text=chunk_summary, auth_manager=auth_manager)
             doc.metadata.update({
                 "pre_existing_history_summary": chunk_summary,
                 "pre_existing_history_text": chunk_text
@@ -238,6 +244,7 @@ namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 date – the session_date to be used as metadata.
 session_id – the session_id.
+openai_manager – the openai manager to be leveraged internally.
 auth_manager – the auth manager to be leveraged internally.
 """
 async def update_session_vectors(index_id: str,
@@ -245,6 +252,7 @@ async def update_session_vectors(index_id: str,
                                  text: str,
                                  date: str,
                                  session_id: str,
+                                 openai_manager: OpenAIManager,
                                  auth_manager: AuthManagerBaseClass):
     try:
         # Delete the outdated data
@@ -256,6 +264,7 @@ async def update_session_vectors(index_id: str,
                                      text=text,
                                      therapy_session_date=date,
                                      session_id=session_id,
+                                     openai_manager=openai_manager,
                                      auth_manager=auth_manager)
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))
@@ -270,12 +279,14 @@ index_id – the index that should be used to update the data.
 namespace – the namespace that should be used for manipulating the index.
 text – the text to be inserted in the record.
 session_id – the session_id.
+openai_manager – the openai manager to be leveraged internally.
 auth_manager – the auth manager to be leveraged internally.
 """
 async def update_preexisting_history_vectors(index_id: str,
                                              namespace: str,
                                              text: str,
                                              session_id: str,
+                                             openai_manager: OpenAIManager,
                                              auth_manager: AuthManagerBaseClass):
     try:
         # Delete the outdated data
@@ -286,6 +297,7 @@ async def update_preexisting_history_vectors(index_id: str,
                                                  namespace=namespace,
                                                  text=text,
                                                  session_id=session_id,
+                                                 openai_manager=openai_manager,
                                                  auth_manager=auth_manager)
     except PineconeApiException as e:
         raise HTTPException(status_code=e.status, detail=str(e))

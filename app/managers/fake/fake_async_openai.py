@@ -1,3 +1,5 @@
+from ...api.openai_base_class import OpenAIBaseClass
+
 class FakeOpenAICompletions:
 
     def create(self,
@@ -12,7 +14,7 @@ class FakeOpenAIChat:
     def __init__(self):
         self.completions = FakeOpenAICompletions()
 
-class FakeAsyncOpenAI:
+class FakeAsyncOpenAI(OpenAIBaseClass):
 
     def __init__(self):
         self.chat = FakeOpenAIChat()

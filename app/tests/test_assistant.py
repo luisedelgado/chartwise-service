@@ -28,6 +28,7 @@ class TestingHarnessAssistantRouter:
         self.auth_manager = AuthManager()
         self.assistant_manager = AssistantManager()
         self.audio_processing_manager = AudioProcessingManager()
+        self.fake_openai_manager = FakeAsyncOpenAI()
         self.fake_supabase_admin_manager = FakeSupabaseManager()
         self.fake_supabase_user_manager = FakeSupabaseManager()
         self.fake_supabase_manager_factory = FakeSupabaseManagerFactory(fake_supabase_admin_manager=self.fake_supabase_admin_manager,
@@ -38,6 +39,7 @@ class TestingHarnessAssistantRouter:
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
                                                                           auth_manager=self.auth_manager,
                                                                           assistant_manager=self.assistant_manager,
+                                                                          openai_manager=self.fake_openai_manager,
                                                                           supabase_manager_factory=self.fake_supabase_manager_factory).router,
                                                           SecurityRouter(auth_manager=self.auth_manager,
                                                                          assistant_manager=self.assistant_manager,

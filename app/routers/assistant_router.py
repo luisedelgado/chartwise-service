@@ -25,6 +25,7 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesUpdate,
                               TemplatePayload)
 from ..internal.utilities import datetime_handler, general_utilities
+from ..managers.implementations.openai_manager import OpenAIManager
 
 class AssistantRouter:
 
@@ -42,10 +43,12 @@ class AssistantRouter:
                  environment: str,
                  auth_manager: AuthManagerBaseClass,
                  assistant_manager: AssistantManagerBaseClass,
+                 openai_manager: OpenAIManager,
                  supabase_manager_factory: SupabaseFactoryBaseClass):
         self._environment = environment
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
+        self._openai_manager = openai_manager
         self._supabase_manager_factory = supabase_manager_factory
         self.router = APIRouter()
         self._register_routes()
@@ -330,6 +333,7 @@ class AssistantRouter:
             session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                       body=body,
                                                                                       session_id=session_id,
+                                                                                      openai_manager=self._openai_manager,
                                                                                       supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -406,6 +410,7 @@ class AssistantRouter:
             await self._assistant_manager.update_session(auth_manager=self._auth_manager,
                                                          body=body,
                                                          session_id=session_id,
+                                                         openai_manager=self._openai_manager,
                                                          supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -550,6 +555,7 @@ class AssistantRouter:
                                                                     api_method=post_api_method,
                                                                     endpoint_name=self.QUERIES_ENDPOINT,
                                                                     environment=self._environment,
+                                                                    openai_manager=self._openai_manager,
                                                                     supabase_manager=supabase_manager):
                 yield part
 
@@ -626,6 +632,7 @@ class AssistantRouter:
                                                                          api_method=get_api_method,
                                                                          environment=self._environment,
                                                                          auth_manager=self._auth_manager,
+                                                                         openai_manager=self._openai_manager,
                                                                          supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -705,6 +712,7 @@ class AssistantRouter:
                                                                                  endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                                  api_method=get_api_method,
                                                                                  auth_manager=self._auth_manager,
+                                                                                 openai_manager=self._openai_manager,
                                                                                  supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -783,6 +791,7 @@ class AssistantRouter:
                                                                                       session_id=session_id,
                                                                                       endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                                                                                       api_method=get_api_method,
+                                                                                      openai_manager=self._openai_manager,
                                                                                       supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -856,6 +865,7 @@ class AssistantRouter:
             patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
                                                                    payload=body,
                                                                    session_id=session_id,
+                                                                   openai_manager=self._openai_manager,
                                                                    supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -932,6 +942,7 @@ class AssistantRouter:
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
                                                          payload=body,
                                                          session_id=session_id,
+                                                         openai_manager=self._openai_manager,
                                                          supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -1100,6 +1111,7 @@ class AssistantRouter:
                                                                               session_id=session_id,
                                                                               endpoint_name=self.TOPICS_ENDPOINT,
                                                                               api_method=get_api_method,
+                                                                              openai_manager=self._openai_manager,
                                                                               supabase_manager=supabase_manager)
 
             logger.log_api_response(session_id=session_id,
@@ -1166,6 +1178,7 @@ class AssistantRouter:
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
             soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
+                                                                                   openai_manager=self._openai_manager,
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)

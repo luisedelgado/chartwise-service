@@ -7,6 +7,7 @@ from ..internal.model import (AssistantQuery,
                               PatientUpdatePayload,
                               SessionNotesInsert,
                               SessionNotesUpdate)
+from ..managers.implementations.openai_manager import OpenAIManager
 
 class AssistantManagerBaseClass(ABC):
 
@@ -23,6 +24,7 @@ class AssistantManagerBaseClass(ABC):
     async def process_new_session_data(auth_manager: AuthManagerBaseClass,
                                        body: SessionNotesInsert,
                                        session_id: str,
+                                       openai_manager: OpenAIManager,
                                        supabase_manager: SupabaseBaseClass) -> str:
         pass
 
@@ -38,6 +40,7 @@ class AssistantManagerBaseClass(ABC):
     async def update_session(auth_manager: AuthManagerBaseClass,
                              body: SessionNotesUpdate,
                              session_id: str,
+                             openai_manager: OpenAIManager,
                              supabase_manager: SupabaseBaseClass):
         pass
 
@@ -68,6 +71,7 @@ class AssistantManagerBaseClass(ABC):
     async def add_patient(auth_manager: AuthManagerBaseClass,
                           payload: PatientInsertPayload,
                           session_id: str,
+                          openai_manager: OpenAIManager,
                           supabase_manager: SupabaseBaseClass) -> str:
         pass
 
@@ -83,6 +87,7 @@ class AssistantManagerBaseClass(ABC):
     async def update_patient(auth_manager: AuthManagerBaseClass,
                              payload: PatientUpdatePayload,
                              session_id: str,
+                             openai_manager: OpenAIManager,
                              supabase_manager: SupabaseBaseClass):
         pass
 
@@ -97,6 +102,7 @@ class AssistantManagerBaseClass(ABC):
     """
     async def adapt_session_notes_to_soap(auth_manager: AuthManagerBaseClass,
                                           therapist_id: str,
+                                          openai_manager: OpenAIManager,
                                           session_notes_text: str,
                                           session_id: str) -> str:
         pass
@@ -138,6 +144,7 @@ class AssistantManagerBaseClass(ABC):
                             api_method: str,
                             endpoint_name: str,
                             environment: str,
+                            openai_manager: OpenAIManager,
                             supabase_manager: SupabaseBaseClass):
         pass
 
@@ -160,6 +167,7 @@ class AssistantManagerBaseClass(ABC):
                                     endpoint_name: str,
                                     api_method: str,
                                     environment: str,
+                                    openai_manager: OpenAIManager,
                                     auth_manager: AuthManagerBaseClass,
                                     supabase_manager: SupabaseBaseClass):
         pass
@@ -184,6 +192,7 @@ class AssistantManagerBaseClass(ABC):
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
+                                     openai_manager: OpenAIManager,
                                      supabase_manager: SupabaseBaseClass):
         pass
 
@@ -207,6 +216,7 @@ class AssistantManagerBaseClass(ABC):
                                          session_id: str,
                                          endpoint_name: str,
                                          api_method: str,
+                                         openai_manager: OpenAIManager,
                                          supabase_manager: SupabaseBaseClass):
         pass
 
@@ -224,6 +234,7 @@ class AssistantManagerBaseClass(ABC):
     def update_diarization_with_notification_data(auth_manager: AuthManagerBaseClass,
                                                   supabase_manager: SupabaseBaseClass,
                                                   job_id: str,
+                                                  openai_manager: OpenAIManager,
                                                   diarization_summary: str,
                                                   diarization: str) -> str:
         pass
@@ -248,5 +259,6 @@ class AssistantManagerBaseClass(ABC):
                                     session_id: str,
                                     endpoint_name: str,
                                     api_method: str,
+                                    openai_manager: OpenAIManager,
                                     supabase_manager: SupabaseBaseClass):
         pass
