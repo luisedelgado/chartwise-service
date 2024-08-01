@@ -9,8 +9,6 @@ from fastapi import (APIRouter,
 from fastapi.responses import StreamingResponse
 from typing import Annotated, Union
 
-from ..api.assistant_base_class import AssistantManagerBaseClass
-from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import security
 from ..internal.logging import Logger
@@ -25,6 +23,8 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesUpdate,
                               TemplatePayload)
 from ..internal.utilities import datetime_handler, general_utilities
+from ..managers.implementations.assistant_manager import AssistantManager
+from ..managers.implementations.auth_manager import AuthManager
 from ..managers.implementations.openai_manager import OpenAIManager
 
 class AssistantRouter:
@@ -41,8 +41,8 @@ class AssistantRouter:
 
     def __init__(self,
                  environment: str,
-                 auth_manager: AuthManagerBaseClass,
-                 assistant_manager: AssistantManagerBaseClass,
+                 auth_manager: AuthManager,
+                 assistant_manager: AssistantManager,
                  openai_manager: OpenAIManager,
                  supabase_manager_factory: SupabaseFactoryBaseClass):
         self._environment = environment

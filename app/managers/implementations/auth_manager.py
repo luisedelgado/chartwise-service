@@ -8,10 +8,9 @@ from typing import Union
 
 from ...api.supabase_base_class import SupabaseBaseClass
 from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
-from ...api.auth_base_class import AuthManagerBaseClass
 from ...internal.security import Token
 
-class AuthManager(AuthManagerBaseClass):
+class AuthManager:
 
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"

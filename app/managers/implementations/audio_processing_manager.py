@@ -10,20 +10,19 @@ from httpx import Timeout
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
+from ..implementations.assistant_manager import AssistantManager
+from ..implementations.auth_manager import AuthManager
 from ..implementations.openai_manager import OpenAIManager
-from ...api.assistant_base_class import AssistantManagerBaseClass
-from ...api.audio_processing_base_class import AudioProcessingManagerBaseClass
-from ...api.auth_base_class import AuthManagerBaseClass
 from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...internal.logging import Logger
 from ...internal.model import SessionNotesTemplate
 from ...internal.utilities import file_copiers
 
-class AudioProcessingManager(AudioProcessingManagerBaseClass):
+class AudioProcessingManager:
 
     async def transcribe_audio_file(self,
-                                    auth_manager: AuthManagerBaseClass,
-                                    assistant_manager: AssistantManagerBaseClass,
+                                    auth_manager: AuthManager,
+                                    assistant_manager: AssistantManager,
                                     openai_manager: OpenAIManager,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
@@ -141,7 +140,7 @@ class AudioProcessingManager(AudioProcessingManagerBaseClass):
         }
 
     async def diarize_audio_file(self,
-                                 auth_manager: AuthManagerBaseClass,
+                                 auth_manager: AuthManager,
                                  supabase_manager_factory: SupabaseFactoryBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,

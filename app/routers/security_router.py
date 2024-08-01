@@ -9,12 +9,12 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..api.auth_base_class import AuthManagerBaseClass
-from ..api.assistant_base_class import AssistantManagerBaseClass
 from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import model, security
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, general_utilities
+from ..managers.implementations.assistant_manager import AssistantManager
+from ..managers.implementations.auth_manager import AuthManager
 
 class SecurityRouter:
 
@@ -24,8 +24,8 @@ class SecurityRouter:
     THERAPISTS_ENDPOINT = "/v1/therapists"
 
     def __init__(self,
-                 auth_manager: AuthManagerBaseClass,
-                 assistant_manager: AssistantManagerBaseClass,
+                 auth_manager: AuthManager,
+                 assistant_manager: AssistantManager,
                  supabase_manager_factory: SupabaseFactoryBaseClass):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager

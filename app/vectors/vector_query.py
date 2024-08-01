@@ -6,8 +6,8 @@ from datetime import datetime
 from pinecone import Pinecone, Index
 
 from .message_templates import PromptCrafter, PromptScenario
-from ..api.auth_base_class import AuthManagerBaseClass
 from ..internal.utilities import datetime_handler
+from ..managers.implementations.auth_manager import AuthManager
 from ..managers.implementations.openai_manager import OpenAIManager
 
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
@@ -51,7 +51,7 @@ class VectorQueryWorker:
                           endpoint_name: str,
                           method: str,
                           environment: str,
-                          auth_manager: AuthManagerBaseClass,
+                          auth_manager: AuthManager,
                           openai_manager: OpenAIManager,
                           session_date_override: IncludeSessionDateOverride = None):
         try:
@@ -128,7 +128,7 @@ class VectorQueryWorker:
                               method: str,
                               environment: str,
                               openai_manager: OpenAIManager,
-                              auth_manager: AuthManagerBaseClass) -> str:
+                              auth_manager: AuthManager) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.GREETING)
@@ -198,7 +198,7 @@ class VectorQueryWorker:
                               therapist_name: str,
                               therapist_gender: str,
                               session_number: int,
-                              auth_manager: AuthManagerBaseClass,
+                              auth_manager: AuthManager,
                               openai_manager: OpenAIManager,
                               session_date_override: IncludeSessionDateOverride = None) -> str:
         try:
@@ -286,7 +286,7 @@ class VectorQueryWorker:
                                           patient_name: str,
                                           patient_gender: str,
                                           openai_manager: OpenAIManager,
-                                          auth_manager: AuthManagerBaseClass) -> str:
+                                          auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 3 questions that I could ask about {patient_name}'s session history?"
             context = await self._get_vector_store_context(auth_manager=auth_manager,
@@ -363,7 +363,7 @@ class VectorQueryWorker:
                                     patient_name: str,
                                     patient_gender: str,
                                     openai_manager: OpenAIManager,
-                                    auth_manager: AuthManagerBaseClass) -> str:
+                                    auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are the 3 topics that come up the most in {patient_name}'s sessions?"
             context = await self._get_vector_store_context(auth_manager=auth_manager,
@@ -426,7 +426,7 @@ class VectorQueryWorker:
     async def create_soap_report(self,
                                  text: str,
                                  therapist_id: str,
-                                 auth_manager: AuthManagerBaseClass,
+                                 auth_manager: AuthManager,
                                  openai_manager: OpenAIManager,
                                  session_id: str) -> str:
         try:
@@ -466,7 +466,7 @@ class VectorQueryWorker:
     async def summarize_chunk(self,
                               chunk_text: str,
                               therapist_id: str,
-                              auth_manager: AuthManagerBaseClass,
+                              auth_manager: AuthManager,
                               openai_manager: OpenAIManager,
                               session_id: str) -> str:
         try:
@@ -508,7 +508,7 @@ class VectorQueryWorker:
                                           session_notes: str,
                                           therapist_id: str,
                                           language_code: str,
-                                          auth_manager: AuthManagerBaseClass,
+                                          auth_manager: AuthManager,
                                           openai_manager: OpenAIManager,
                                           session_id: str) -> str:
         try:
@@ -540,7 +540,7 @@ class VectorQueryWorker:
     # Private
 
     async def _get_vector_store_context(self,
-                                        auth_manager: AuthManagerBaseClass,
+                                        auth_manager: AuthManager,
                                         openai_manager: OpenAIManager,
                                         query_input: str,
                                         index_id: str,

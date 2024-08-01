@@ -3,14 +3,13 @@ import base64, os, requests
 from fastapi import (File, HTTPException, status, UploadFile)
 from portkey_ai import Portkey
 
-from ...api.image_processing_base_class import ImageProcessingManagerBaseClass
-from ...api.auth_base_class import AuthManagerBaseClass
+from ..implementations.auth_manager import AuthManager
 from ...internal.utilities import file_copiers
 
-class ImageProcessingManager(ImageProcessingManagerBaseClass):
+class ImageProcessingManager:
 
     async def upload_image_for_textraction(self,
-                                           auth_manager: AuthManagerBaseClass,
+                                           auth_manager: AuthManager,
                                            image: UploadFile = File(...)) -> str:
         files_to_clean = None
         try:

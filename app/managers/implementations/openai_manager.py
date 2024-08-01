@@ -4,7 +4,7 @@ from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
 
-from ...api.auth_base_class import AuthManagerBaseClass
+from ..implementations.auth_manager import AuthManager
 from ...api.openai_base_class import OpenAIBaseClass
 
 class OpenAIManager(OpenAIBaseClass):
@@ -17,7 +17,7 @@ class OpenAIManager(OpenAIBaseClass):
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
-                                            auth_manager: AuthManagerBaseClass,
+                                            auth_manager: AuthManager,
                                             cache_configuration: dict = None):
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
@@ -54,7 +54,7 @@ class OpenAIManager(OpenAIBaseClass):
                                               metadata: dict,
                                               max_tokens: int,
                                               messages: list,
-                                              auth_manager: AuthManagerBaseClass,
+                                              auth_manager: AuthManager,
                                               cache_configuration: dict = None):
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
@@ -91,7 +91,7 @@ class OpenAIManager(OpenAIBaseClass):
             raise Exception(e)
 
     async def create_embeddings(self,
-                                auth_manager: AuthManagerBaseClass,
+                                auth_manager: AuthManager,
                                 text: str):
         if auth_manager.is_monitoring_proxy_reachable():
             portkey = Portkey(

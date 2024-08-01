@@ -1,6 +1,6 @@
 from abc import ABC
 
-from ..api.auth_base_class import AuthManagerBaseClass
+from ..managers.implementations.auth_manager import AuthManager
 
 class OpenAIBaseClass(ABC):
 
@@ -8,17 +8,17 @@ class OpenAIBaseClass(ABC):
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
-                                            auth_manager: AuthManagerBaseClass,
+                                            auth_manager: AuthManager,
                                             cache_configuration: dict = None):
         pass
 
     async def stream_chat_completion_internal(metadata: dict,
                                               max_tokens: int,
                                               messages: list,
-                                              auth_manager: AuthManagerBaseClass,
+                                              auth_manager: AuthManager,
                                               cache_configuration: dict = None):
         pass
 
-    async def create_embeddings(auth_manager: AuthManagerBaseClass,
+    async def create_embeddings(auth_manager: AuthManager,
                                 text: str):
         pass

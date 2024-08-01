@@ -13,9 +13,6 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
-from ..api.assistant_base_class import AssistantManagerBaseClass
-from ..api.audio_processing_base_class import AudioProcessingManagerBaseClass
-from ..api.auth_base_class import AuthManagerBaseClass
 from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..internal import security
@@ -23,6 +20,9 @@ from ..internal.logging import Logger
 from ..internal.model import SessionNotesSource, SessionNotesTemplate
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.implementations.openai_manager import OpenAIManager
+from ..managers.implementations.assistant_manager import AssistantManager
+from ..managers.implementations.audio_processing_manager import AudioProcessingManager
+from ..managers.implementations.auth_manager import AuthManager
 
 class AudioProcessingRouter:
 
@@ -32,9 +32,9 @@ class AudioProcessingRouter:
     ROUTER_TAG = "audio-files"
 
     def __init__(self,
-                auth_manager: AuthManagerBaseClass,
-                assistant_manager: AssistantManagerBaseClass,
-                audio_processing_manager: AudioProcessingManagerBaseClass,
+                auth_manager: AuthManager,
+                assistant_manager: AssistantManager,
+                audio_processing_manager: AudioProcessingManager,
                 supabase_manager_factory: SupabaseFactoryBaseClass,
                 openai_manager: OpenAIManager):
             self._auth_manager = auth_manager

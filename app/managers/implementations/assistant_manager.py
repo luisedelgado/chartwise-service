@@ -1,8 +1,7 @@
 from datetime import datetime
 
 from ..implementations.openai_manager import OpenAIManager
-from ...api.assistant_base_class import AssistantManagerBaseClass
-from ...api.auth_base_class import AuthManagerBaseClass
+from ..implementations.auth_manager import AuthManager
 from ...api.supabase_base_class import SupabaseBaseClass
 from ...internal.model import (AssistantQuery,
                                PatientInsertPayload,
@@ -14,10 +13,10 @@ from ...internal.utilities import datetime_handler
 from ...vectors import vector_writer
 from ...vectors.vector_query import IncludeSessionDateOverride, VectorQueryWorker
 
-class AssistantManager(AssistantManagerBaseClass):
+class AssistantManager:
 
     async def process_new_session_data(self,
-                                       auth_manager: AuthManagerBaseClass,
+                                       auth_manager: AuthManager,
                                        body: SessionNotesInsert,
                                        session_id: str,
                                        openai_manager: OpenAIManager,
@@ -83,7 +82,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     async def update_session(self,
-                             auth_manager: AuthManagerBaseClass,
+                             auth_manager: AuthManager,
                              body: SessionNotesUpdate,
                              session_id: str,
                              openai_manager: OpenAIManager,
@@ -142,7 +141,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     def delete_session(self,
-                       auth_manager: AuthManagerBaseClass,
+                       auth_manager: AuthManager,
                        therapist_id: str,
                        session_report_id: str,
                        supabase_manager: SupabaseBaseClass):
@@ -175,7 +174,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     async def add_patient(self,
-                          auth_manager: AuthManagerBaseClass,
+                          auth_manager: AuthManager,
                           payload: PatientInsertPayload,
                           session_id: str,
                           openai_manager: OpenAIManager,
@@ -209,7 +208,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     async def update_patient(self,
-                             auth_manager: AuthManagerBaseClass,
+                             auth_manager: AuthManager,
                              payload: PatientUpdatePayload,
                              session_id: str,
                              openai_manager: OpenAIManager,
@@ -247,7 +246,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                                                    auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
-                                          auth_manager: AuthManagerBaseClass,
+                                          auth_manager: AuthManager,
                                           openai_manager: OpenAIManager,
                                           therapist_id: str,
                                           session_notes_text: str,
@@ -280,7 +279,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     async def query_session(self,
-                            auth_manager: AuthManagerBaseClass,
+                            auth_manager: AuthManager,
                             query: AssistantQuery,
                             session_id: str,
                             api_method: str,
@@ -346,7 +345,7 @@ class AssistantManager(AssistantManagerBaseClass):
                                     api_method: str,
                                     environment: str,
                                     openai_manager: OpenAIManager,
-                                    auth_manager: AuthManagerBaseClass,
+                                    auth_manager: AuthManager,
                                     supabase_manager: SupabaseBaseClass) -> str:
         try:
             therapist_query = supabase_manager.select(fields="*",
@@ -378,7 +377,7 @@ class AssistantManager(AssistantManagerBaseClass):
     async def fetch_question_suggestions(self,
                                          therapist_id: str,
                                          patient_id: str,
-                                         auth_manager: AuthManagerBaseClass,
+                                         auth_manager: AuthManager,
                                          environment: str,
                                          session_id: str,
                                          endpoint_name: str,
@@ -425,7 +424,7 @@ class AssistantManager(AssistantManagerBaseClass):
             raise Exception(e)
 
     async def update_diarization_with_notification_data(self,
-                                                        auth_manager: AuthManagerBaseClass,
+                                                        auth_manager: AuthManager,
                                                         supabase_manager: SupabaseBaseClass,
                                                         openai_manager: OpenAIManager,
                                                         job_id: str,
@@ -529,7 +528,7 @@ class AssistantManager(AssistantManagerBaseClass):
     async def create_patient_summary(self,
                                      therapist_id: str,
                                      patient_id: str,
-                                     auth_manager: AuthManagerBaseClass,
+                                     auth_manager: AuthManager,
                                      environment: str,
                                      session_id: str,
                                      endpoint_name: str,
@@ -599,7 +598,7 @@ class AssistantManager(AssistantManagerBaseClass):
     async def fetch_frequent_topics(self,
                                     therapist_id: str,
                                     patient_id: str,
-                                    auth_manager: AuthManagerBaseClass,
+                                    auth_manager: AuthManager,
                                     environment: str,
                                     session_id: str,
                                     endpoint_name: str,
