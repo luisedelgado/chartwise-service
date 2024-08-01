@@ -526,8 +526,15 @@ class AssistantManager:
 
             patient_query_dict = patient_query.dict()
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
-            patient_last_session_date = datetime_handler.retrieve_most_recent_date(session_date_formatted,
-                                                                                   datetime_handler.convert_to_internal_date_format(patient_last_session_date))
+
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
+            if patient_last_session_date is None:
+                patient_last_session_date = session_date_formatted
+            else:
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(session_date_formatted,
+                                                                                       datetime_handler.convert_to_internal_date_format(patient_last_session_date))
+
             supabase_manager.update(table_name="patients",
                                     payload={
                                         "last_session_date": patient_last_session_date,
