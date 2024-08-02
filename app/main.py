@@ -1,6 +1,7 @@
 import os
 
 from .dependencies.implementation.openai_client import OpenAIClient
+from .dependencies.implementation.pinecone_client import PineconeClient
 from .dependencies.implementation.supabase_client_factory import SupabaseClientFactory
 from .internal.model import RouterDependencies
 from .routers.assistant_router import AssistantRouter
@@ -20,21 +21,25 @@ audio_processing_manager = AudioProcessingManager()
 image_processing_manager = ImageProcessingManager()
 supabase_client_factory = SupabaseClientFactory()
 openai_client = OpenAIClient()
+pinecone_client = PineconeClient()
 
 app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment,
                                                     auth_manager=auth_manager,
                                                     assistant_manager=assistant_manager,
                                                     router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                           pinecone_client=pinecone_client,
                                                                                            supabase_client_factory=supabase_client_factory)).router,
                                     AudioProcessingRouter(auth_manager=auth_manager,
                                                           assistant_manager=assistant_manager,
                                                           audio_processing_manager=audio_processing_manager,
                                                           router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                                 pinecone_client=pinecone_client,
                                                                                                  supabase_client_factory=supabase_client_factory)).router,
                                     SecurityRouter(auth_manager=auth_manager,
                                                    assistant_manager=assistant_manager,
-                                                   router_dependencies=RouterDependencies(supabase_client_factory=supabase_client_factory)).router,
+                                                   router_dependencies=RouterDependencies(supabase_client_factory=supabase_client_factory,
+                                                                                          pinecone_client=pinecone_client)).router,
                                     ImageProcessingRouter(assistant_manager=assistant_manager,
                                                           auth_manager=auth_manager,
                                                           image_processing_manager=image_processing_manager,

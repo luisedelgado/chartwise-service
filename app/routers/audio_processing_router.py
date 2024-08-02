@@ -37,6 +37,7 @@ class AudioProcessingRouter:
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
+            self._pinecone_client = router_dependencies.pinecone_client
             self._supabase_client_factory = router_dependencies.supabase_client_factory
             self._openai_client = router_dependencies.openai_client
             self.router = APIRouter()
@@ -301,6 +302,7 @@ class AudioProcessingRouter:
             session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                                                  supabase_client=supabase_admin_client,
                                                                                                  openai_client=self._openai_client,
+                                                                                                 pinecone_client=self._pinecone_client,
                                                                                                  job_id=job_id,
                                                                                                  diarization_summary=summary,
                                                                                                  diarization=diarization)

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
+from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..internal.model import (AssistantQuery,
@@ -10,7 +11,6 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesTemplate,
                               SessionNotesUpdate)
 from ..internal.utilities import datetime_handler
-from ..vectors import vector_writer
 from ..vectors.vector_query import IncludeSessionDateOverride, VectorQueryWorker
 
 class AssistantManager:
@@ -20,7 +20,8 @@ class AssistantManager:
                                        body: SessionNotesInsert,
                                        session_id: str,
                                        openai_client: OpenAIBaseClass,
-                                       supabase_client: SupabaseBaseClass) -> str:
+                                       supabase_client: SupabaseBaseClass,
+                                       pinecone_client: PineconeBaseClass) -> str:
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -80,13 +81,13 @@ class AssistantManager:
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
-            await vector_writer.insert_session_vectors(index_id=body.therapist_id,
-                                                       namespace=body.patient_id,
-                                                       text=body.text,
-                                                       therapy_session_date=body.date,
-                                                       openai_client=openai_client,
-                                                       auth_manager=auth_manager,
-                                                       session_id=session_id)
+            await pinecone_client.insert_session_vectors(index_id=body.therapist_id,
+                                                         namespace=body.patient_id,
+                                                         text=body.text,
+                                                         therapy_session_date=body.date,
+                                                         openai_client=openai_client,
+                                                         auth_manager=auth_manager,
+                                                         session_id=session_id)
 
             return session_notes_id
         except Exception as e:
@@ -97,7 +98,8 @@ class AssistantManager:
                              body: SessionNotesUpdate,
                              session_id: str,
                              openai_client: OpenAIBaseClass,
-                             supabase_client: SupabaseBaseClass):
+                             supabase_client: SupabaseBaseClass,
+                             pinecone_client: PineconeBaseClass):
         try:
             report_query = supabase_client.select(fields="*",
                                                   table_name="session_reports",
@@ -150,21 +152,22 @@ class AssistantManager:
 
             if session_date_changed or session_text_changed:
                 # Upload vector embeddings with the original session date since that's what was used for insertion.
-                await vector_writer.update_session_vectors(index_id=body.therapist_id,
-                                                           namespace=patient_id,
-                                                           text=body.text,
-                                                           session_id=session_id,
-                                                           old_date=current_session_date_formatted,
-                                                           new_date=body.date,
-                                                           openai_client=openai_client,
-                                                           auth_manager=auth_manager)
+                await pinecone_client.update_session_vectors(index_id=body.therapist_id,
+                                                             namespace=patient_id,
+                                                             text=body.text,
+                                                             session_id=session_id,
+                                                             old_date=current_session_date_formatted,
+                                                             new_date=body.date,
+                                                             openai_client=openai_client,
+                                                             auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
     def delete_session(self,
                        therapist_id: str,
                        session_report_id: str,
-                       supabase_client: SupabaseBaseClass):
+                       supabase_client: SupabaseBaseClass,
+                       pinecone_client: PineconeBaseClass):
         try:
             # Validate the session report is linked to the therapist id
             report_query = supabase_client.select(fields="*",
@@ -223,9 +226,9 @@ class AssistantManager:
 
             # Delete vector embeddings
             session_date_formatted = datetime_handler.convert_to_internal_date_format(session_date)
-            vector_writer.delete_session_vectors(index_id=therapist_id,
-                                                 namespace=patient_id,
-                                                 date=session_date_formatted)
+            pinecone_client.delete_session_vectors(index_id=therapist_id,
+                                                   namespace=patient_id,
+                                                   date=session_date_formatted)
         except Exception as e:
             raise Exception(e)
 
@@ -234,7 +237,8 @@ class AssistantManager:
                           payload: PatientInsertPayload,
                           session_id: str,
                           openai_client: OpenAIBaseClass,
-                          supabase_client: SupabaseBaseClass) -> str:
+                          supabase_client: SupabaseBaseClass,
+                          pinecone_client: PineconeBaseClass) -> str:
         try:
             response = supabase_client.insert(table_name="patients",
                                               payload={
@@ -252,12 +256,12 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if len(payload.pre_existing_history or '') > 0:
-                await vector_writer.insert_preexisting_history_vectors(index_id=payload.therapist_id,
-                                                                       namespace=patient_id,
-                                                                       text=payload.pre_existing_history,
-                                                                       auth_manager=auth_manager,
-                                                                       openai_client=openai_client,
-                                                                       session_id=session_id)
+                await pinecone_client.insert_preexisting_history_vectors(index_id=payload.therapist_id,
+                                                                         namespace=patient_id,
+                                                                         text=payload.pre_existing_history,
+                                                                         auth_manager=auth_manager,
+                                                                         openai_client=openai_client,
+                                                                         session_id=session_id)
 
             return patient_id
         except Exception as e:
@@ -268,7 +272,8 @@ class AssistantManager:
                              payload: PatientUpdatePayload,
                              session_id: str,
                              openai_client: OpenAIBaseClass,
-                             supabase_client: SupabaseBaseClass):
+                             supabase_client: SupabaseBaseClass,
+                             pinecone_client: PineconeBaseClass):
         patient_query = supabase_client.select(fields="*",
                                                filters={
                                                    'id': payload.patient_id,
@@ -295,12 +300,12 @@ class AssistantManager:
                                })
 
         if len(payload.pre_existing_history or '') > 0 and payload.pre_existing_history != current_pre_existing_history:
-            await vector_writer.update_preexisting_history_vectors(index_id=payload.therapist_id,
-                                                                   namespace=payload.patient_id,
-                                                                   text=payload.pre_existing_history,
-                                                                   session_id=session_id,
-                                                                   openai_client=openai_client,
-                                                                   auth_manager=auth_manager)
+            await pinecone_client.update_preexisting_history_vectors(index_id=payload.therapist_id,
+                                                                     namespace=payload.patient_id,
+                                                                     text=payload.pre_existing_history,
+                                                                     session_id=session_id,
+                                                                     openai_client=openai_client,
+                                                                     auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManager,
@@ -319,19 +324,22 @@ class AssistantManager:
             raise Exception(e)
 
     def delete_all_data_for_patient(self,
+                                    pinecone_client: PineconeBaseClass,
                                     therapist_id: str,
                                     patient_id: str):
         try:
-            vector_writer.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
-            vector_writer.delete_preexisting_history_vectors(index_id=therapist_id, namespace=patient_id)
+            pinecone_client.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
+            pinecone_client.delete_preexisting_history_vectors(index_id=therapist_id, namespace=patient_id)
         except Exception as e:
             # Index doesn't exist, failing silently. Patient may have been queued for deletion prior to having any
             # data in our vector db
             pass
 
-    def delete_all_sessions_for_therapist(self, id: str):
+    def delete_all_sessions_for_therapist(self,
+                                          id: str,
+                                          pinecone_client: PineconeBaseClass):
         try:
-            vector_writer.delete_index(id)
+            pinecone_client.delete_index(id)
         except Exception as e:
             raise Exception(e)
 
@@ -484,6 +492,7 @@ class AssistantManager:
                                                         auth_manager: AuthManager,
                                                         supabase_client: SupabaseBaseClass,
                                                         openai_client: OpenAIBaseClass,
+                                                        pinecone_client: PineconeBaseClass,
                                                         job_id: str,
                                                         diarization_summary: str,
                                                         diarization: str) -> str:
@@ -582,13 +591,13 @@ class AssistantManager:
                                            'diarization_job_id': job_id
                                        })
 
-            await vector_writer.insert_session_vectors(index_id=therapist_id,
-                                                       namespace=patient_id,
-                                                       text=diarization_summary,
-                                                       therapy_session_date=session_date_formatted,
-                                                       auth_manager=auth_manager,
-                                                       openai_client=openai_client,
-                                                       session_id=session_id)
+            await pinecone_client.insert_session_vectors(index_id=therapist_id,
+                                                         namespace=patient_id,
+                                                         text=diarization_summary,
+                                                         therapy_session_date=session_date_formatted,
+                                                         auth_manager=auth_manager,
+                                                         openai_client=openai_client,
+                                                         session_id=session_id)
             return session_id
         except Exception as e:
             raise Exception(e)

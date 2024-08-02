@@ -29,6 +29,7 @@ class SecurityRouter:
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory
+        self._pinecone_client = router_dependencies.pinecone_client
         self.router = APIRouter()
         self._register_routes()
 
@@ -422,7 +423,8 @@ class SecurityRouter:
             supabase_manager.sign_out()
 
             # Delete vectors associated with therapist's patients
-            self._assistant_manager.delete_all_sessions_for_therapist(therapist_id)
+            self._assistant_manager.delete_all_sessions_for_therapist(id=therapist_id,
+                                                                      pinecone_client=self._pinecone_client)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)

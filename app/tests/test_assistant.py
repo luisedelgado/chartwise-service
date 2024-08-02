@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
+from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..internal.model import RouterDependencies
@@ -31,6 +32,7 @@ class TestingHarnessAssistantRouter:
         self.fake_openai_client = FakeAsyncOpenAI(create_completion_returns_data=True)
         self.fake_supabase_admin_client = FakeSupabaseClient()
         self.fake_supabase_user_client = FakeSupabaseClient()
+        self.fake_pinecone_client = FakePineconeClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
@@ -40,10 +42,12 @@ class TestingHarnessAssistantRouter:
                                                                           auth_manager=self.auth_manager,
                                                                           assistant_manager=self.assistant_manager,
                                                                           router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
+                                                                                                                 pinecone_client=self.fake_pinecone_client,
                                                                                                                  supabase_client_factory=self.fake_supabase_client_factory)).router,
                                                           SecurityRouter(auth_manager=self.auth_manager,
                                                                          assistant_manager=self.assistant_manager,
-                                                                         router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory)).router],
+                                                                         router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
+                                                                                                                pinecone_client=self.fake_pinecone_client)).router],
                                                  environment="dev")
         self.client = TestClient(coordinator.app)
 

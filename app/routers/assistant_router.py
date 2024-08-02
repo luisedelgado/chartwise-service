@@ -47,6 +47,7 @@ class AssistantRouter:
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
         self._openai_client = router_dependencies.openai_client
+        self._pinecone_client = router_dependencies.pinecone_client
         self._supabase_client_factory = router_dependencies.supabase_client_factory
         self.router = APIRouter()
         self._register_routes()
@@ -332,7 +333,8 @@ class AssistantRouter:
                                                                                       body=body,
                                                                                       session_id=session_id,
                                                                                       openai_client=self._openai_client,
-                                                                                      supabase_client=supabase_client)
+                                                                                      supabase_client=supabase_client,
+                                                                                      pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -409,7 +411,8 @@ class AssistantRouter:
                                                          body=body,
                                                          session_id=session_id,
                                                          openai_client=self._openai_client,
-                                                         supabase_client=supabase_client)
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -498,7 +501,8 @@ class AssistantRouter:
                                                                                  refresh_token=datastore_refresh_token)
             self._assistant_manager.delete_session(therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
-                                                   supabase_client=supabase_client)
+                                                   supabase_client=supabase_client,
+                                                   pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=therapist_id,
@@ -863,7 +867,8 @@ class AssistantRouter:
                                                                    payload=body,
                                                                    session_id=session_id,
                                                                    openai_client=self._openai_client,
-                                                                   supabase_client=supabase_client)
+                                                                   supabase_client=supabase_client,
+                                                                   pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     method=post_api_method,
@@ -940,7 +945,8 @@ class AssistantRouter:
                                                          payload=body,
                                                          session_id=session_id,
                                                          openai_client=self._openai_client,
-                                                         supabase_client=supabase_client)
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     method=put_api_method,
@@ -1029,7 +1035,9 @@ class AssistantRouter:
                                                     })
             assert len(delete_result.dict()['data']) > 0, "No patient found with the incoming patient_id"
 
-            self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id, patient_id=patient_id)
+            self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
+                                                                patient_id=patient_id,
+                                                                pinecone_client=self._pinecone_client)
 
             logger.log_api_response(session_id=session_id,
                                     method=delete_api_method,
