@@ -44,12 +44,12 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                             cache_configuration: dict = None):
         return "my result"
 
-    async def stream_chat_completion_internal(self,
-                                              metadata: dict,
-                                              max_tokens: int,
-                                              messages: list,
-                                              auth_manager: AuthManager,
-                                              cache_configuration: dict = None):
+    async def stream_chat_completion(self,
+                                     metadata: dict,
+                                     max_tokens: int,
+                                     messages: list,
+                                     auth_manager: AuthManager,
+                                     cache_configuration: dict = None):
         yield "my result"
 
     async def create_embeddings(self,

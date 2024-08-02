@@ -2,6 +2,7 @@ from datetime import datetime
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
+from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..internal.model import (AssistantQuery,
@@ -11,7 +12,7 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesTemplate,
                               SessionNotesUpdate)
 from ..internal.utilities import datetime_handler
-from ..vectors.vector_query import IncludeSessionDateOverride, VectorQueryWorker
+from ..vectors.vector_query import VectorQueryWorker
 
 class AssistantManager:
 
@@ -351,6 +352,7 @@ class AssistantManager:
                             endpoint_name: str,
                             environment: str,
                             openai_client: OpenAIBaseClass,
+                            pinecone_client: PineconeBaseClass,
                             supabase_client: SupabaseBaseClass):
         try:
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
@@ -370,9 +372,9 @@ class AssistantManager:
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
 
             if len(patient_last_session_date or '') > 0:
-                session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
-                                                                    output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                                                                    session_date=patient_last_session_date)
+                session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                                                                         output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                                                                         session_date=patient_last_session_date)
             else:
                 session_date_override = None
 
@@ -397,6 +399,7 @@ class AssistantManager:
                                                               environment=environment,
                                                               auth_manager=auth_manager,
                                                               openai_client=openai_client,
+                                                              pinecone_client=pinecone_client,
                                                               session_date_override=session_date_override):
                 yield part
         except Exception as e:
@@ -448,6 +451,7 @@ class AssistantManager:
                                          endpoint_name: str,
                                          api_method: str,
                                          openai_client: OpenAIBaseClass,
+                                         pinecone_client: PineconeBaseClass,
                                          supabase_client: SupabaseBaseClass):
         try:
             therapist_query = supabase_client.select(fields="*",
@@ -480,6 +484,7 @@ class AssistantManager:
                                                                              environment=environment,
                                                                              auth_manager=auth_manager,
                                                                              openai_client=openai_client,
+                                                                             pinecone_client=pinecone_client,
                                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                              patient_gender=patient_gender)
 
@@ -610,6 +615,7 @@ class AssistantManager:
                                      session_id: str,
                                      endpoint_name: str,
                                      api_method: str,
+                                     pinecone_client: PineconeBaseClass,
                                      openai_client: OpenAIBaseClass,
                                      supabase_client: SupabaseBaseClass):
         try:
@@ -638,9 +644,9 @@ class AssistantManager:
             therapist_gender = therapist_response_dict['data'][0]['gender']
 
             if len(last_session_date or '') > 0:
-                session_date_override = IncludeSessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
-                                                                   output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                                                                   session_date=last_session_date)
+                session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                                                                         output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                                                                         session_date=last_session_date)
             else:
                 session_date_override = None
 
@@ -659,6 +665,7 @@ class AssistantManager:
                                                                session_number=session_number,
                                                                auth_manager=auth_manager,
                                                                openai_client=openai_client,
+                                                               pinecone_client=pinecone_client,
                                                                session_date_override=session_date_override)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
@@ -675,6 +682,7 @@ class AssistantManager:
                                     endpoint_name: str,
                                     api_method: str,
                                     openai_client: OpenAIBaseClass,
+                                    pinecone_client: PineconeBaseClass,
                                     supabase_client: SupabaseBaseClass):
         try:
             therapist_query = supabase_client.select(fields="*",
@@ -705,6 +713,7 @@ class AssistantManager:
                                                                        namespace=patient_id,
                                                                        method=api_method,
                                                                        environment=environment,
+                                                                       pinecone_client=pinecone_client,
                                                                        openai_client=openai_client,
                                                                        auth_manager=auth_manager,
                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),

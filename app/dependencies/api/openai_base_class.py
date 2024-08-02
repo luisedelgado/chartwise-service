@@ -12,11 +12,11 @@ class OpenAIBaseClass(ABC):
                                             cache_configuration: dict = None):
         pass
 
-    async def stream_chat_completion_internal(metadata: dict,
-                                              max_tokens: int,
-                                              messages: list,
-                                              auth_manager: AuthManager,
-                                              cache_configuration: dict = None):
+    async def stream_chat_completion(metadata: dict,
+                                     max_tokens: int,
+                                     messages: list,
+                                     auth_manager: AuthManager,
+                                     cache_configuration: dict = None):
         pass
 
     async def create_embeddings(auth_manager: AuthManager,

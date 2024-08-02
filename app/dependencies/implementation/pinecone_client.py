@@ -1,16 +1,18 @@
-import os, uuid
+import cohere, os, uuid
 import tiktoken
 
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from pinecone import ServerlessSpec, PineconeApiException
+from pinecone import Index, ServerlessSpec, Pinecone, PineconeApiException
 from pinecone.exceptions import NotFoundException
-from pinecone.grpc import PineconeGRPC
+from pinecone.grpc import PineconeGRPC 
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
+from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
+from ...internal.utilities import datetime_handler
 from ...managers.auth_manager import AuthManager
 from ...vectors import data_cleaner
 from ...vectors.vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
@@ -239,6 +241,154 @@ class PineconeClient(PineconeBaseClass):
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
             raise Exception(str(e))
+
+    async def get_vector_store_context(self,
+                                       auth_manager: AuthManager,
+                                       openai_client: OpenAIBaseClass,
+                                       query_input: str,
+                                       index_id: str,
+                                       namespace: str,
+                                       query_top_k: int,
+                                       rerank_top_n: int,
+                                       session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+        pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+
+        missing_session_data_error = ("There's no data from patient sessions. "
+                                      "They may have not gone through their first session since the practitioner added them to the platform. ")
+        if index_id not in pc.list_indexes().names():
+            return missing_session_data_error
+
+        index = pc.Index(index_id)
+        embeddings = await openai_client.create_embeddings(auth_manager=auth_manager,
+                                                           text=query_input)
+
+        # Fetch patient's historical context
+        found_historical_context, historical_context = self.fetch_historical_context(index=index, namespace=namespace)
+
+        if found_historical_context:
+            historical_context = ("Here's an outline of the patient's pre-existing history, written by the therapist:\n" + historical_context)
+            missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
+                                          "They may have not gone through their first session since the practitioner added them to the platform. ")
+        else:
+            historical_context = ""
+
+        query_result = index.query(vector=embeddings,
+                                   top_k=query_top_k,
+                                   namespace=namespace,
+                                   include_metadata=True)
+        query_matches = query_result.to_dict()['matches']
+
+        # There's no session data, return a message explaining this, and offer the historical context, if exists.
+        if len(query_matches or []) == 0:
+            return missing_session_data_error
+
+        retrieved_docs = []
+        for match in query_matches:
+            metadata = match['metadata']
+            session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
+            chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
+            chunk_text = "".join(["chunk_text = ",f"{metadata['chunk_text']}\n"])
+            session_full_context = "".join([session_date,
+                                            chunk_summary,
+                                            chunk_text,
+                                            "\n"])
+            retrieved_docs.append({"id": match['id'], "text": session_full_context})
+
+        cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
+        rerank_response = await cohere_client.rerank(
+            model="rerank-multilingual-v3.0",
+            query=query_input,
+            documents=retrieved_docs,
+            return_documents=True,
+            top_n=rerank_top_n,
+        )
+
+        reranked_response_results = rerank_response.results
+        reranked_docs = "\n".join([result.document.text for result in reranked_response_results])
+
+        if found_historical_context:
+            reranked_docs = "\n".join([reranked_docs, historical_context])
+
+        if session_date_override is not None:
+            formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            override_date_is_already_contained = any(
+                str(result.document.id).startswith(f"{formatted_session_date_override}")
+                for result in reranked_response_results
+            )
+
+            if override_date_is_already_contained:
+                return reranked_docs
+
+            # Add vectors associated with the session date override since they haven't been retrieved yet.
+            session_date_override_vector_ids = []
+            list_operation_prefix = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
+                session_date_override_vector_ids = list_ids
+
+            # Didn't find any vectors for that day, return unchanged reranked_docs
+            if len(session_date_override_vector_ids) == 0:
+                return reranked_docs
+
+            session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
+                                                             namespace=namespace)
+            vectors = session_date_override_fetch_result['vectors']
+            if len(vectors or []) == 0:
+                return reranked_docs
+
+            # Have vectors for session date override. Append them to current reranked_docs value.
+            for vector_id in vectors:
+                vector_data = vectors[vector_id]
+
+                metadata = vector_data['metadata']
+                session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
+                chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
+                chunk_text = "".join(["chunk_text = ",f"{metadata['chunk_text']}\n"])
+                session_date_override_context = "".join([session_date_override.output_prefix_override,
+                                                         session_date,
+                                                         chunk_summary,
+                                                         chunk_text,
+                                                         session_date_override.output_suffix_override,
+                                                         "\n"])
+                reranked_docs = "\n".join([reranked_docs,
+                                           session_date_override_context])
+
+        return reranked_docs
+
+    def fetch_historical_context(self,
+                                 index: Index,
+                                 namespace: str):
+        historial_context_namespace = ("".join([namespace,
+                                                  "-",
+                                                  PRE_EXISTING_HISTORY_PREFIX]))
+        context_vector_ids = []
+        for list_ids in index.list(namespace=historial_context_namespace):
+            context_vector_ids = list_ids
+
+        if len(context_vector_ids or '') == 0:
+            return (False, None)
+
+        fetch_result = index.fetch(ids=context_vector_ids,
+                                   namespace=historial_context_namespace)
+
+        context_docs = []
+        vectors = fetch_result['vectors']
+        for vector_id in vectors:
+            vector_data = vectors[vector_id]
+            metadata = vector_data['metadata']
+            chunk_summary = "".join(["pre_existing_history_summary = ",f"{metadata['pre_existing_history_summary']}"])
+            chunk_text = "".join(["\npre_existing_history_text = ",f"{metadata['pre_existing_history_text']}\n"])
+            chunk_full_context = "".join([chunk_summary,
+                                          chunk_text,
+                                          "\n"])
+            context_docs.append({
+                "id": vector_data['id'],
+                "text": chunk_full_context
+            })
+
+        if len(context_docs) > 0:
+            return (True, "\n".join([doc['text'] for doc in context_docs]))
+        return (False, None)
+
 
     # Private
 

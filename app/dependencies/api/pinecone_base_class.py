@@ -1,5 +1,8 @@
 from abc import ABC
 
+from pinecone import Index
+
+from .pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
 
@@ -118,4 +121,38 @@ class PineconeBaseClass(ABC):
                                                  session_id: str,
                                                  openai_client: OpenAIBaseClass,
                                                  auth_manager: AuthManager):
+        pass
+
+    """
+    Retrieves the vector context associated with the incoming query_input.
+
+    Arguments:
+    auth_manager – the auth manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
+    query_input – the query that was triggered by a user.
+    index_id – the index that should be used to query the data.
+    namespace – the namespace that should be used for querying the index.
+    query_top_k – the top k results that should be retrieved from the vector store.
+    rerank_top_n – the top n results that should be returned after reranking vectors.
+    session_date_override – the optional override for including session-date-specific vectors.
+    """
+    async def get_vector_store_context(auth_manager: AuthManager,
+                                       openai_client: OpenAIBaseClass,
+                                       query_input: str,
+                                       index_id: str,
+                                       namespace: str,
+                                       query_top_k: int,
+                                       rerank_top_n: int,
+                                       session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+        pass
+
+    """
+    Retrieves the historical context associated with a patient, if exists.
+
+    Arguments:
+    index_id – the index that should be used to query the data.
+    namespace – the namespace that should be used for querying the index.
+    """
+    def fetch_historical_context(index: Index,
+                                 namespace: str):
         pass

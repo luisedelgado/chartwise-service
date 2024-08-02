@@ -556,6 +556,7 @@ class AssistantRouter:
                                                                     api_method=post_api_method,
                                                                     endpoint_name=self.QUERIES_ENDPOINT,
                                                                     environment=self._environment,
+                                                                    pinecone_client=self._pinecone_client,
                                                                     openai_client=self._openai_client,
                                                                     supabase_client=supabase_client):
                 yield part
@@ -713,6 +714,7 @@ class AssistantRouter:
                                                                                  endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                                  api_method=get_api_method,
                                                                                  auth_manager=self._auth_manager,
+                                                                                 pinecone_client=self._pinecone_client,
                                                                                  openai_client=self._openai_client,
                                                                                  supabase_client=supabase_client)
 
@@ -793,6 +795,7 @@ class AssistantRouter:
                                                                                       endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                                                                                       api_method=get_api_method,
                                                                                       openai_client=self._openai_client,
+                                                                                      pinecone_client=self._pinecone_client,
                                                                                       supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
@@ -1118,6 +1121,7 @@ class AssistantRouter:
                                                                               endpoint_name=self.TOPICS_ENDPOINT,
                                                                               api_method=get_api_method,
                                                                               openai_client=self._openai_client,
+                                                                              pinecone_client=self._pinecone_client,
                                                                               supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
