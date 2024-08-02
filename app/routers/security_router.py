@@ -9,12 +9,12 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import model, security
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, general_utilities
-from ..managers.implementations.assistant_manager import AssistantManager
-from ..managers.implementations.auth_manager import AuthManager
+from ..managers.assistant_manager import AssistantManager
+from ..managers.auth_manager import AuthManager
 
 class SecurityRouter:
 

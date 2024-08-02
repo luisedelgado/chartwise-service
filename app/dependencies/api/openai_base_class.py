@@ -1,6 +1,6 @@
 from abc import ABC
 
-from ..managers.implementations.auth_manager import AuthManager
+from ...managers.auth_manager import AuthManager
 
 class OpenAIBaseClass(ABC):
 

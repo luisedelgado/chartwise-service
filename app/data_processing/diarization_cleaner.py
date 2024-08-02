@@ -3,7 +3,7 @@ import json
 from fastapi import status
 from typing import Dict
 
-from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.logging import Logger
 
 """

@@ -1,5 +1,5 @@
-from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from .fake_supabase_manager import FakeSupabaseManager
+from ...dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 
 class FakeSupabaseManagerFactory(SupabaseFactoryBaseClass):
 

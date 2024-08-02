@@ -4,8 +4,8 @@ from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
 
-from ..implementations.auth_manager import AuthManager
-from ...api.openai_base_class import OpenAIBaseClass
+from ...dependencies.api.openai_base_class import OpenAIBaseClass
+from ...managers.auth_manager import AuthManager
 
 class OpenAIManager(OpenAIBaseClass):
 

@@ -1,6 +1,6 @@
 from supabase import Client
 
-from ...api.supabase_base_class import SupabaseBaseClass
+from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
 class SupabaseManager(SupabaseBaseClass):
 

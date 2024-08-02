@@ -3,8 +3,8 @@ import base64, os, requests
 from fastapi import (File, HTTPException, status, UploadFile)
 from portkey_ai import Portkey
 
-from ..implementations.auth_manager import AuthManager
-from ...internal.utilities import file_copiers
+from ..managers.auth_manager import AuthManager
+from ..internal.utilities import file_copiers
 
 class ImageProcessingManager:
 

@@ -2,12 +2,12 @@ from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
-from ..managers.fake.fake_async_openai import FakeAsyncOpenAI
-from ..managers.fake.fake_supabase_factory_manager import FakeSupabaseManagerFactory
-from ..managers.fake.fake_supabase_manager import FakeSupabaseManager
-from ..managers.implementations.assistant_manager import AssistantManager
-from ..managers.implementations.audio_processing_manager import AudioProcessingManager
-from ..managers.implementations.auth_manager import AuthManager
+from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
+from ..dependencies.fake.fake_supabase_factory_manager import FakeSupabaseManagerFactory
+from ..dependencies.fake.fake_supabase_manager import FakeSupabaseManager
+from ..managers.assistant_manager import AssistantManager
+from ..managers.audio_processing_manager import AudioProcessingManager
+from ..managers.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator

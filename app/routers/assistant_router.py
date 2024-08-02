@@ -9,7 +9,8 @@ from fastapi import (APIRouter,
 from fastapi.responses import StreamingResponse
 from typing import Annotated, Union
 
-from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..dependencies.api.openai_base_class import OpenAIBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import (AssistantQuery,
@@ -23,9 +24,8 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesUpdate,
                               TemplatePayload)
 from ..internal.utilities import datetime_handler, general_utilities
-from ..managers.implementations.assistant_manager import AssistantManager
-from ..managers.implementations.auth_manager import AuthManager
-from ..managers.implementations.openai_manager import OpenAIManager
+from ..managers.assistant_manager import AssistantManager
+from ..managers.auth_manager import AuthManager
 
 class AssistantRouter:
 
@@ -43,7 +43,7 @@ class AssistantRouter:
                  environment: str,
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
-                 openai_manager: OpenAIManager,
+                 openai_manager: OpenAIBaseClass,
                  supabase_manager_factory: SupabaseFactoryBaseClass):
         self._environment = environment
         self._auth_manager = auth_manager

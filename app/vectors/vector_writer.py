@@ -11,8 +11,8 @@ from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
 from .vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
-from ..managers.implementations.auth_manager import AuthManager
-from ..managers.implementations.openai_manager import OpenAIManager
+from ..managers.auth_manager import AuthManager
+from ..dependencies.api.openai_base_class import OpenAIBaseClass
 
 """
 Inserts a new record to the datastore leveraging the incoming data.
@@ -32,7 +32,7 @@ async def insert_session_vectors(index_id: str,
                                  text: str,
                                  session_id: str,
                                  auth_manager: AuthManager,
-                                 openai_manager: OpenAIManager,
+                                 openai_manager: OpenAIBaseClass,
                                  therapy_session_date: str = None):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -104,7 +104,7 @@ async def insert_preexisting_history_vectors(index_id: str,
                                              namespace: str,
                                              text: str,
                                              session_id: str,
-                                             openai_manager: OpenAIManager,
+                                             openai_manager: OpenAIBaseClass,
                                              auth_manager: AuthManager):
     try:
         pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
@@ -253,7 +253,7 @@ async def update_session_vectors(index_id: str,
                                  old_date: str,
                                  new_date: str,
                                  session_id: str,
-                                 openai_manager: OpenAIManager,
+                                 openai_manager: OpenAIBaseClass,
                                  auth_manager: AuthManager):
     try:
         # Delete the outdated data
@@ -287,7 +287,7 @@ async def update_preexisting_history_vectors(index_id: str,
                                              namespace: str,
                                              text: str,
                                              session_id: str,
-                                             openai_manager: OpenAIManager,
+                                             openai_manager: OpenAIBaseClass,
                                              auth_manager: AuthManager):
     try:
         # Delete the outdated data

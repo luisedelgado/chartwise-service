@@ -1,5 +1,5 @@
-from ...api.openai_base_class import OpenAIBaseClass
-from ..implementations.auth_manager import AuthManager
+from ...dependencies.api.openai_base_class import OpenAIBaseClass
+from ...managers.auth_manager import AuthManager
 
 class FakeOpenAICompletions:
 

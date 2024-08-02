@@ -6,9 +6,9 @@ from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 from typing import Union
 
-from ...api.supabase_base_class import SupabaseBaseClass
-from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
-from ...internal.security import Token
+from ..dependencies.api.supabase_base_class import SupabaseBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..internal.security import Token
 
 class AuthManager:
 

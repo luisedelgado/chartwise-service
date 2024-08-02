@@ -2,8 +2,8 @@ import os
 
 from supabase import Client, create_client
 
-from ...api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from .supabase_manager import SupabaseManager
+from ...dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 
 class SupabaseManagerFactory(SupabaseFactoryBaseClass):
 

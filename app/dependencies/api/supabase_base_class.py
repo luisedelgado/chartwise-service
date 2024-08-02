@@ -13,7 +13,8 @@ class SupabaseBaseClass(ABC):
 
     def select(fields: str,
                filters: dict,
-               table_name: str):
+               table_name: str,
+               order_desc_column: str = None):
         pass
 
     def delete(filters: dict,

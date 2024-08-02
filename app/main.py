@@ -1,16 +1,16 @@
 import os
 
+from .dependencies.implementation.openai_manager import OpenAIManager
+from .dependencies.implementation.supabase_manager_factory import SupabaseManagerFactory
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
 from .routers.security_router import SecurityRouter
 from .service_coordinator import EndpointServiceCoordinator
-from .managers.implementations.assistant_manager import AssistantManager
-from .managers.implementations.audio_processing_manager import AudioProcessingManager
-from .managers.implementations.auth_manager import AuthManager
-from .managers.implementations.image_processing_manager import ImageProcessingManager
-from .managers.implementations.openai_manager import OpenAIManager
-from .managers.implementations.supabase_manager_factory import SupabaseManagerFactory
+from .managers.assistant_manager import AssistantManager
+from .managers.audio_processing_manager import AudioProcessingManager
+from .managers.auth_manager import AuthManager
+from .managers.image_processing_manager import ImageProcessingManager
 
 environment = os.environ.get("ENVIRONMENT")
 auth_manager = AuthManager()

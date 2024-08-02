@@ -1,7 +1,6 @@
 import os
 
-from ..api.supabase_base_class import SupabaseBaseClass
-from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 
 class Logger:
 

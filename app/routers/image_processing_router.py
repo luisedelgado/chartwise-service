@@ -9,15 +9,15 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
-from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..dependencies.api.openai_base_class import OpenAIBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import security
 from ..internal.logging import Logger
 from ..internal.model import SessionNotesTemplate
 from ..internal.utilities import general_utilities
-from ..managers.implementations.assistant_manager import AssistantManager
-from ..managers.implementations.auth_manager import AuthManager
-from ..managers.implementations.image_processing_manager import ImageProcessingManager
-from ..managers.implementations.openai_manager import OpenAIManager
+from ..managers.assistant_manager import AssistantManager
+from ..managers.auth_manager import AuthManager
+from ..managers.image_processing_manager import ImageProcessingManager
 
 class ImageProcessingRouter:
 
@@ -30,7 +30,7 @@ class ImageProcessingRouter:
                  auth_manager: AuthManager,
                  image_processing_manager: ImageProcessingManager,
                  supabase_manager_factory: SupabaseFactoryBaseClass,
-                 openai_manager: OpenAIManager):
+                 openai_manager: OpenAIBaseClass):
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
         self._image_processing_manager = image_processing_manager
