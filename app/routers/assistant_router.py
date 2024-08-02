@@ -326,7 +326,7 @@ class AssistantRouter:
             assert datetime_handler.is_valid_date(date_input=body.date,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
             session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                       body=body,
@@ -403,7 +403,7 @@ class AssistantRouter:
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_session(auth_manager=self._auth_manager,
                                                          body=body,
@@ -494,8 +494,8 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Received invalid therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             self._assistant_manager.delete_session(therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
                                                    supabase_manager=supabase_manager)
@@ -544,7 +544,7 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
@@ -620,8 +620,8 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             result = await self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
@@ -700,8 +700,8 @@ class AssistantRouter:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                                  therapist_id=therapist_id,
                                                                                  environment=self._environment,
@@ -779,8 +779,8 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             json_questions = await self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
                                                                                       patient_id=patient_id,
                                                                                       auth_manager=self._auth_manager,
@@ -857,8 +857,8 @@ class AssistantRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
                                                                    payload=body,
                                                                    session_id=session_id,
@@ -934,8 +934,8 @@ class AssistantRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
                                                          payload=body,
                                                          session_id=session_id,
@@ -1011,8 +1011,8 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
 
             patient_query = supabase_manager.select(fields="*",
                                                     filters={
@@ -1100,8 +1100,8 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             json_topics = await self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
                                                                               patient_id=patient_id,
                                                                               auth_manager=self._auth_manager,

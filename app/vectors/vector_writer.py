@@ -11,8 +11,8 @@ from pinecone.grpc import PineconeGRPC
 
 from . import data_cleaner
 from .vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
-from ..managers.auth_manager import AuthManager
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
+from ..managers.auth_manager import AuthManager
 
 """
 Inserts a new record to the datastore leveraging the incoming data.

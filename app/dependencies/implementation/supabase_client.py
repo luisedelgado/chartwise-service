@@ -2,7 +2,7 @@ from supabase import Client
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
-class SupabaseManager(SupabaseBaseClass):
+class SupabaseClient(SupabaseBaseClass):
 
     def __init__(self, client: Client):
         self.client = client

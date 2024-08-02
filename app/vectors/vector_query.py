@@ -6,9 +6,9 @@ from datetime import datetime
 from pinecone import Pinecone, Index
 
 from .message_templates import PromptCrafter, PromptScenario
+from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
-from ..dependencies.api.openai_base_class import OpenAIBaseClass
 
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"

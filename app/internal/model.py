@@ -6,8 +6,8 @@ from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseCl
 
 class RouterDependencies:
     def __init__(self,
-                 openai_client: OpenAIBaseClass,
-                 supabase_client_factory: SupabaseFactoryBaseClass):
+                 openai_client: OpenAIBaseClass = None,
+                 supabase_client_factory: SupabaseFactoryBaseClass = None):
         self.openai_client = openai_client
         self.supabase_client_factory = supabase_client_factory
 

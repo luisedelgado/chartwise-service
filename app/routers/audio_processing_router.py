@@ -234,8 +234,8 @@ class AudioProcessingRouter:
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             supabase_manager.insert(table_name="session_reports",
                                     payload={
@@ -297,9 +297,9 @@ class AudioProcessingRouter:
             diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
                                                                    supabase_manager_factory=self._supabase_client_factory)
 
-            supabase_admin_manager = self._supabase_client_factory.supabase_admin_manager()
+            supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
             session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
-                                                                                                 supabase_manager=supabase_admin_manager,
+                                                                                                 supabase_manager=supabase_admin_client,
                                                                                                  openai_manager=self._openai_client,
                                                                                                  job_id=job_id,
                                                                                                  diarization_summary=summary,

@@ -7,7 +7,7 @@ from portkey_ai import Portkey
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
 
-class OpenAIManager(OpenAIBaseClass):
+class OpenAIClient(OpenAIBaseClass):
 
     LLM_MODEL = "gpt-4o-mini"
     EMBEDDING_MODEL = "text-embedding-3-small"

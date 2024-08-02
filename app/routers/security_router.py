@@ -136,8 +136,8 @@ class SecurityRouter:
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=body.datastore_access_token,
-                                                                                    refresh_token=body.datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=body.datastore_access_token,
+                                                                                  refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
                                                                                         supabase_manager=supabase_manager)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
@@ -251,8 +251,8 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(refresh_token=datastore_refresh_token,
-                                                                                    access_token=datastore_access_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
+                                                                                  access_token=datastore_access_token)
             supabase_manager.insert(table_name="therapists",
                                     payload={
                                         "id": body.id,
@@ -330,8 +330,8 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
             supabase_manager.update(table_name="therapists",
                                     payload={
                                         "first_name": body.first_name,
@@ -408,8 +408,8 @@ class SecurityRouter:
                                method=delete_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                  refresh_token=datastore_refresh_token)
 
             # Delete therapist and all their patients (through cascading)
             delete_response = supabase_manager.delete(table_name="therapists",

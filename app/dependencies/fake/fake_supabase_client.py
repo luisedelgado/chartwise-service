@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from .fake_supabase_session import FakeSession
-from ...dependencies.api.supabase_base_class import SupabaseBaseClass
+from ..api.supabase_base_class import SupabaseBaseClass
 
 FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
 

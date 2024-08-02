@@ -3,8 +3,9 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
-from ..dependencies.fake.fake_supabase_factory_manager import FakeSupabaseManagerFactory
-from ..dependencies.fake.fake_supabase_manager import FakeSupabaseManager
+from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
+from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
+from ..internal.model import RouterDependencies
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
@@ -27,22 +28,22 @@ class TestingHarnessAssistantRouter:
         self.auth_manager = AuthManager()
         self.assistant_manager = AssistantManager()
         self.audio_processing_manager = AudioProcessingManager()
-        self.fake_openai_manager = FakeAsyncOpenAI(create_completion_returns_data=True)
-        self.fake_supabase_admin_manager = FakeSupabaseManager()
-        self.fake_supabase_user_manager = FakeSupabaseManager()
-        self.fake_supabase_manager_factory = FakeSupabaseManagerFactory(fake_supabase_admin_manager=self.fake_supabase_admin_manager,
-                                                                        fake_supabase_user_manager=self.fake_supabase_user_manager)
+        self.fake_openai_client = FakeAsyncOpenAI(create_completion_returns_data=True)
+        self.fake_supabase_admin_client = FakeSupabaseClient()
+        self.fake_supabase_user_client = FakeSupabaseClient()
+        self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
+                                                                      fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
                                                                  expires_delta=timedelta(minutes=5))
 
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
                                                                           auth_manager=self.auth_manager,
                                                                           assistant_manager=self.assistant_manager,
-                                                                          openai_manager=self.fake_openai_manager,
-                                                                          supabase_manager_factory=self.fake_supabase_manager_factory).router,
+                                                                          router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
+                                                                                                                 supabase_client_factory=self.fake_supabase_client_factory)).router,
                                                           SecurityRouter(auth_manager=self.auth_manager,
                                                                          assistant_manager=self.assistant_manager,
-                                                                         supabase_manager_factory=self.fake_supabase_manager_factory).router],
+                                                                         router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory)).router],
                                                  environment="dev")
         self.client = TestClient(coordinator.app)
 
@@ -80,9 +81,9 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 401
 
     def test_insert_new_session_with_valid_authentication_but_invalid_date_format(self):
-        self.fake_supabase_user_manager.return_authenticated_session = True
-        self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -100,9 +101,9 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_insert_new_session_with_valid_auth_but_undefined_source(self):
-        self.fake_supabase_user_manager.return_authenticated_session = True
-        self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -120,12 +121,12 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     # def test_insert_new_session_success(self):
-    #     self.fake_supabase_user_manager.return_authenticated_session = True
-    #     self.fake_supabase_user_manager.fake_access_token = FAKE_ACCESS_TOKEN
-    #     self.fake_supabase_user_manager.fake_refresh_token = FAKE_REFRESH_TOKEN
-    #     self.fake_supabase_user_manager.select_returns_data = True
+    #     self.fake_supabase_user_client.return_authenticated_session = True
+    #     self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+    #     self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+    #     self.fake_supabase_user_client.select_returns_data = True
 
-    #     assert self.fake_supabase_user_manager.fake_insert_text == None
+    #     assert self.fake_supabase_user_client.fake_insert_text == None
     #     insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
     #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
     #                                 cookies={
@@ -142,7 +143,7 @@ class TestingHarnessAssistantRouter:
     #                                     "source": "manual_input"
     #                                 })
     #     assert response.status_code == 200
-    #     assert self.fake_supabase_user_manager.fake_insert_text == insert_text
+    #     assert self.fake_supabase_user_client.fake_insert_text == insert_text
 
     # def test_update_session_with_invalid_auth(self):
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
