@@ -1,6 +1,16 @@
 from enum import Enum
 from pydantic import BaseModel
 
+from ..dependencies.api.openai_base_class import OpenAIBaseClass
+from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
+
+class RouterDependencies:
+    def __init__(self,
+                 openai_client: OpenAIBaseClass,
+                 supabase_client_factory: SupabaseFactoryBaseClass):
+        self.openai_client = openai_client
+        self.supabase_client_factory = supabase_client_factory
+
 class SessionNotesSource(Enum):
     UNDEFINED = "undefined"
     FULL_SESSION_RECORDING = "full_session_recording"

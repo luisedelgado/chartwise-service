@@ -9,11 +9,9 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
-from ..dependencies.api.openai_base_class import OpenAIBaseClass
-from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.model import SessionNotesTemplate
+from ..internal.model import RouterDependencies, SessionNotesTemplate
 from ..internal.utilities import general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
@@ -29,13 +27,12 @@ class ImageProcessingRouter:
                  assistant_manager: AssistantManager,
                  auth_manager: AuthManager,
                  image_processing_manager: ImageProcessingManager,
-                 supabase_manager_factory: SupabaseFactoryBaseClass,
-                 openai_manager: OpenAIBaseClass):
+                 router_dependencies: RouterDependencies):
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
         self._image_processing_manager = image_processing_manager
-        self._supabase_manager_factory = supabase_manager_factory
-        self._openai_manager = openai_manager
+        self._supabase_client_factory = router_dependencies.supabase_client_factory
+        self._openai_client = router_dependencies.openai_client
         self.router = APIRouter()
         self._register_routes()
 
@@ -104,12 +101,12 @@ class ImageProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -173,12 +170,12 @@ class ImageProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -204,7 +201,7 @@ class ImageProcessingRouter:
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             soap_textraction = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                         openai_manager=self._openai_manager,
+                                                                                         openai_manager=self._openai_client,
                                                                                          therapist_id=therapist_id,
                                                                                          session_id=session_id,
                                                                                          session_notes_text=textraction)

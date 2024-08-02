@@ -2,6 +2,7 @@ import os
 
 from .dependencies.implementation.openai_manager import OpenAIManager
 from .dependencies.implementation.supabase_manager_factory import SupabaseManagerFactory
+from .internal.model import RouterDependencies
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
@@ -17,27 +18,27 @@ auth_manager = AuthManager()
 assistant_manager = AssistantManager()
 audio_processing_manager = AudioProcessingManager()
 image_processing_manager = ImageProcessingManager()
-supabase_manager_factory = SupabaseManagerFactory()
-openai_manager = OpenAIManager()
+supabase_client_factory = SupabaseManagerFactory()
+openai_client = OpenAIManager()
 
 app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment,
                                                     auth_manager=auth_manager,
                                                     assistant_manager=assistant_manager,
-                                                    openai_manager=openai_manager,
-                                                    supabase_manager_factory=supabase_manager_factory).router,
+                                                    router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                           supabase_client_factory=supabase_client_factory)).router,
                                     AudioProcessingRouter(auth_manager=auth_manager,
                                                           assistant_manager=assistant_manager,
                                                           audio_processing_manager=audio_processing_manager,
-                                                          openai_manager=openai_manager,
-                                                          supabase_manager_factory=supabase_manager_factory).router,
+                                                          router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                                 supabase_client_factory=supabase_client_factory)).router,
                                     SecurityRouter(auth_manager=auth_manager,
                                                    assistant_manager=assistant_manager,
-                                                   supabase_manager_factory=supabase_manager_factory).router,
+                                                   router_dependencies=RouterDependencies(supabase_client_factory=supabase_client_factory)).router,
                                     ImageProcessingRouter(assistant_manager=assistant_manager,
                                                           auth_manager=auth_manager,
                                                           image_processing_manager=image_processing_manager,
-                                                          supabase_manager_factory=supabase_manager_factory,
-                                                          openai_manager=openai_manager).router,
+                                                          router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                                 supabase_client_factory=supabase_client_factory)).router,
                                 ],
                                  environment=environment).app

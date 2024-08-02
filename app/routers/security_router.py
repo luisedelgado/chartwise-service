@@ -9,7 +9,6 @@ from fastapi import (APIRouter,
 from langcodes import Language
 from typing import Annotated, Union
 
-from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal import model, security
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, general_utilities
@@ -26,10 +25,10 @@ class SecurityRouter:
     def __init__(self,
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
-                 supabase_manager_factory: SupabaseFactoryBaseClass):
+                 router_dependencies: model.RouterDependencies):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
-        self._supabase_manager_factory = supabase_manager_factory
+        self._supabase_client_factory = router_dependencies.supabase_client_factory
         self.router = APIRouter()
         self._register_routes()
 
@@ -130,14 +129,14 @@ class SecurityRouter:
                             secure=True,
                             samesite="none")
 
-            logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+            logger = Logger(supabase_manager_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
             logger.log_api_request(session_id=session_id,
                                    method=post_api_method,
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
-            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=body.datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=body.datastore_access_token,
                                                                                     refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
                                                                                         supabase_manager=supabase_manager)
@@ -146,7 +145,7 @@ class SecurityRouter:
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
-                                                                  supabase_manager_factory=self._supabase_manager_factory,
+                                                                  supabase_manager_factory=self._supabase_client_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
             logger.log_api_response(session_id=session_id,
@@ -182,12 +181,12 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
@@ -234,12 +233,12 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -252,7 +251,7 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_manager_factory.supabase_user_manager(refresh_token=datastore_refresh_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_manager(refresh_token=datastore_refresh_token,
                                                                                     access_token=datastore_access_token)
             supabase_manager.insert(table_name="therapists",
                                     payload={
@@ -315,12 +314,12 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                therapist_id=body.id,
@@ -331,7 +330,7 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
             supabase_manager.update(table_name="therapists",
                                     payload={
@@ -397,19 +396,19 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
                                                      request=request,
-                                                     supabase_manager_factory=self._supabase_manager_factory)
+                                                     supabase_manager_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
                                method=delete_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            supabase_manager = self._supabase_manager_factory.supabase_user_manager(access_token=datastore_access_token,
+            supabase_manager = self._supabase_client_factory.supabase_user_manager(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
 
             # Delete therapist and all their patients (through cascading)
