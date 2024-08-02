@@ -23,7 +23,7 @@ class DiarizationCleaner:
     input – the diarization input.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def clean_transcription(self, input: str, supabase_manager_factory: SupabaseFactoryBaseClass) -> str:
+    def clean_transcription(self, input: str, supabase_client_factory: SupabaseFactoryBaseClass) -> str:
         self._current_speaker = input[0]["alternatives"][0]["speaker"]
         for obj in input:
             speaker = obj["alternatives"][0]["speaker"]
@@ -37,7 +37,7 @@ class DiarizationCleaner:
                 has_attaches_to = True
                 attaches_to = obj["attaches_to"]
                 if attaches_to.lower() != "previous":
-                    Logger(supabase_manager_factory=supabase_manager_factory).log_diarization_event(error_code=status.HTTP_417_EXPECTATION_FAILED,
+                    Logger(supabase_client_factory=supabase_client_factory).log_diarization_event(error_code=status.HTTP_417_EXPECTATION_FAILED,
                                                                                                     description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
 
             if "is_eos" in obj:

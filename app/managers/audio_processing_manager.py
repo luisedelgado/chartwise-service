@@ -146,7 +146,7 @@ class AudioProcessingManager:
                                  endpoint_url: str,
                                  session_id: str,
                                  audio_file: UploadFile = File(...)) -> str:
-        logger = Logger(supabase_manager_factory=supabase_client_factory)
+        logger = Logger(supabase_client_factory=supabase_client_factory)
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)

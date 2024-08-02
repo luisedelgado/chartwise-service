@@ -130,7 +130,7 @@ class SecurityRouter:
                             secure=True,
                             samesite="none")
 
-            logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+            logger = Logger(supabase_client_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
             logger.log_api_request(session_id=session_id,
                                    method=post_api_method,
@@ -187,7 +187,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
@@ -239,7 +239,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -320,7 +320,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                therapist_id=body.id,
@@ -402,7 +402,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,

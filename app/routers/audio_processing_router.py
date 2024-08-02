@@ -129,7 +129,7 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -212,7 +212,7 @@ class AudioProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                patient_id=patient_id,
@@ -285,7 +285,7 @@ class AudioProcessingRouter:
         except:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         try:
             request_status_code = request.query_params["status"]
             id = request.query_params["id"]
@@ -296,7 +296,7 @@ class AudioProcessingRouter:
             job_id = json_data["job"]["id"]
             summary = json_data["summary"]["content"]
             diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
-                                                                   supabase_manager_factory=self._supabase_client_factory)
+                                                                   supabase_client_factory=self._supabase_client_factory)
 
             supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
             session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
