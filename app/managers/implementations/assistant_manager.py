@@ -28,7 +28,8 @@ class AssistantManager:
                                                         'therapist_id': body.therapist_id
                                                     },
                                                     table_name="patients")
-            patient_therapist_match = (0 != len(patient_query.data))
+            patient_query_dict = patient_query.dict()
+            patient_therapist_match = (0 != len(patient_query_dict['data']))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
             therapist_query = supabase_manager.select(fields="*",
@@ -46,10 +47,16 @@ class AssistantManager:
                                                                                  openai_manager=openai_manager,
                                                                                  session_id=session_id)
 
-            patient_query_dict = patient_query.dict()
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
-            patient_last_session_date = datetime_handler.retrieve_most_recent_date(body.date,
-                                                                                   datetime_handler.convert_to_internal_date_format(patient_last_session_date))
+
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
+            if patient_last_session_date is None:
+                patient_last_session_date = body.date
+            else:
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(body.date,
+                                                                                       datetime_handler.convert_to_internal_date_format(patient_last_session_date))
+
             supabase_manager.update(table_name="patients",
                                     payload={
                                         "last_session_date": patient_last_session_date,

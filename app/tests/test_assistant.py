@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from fastapi.testclient import TestClient
-from openai import AsyncOpenAI
 
 from ..managers.fake.fake_async_openai import FakeAsyncOpenAI
 from ..managers.fake.fake_supabase_factory_manager import FakeSupabaseManagerFactory
@@ -28,7 +27,7 @@ class TestingHarnessAssistantRouter:
         self.auth_manager = AuthManager()
         self.assistant_manager = AssistantManager()
         self.audio_processing_manager = AudioProcessingManager()
-        self.fake_openai_manager = FakeAsyncOpenAI()
+        self.fake_openai_manager = FakeAsyncOpenAI(create_completion_returns_data=True)
         self.fake_supabase_admin_manager = FakeSupabaseManager()
         self.fake_supabase_user_manager = FakeSupabaseManager()
         self.fake_supabase_manager_factory = FakeSupabaseManagerFactory(fake_supabase_admin_manager=self.fake_supabase_admin_manager,
@@ -45,11 +44,6 @@ class TestingHarnessAssistantRouter:
                                                                          assistant_manager=self.assistant_manager,
                                                                          supabase_manager_factory=self.fake_supabase_manager_factory).router],
                                                  environment="dev")
-        coordinator.app.dependency_overrides = {
-            AsyncOpenAI(api_key="",
-                        default_headers={},
-                        base_url=""): FakeAsyncOpenAI()
-        }
         self.client = TestClient(coordinator.app)
 
     def test_insert_new_session_with_missing_auth_token(self):

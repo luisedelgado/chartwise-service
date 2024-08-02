@@ -1,5 +1,12 @@
+from pydantic import BaseModel
+
 from ...api.supabase_base_class import SupabaseBaseClass
 from .fake_supabase_session import FakeSession
+
+FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
+
+class ResultQuery(BaseModel):
+    data: list
 
 class FakeSupabaseManager(SupabaseBaseClass):
 
@@ -13,6 +20,9 @@ class FakeSupabaseManager(SupabaseBaseClass):
                payload: dict,
                table_name: str):
         self.fake_insert_text = None if "notes_text" not in payload else payload["notes_text"]
+        return ResultQuery(data=[{
+                "id": FAKE_SESSION_NOTES_ID
+            }])
 
     def update(self,
                payload: dict,
@@ -25,16 +35,19 @@ class FakeSupabaseManager(SupabaseBaseClass):
                filters: dict,
                table_name: str):
         if not self.select_returns_data:
-            return {"data": []}
+            return ResultQuery(data=[])
 
         if table_name == "therapists":
-            return {"data": [{
+            return ResultQuery(data=[{
                 "language_preference": "en-US"
-            }]}
+            }])
         if table_name == "patients":
-            return {"data": ["fake_data"]}
+            return ResultQuery(data=[{
+                "last_session_date":"2000-01-01",
+                "total_sessions": 2
+            }])
         if table_name == "session_reports":
-            return {"data": ["fake_data"]}
+            return ResultQuery(data=["fake_data"])
 
         raise Exception("Untracked table name")
 
