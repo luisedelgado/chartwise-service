@@ -37,7 +37,7 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     last_session_date – the last session that the patient had (None if yet to have first session).
     """
     async def query_store(self,
@@ -52,14 +52,14 @@ class VectorQueryWorker:
                           method: str,
                           environment: str,
                           auth_manager: AuthManager,
-                          openai_manager: OpenAIBaseClass,
+                          openai_client: OpenAIBaseClass,
                           session_date_override: IncludeSessionDateOverride = None):
         try:
             context = await self._get_vector_store_context(auth_manager=auth_manager,
                                                            query_input=query_input,
                                                            index_id=index_id,
                                                            namespace=namespace,
-                                                           openai_manager=openai_manager,
+                                                           openai_client=openai_client,
                                                            query_top_k=10,
                                                            rerank_top_n=3,
                                                            session_date_override=session_date_override)
@@ -89,13 +89,13 @@ class VectorQueryWorker:
                 "method": method,
             }
 
-            async for part in openai_manager.stream_chat_completion(metadata=metadata,
-                                                                    max_tokens=max_tokens,
-                                                                    messages=[
-                                                                        {"role": "system", "content": system_prompt},
-                                                                        {"role": "user", "content": user_prompt},
-                                                                    ],
-                                                                    auth_manager=auth_manager):
+            async for part in openai_client.stream_chat_completion(metadata=metadata,
+                                                                   max_tokens=max_tokens,
+                                                                   messages=[
+                                                                       {"role": "system", "content": system_prompt},
+                                                                       {"role": "user", "content": user_prompt},
+                                                                   ],
+                                                                   auth_manager=auth_manager):
                 yield part
 
         except Exception as e:
@@ -115,6 +115,7 @@ class VectorQueryWorker:
     therapist_id – the therapist_id.
     method – the API method that was invoked.
     environment – the current running environment.
+    openai_client – the openai client.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def create_greeting(self,
@@ -127,7 +128,7 @@ class VectorQueryWorker:
                               therapist_id: str,
                               method: str,
                               environment: str,
-                              openai_manager: OpenAIBaseClass,
+                              openai_client: OpenAIBaseClass,
                               auth_manager: AuthManager) -> str:
         try:
             prompt_crafter = PromptCrafter()
@@ -152,7 +153,7 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
                                                                      max_tokens=max_tokens,
                                                                      cache_configuration={
                                                                          'cache_max_age': 86400, # 24 hours
@@ -182,7 +183,7 @@ class VectorQueryWorker:
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
     auth_manager – the auth manager to be leveraged internally.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     session_date_override – the optional session date override for including in the (vector) briefing context.
     """
     async def create_briefing(self,
@@ -199,14 +200,14 @@ class VectorQueryWorker:
                               therapist_gender: str,
                               session_number: int,
                               auth_manager: AuthManager,
-                              openai_manager: OpenAIBaseClass,
+                              openai_client: OpenAIBaseClass,
                               session_date_override: IncludeSessionDateOverride = None) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
 
             context = await self._get_vector_store_context(auth_manager=auth_manager,
-                                                           openai_manager=openai_manager,
+                                                           openai_client=openai_client,
                                                            query_input=query_input,
                                                            index_id=index_id,
                                                            namespace=namespace,
@@ -244,18 +245,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      cache_configuration={
-                                                                          'cache_max_age': 86400, # 24 hours
-                                                                          'caching_shard_key': caching_shard_key,
-                                                                      },
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=True,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=True,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -272,7 +273,7 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def create_question_suggestions(self,
@@ -285,12 +286,12 @@ class VectorQueryWorker:
                                           method: str,
                                           patient_name: str,
                                           patient_gender: str,
-                                          openai_manager: OpenAIBaseClass,
+                                          openai_client: OpenAIBaseClass,
                                           auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 3 questions that I could ask about {patient_name}'s session history?"
             context = await self._get_vector_store_context(auth_manager=auth_manager,
-                                                           openai_manager=openai_manager,
+                                                           openai_client=openai_client,
                                                            query_input=query_input,
                                                            index_id=index_id,
                                                            namespace=namespace,
@@ -321,18 +322,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      cache_configuration={
-                                                                          'cache_max_age': 86400, # 24 hours
-                                                                          'caching_shard_key': caching_shard_key,
-                                                                      },
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=True,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=True,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -349,7 +350,7 @@ class VectorQueryWorker:
     method – the API method that was invoked.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def fetch_frequent_topics(self,
@@ -362,13 +363,13 @@ class VectorQueryWorker:
                                     method: str,
                                     patient_name: str,
                                     patient_gender: str,
-                                    openai_manager: OpenAIBaseClass,
+                                    openai_client: OpenAIBaseClass,
                                     auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are the 3 topics that come up the most in {patient_name}'s sessions?"
             context = await self._get_vector_store_context(auth_manager=auth_manager,
                                                            query_input=query_input,
-                                                           openai_manager=openai_manager,
+                                                           openai_client=openai_client,
                                                            index_id=index_id,
                                                            namespace=namespace,
                                                            query_top_k=10,
@@ -398,18 +399,18 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      cache_configuration={
-                                                                          'cache_max_age': 86400, # 24 hours
-                                                                          'caching_shard_key': caching_shard_key,
-                                                                      },
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=True,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=True,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -420,14 +421,14 @@ class VectorQueryWorker:
     text – the text to be adapted to a SOAP format.
     therapist_id – the therapist_id.
     auth_manager – the auth manager to be leveraged internally.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     session_id – the session id.
     """
     async def create_soap_report(self,
                                  text: str,
                                  therapist_id: str,
                                  auth_manager: AuthManager,
-                                 openai_manager: OpenAIBaseClass,
+                                 openai_client: OpenAIBaseClass,
                                  session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
@@ -442,14 +443,14 @@ class VectorQueryWorker:
                 "session_id": str(session_id),
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=False,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=False,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -460,14 +461,14 @@ class VectorQueryWorker:
     chunk_text – the text associated with the incoming chunk.
     therapist_id – the therapist_id.
     auth_manager – the auth manager to be leveraged internally.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     session_id – the session id.
     """
     async def summarize_chunk(self,
                               chunk_text: str,
                               therapist_id: str,
                               auth_manager: AuthManager,
-                              openai_manager: OpenAIBaseClass,
+                              openai_client: OpenAIBaseClass,
                               session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
@@ -482,14 +483,14 @@ class VectorQueryWorker:
                 "session_id": str(session_id)
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=False,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=False,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -501,7 +502,7 @@ class VectorQueryWorker:
     therapist_id – the therapist_id.
     language_code – the language_code to be used for generating the response.
     auth_manager – the auth manager to be leveraged internally.
-    openai_manager – the openai manager to be leveraged internally.
+    openai_client – the openai client to be leveraged internally.
     session_id – the session id.
     """
     async def create_session_mini_summary(self,
@@ -509,7 +510,7 @@ class VectorQueryWorker:
                                           therapist_id: str,
                                           language_code: str,
                                           auth_manager: AuthManager,
-                                          openai_manager: OpenAIBaseClass,
+                                          openai_client: OpenAIBaseClass,
                                           session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
@@ -526,14 +527,14 @@ class VectorQueryWorker:
                 "language_code": language_code,
             }
 
-            return await openai_manager.trigger_async_chat_completion(metadata=metadata,
-                                                                      max_tokens=max_tokens,
-                                                                      messages=[
-                                                                          {"role": "system", "content": system_prompt},
-                                                                          {"role": "user", "content": user_prompt},
-                                                                      ],
-                                                                      expects_json_response=False,
-                                                                      auth_manager=auth_manager)
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=False,
+                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 
@@ -541,7 +542,7 @@ class VectorQueryWorker:
 
     async def _get_vector_store_context(self,
                                         auth_manager: AuthManager,
-                                        openai_manager: OpenAIBaseClass,
+                                        openai_client: OpenAIBaseClass,
                                         query_input: str,
                                         index_id: str,
                                         namespace: str,
@@ -556,8 +557,8 @@ class VectorQueryWorker:
             return missing_session_data_error
 
         index = pc.Index(index_id)
-        embeddings = await openai_manager.create_embeddings(auth_manager=auth_manager,
-                                                            text=query_input)
+        embeddings = await openai_client.create_embeddings(auth_manager=auth_manager,
+                                                           text=query_input)
 
         # Fetch patient's historical context
         found_historical_context, historical_context = self._fetch_historical_context(index=index, namespace=namespace)

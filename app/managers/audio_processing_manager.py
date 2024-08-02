@@ -23,7 +23,7 @@ class AudioProcessingManager:
     async def transcribe_audio_file(self,
                                     auth_manager: AuthManager,
                                     assistant_manager: AssistantManager,
-                                    openai_manager: OpenAIBaseClass,
+                                    openai_client: OpenAIBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
                                     session_id: str,
@@ -104,7 +104,7 @@ class AudioProcessingManager:
 
         assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
         return await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                   openai_manager=openai_manager,
+                                                                   openai_client=openai_client,
                                                                    therapist_id=therapist_id,
                                                                    session_notes_text=transcript,
                                                                    session_id=session_id)
@@ -141,12 +141,12 @@ class AudioProcessingManager:
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManager,
-                                 supabase_manager_factory: SupabaseFactoryBaseClass,
+                                 supabase_client_factory: SupabaseFactoryBaseClass,
                                  session_auth_token: str,
                                  endpoint_url: str,
                                  session_id: str,
                                  audio_file: UploadFile = File(...)) -> str:
-        logger = Logger(supabase_manager_factory=supabase_manager_factory)
+        logger = Logger(supabase_manager_factory=supabase_client_factory)
         audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)

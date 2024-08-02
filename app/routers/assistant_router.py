@@ -123,7 +123,7 @@ class AssistantRouter:
                 await self._auth_manager.refresh_session(user_id=query.therapist_id,
                                                          request=request,
                                                          response=response,
-                                                         supabase_manager_factory=self._supabase_client_factory)
+                                                         supabase_client_factory=self._supabase_client_factory)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
                 raise HTTPException(status_code=status_code, detail=str(e))
@@ -307,12 +307,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                patient_id=body.patient_id,
@@ -326,13 +326,13 @@ class AssistantRouter:
             assert datetime_handler.is_valid_date(date_input=body.date,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                       body=body,
                                                                                       session_id=session_id,
-                                                                                      openai_manager=self._openai_client,
-                                                                                      supabase_manager=supabase_manager)
+                                                                                      openai_client=self._openai_client,
+                                                                                      supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -385,12 +385,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                therapist_id=body.therapist_id,
@@ -403,13 +403,13 @@ class AssistantRouter:
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                     refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_session(auth_manager=self._auth_manager,
                                                          body=body,
                                                          session_id=session_id,
-                                                         openai_manager=self._openai_client,
-                                                         supabase_manager=supabase_manager)
+                                                         openai_client=self._openai_client,
+                                                         supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=body.therapist_id,
@@ -462,12 +462,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                therapist_id=therapist_id,
@@ -494,11 +494,11 @@ class AssistantRouter:
         try:
             assert len(therapist_id or '') > 0, "Received invalid therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             self._assistant_manager.delete_session(therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
-                                                   supabase_manager=supabase_manager)
+                                                   supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     therapist_id=therapist_id,
@@ -535,7 +535,7 @@ class AssistantRouter:
                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                 session_id: Annotated[Union[str, None], Cookie()]):
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                therapist_id=query.therapist_id,
@@ -544,16 +544,16 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
                                                                     api_method=post_api_method,
                                                                     endpoint_name=self.QUERIES_ENDPOINT,
                                                                     environment=self._environment,
-                                                                    openai_manager=self._openai_client,
-                                                                    supabase_manager=supabase_manager):
+                                                                    openai_client=self._openai_client,
+                                                                    supabase_client=supabase_client):
                 yield part
 
             logger.log_api_response(session_id=session_id,
@@ -603,12 +603,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
@@ -620,8 +620,8 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             result = await self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
@@ -629,8 +629,8 @@ class AssistantRouter:
                                                                          api_method=get_api_method,
                                                                          environment=self._environment,
                                                                          auth_manager=self._auth_manager,
-                                                                         openai_manager=self._openai_client,
-                                                                         supabase_manager=supabase_manager)
+                                                                         openai_client=self._openai_client,
+                                                                         supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,
@@ -683,12 +683,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -700,8 +700,8 @@ class AssistantRouter:
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                                  therapist_id=therapist_id,
                                                                                  environment=self._environment,
@@ -709,8 +709,8 @@ class AssistantRouter:
                                                                                  endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                                                                  api_method=get_api_method,
                                                                                  auth_manager=self._auth_manager,
-                                                                                 openai_manager=self._openai_client,
-                                                                                 supabase_manager=supabase_manager)
+                                                                                 openai_client=self._openai_client,
+                                                                                 supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
@@ -762,12 +762,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -779,8 +779,8 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             json_questions = await self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
                                                                                       patient_id=patient_id,
                                                                                       auth_manager=self._auth_manager,
@@ -788,8 +788,8 @@ class AssistantRouter:
                                                                                       session_id=session_id,
                                                                                       endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                                                                                       api_method=get_api_method,
-                                                                                      openai_manager=self._openai_client,
-                                                                                      supabase_manager=supabase_manager)
+                                                                                      openai_client=self._openai_client,
+                                                                                      supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
@@ -840,12 +840,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -857,13 +857,13 @@ class AssistantRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
                                                                    payload=body,
                                                                    session_id=session_id,
-                                                                   openai_manager=self._openai_client,
-                                                                   supabase_manager=supabase_manager)
+                                                                   openai_client=self._openai_client,
+                                                                   supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     method=post_api_method,
@@ -915,12 +915,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=body.therapist_id,
                                                      response=response,
                                                      request=request,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(session_id=session_id,
                                method=put_api_method,
@@ -934,13 +934,13 @@ class AssistantRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
                                                          payload=body,
                                                          session_id=session_id,
-                                                         openai_manager=self._openai_client,
-                                                         supabase_manager=supabase_manager)
+                                                         openai_client=self._openai_client,
+                                                         supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     method=put_api_method,
@@ -994,12 +994,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
                                                      request=request,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(session_id=session_id,
                                method=delete_api_method,
@@ -1083,12 +1083,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
         logger.log_api_request(session_id=session_id,
                                method=get_api_method,
@@ -1100,8 +1100,8 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
             json_topics = await self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
                                                                               patient_id=patient_id,
                                                                               auth_manager=self._auth_manager,
@@ -1109,8 +1109,8 @@ class AssistantRouter:
                                                                               session_id=session_id,
                                                                               endpoint_name=self.TOPICS_ENDPOINT,
                                                                               api_method=get_api_method,
-                                                                              openai_manager=self._openai_client,
-                                                                              supabase_manager=supabase_manager)
+                                                                              openai_client=self._openai_client,
+                                                                              supabase_client=supabase_client)
 
             logger.log_api_response(session_id=session_id,
                                     endpoint_name=self.TOPICS_ENDPOINT,
@@ -1158,12 +1158,12 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
 
-        logger = Logger(supabase_manager_factory=self._supabase_client_factory)
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,
                                method=post_api_method,
@@ -1176,7 +1176,7 @@ class AssistantRouter:
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
             soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                   openai_manager=self._openai_client,
+                                                                                   openai_client=self._openai_client,
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)

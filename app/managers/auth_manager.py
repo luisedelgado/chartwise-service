@@ -24,9 +24,9 @@ class AuthManager:
 
     def authenticate_datastore_user(self,
                                     user_id: str,
-                                    supabase_manager: SupabaseBaseClass) -> bool:
+                                    supabase_client: SupabaseBaseClass) -> bool:
         try:
-            response = supabase_manager.get_user().dict()
+            response = supabase_client.get_user().dict()
             return response['user']['id'] == user_id
         except Exception as e:
             raise Exception(str(e))
@@ -80,7 +80,7 @@ class AuthManager:
                               user_id: str,
                               request: Request,
                               response: Response,
-                              supabase_manager_factory: SupabaseFactoryBaseClass,
+                              supabase_client_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
@@ -100,8 +100,8 @@ class AuthManager:
                                     samesite="none")
             # If we have datastore tokens in cookies, let's refresh them.
             elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
-                supabase_client: SupabaseBaseClass = supabase_manager_factory.supabase_user_client(access_token=request.cookies['datastore_access_token'],
-                                                                                                   refresh_token=request.cookies['datastore_refresh_token'])
+                supabase_client: SupabaseBaseClass = supabase_client_factory.supabase_user_client(access_token=request.cookies['datastore_access_token'],
+                                                                                                  refresh_token=request.cookies['datastore_refresh_token'])
                 refresh_session_response = supabase_client.refresh_session().dict()
                 assert refresh_session_response['user']['role'] == 'authenticated'
 

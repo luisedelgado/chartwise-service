@@ -101,7 +101,7 @@ class ImageProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -170,7 +170,7 @@ class ImageProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -201,7 +201,7 @@ class ImageProcessingRouter:
 
             assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
             soap_textraction = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                         openai_manager=self._openai_client,
+                                                                                         openai_client=self._openai_client,
                                                                                          therapist_id=therapist_id,
                                                                                          session_id=session_id,
                                                                                          session_notes_text=textraction)

@@ -123,7 +123,7 @@ class AudioProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -141,7 +141,7 @@ class AudioProcessingRouter:
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
             transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
-                                                                                    openai_manager=self._openai_client,
+                                                                                    openai_client=self._openai_client,
                                                                                     auth_manager=self._auth_manager,
                                                                                     template=template,
                                                                                     therapist_id=therapist_id,
@@ -206,7 +206,7 @@ class AudioProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -228,7 +228,7 @@ class AudioProcessingRouter:
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
-                                                                                  supabase_manager_factory=self._supabase_client_factory,
+                                                                                  supabase_client_factory=self._supabase_client_factory,
                                                                                   session_auth_token=authorization,
                                                                                   session_id=session_id,
                                                                                   audio_file=audio_file,
@@ -299,8 +299,8 @@ class AudioProcessingRouter:
 
             supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
             session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
-                                                                                                 supabase_manager=supabase_admin_client,
-                                                                                                 openai_manager=self._openai_client,
+                                                                                                 supabase_client=supabase_admin_client,
+                                                                                                 openai_client=self._openai_client,
                                                                                                  job_id=job_id,
                                                                                                  diarization_summary=summary,
                                                                                                  diarization=diarization)

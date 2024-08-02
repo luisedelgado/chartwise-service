@@ -136,16 +136,16 @@ class SecurityRouter:
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=body.datastore_access_token,
-                                                                                  refresh_token=body.datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=body.datastore_access_token,
+                                                                                 refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
-                                                                                        supabase_manager=supabase_manager)
+                                                                                        supabase_client=supabase_client)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
 
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
-                                                                  supabase_manager_factory=self._supabase_client_factory,
+                                                                  supabase_client_factory=self._supabase_client_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
             logger.log_api_response(session_id=session_id,
@@ -181,7 +181,7 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -233,7 +233,7 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -314,7 +314,7 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=body.id,
                                                      request=request,
                                                      response=response,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -396,7 +396,7 @@ class SecurityRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
                                                      request=request,
-                                                     supabase_manager_factory=self._supabase_client_factory)
+                                                     supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
