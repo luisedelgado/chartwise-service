@@ -12,7 +12,7 @@ from ..internal.model import (AssistantQuery,
                               SessionNotesTemplate,
                               SessionNotesUpdate)
 from ..internal.utilities import datetime_handler
-from ..vectors.vector_query import VectorQueryWorker
+from ..vectors.chartwise_assistant import ChartWiseAssistant
 
 class AssistantManager:
 
@@ -42,12 +42,12 @@ class AssistantManager:
             assert (0 != len(therapist_query.data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
-                                                                                 therapist_id=body.therapist_id,
-                                                                                 language_code=language_code,
-                                                                                 auth_manager=auth_manager,
-                                                                                 openai_client=openai_client,
-                                                                                 session_id=session_id)
+            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.text,
+                                                                                  therapist_id=body.therapist_id,
+                                                                                  language_code=language_code,
+                                                                                  auth_manager=auth_manager,
+                                                                                  openai_client=openai_client,
+                                                                                  session_id=session_id)
 
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
 
@@ -128,12 +128,12 @@ class AssistantManager:
                 assert (0 != len((therapist_query).data))
 
                 language_code = therapist_query.dict()['data'][0]["language_preference"]
-                mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=body.text,
-                                                                                    therapist_id=body.therapist_id,
-                                                                                    language_code=language_code,
-                                                                                    auth_manager=auth_manager,
-                                                                                    openai_client=openai_client,
-                                                                                    session_id=session_id)
+                mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.text,
+                                                                                      therapist_id=body.therapist_id,
+                                                                                      language_code=language_code,
+                                                                                      auth_manager=auth_manager,
+                                                                                      openai_client=openai_client,
+                                                                                      session_id=session_id)
             else:
                 mini_summary = current_mini_summary
 
@@ -315,11 +315,11 @@ class AssistantManager:
                                           session_notes_text: str,
                                           session_id: str) -> str:
         try:
-            soap_report = await VectorQueryWorker().create_soap_report(text=session_notes_text,
-                                                                       therapist_id=therapist_id,
-                                                                       auth_manager=auth_manager,
-                                                                       openai_client=openai_client,
-                                                                       session_id=session_id)
+            soap_report = await ChartWiseAssistant().create_soap_report(text=session_notes_text,
+                                                                        therapist_id=therapist_id,
+                                                                        auth_manager=auth_manager,
+                                                                        openai_client=openai_client,
+                                                                        session_id=session_id)
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -386,8 +386,8 @@ class AssistantManager:
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
-            vector_query_worker = VectorQueryWorker()
-            async for part in vector_query_worker.query_store(index_id=query.therapist_id,
+            chartwise_assistant = ChartWiseAssistant()
+            async for part in chartwise_assistant.query_store(index_id=query.therapist_id,
                                                               namespace=query.patient_id,
                                                               patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                               patient_gender=patient_gender,
@@ -427,17 +427,17 @@ class AssistantManager:
             addressing_name = therapist_query_dict['data'][0]["first_name"]
             language_code = therapist_query_dict['data'][0]["language_preference"]
             therapist_gender = therapist_query_dict['data'][0]["gender"]
-            result = await VectorQueryWorker().create_greeting(therapist_name=addressing_name,
-                                                               therapist_gender=therapist_gender,
-                                                               language_code=language_code,
-                                                               tz_identifier=client_tz_identifier,
-                                                               session_id=session_id,
-                                                               endpoint_name=endpoint_name,
-                                                               therapist_id=therapist_id,
-                                                               method=api_method,
-                                                               environment=environment,
-                                                               openai_client=openai_client,
-                                                               auth_manager=auth_manager)
+            result = await ChartWiseAssistant().create_greeting(therapist_name=addressing_name,
+                                                                therapist_gender=therapist_gender,
+                                                                language_code=language_code,
+                                                                tz_identifier=client_tz_identifier,
+                                                                session_id=session_id,
+                                                                endpoint_name=endpoint_name,
+                                                                therapist_id=therapist_id,
+                                                                method=api_method,
+                                                                environment=environment,
+                                                                openai_client=openai_client,
+                                                                auth_manager=auth_manager)
             return result
         except Exception as e:
             raise Exception(e)
@@ -475,18 +475,18 @@ class AssistantManager:
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
 
-            response = await VectorQueryWorker().create_question_suggestions(language_code=language_code,
-                                                                             session_id=session_id,
-                                                                             endpoint_name=endpoint_name,
-                                                                             index_id=therapist_id,
-                                                                             namespace=patient_id,
-                                                                             method=api_method,
-                                                                             environment=environment,
-                                                                             auth_manager=auth_manager,
-                                                                             openai_client=openai_client,
-                                                                             pinecone_client=pinecone_client,
-                                                                             patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                             patient_gender=patient_gender)
+            response = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
+                                                                              session_id=session_id,
+                                                                              endpoint_name=endpoint_name,
+                                                                              index_id=therapist_id,
+                                                                              namespace=patient_id,
+                                                                              method=api_method,
+                                                                              environment=environment,
+                                                                              auth_manager=auth_manager,
+                                                                              openai_client=openai_client,
+                                                                              pinecone_client=pinecone_client,
+                                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                              patient_gender=patient_gender)
 
             assert 'questions' in response, "Something went wrong in generating a response. Please try again"
             return response
@@ -538,12 +538,12 @@ class AssistantManager:
                                                      table_name="therapists")
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await VectorQueryWorker().create_session_mini_summary(session_notes=diarization_summary,
-                                                                                 therapist_id=therapist_id,
-                                                                                 language_code=language_code,
-                                                                                 auth_manager=auth_manager,
-                                                                                 openai_client=openai_client,
-                                                                                 session_id=session_id)
+            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=diarization_summary,
+                                                                                  therapist_id=therapist_id,
+                                                                                  language_code=language_code,
+                                                                                  auth_manager=auth_manager,
+                                                                                  openai_client=openai_client,
+                                                                                  session_id=session_id)
 
             patient_query_dict = patient_query.dict()
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
@@ -650,8 +650,8 @@ class AssistantManager:
             else:
                 session_date_override = None
 
-            vector_query_worker = VectorQueryWorker()
-            result = await vector_query_worker.create_briefing(index_id=therapist_id,
+            chartwise_assistant = ChartWiseAssistant()
+            result = await chartwise_assistant.create_briefing(index_id=therapist_id,
                                                                namespace=patient_id,
                                                                environment=environment,
                                                                language_code=language_code,
@@ -706,18 +706,18 @@ class AssistantManager:
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
 
-            response = await VectorQueryWorker().fetch_frequent_topics(language_code=language_code,
-                                                                       session_id=session_id,
-                                                                       endpoint_name=endpoint_name,
-                                                                       index_id=therapist_id,
-                                                                       namespace=patient_id,
-                                                                       method=api_method,
-                                                                       environment=environment,
-                                                                       pinecone_client=pinecone_client,
-                                                                       openai_client=openai_client,
-                                                                       auth_manager=auth_manager,
-                                                                       patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                       patient_gender=patient_gender)
+            response = await ChartWiseAssistant().fetch_frequent_topics(language_code=language_code,
+                                                                        session_id=session_id,
+                                                                        endpoint_name=endpoint_name,
+                                                                        index_id=therapist_id,
+                                                                        namespace=patient_id,
+                                                                        method=api_method,
+                                                                        environment=environment,
+                                                                        pinecone_client=pinecone_client,
+                                                                        openai_client=openai_client,
+                                                                        auth_manager=auth_manager,
+                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                        patient_gender=patient_gender)
 
             error_message = "Something went wrong in generating a response. Please try again"
             assert 'topics' in response, error_message

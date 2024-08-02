@@ -12,7 +12,7 @@ from ..managers.auth_manager import AuthManager
 GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
-class VectorQueryWorker:
+class ChartWiseAssistant:
 
     """
     Queries the respective datastore with the incoming parameters.

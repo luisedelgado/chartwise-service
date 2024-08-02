@@ -15,7 +15,7 @@ from ...dependencies.api.pinecone_base_class import PineconeBaseClass
 from ...internal.utilities import datetime_handler
 from ...managers.auth_manager import AuthManager
 from ...vectors import data_cleaner
-from ...vectors.vector_query import VectorQueryWorker, PRE_EXISTING_HISTORY_PREFIX
+from ...vectors.chartwise_assistant import ChartWiseAssistant, PRE_EXISTING_HISTORY_PREFIX
 
 class PineconeClient(PineconeBaseClass):
 
@@ -47,7 +47,7 @@ class PineconeClient(PineconeBaseClass):
             )
             chunks = splitter.split_text(text)
 
-            vector_query_worker = VectorQueryWorker()
+            chartwise_assistant = ChartWiseAssistant()
             vectors = []
             for chunk_index, chunk in enumerate(chunks):
                 doc = Document()
@@ -55,11 +55,11 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await vector_query_worker.summarize_chunk(chunk_text=chunk_text,
-                                                                        therapist_id=index_id,
-                                                                        auth_manager=auth_manager,
-                                                                        openai_client=openai_client,
-                                                                        session_id=session_id)
+                chunk_summary = await chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                                                                          therapist_id=index_id,
+                                                                          auth_manager=auth_manager,
+                                                                          openai_client=openai_client,
+                                                                          session_id=session_id)
 
                 vector_store.namespace = namespace
                 doc.id_ = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -107,7 +107,7 @@ class PineconeClient(PineconeBaseClass):
             )
             chunks = splitter.split_text(text)
 
-            vector_query_worker = VectorQueryWorker()
+            chartwise_assistant = ChartWiseAssistant()
             vectors = []
             for chunk in chunks:
                 doc = Document()
@@ -115,11 +115,11 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await vector_query_worker.summarize_chunk(chunk_text=chunk_text,
-                                                                        therapist_id=index_id,
-                                                                        auth_manager=auth_manager,
-                                                                        openai_client=openai_client,
-                                                                        session_id=session_id)
+                chunk_summary = await chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                                                                          therapist_id=index_id,
+                                                                          auth_manager=auth_manager,
+                                                                          openai_client=openai_client,
+                                                                          session_id=session_id)
 
                 vector_store.namespace = "".join([namespace,
                                                     "-",
