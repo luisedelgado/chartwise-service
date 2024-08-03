@@ -398,7 +398,7 @@ class PineconeClient(PineconeBaseClass):
     Arguments:
     index_name – the name that should be used to create the index.
     """
-    def __create_index_if_necessary(index_name: str):
+    def __create_index_if_necessary(self, index_name: str):
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             pc.create_index(
