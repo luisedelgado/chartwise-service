@@ -124,30 +124,30 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 400
 
-    # def test_insert_new_session_success(self):
-    #     self.fake_supabase_user_client.return_authenticated_session = True
-    #     self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-    #     self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-    #     self.fake_supabase_user_client.select_returns_data = True
+    def test_insert_new_session_success(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
 
-    #     assert self.fake_supabase_user_client.fake_insert_text == None
-    #     insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
-    #     response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-    #                                 cookies={
-    #                                     "authorization": self.auth_cookie,
-    #                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
-    #                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
-    #                                 },
-    #                                 json={
-    #                                     "patient_id": FAKE_PATIENT_ID,
-    #                                     "therapist_id": FAKE_THERAPIST_ID,
-    #                                     "text": insert_text,
-    #                                     "date": "01-01-2020",
-    #                                     "client_timezone_identifier": "UTC",
-    #                                     "source": "manual_input"
-    #                                 })
-    #     assert response.status_code == 200
-    #     assert self.fake_supabase_user_client.fake_insert_text == insert_text
+        assert self.fake_supabase_user_client.fake_insert_text == None
+        insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
+        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": insert_text,
+                                        "date": "01-01-2020",
+                                        "client_timezone_identifier": "UTC",
+                                        "source": "manual_input"
+                                    })
+        assert response.status_code == 200
+        assert self.fake_supabase_user_client.fake_insert_text == insert_text
 
     # def test_update_session_with_invalid_auth(self):
     #     response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
