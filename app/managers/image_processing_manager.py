@@ -41,7 +41,6 @@ class ImageProcessingManager:
                 response = portkey.post('/document', document=payload)
                 response_as_dict = response.dict()
                 doc_id = response_as_dict["documentId"]
-                assert response_as_dict['status'].lower() == "processing"
             else:
                 headers = {
                     "accept": "application/json",
