@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 
+from ..dependencies.api.docupanda_base_class import DocuPandaBaseClass
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
@@ -9,9 +10,11 @@ class RouterDependencies:
     def __init__(self,
                  openai_client: OpenAIBaseClass = None,
                  pinecone_client: PineconeBaseClass = None,
+                 docupanda_client: DocuPandaBaseClass = None,
                  supabase_client_factory: SupabaseFactoryBaseClass = None):
         self.openai_client = openai_client
         self.pinecone_client = pinecone_client
+        self.docupanda_client = docupanda_client
         self.supabase_client_factory = supabase_client_factory
 
 class SessionNotesSource(Enum):

@@ -33,6 +33,7 @@ class ImageProcessingRouter:
         self._image_processing_manager = image_processing_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory
         self._openai_client = router_dependencies.openai_client
+        self._docupanda_client = router_dependencies.docupanda_client
         self.router = APIRouter()
         self._register_routes()
 
@@ -119,7 +120,8 @@ class ImageProcessingRouter:
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
             document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
-                                                                                            image=image)
+                                                                                            image=image,
+                                                                                            docupanda_client=self._docupanda_client)
 
             logs_description = f"document_id={document_id}"
             logger.log_api_response(session_id=session_id,
@@ -188,7 +190,8 @@ class ImageProcessingRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param."
             assert len(document_id or '') > 0, "Didn't receive a valid document id."
 
-            textraction = self._image_processing_manager.extract_text(document_id)
+            textraction = self._image_processing_manager.extract_text(document_id=document_id,
+                                                                      docupanda_client=self._docupanda_client)
 
             if template == SessionNotesTemplate.FREE_FORM:
                 logger.log_api_response(session_id=session_id,
