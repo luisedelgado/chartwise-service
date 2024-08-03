@@ -1201,7 +1201,7 @@ class AssistantRouter:
             return {"soap_notes": soap_notes}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(session_id=session_id,
                              endpoint_name=self.TEMPLATES_ENDPOINT,
                              error_code=status_code,

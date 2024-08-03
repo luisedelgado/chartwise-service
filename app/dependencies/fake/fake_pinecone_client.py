@@ -7,6 +7,11 @@ from ...managers.auth_manager import AuthManager
 
 class FakePineconeClient(PineconeBaseClass):
 
+    def __init__(self):
+        self.vector_store_context_returns_data = False
+        self.insert_preexisting_history_num_invocations = 0
+        self.update_preexisting_history_num_invocations = 0
+
     async def insert_session_vectors(self,
                                      index_id: str,
                                      namespace: str,
@@ -24,7 +29,7 @@ class FakePineconeClient(PineconeBaseClass):
                                                  session_id: str,
                                                  openai_client: OpenAIBaseClass,
                                                  auth_manager: AuthManager):
-        pass
+        self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
     def delete_session_vectors(self, index_id, namespace, date=None):
         pass
@@ -53,9 +58,10 @@ class FakePineconeClient(PineconeBaseClass):
                                                  session_id: str,
                                                  openai_client: OpenAIBaseClass,
                                                  auth_manager: AuthManager):
-        pass
+        self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
-    async def get_vector_store_context(auth_manager: AuthManager,
+    async def get_vector_store_context(self,
+                                       auth_manager: AuthManager,
                                        openai_client: OpenAIBaseClass,
                                        query_input: str,
                                        index_id: str,
@@ -63,8 +69,18 @@ class FakePineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> str:
-        pass
+        if not self.vector_store_context_returns_data:
+            return {}
 
-    def fetch_historical_context(index: Index,
+        return {
+            "language_code": "es-419",
+            "context": "fakeContext",
+            "patient_name": "fakePatientName",
+            "patient_gender": "female",
+            "query_input": "My fake query input"
+        }
+
+    def fetch_historical_context(self,
+                                 index: Index,
                                  namespace: str):
         pass

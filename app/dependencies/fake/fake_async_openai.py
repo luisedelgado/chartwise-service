@@ -31,9 +31,8 @@ class FakeOpenAIChat:
 
 class FakeAsyncOpenAI(OpenAIBaseClass):
 
-    def __init__(self, create_completion_returns_data):
-        self.create_completion_returns_data: bool = create_completion_returns_data
-        self._chat = FakeOpenAIChat(completions_return_data=create_completion_returns_data)
+    def __init__(self):
+        self._chat = FakeOpenAIChat(completions_return_data=True)
 
     async def trigger_async_chat_completion(self,
                                             metadata: dict,
@@ -42,7 +41,11 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                             expects_json_response: bool,
                                             auth_manager: AuthManager,
                                             cache_configuration: dict = None):
-        return "my result"
+        return {
+            "summary": "my fake summary",
+            "questions": ["question"],
+            "topics": ["topic"]
+        }
 
     async def stream_chat_completion(self,
                                      metadata: dict,
