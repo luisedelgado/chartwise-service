@@ -10,6 +10,9 @@ FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
 class FakeSupabaseResult(BaseModel):
     data: list
 
+class FakeSupabaseUser(BaseModel):
+    user: dict
+
 class FakeSupabaseClient(SupabaseBaseClass):
 
     return_authenticated_session: bool = False
@@ -18,6 +21,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     fake_text: str = None
     select_returns_data: bool = False
     patient_query_returns_preexisting_history = False
+    user_authentication_id = None
 
     def insert(self,
                payload: dict,
@@ -89,7 +93,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
         }])
 
     def get_user(self):
-        pass
+        return FakeSupabaseUser(user={
+            'id': self.user_authentication_id
+        })
 
     def refresh_session(self):
         return FakeSession(return_authenticated_session=self.return_authenticated_session,

@@ -17,9 +17,9 @@ from ..service_coordinator import EndpointServiceCoordinator
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
 FAKE_SESSION_REPORT_ID = "09b6da8d-a58e-45e2-9022-7d58ca02266b"
-FAKE_REFRESH_TOKEN = "refreshToken"
-FAKE_ACCESS_TOKEN = "accessToken"
-FAKE_TZ_IDENTIFIER = "UTC"
+FAKE_REFRESH_TOKEN = "3ac77394-86b5-42dc-be14-0b92414d8443"
+FAKE_ACCESS_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
+TZ_IDENTIFIER = "UTC"
 ENVIRONMENT = "testing"
 
 class TestingHarnessAssistantRouter:
@@ -47,7 +47,7 @@ class TestingHarnessAssistantRouter:
                                                                          assistant_manager=self.assistant_manager,
                                                                          router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
                                                                                                                 pinecone_client=self.fake_pinecone_client)).router],
-                                                 environment="dev")
+                                                 environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
     def test_insert_new_session_with_missing_auth_token(self):
@@ -57,7 +57,7 @@ class TestingHarnessAssistantRouter:
                                    "therapist_id": FAKE_THERAPIST_ID,
                                    "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                    "date": "01-01-2020",
-                                   "client_timezone_identifier": "UTC",
+                                   "client_timezone_identifier": TZ_IDENTIFIER,
                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                    "source": "manual_input"
@@ -76,7 +76,7 @@ class TestingHarnessAssistantRouter:
                                     "therapist_id": FAKE_THERAPIST_ID,
                                     "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                     "date": "01-01-2020",
-                                    "client_timezone_identifier": "UTC",
+                                    "client_timezone_identifier": TZ_IDENTIFIER,
                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                     "source": "manual_input"
@@ -95,7 +95,7 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
@@ -115,7 +115,7 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
@@ -214,7 +214,7 @@ class TestingHarnessAssistantRouter:
                                         "therapist_id": FAKE_THERAPIST_ID,
                                         "text": insert_text,
                                         "date": "01-01-2020",
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "source": "manual_input"
                                     })
         assert response.status_code == 200
@@ -225,7 +225,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
                                         "source": "manual_input",
@@ -243,7 +243,7 @@ class TestingHarnessAssistantRouter:
                                 json={
                                     "patient_id": FAKE_PATIENT_ID,
                                     "therapist_id": FAKE_THERAPIST_ID,
-                                    "client_timezone_identifier": "UTC",
+                                    "client_timezone_identifier": TZ_IDENTIFIER,
                                     "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                     "date": "01/01/2020",
                                     "source": "manual_input",
@@ -264,7 +264,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01/01/2020",
                                         "source": "manual_input",
@@ -306,7 +306,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": "",
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
                                         "source": "undefined",
@@ -327,7 +327,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": "",
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
                                         "source": "undefined",
@@ -348,7 +348,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
                                         "source": "undefined",
@@ -369,7 +369,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "date": "01-01-2020",
                                         "source": "undefined",
@@ -393,7 +393,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": update_text,
                                         "date": "01-01-2020",
                                         "source": "manual_input",
@@ -418,7 +418,7 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "text": update_text,
                                         "date": "01-01-2020",
                                         "source": "manual_input",
@@ -640,7 +640,7 @@ class TestingHarnessAssistantRouter:
     def test_greeting_with_missing_auth_token(self):
         response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
                                     params={
-                                        "client_tz_identifier": FAKE_TZ_IDENTIFIER,
+                                        "client_tz_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
@@ -653,7 +653,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
-                                        "client_tz_identifier": FAKE_TZ_IDENTIFIER,
+                                        "client_tz_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
@@ -685,7 +685,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": "",
                                     })
         assert response.status_code == 401
@@ -702,7 +702,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
-                                        "client_timezone_identifier": "UTC",
+                                        "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
