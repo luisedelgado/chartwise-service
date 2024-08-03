@@ -42,11 +42,7 @@ class TestingHarnessAssistantRouter:
                                                                           assistant_manager=self.assistant_manager,
                                                                           router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
                                                                                                                  pinecone_client=self.fake_pinecone_client,
-                                                                                                                 supabase_client_factory=self.fake_supabase_client_factory)).router,
-                                                          SecurityRouter(auth_manager=self.auth_manager,
-                                                                         assistant_manager=self.assistant_manager,
-                                                                         router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
-                                                                                                                pinecone_client=self.fake_pinecone_client)).router],
+                                                                                                                 supabase_client_factory=self.fake_supabase_client_factory)).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 

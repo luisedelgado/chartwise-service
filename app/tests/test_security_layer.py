@@ -35,12 +35,7 @@ class TestingHarnessSecurityRouter:
         self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
                                                                  expires_delta=timedelta(minutes=5))
 
-        coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
-                                                                          auth_manager=self.auth_manager,
-                                                                          assistant_manager=self.assistant_manager,
-                                                                          router_dependencies=RouterDependencies(pinecone_client=self.fake_pinecone_client,
-                                                                                                                 supabase_client_factory=self.fake_supabase_client_factory)).router,
-                                                          SecurityRouter(auth_manager=self.auth_manager,
+        coordinator = EndpointServiceCoordinator(routers=[SecurityRouter(auth_manager=self.auth_manager,
                                                                          assistant_manager=self.assistant_manager,
                                                                          router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
                                                                                                                 pinecone_client=self.fake_pinecone_client)).router],
