@@ -2,9 +2,11 @@ from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
+from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
+from ..dependencies.fake.fake_speechmatics_client import FakeSpeechmaticsClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..internal.router_dependencies import RouterDependencies
@@ -24,6 +26,131 @@ ENVIRONMENT = "testing"
 DUMMY_WAV_FILE_LOCATION = "app/tests/data/maluma.wav"
 AUDIO_WAV_FILETYPE = "audio/wav"
 ENVIRONMENT = "testing"
+FAKE_JOB_ID = "9876"
+FAKE_DIARIZATION_RESULT = {
+    "job": {
+        "id": "m38xavr1g4"
+    },
+    "results": [
+        {
+            "alternatives": [
+                {
+                    "confidence": 0.94,
+                    "content": "Lo",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.24,
+            "start_time": 0.0,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 1.0,
+                    "content": "creo",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.45,
+            "start_time": 0.24,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 1.0,
+                    "content": "que",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.54,
+            "start_time": 0.45,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 0.86,
+                    "content": "es",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.6,
+            "start_time": 0.54,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 1.0,
+                    "content": "lo",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.69,
+            "start_time": 0.6,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 0.95,
+                    "content": "más",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 0.87,
+            "start_time": 0.69,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 1.0,
+                    "content": "reciente",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "end_time": 1.65,
+            "start_time": 0.87,
+            "type": "word"
+        },
+        {
+            "alternatives":
+            [
+                {
+                    "confidence": 1.0,
+                    "content": ".",
+                    "language": "es",
+                    "speaker": "S1"
+                }
+            ],
+            "attaches_to": "previous",
+            "end_time": 1.65,
+            "is_eos": True,
+            "start_time": 1.65,
+            "type": "punctuation"
+        }
+    ],
+    "summary":
+    {
+        "content": "Temas clave:\n- Interpretación de personajes\n"
+    }
+}
 
 class TestingHarnessAudioProcessingRouter:
 
@@ -36,6 +163,7 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_admin_client = FakeSupabaseClient()
         self.fake_supabase_user_client = FakeSupabaseClient()
         self.fake_pinecone_client = FakePineconeClient()
+        self.fake_speechmatics_client = FakeSpeechmaticsClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
@@ -47,6 +175,7 @@ class TestingHarnessAudioProcessingRouter:
                                                                                 router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
                                                                                                                        deepgram_client=self.fake_deepgram_client,
                                                                                                                        pinecone_client=self.fake_pinecone_client,
+                                                                                                                       speechmatics_client=self.fake_speechmatics_client,
                                                                                                                        supabase_client_factory=self.fake_supabase_client_factory)).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
@@ -98,148 +227,212 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 200
         assert "transcript" in response.json()
 
-    # def test_invoke_diarization_with_no_auth(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": FAKE_THERAPIST_ID,
-    #                                "session_date": "10-24-2020",
-    #                                "template": SOAP_TEMPLATE,
-    #                                "client_timezone_identifier": "UTC"
-    #                            },
-    #                            files=files)
-    #     assert response.status_code == 401
+    def test_invoke_diarization_with_no_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files)
+        assert response.status_code == 401
 
-    # def test_invoke_diarization_with_valid_auth_token_but_invalid_date_format(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": FAKE_THERAPIST_ID,
-    #                                "session_date": "10/24/2020",
-    #                                "template": SOAP_TEMPLATE,
-    #                                "client_timezone_identifier": "UTC"
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 401
+    def test_invoke_diarization_with_auth_token_but_supabase_returns_unathenticated_session(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "session_date": "10-24-2020",
+                                        "template": "soap",
+                                        "client_timezone_identifier": "UTC"
+                                    },
+                                    files=files)
+        assert response.status_code == 401
 
-    # def test_invoke_diarization_with_valid_tokens_but_invalid_date_format(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": self.auth_manager.FAKE_USER_ID,
-    #                                "session_date": "10/24/2020",
-    #                                "template": SOAP_TEMPLATE,
-    #                                "client_timezone_identifier": "UTC"
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                                "datastore_access_token": FAKE_AUTH_COOKIE,
-    #                                "datastore_refresh_token": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 417
+    def test_invoke_diarization_with_valid_auth_but_empty_therapist_id(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": "",
+                                   "session_date": "10-24-2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                               })
+        assert response.status_code == 422
 
-    # def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": self.auth_manager.FAKE_USER_ID,
-    #                                "session_date": "10-24-2020",
-    #                                "template": SOAP_TEMPLATE,
-    #                                "client_timezone_identifier": "gfhhfhdfhhs"
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                                "datastore_access_token": FAKE_AUTH_COOKIE,
-    #                                "datastore_refresh_token": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 417
+    def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": "",
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                               })
+        assert response.status_code == 422
 
-    # def test_invoke_diarization_with_valid_auth_and_valid_date_format(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": self.auth_manager.FAKE_USER_ID,
-    #                                "session_date": "10-24-2020",
-    #                                "template": SOAP_TEMPLATE,
-    #                                "client_timezone_identifier": "UTC"
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                                "datastore_access_token": FAKE_AUTH_COOKIE,
-    #                                "datastore_refresh_token": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 200
-    #     assert response.json() == {"job_id": self.audio_processing_manager.FAKE_JOB_ID}
-    #     assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
-    #     assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
+    def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10/24/2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                               })
+        assert response.status_code == 401
 
-    # def test_diarization_notifications_with_invalid_auth(self):
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-    #                            headers={
-    #                            })
-    #     assert response.status_code == 401
+    def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "gfhhfhdfhhs"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                               })
+        assert response.status_code == 417
 
-    # def test_diarization_notifications_with_valid_auth_but_no_status(self):
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-    #                            headers={
-    #                                "authorization": FAKE_AUTH_COOKIE
-    #                            },
-    #                            params={
-    #                            })
-    #     assert response.status_code == 417
+    def test_invoke_diarization_success(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "session_date": "10-24-2020",
+                                   "template": "soap",
+                                   "client_timezone_identifier": "UTC"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                               })
+        assert response.status_code == 200
+        assert "job_id" in response.json()
 
-    # def test_diarization_notifications_with_valid_auth_and_failed_status(self):
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-    #                            headers={
-    #                                "authorization": FAKE_AUTH_COOKIE
-    #                            },
-    #                            params={
-    #                                "status": "failed"
-    #                            })
-    #     assert response.status_code == 417
+    def test_diarization_notifications_with_invalid_auth(self):
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                               })
+        assert response.status_code == 401
 
-    # def test_diarization_notifications_with_valid_auth_and_success_status_but_no_job_id(self):
-    #     response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-    #                            headers={
-    #                                "authorization": FAKE_AUTH_COOKIE
-    #                            },
-    #                            params={
-    #                                "status": "failed"
-    #                            })
-    #     assert response.status_code == 417
+    def test_diarization_notifications_with_valid_auth_but_no_status(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": self.auth_cookie
+                               },
+                               params={
+                               })
+        assert response.status_code == 417
 
-    # # TODO: Uncomment when async testing is figured out
-    # # def test_diarization_notifications_with_valid_auth_and_successful_params(self):
-    # #     assert self.assistant_manager.fake_processed_diarization_result == None
-    # #     response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-    # #                            headers={
-    # #                                "authorization": FAKE_AUTH_COOKIE
-    # #                            },
-    # #                            params={
-    # #                                "status": "success",
-    # #                                "id": self.audio_processing_manager.FAKE_JOB_ID
-    # #                            },
-    # #                            json=self.audio_processing_manager.FAKE_DIARIZATION_RESULT)
-    # #     assert response.status_code == 200
-    # #     assert self.assistant_manager.fake_processed_diarization_result == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'
+    def test_diarization_notifications_with_valid_auth_and_failed_status(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": self.auth_cookie
+                               },
+                               params={
+                                   "status": "failed"
+                               })
+        assert response.status_code == 417
+
+    def test_diarization_notifications_with_valid_auth_and_success_status_but_no_job_id(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": self.auth_cookie
+                               },
+                               params={
+                                   "status": "success"
+                               })
+        assert response.status_code == 417
+
+    def test_diarization_notifications_with_valid_auth_and_successful_params(self):
+        self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_admin_client.select_returns_data = True
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
+                               headers={
+                                   "authorization": self.auth_cookie
+                               },
+                               params={
+                                   "status": "success",
+                                   "id": FAKE_JOB_ID
+                               },
+                               json=FAKE_DIARIZATION_RESULT)
+        assert response.status_code == 200
+
+    def test_diarization_cleaner_internal_formatting(self):
+        clean_transcription = DiarizationCleaner().clean_transcription(input=FAKE_DIARIZATION_RESULT["results"],
+                                                                       supabase_client_factory=self.fake_supabase_client_factory)
+        assert clean_transcription == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'

@@ -79,7 +79,13 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "notes_text": "My fake notes text",
                 "session_date": "2023-01-01",
                 "patient_id": FAKE_PATIENT_ID,
+                "therapist_id": FAKE_THERAPIST_ID,
+                "diarization_template": "free_form",
             }])
+        if table_name == "diarization_logs":
+            return FakeSupabaseResult(data=[{
+            "session_id": "123",
+        }])
 
         raise Exception("Untracked table name")
 
