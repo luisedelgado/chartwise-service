@@ -7,24 +7,29 @@ from fastapi import (APIRouter,
                      Response,
                      status)
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from typing import Annotated, Union
 
+from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.model import (AssistantQuery,
-                              Gender,
-                              PatientConsentmentChannel,
-                              PatientInsertPayload,
-                              PatientUpdatePayload,
-                              RouterDependencies,
-                              SessionNotesInsert,
-                              SessionNotesSource,
-                              SessionNotesTemplate,
-                              SessionNotesUpdate,
-                              TemplatePayload)
+from ..internal.router_dependencies import RouterDependencies
+from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
-from ..managers.assistant_manager import AssistantManager
+from ..managers.assistant_manager import (AssistantManager,
+                                          AssistantQuery,
+                                          PatientConsentmentChannel,
+                                          PatientInsertPayload,
+                                          PatientUpdatePayload,
+                                          SessionNotesInsert,
+                                          SessionNotesSource,
+                                          SessionNotesUpdate)
 from ..managers.auth_manager import AuthManager
+
+class TemplatePayload(BaseModel):
+    session_notes_text: str
+    template: SessionNotesTemplate = SessionNotesTemplate.SOAP
+    therapist_id: str
 
 class AssistantRouter:
 

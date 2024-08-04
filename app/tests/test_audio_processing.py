@@ -1,89 +1,102 @@
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
-from ..routers.assistant_router import AssistantRouter
+from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
+from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
+from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
+from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
+from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
+from ..internal.router_dependencies import RouterDependencies
+from ..managers.assistant_manager import AssistantManager
+from ..managers.audio_processing_manager import AudioProcessingManager
+from ..managers.auth_manager import AuthManager
 from ..routers.audio_processing_router import AudioProcessingRouter
-from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
-FAKE_AUTH_COOKIE = "my-auth-cookie"
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
+FAKE_SESSION_REPORT_ID = "09b6da8d-a58e-45e2-9022-7d58ca02266b"
+FAKE_REFRESH_TOKEN = "3ac77394-86b5-42dc-be14-0b92414d8443"
+FAKE_ACCESS_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
+TZ_IDENTIFIER = "UTC"
+ENVIRONMENT = "testing"
 DUMMY_WAV_FILE_LOCATION = "app/tests/data/maluma.wav"
 AUDIO_WAV_FILETYPE = "audio/wav"
 ENVIRONMENT = "testing"
-SOAP_TEMPLATE = "soap"
 
 class TestingHarnessAudioProcessingRouter:
 
-    ...
-    # def setup_method(self):
-    #     self.auth_manager = ManagerFactory().create_auth_manager(ENVIRONMENT)
-    #     self.auth_manager.auth_cookie = FAKE_AUTH_COOKIE
+    def setup_method(self):
+        self.auth_manager = AuthManager()
+        self.assistant_manager = AssistantManager()
+        self.audio_processing_manager = AudioProcessingManager()
+        self.fake_openai_client = FakeAsyncOpenAI()
+        self.fake_deepgram_client = FakeDeepgramClient()
+        self.fake_supabase_admin_client = FakeSupabaseClient()
+        self.fake_supabase_user_client = FakeSupabaseClient()
+        self.fake_pinecone_client = FakePineconeClient()
+        self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
+                                                                      fake_supabase_user_client=self.fake_supabase_user_client)
+        self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
+                                                                 expires_delta=timedelta(minutes=5))
 
-    #     self.assistant_manager = ManagerFactory.create_assistant_manager(ENVIRONMENT)
-    #     self.audio_processing_manager = ManagerFactory.create_audio_processing_manager(ENVIRONMENT)
+        coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(auth_manager=self.auth_manager,
+                                                                                assistant_manager=self.assistant_manager,
+                                                                                audio_processing_manager=self.audio_processing_manager,
+                                                                                router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
+                                                                                                                       deepgram_client=self.fake_deepgram_client,
+                                                                                                                       pinecone_client=self.fake_pinecone_client,
+                                                                                                                       supabase_client_factory=self.fake_supabase_client_factory)).router],
+                                                 environment=ENVIRONMENT)
+        self.client = TestClient(coordinator.app)
 
-    #     coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
-    #                                                                       auth_manager=self.auth_manager,
-    #                                                                       assistant_manager=self.assistant_manager).router,
-    #                                                       AudioProcessingRouter(auth_manager=self.auth_manager,
-    #                                                                             assistant_manager=self.assistant_manager,
-    #                                                                             audio_processing_manager=self.audio_processing_manager).router,
-    #                                                       SecurityRouter(auth_manager=self.auth_manager,
-    #                                                                      assistant_manager=self.assistant_manager).router],
-    #                                              environment="dev")
-    #     self.client = TestClient(coordinator.app)
+    def test_invoke_transcription_with_no_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "template": "soap"
+                               },
+                               files=files)
+        assert response.status_code == 401
 
-    # def test_invoke_transcription_with_no_auth(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": FAKE_THERAPIST_ID,
-    #                                "template": SOAP_TEMPLATE
-    #                            },
-    #                            files=files)
-    #     assert response.status_code == 401
+    def test_invoke_soap_transcription_with_valid_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "template": "soap"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                               })
+        assert response.status_code == 200
+        assert "soap_transcript" in response.json()
 
-    # def test_invoke_free_form_transcription_with_valid_auth(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": self.auth_manager.FAKE_USER_ID,
-    #                                "template": "free_form"
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 200
-    #     assert response.json() == {"transcript": self.audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
-    #     assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
-    #     assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
-
-    # def test_invoke_free_form_transcription_with_valid_auth(self):
-    #     files = {
-    #         "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-    #     }
-    #     response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-    #                            data={
-    #                                "patient_id": FAKE_PATIENT_ID,
-    #                                "therapist_id": self.auth_manager.FAKE_USER_ID,
-    #                                "template": SOAP_TEMPLATE
-    #                            },
-    #                            files=files,
-    #                            cookies={
-    #                                "authorization": FAKE_AUTH_COOKIE,
-    #                            })
-    #     assert response.status_code == 200
-    #     assert response.json() == {"soap_transcript": self.audio_processing_manager.FAKE_TRANSCRIPTION_RESULT}
-    #     assert response.cookies.get("authorization") == self.auth_manager.FAKE_AUTH_TOKEN
-    #     assert response.cookies.get("session_id") == self.auth_manager.FAKE_SESSION_ID
+    def test_invoke_free_form_transcription_with_valid_auth(self):
+        files = {
+            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
+        }
+        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                               data={
+                                   "patient_id": FAKE_PATIENT_ID,
+                                   "therapist_id": FAKE_THERAPIST_ID,
+                                   "template": "free_form"
+                               },
+                               files=files,
+                               cookies={
+                                   "authorization": self.auth_cookie,
+                               })
+        assert response.status_code == 200
+        assert "transcript" in response.json()
 
     # def test_invoke_diarization_with_no_auth(self):
     #     files = {

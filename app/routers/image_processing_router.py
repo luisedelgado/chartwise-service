@@ -9,9 +9,10 @@ from fastapi import (APIRouter,
                      UploadFile)
 from typing import Annotated, Union
 
+from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.model import RouterDependencies, SessionNotesTemplate
+from ..internal.router_dependencies import RouterDependencies
 from ..internal.utilities import general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager

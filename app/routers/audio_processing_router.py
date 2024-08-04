@@ -14,11 +14,12 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
+from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.model import RouterDependencies, SessionNotesSource, SessionNotesTemplate
+from ..internal.router_dependencies import RouterDependencies
 from ..internal.utilities import datetime_handler, general_utilities
-from ..managers.assistant_manager import AssistantManager
+from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
 
@@ -37,6 +38,7 @@ class AudioProcessingRouter:
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
+            self._deepgram_client = router_dependencies.deepgram_client
             self._pinecone_client = router_dependencies.pinecone_client
             self._supabase_client_factory = router_dependencies.supabase_client_factory
             self._openai_client = router_dependencies.openai_client
@@ -143,6 +145,7 @@ class AudioProcessingRouter:
 
             transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
                                                                                     openai_client=self._openai_client,
+                                                                                    deepgram_client=self._deepgram_client,
                                                                                     auth_manager=self._auth_manager,
                                                                                     template=template,
                                                                                     therapist_id=therapist_id,

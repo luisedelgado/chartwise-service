@@ -1,5 +1,6 @@
 import uuid
 
+from enum import Enum
 from fastapi import (APIRouter,
                      Cookie,
                      HTTPException,
@@ -8,12 +9,49 @@ from fastapi import (APIRouter,
                      status,)
 from langcodes import Language
 from typing import Annotated, Union
+from pydantic import BaseModel
 
-from ..internal import model, security
+from ..internal import router_dependencies, security
 from ..internal.logging import Logger
+from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
+
+class SignupMechanism(Enum):
+    UNDEFINED = "undefined"
+    GOOGLE = "google"
+    FACEBOOK = "facebook"
+    INTERNAL = "internal"
+
+class LoginData(BaseModel):
+    datastore_access_token: str = None
+    datastore_refresh_token: str = None
+    user_id: str
+
+class LogoutData(BaseModel):
+    therapist_id: str
+
+class TherapistInsertPayload(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    signup_mechanism: SignupMechanism
+    language_code_preference: str
+    gender: Gender
+
+class TherapistUpdatePayload(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    language_code_preference: str
+    gender: Gender
 
 class SecurityRouter:
 
@@ -25,7 +63,7 @@ class SecurityRouter:
     def __init__(self,
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
-                 router_dependencies: model.RouterDependencies):
+                 router_dependencies: router_dependencies.RouterDependencies):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory
@@ -38,7 +76,7 @@ class SecurityRouter:
     """
     def _register_routes(self):
         @self.router.post(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def login_for_access_token(body: model.LoginData,
+        async def login_for_access_token(body: LoginData,
                                          response: Response,
                                          request: Request,
                                          session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
@@ -50,7 +88,7 @@ class SecurityRouter:
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
                          request: Request,
-                         logout_data: model.LogoutData,
+                         logout_data: LogoutData,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
@@ -60,7 +98,7 @@ class SecurityRouter:
                                                session_id=session_id)
 
         @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def add_new_therapist(body: model.TherapistInsertPayload,
+        async def add_new_therapist(body: TherapistInsertPayload,
                                     response: Response,
                                     request: Request,
                                     datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -78,7 +116,7 @@ class SecurityRouter:
         @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_therapist_data(response: Response,
                                         request: Request,
-                                        body: model.TherapistUpdatePayload,
+                                        body: TherapistUpdatePayload,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -117,7 +155,7 @@ class SecurityRouter:
     session_id – the id of the current user session.
     """
     async def _login_for_access_token_internal(self,
-                                               body: model.LoginData,
+                                               body: LoginData,
                                                request: Request,
                                                response: Response,
                                                session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
@@ -217,7 +255,7 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _add_new_therapist_internal(self,
-                                          body: model.TherapistInsertPayload,
+                                          body: TherapistInsertPayload,
                                           request: Request,
                                           response: Response,
                                           datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -247,8 +285,8 @@ class SecurityRouter:
                                endpoint_name=self.THERAPISTS_ENDPOINT)
 
         try:
-            assert body.signup_mechanism != model.SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
-            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert body.signup_mechanism != SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
+            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
@@ -300,7 +338,7 @@ class SecurityRouter:
     async def _update_therapist_data_internal(self,
                                               response: Response,
                                               request: Request,
-                                              body: model.TherapistUpdatePayload,
+                                              body: TherapistUpdatePayload,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                               authorization: Annotated[Union[str, None], Cookie()],
@@ -327,7 +365,7 @@ class SecurityRouter:
                                method=put_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            assert body.gender != model.Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 

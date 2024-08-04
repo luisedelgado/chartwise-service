@@ -1,21 +1,78 @@
 from datetime import datetime
+from enum import Enum
+
+from pydantic import BaseModel
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
+from ..dependencies.api.templates import SessionNotesTemplate
 from ..managers.auth_manager import AuthManager
-from ..internal.model import (AssistantQuery,
-                              PatientInsertPayload,
-                              PatientUpdatePayload,
-                              SessionNotesInsert,
-                              SessionNotesTemplate,
-                              SessionNotesUpdate)
+from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
-class AssistantManager:
+class AssistantQuery(BaseModel):
+    patient_id: str
+    therapist_id: str
+    text: str
 
+class PatientConsentmentChannel(Enum):
+    UNDEFINED = "undefined"
+    VERBAL = "verbal"
+    WRITTEN = "written"
+
+class SessionNotesSource(Enum):
+    UNDEFINED = "undefined"
+    FULL_SESSION_RECORDING = "full_session_recording"
+    NOTES_RECORDING = "notes_recording"
+    NOTES_IMAGE = "notes_image"
+    MANUAL_INPUT = "manual_input"
+
+class PatientInsertPayload(BaseModel):
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    pre_existing_history: str = None
+    gender: Gender
+    email: str
+    phone_number: str
+    consentment_channel: PatientConsentmentChannel
+    therapist_id: str
+
+class PatientUpdatePayload(BaseModel):
+    patient_id: str
+    first_name: str
+    middle_name: str = None
+    last_name: str
+    birth_date: str
+    pre_existing_history: str = None
+    gender: Gender
+    email: str
+    phone_number: str
+    consentment_channel: PatientConsentmentChannel
+    therapist_id: str
+
+class SessionNotesInsert(BaseModel):
+    therapist_id: str
+    patient_id: str
+    text: str
+    date: str
+    client_timezone_identifier: str
+    source: SessionNotesSource
+
+class SessionNotesUpdate(BaseModel):
+    therapist_id: str
+    date: str
+    session_notes_id: str
+    client_timezone_identifier: str
+    source: SessionNotesSource
+    diarization: str = None
+    text: str
+
+class AssistantManager:
     async def process_new_session_data(self,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,

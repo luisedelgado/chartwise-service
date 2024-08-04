@@ -1,10 +1,11 @@
 import os
 
+from .dependencies.implementation.deepgram_client import DeepgramClient
 from .dependencies.implementation.docupanda_client import DocupandaClient
 from .dependencies.implementation.openai_client import OpenAIClient
 from .dependencies.implementation.pinecone_client import PineconeClient
 from .dependencies.implementation.supabase_client_factory import SupabaseClientFactory
-from .internal.model import RouterDependencies
+from .internal.router_dependencies import RouterDependencies
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
@@ -24,6 +25,7 @@ supabase_client_factory = SupabaseClientFactory()
 openai_client = OpenAIClient()
 pinecone_client = PineconeClient()
 docupanda_client = DocupandaClient()
+deepgram_client = DeepgramClient()
 
 app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment,
@@ -36,6 +38,7 @@ app = EndpointServiceCoordinator(routers=[
                                                           assistant_manager=assistant_manager,
                                                           audio_processing_manager=audio_processing_manager,
                                                           router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                                                                 deepgram_client=deepgram_client,
                                                                                                  pinecone_client=pinecone_client,
                                                                                                  supabase_client_factory=supabase_client_factory)).router,
                                     SecurityRouter(auth_manager=auth_manager,
