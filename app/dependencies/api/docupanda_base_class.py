@@ -2,7 +2,7 @@ from abc import ABC
 
 from ...managers.auth_manager import AuthManager
 
-class DocuPandaBaseClass(ABC):
+class DocupandaBaseClass(ABC):
 
     """
     Uploads an image for future textraction. Returns the job id.

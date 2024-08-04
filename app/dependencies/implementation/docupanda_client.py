@@ -3,10 +3,10 @@ import base64, os, requests
 from fastapi import HTTPException, status
 from portkey_ai import Portkey
 
-from ..api.docupanda_base_class import DocuPandaBaseClass
+from ..api.docupanda_base_class import DocupandaBaseClass
 from ...managers.auth_manager import AuthManager
 
-class DocupandaClient(DocuPandaBaseClass):
+class DocupandaClient(DocupandaBaseClass):
 
     def upload_image(self,
                      auth_manager: AuthManager,

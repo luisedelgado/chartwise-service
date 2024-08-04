@@ -2,7 +2,7 @@ import os
 
 from fastapi import (File, UploadFile)
 
-from ..dependencies.api.docupanda_base_class import DocuPandaBaseClass
+from ..dependencies.api.docupanda_base_class import DocupandaBaseClass
 from ..internal.utilities import file_copiers
 from ..managers.auth_manager import AuthManager
 
@@ -10,7 +10,7 @@ class ImageProcessingManager:
 
     async def upload_image_for_textraction(self,
                                            auth_manager: AuthManager,
-                                           docupanda_client: DocuPandaBaseClass,
+                                           docupanda_client: DocupandaBaseClass,
                                            image: UploadFile = File(...)) -> str:
         files_to_clean = None
         try:
@@ -35,7 +35,7 @@ class ImageProcessingManager:
             raise Exception(str(e))
 
     def extract_text(self,
-                     docupanda_client: DocuPandaBaseClass,
+                     docupanda_client: DocupandaBaseClass,
                      document_id: str) -> str:
         try:
             return docupanda_client.retrieve_text_from_document(document_id)

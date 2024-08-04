@@ -1,7 +1,9 @@
-from ..api.docupanda_base_class import DocuPandaBaseClass
+from ..api.docupanda_base_class import DocupandaBaseClass
 from ...managers.auth_manager import AuthManager
 
-class DocuPandaBaseClass(DocuPandaBaseClass):
+class FakeDocupandaClient(DocupandaBaseClass):
+
+    retrieving_non_existing_doc_id = False
 
     def upload_image(self,
                      auth_manager: AuthManager,
@@ -10,4 +12,7 @@ class DocuPandaBaseClass(DocuPandaBaseClass):
         pass
 
     def retrieve_text_from_document(self, document_id) -> str:
-        pass
+        if self.retrieving_non_existing_doc_id:
+            raise Exception("Non existent")
+
+        return "This is my fake textraction"

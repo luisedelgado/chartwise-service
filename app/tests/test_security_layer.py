@@ -9,7 +9,6 @@ from ..internal.model import RouterDependencies
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
-from ..routers.assistant_router import AssistantRouter
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
