@@ -39,6 +39,7 @@ class AudioProcessingRouter:
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
             self._deepgram_client = router_dependencies.deepgram_client
+            self._speechmatics_client = router_dependencies.speechmatics_client
             self._pinecone_client = router_dependencies.pinecone_client
             self._supabase_client_factory = router_dependencies.supabase_client_factory
             self._openai_client = router_dependencies.openai_client
@@ -234,6 +235,7 @@ class AudioProcessingRouter:
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
                                                                                   supabase_client_factory=self._supabase_client_factory,
                                                                                   session_auth_token=authorization,
+                                                                                  speechmatics_client=self._speechmatics_client,
                                                                                   session_id=session_id,
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)

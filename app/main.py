@@ -4,6 +4,7 @@ from .dependencies.implementation.deepgram_client import DeepgramClient
 from .dependencies.implementation.docupanda_client import DocupandaClient
 from .dependencies.implementation.openai_client import OpenAIClient
 from .dependencies.implementation.pinecone_client import PineconeClient
+from .dependencies.implementation.speechmatics_client import SpeechmaticsClient
 from .dependencies.implementation.supabase_client_factory import SupabaseClientFactory
 from .internal.router_dependencies import RouterDependencies
 from .routers.assistant_router import AssistantRouter
@@ -26,6 +27,7 @@ openai_client = OpenAIClient()
 pinecone_client = PineconeClient()
 docupanda_client = DocupandaClient()
 deepgram_client = DeepgramClient()
+speechmatics_client = SpeechmaticsClient()
 
 app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment,
@@ -40,6 +42,7 @@ app = EndpointServiceCoordinator(routers=[
                                                           router_dependencies=RouterDependencies(openai_client=openai_client,
                                                                                                  deepgram_client=deepgram_client,
                                                                                                  pinecone_client=pinecone_client,
+                                                                                                 speechmatics_client=speechmatics_client,
                                                                                                  supabase_client_factory=supabase_client_factory)).router,
                                     SecurityRouter(auth_manager=auth_manager,
                                                    assistant_manager=assistant_manager,
