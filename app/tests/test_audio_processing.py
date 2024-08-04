@@ -64,7 +64,7 @@ class TestingHarnessAudioProcessingRouter:
                                files=files)
         assert response.status_code == 401
 
-    def test_invoke_soap_transcription_with_valid_auth(self):
+    def test_invoke_soap_transcription_success(self):
         files = {
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
@@ -81,7 +81,7 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 200
         assert "soap_transcript" in response.json()
 
-    def test_invoke_free_form_transcription_with_valid_auth(self):
+    def test_invoke_free_form_transcription_success(self):
         files = {
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
