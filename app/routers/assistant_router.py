@@ -1025,22 +1025,22 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
 
-            patient_query = supabase_manager.select(fields="*",
-                                                    filters={
-                                                        'therapist_id': therapist_id,
-                                                        'id': patient_id
-                                                    },
-                                                    table_name="patients")
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                       'id': patient_id
+                                                   },
+                                                   table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             # Cascading will take care of deleting the session notes in Supabase.
-            delete_result = supabase_manager.delete(table_name="patients",
-                                                    filters={
-                                                        'id': patient_id
-                                                    })
+            delete_result = supabase_client.delete(table_name="patients",
+                                                   filters={
+                                                       'id': patient_id
+                                                   })
             assert len(delete_result.dict()['data']) > 0, "No patient found with the incoming patient_id"
 
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,

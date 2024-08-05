@@ -48,6 +48,8 @@ class ImageProcessingRouter:
                                              patient_id: Annotated[str, Form()],
                                              therapist_id: Annotated[str, Form()],
                                              image: UploadFile = File(...),
+                                             datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                              authorization: Annotated[Union[str, None], Cookie()] = None,
                                              session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._upload_session_notes_image_internal(response=response,
@@ -55,6 +57,8 @@ class ImageProcessingRouter:
                                                                    patient_id=patient_id,
                                                                    therapist_id=therapist_id,
                                                                    image=image,
+                                                                   datastore_access_token=datastore_access_token,
+                                                                   datastore_refresh_token=datastore_refresh_token,
                                                                    authorization=authorization,
                                                                    session_id=session_id)
 
@@ -86,6 +90,8 @@ class ImageProcessingRouter:
     patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
     authorization – the authorization cookie, if exists.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _upload_session_notes_image_internal(self,
@@ -95,6 +101,8 @@ class ImageProcessingRouter:
                                                    therapist_id: Annotated[str, Form()],
                                                    image: UploadFile,
                                                    authorization: Annotated[Union[str, None], Cookie()],
+                                                   datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                    session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
@@ -119,6 +127,16 @@ class ImageProcessingRouter:
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                       'id': patient_id
+                                                   },
+                                                   table_name="patients")
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
                                                                                             image=image,

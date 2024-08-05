@@ -290,20 +290,20 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
-                                                                                  access_token=datastore_access_token)
-            supabase_manager.insert(table_name="therapists",
-                                    payload={
-                                        "id": body.id,
-                                        "first_name": body.first_name,
-                                        "middle_name": body.middle_name,
-                                        "last_name": body.last_name,
-                                        "gender": body.gender.value,
-                                        "birth_date": body.birth_date,
-                                        "login_mechanism": body.signup_mechanism.value,
-                                        "email": body.email,
-                                        "language_preference": body.language_code_preference,
-                                    })
+            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
+                                                                                 access_token=datastore_access_token)
+            supabase_client.insert(table_name="therapists",
+                                   payload={
+                                       "id": body.id,
+                                       "first_name": body.first_name,
+                                       "middle_name": body.middle_name,
+                                       "last_name": body.last_name,
+                                       "gender": body.gender.value,
+                                       "birth_date": body.birth_date,
+                                       "login_mechanism": body.signup_mechanism.value,
+                                       "email": body.email,
+                                       "language_preference": body.language_code_preference,
+                                   })
 
             logger.log_api_response(therapist_id=body.id,
                                     session_id=session_id,
@@ -369,21 +369,21 @@ class SecurityRouter:
             assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
-            supabase_manager.update(table_name="therapists",
-                                    payload={
-                                        "first_name": body.first_name,
-                                        "middle_name": body.middle_name,
-                                        "last_name": body.last_name,
-                                        "gender": body.gender.value,
-                                        "birth_date": body.birth_date,
-                                        "email": body.email,
-                                        "language_preference": body.language_code_preference,
-                                    },
-                                    filters={
-                                        'id': body.id
-                                    })
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client.update(table_name="therapists",
+                                   payload={
+                                       "first_name": body.first_name,
+                                       "middle_name": body.middle_name,
+                                       "last_name": body.last_name,
+                                       "gender": body.gender.value,
+                                       "birth_date": body.birth_date,
+                                       "email": body.email,
+                                       "language_preference": body.language_code_preference,
+                                   },
+                                   filters={
+                                       'id': body.id
+                                   })
 
             logger.log_api_response(therapist_id=body.id,
                                     session_id=session_id,
@@ -447,18 +447,18 @@ class SecurityRouter:
                                method=delete_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
 
             # Delete therapist and all their patients (through cascading)
-            delete_response = supabase_manager.delete(table_name="therapists",
-                                                      filters={
-                                                          'id': therapist_id
-                                                      })
+            delete_response = supabase_client.delete(table_name="therapists",
+                                                     filters={
+                                                         'id': therapist_id
+                                                     })
             assert len(delete_response.dict()['data']) > 0, "No therapist found with the incoming id"
 
             # Remove the active session and clear Auth data from client storage.
-            supabase_manager.sign_out()
+            supabase_client.sign_out()
 
             # Delete vectors associated with therapist's patients
             self._assistant_manager.delete_all_sessions_for_therapist(id=therapist_id,

@@ -58,6 +58,8 @@ class AudioProcessingRouter:
                                            template: Annotated[SessionNotesTemplate, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
                                                                  request=request,
@@ -66,6 +68,8 @@ class AudioProcessingRouter:
                                                                  template=template,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
+                                                                 datastore_access_token=datastore_access_token,
+                                                                 datastore_refresh_token=datastore_refresh_token,
                                                                  session_id=session_id)
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -109,6 +113,8 @@ class AudioProcessingRouter:
     template – the template to be used for generating the output.
     audio_file – the audio file for which the transcription will be created.
     authorization – the authorization cookie, if exists.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _transcribe_session_notes_internal(self,
@@ -119,6 +125,8 @@ class AudioProcessingRouter:
                                                  template: Annotated[SessionNotesTemplate, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
+                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                  session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
@@ -143,6 +151,16 @@ class AudioProcessingRouter:
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                       'id': patient_id
+                                                   },
+                                                   table_name="patients")
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
                                                                                     openai_client=self._openai_client,
@@ -231,6 +249,16 @@ class AudioProcessingRouter:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                       'id': patient_id
+                                                   },
+                                                   table_name="patients")
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
                                                                                   supabase_client_factory=self._supabase_client_factory,
@@ -240,19 +268,17 @@ class AudioProcessingRouter:
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)
 
-            supabase_manager = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                  refresh_token=datastore_refresh_token)
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            supabase_manager.insert(table_name="session_reports",
-                                    payload={
-                                        "diarization_job_id": job_id,
-                                        "diarization_template": template.value,
-                                        "session_date": session_date,
-                                        "therapist_id": therapist_id,
-                                        "patient_id": patient_id,
-                                        "last_updated": now_timestamp,
-                                        "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
-                                    })
+            supabase_client.insert(table_name="session_reports",
+                                   payload={
+                                       "diarization_job_id": job_id,
+                                       "diarization_template": template.value,
+                                       "session_date": session_date,
+                                       "therapist_id": therapist_id,
+                                       "patient_id": patient_id,
+                                       "last_updated": now_timestamp,
+                                       "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
+                                   })
 
             logs_description = f"job_id={job_id}"
             logger.log_api_response(session_id=session_id,

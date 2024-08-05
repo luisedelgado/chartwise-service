@@ -10,7 +10,7 @@ class Logger:
     API_METHOD_DELETE = "DELETE"
 
     def __init__(self, supabase_client_factory: SupabaseFactoryBaseClass):
-        self.supabase_manager = supabase_client_factory.supabase_admin_client()
+        self.supabase_client = supabase_client_factory.supabase_admin_client()
 
     """
     Logs data about an API request.
@@ -32,7 +32,7 @@ class Logger:
             patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
             method = None if "method" not in kwargs else kwargs["method"]
             session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
-            self.supabase_manager.insert(table_name="api_request_logs",
+            self.supabase_client.insert(table_name="api_request_logs",
                                          payload={
                                              "session_id": str(session_id),
                                              "endpoint_name": endpoint_name,
@@ -67,7 +67,7 @@ class Logger:
         session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
 
         try:
-            self.supabase_manager.insert(table_name="api_response_logs",
+            self.supabase_client.insert(table_name="api_response_logs",
                                          payload={
                                              "session_id": str(session_id),
                                              "therapist_id": therapist_id,
@@ -103,7 +103,7 @@ class Logger:
         session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
 
         try:
-            self.supabase_manager.insert(table_name="error_logs",
+            self.supabase_client.insert(table_name="error_logs",
                                          payload={
                                              "session_id": str(session_id),
                                              "therapist_id": therapist_id,
@@ -135,7 +135,7 @@ class Logger:
         job_id = None if "job_id" not in kwargs else kwargs["job_id"]
 
         try:
-            self.supabase_manager.insert(table_name="diarization_logs",
+            self.supabase_client.insert(table_name="diarization_logs",
                                          payload={
                                              "error_code": error_code,
                                              "session_id": session_id,
@@ -160,7 +160,7 @@ class Logger:
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
 
         try:
-            self.supabase_manager.insert(table_name="account_deletion_logs",
+            self.supabase_client.insert(table_name="account_deletion_logs",
                                          payload={
                                              "therapist_id": therapist_id,
                                          })
