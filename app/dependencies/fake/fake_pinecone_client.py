@@ -11,6 +11,7 @@ class FakePineconeClient(PineconeBaseClass):
         self.vector_store_context_returns_data = False
         self.insert_preexisting_history_num_invocations = 0
         self.update_preexisting_history_num_invocations = 0
+        self.fake_vectors_insertion = None
 
     async def insert_session_vectors(self,
                                      index_id: str,
@@ -20,7 +21,7 @@ class FakePineconeClient(PineconeBaseClass):
                                      auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
                                      therapy_session_date: str = None):
-        pass
+        self.fake_vectors_insertion = text
 
     async def insert_preexisting_history_vectors(self,
                                                  index_id: str,

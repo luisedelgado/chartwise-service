@@ -1,3 +1,5 @@
+import json
+
 from datetime import timedelta
 
 from fastapi.testclient import TestClient
@@ -421,6 +423,10 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_admin_client.select_returns_data = True
+
+        assert self.fake_pinecone_client.fake_vectors_insertion is None
+        assert self.fake_supabase_admin_client.fake_text is None
+
         response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
                                headers={
                                    "authorization": self.auth_cookie
@@ -431,6 +437,10 @@ class TestingHarnessAudioProcessingRouter:
                                },
                                json=FAKE_DIARIZATION_RESULT)
         assert response.status_code == 200
+
+        fake_diarization_summary = FAKE_DIARIZATION_RESULT['summary']['content']
+        assert self.fake_supabase_admin_client.fake_text == fake_diarization_summary
+        assert self.fake_pinecone_client.fake_vectors_insertion == fake_diarization_summary
 
     def test_diarization_cleaner_internal_formatting(self):
         clean_transcription = DiarizationCleaner().clean_transcription(input=FAKE_DIARIZATION_RESULT["results"],
