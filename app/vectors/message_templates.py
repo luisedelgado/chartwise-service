@@ -150,7 +150,7 @@ class PromptCrafter:
             "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
             "Additionally, if you find values for pre_existing_history_summary, and it's related to the question, you should use it along the pre_existing_history_text since they describe the patient's pre-existing history (prior to being added to our platform). "
             f"{last_session_date_param} "
-            "When answering a question, you should always outline the session_date associated with the information you are providing (mm-dd-yyyy). If no session information is found, do not mention any session dates. "
+            "When answering a question, you should always outline the session date associated with the information you are providing (use format mm-dd-yyyy). If no session information is found, do not mention any session dates. "
             "If the question can't be answered based on the context from the session notes, you should strictly say you can't provide an answer because that information isn't in the session notes. "
         )
 
