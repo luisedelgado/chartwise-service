@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
+from typing import AsyncIterable
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
@@ -410,7 +411,7 @@ class AssistantManager:
                             environment: str,
                             openai_client: OpenAIBaseClass,
                             pinecone_client: PineconeBaseClass,
-                            supabase_client: SupabaseBaseClass):
+                            supabase_client: SupabaseBaseClass) -> AsyncIterable[str]:
         try:
             # Confirm that the incoming patient id is assigned to the incoming therapist id.
             patient_query = supabase_client.select(fields="*",

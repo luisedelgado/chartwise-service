@@ -1,6 +1,7 @@
 import tiktoken
 
 from datetime import datetime
+from typing import AsyncIterable
 
 from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
@@ -48,7 +49,7 @@ class ChartWiseAssistant:
                           auth_manager: AuthManager,
                           openai_client: OpenAIBaseClass,
                           pinecone_client: PineconeBaseClass,
-                          session_date_override: PineconeQuerySessionDateOverride = None):
+                          session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
             context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                      query_input=query_input,
@@ -86,10 +87,8 @@ class ChartWiseAssistant:
 
             async for part in openai_client.stream_chat_completion(metadata=metadata,
                                                                    max_tokens=max_tokens,
-                                                                   messages=[
-                                                                       {"role": "system", "content": system_prompt},
-                                                                       {"role": "user", "content": user_prompt},
-                                                                   ],
+                                                                   user_prompt=user_prompt,
+                                                                   system_prompt=system_prompt,
                                                                    auth_manager=auth_manager):
                 yield part
 

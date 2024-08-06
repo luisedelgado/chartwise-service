@@ -8,7 +8,7 @@ from fastapi import (APIRouter,
                      status)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Annotated, Union
+from typing import Annotated, AsyncIterable, Union
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
@@ -544,7 +544,7 @@ class AssistantRouter:
     async def _execute_assistant_query_internal(self,
                                                 query: AssistantQuery,
                                                 supabase_client: SupabaseBaseClass,
-                                                session_id: Annotated[Union[str, None], Cookie()]):
+                                                session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(session_id=session_id,

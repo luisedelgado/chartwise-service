@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import AsyncIterable
 
 from ...managers.auth_manager import AuthManager
 
@@ -29,15 +30,17 @@ class OpenAIBaseClass(ABC):
     Arguments:
     metadata – the metadata to be used when logging.
     max_tokens – the max tokens allowed for the response output.
-    messages – the set of message prompts.
+    user_prompt – the user prompt to be used.
+    system_prompt – the system prompt to be used.
     auth_manager – the auth_manager to be leveraged internally.
     cache_configuration – the optional cache configuration.
     """
     async def stream_chat_completion(metadata: dict,
                                      max_tokens: int,
-                                     messages: list,
+                                     user_prompt: str,
+                                     system_prompt: str,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None):
+                                     cache_configuration: dict = None) -> AsyncIterable[str]:
         pass
 
     """

@@ -1,5 +1,10 @@
+import asyncio
 import os
+from typing import AsyncIterable, Awaitable
 
+from langchain.callbacks import AsyncIteratorCallbackHandler
+from langchain_openai import ChatOpenAI
+from langchain.schema import HumanMessage, SystemMessage
 from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
@@ -53,9 +58,10 @@ class OpenAIClient(OpenAIBaseClass):
     async def stream_chat_completion(self,
                                      metadata: dict,
                                      max_tokens: int,
-                                     messages: list,
+                                     user_prompt: str,
+                                     system_prompt: str,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None):
+                                     cache_configuration: dict = None) -> AsyncIterable[str]:
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 
@@ -71,21 +77,41 @@ class OpenAIClient(OpenAIBaseClass):
                 api_base = None
                 proxy_headers = None
 
-            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
-                                        default_headers=proxy_headers,
-                                        base_url=api_base)
-
-            response: Completion = await openai_client.chat.completions.create(
+            callback = AsyncIteratorCallbackHandler()
+            llm_client = ChatOpenAI(
                 model=self.LLM_MODEL,
-                messages=messages,
                 temperature=0,
-                stream=True,
-                max_tokens=max_tokens
+                streaming=True,
+                default_headers=proxy_headers,
+                base_url=api_base,
+                verbose=True,
+                max_tokens=max_tokens,
+                callbacks=[callback],
             )
 
-            async for part in response:
-                if 'choices' in part:
-                    yield part["choices"][0]["text"]
+            """Wrap an awaitable with a event to signal when it's done or an exception is raised."""
+            async def wrap_done(fn: Awaitable, event: asyncio.Event):
+                try:
+                    await fn
+                except Exception as e:
+                    raise Exception(e)
+                finally:
+                    event.set()
+
+            task = asyncio.create_task(wrap_done(
+                llm_client.agenerate(messages=[
+                    [
+                        SystemMessage(content=f"{system_prompt}"),
+                        HumanMessage(content=f"{user_prompt}")
+                    ],
+                ]),
+                callback.done),
+            )
+
+            async for token in callback.aiter():
+                yield f"{token}"
+
+            await task
 
         except Exception as e:
             raise Exception(e)

@@ -1,3 +1,5 @@
+from typing import AsyncIterable
+
 from ..api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
 
@@ -50,9 +52,10 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
     async def stream_chat_completion(self,
                                      metadata: dict,
                                      max_tokens: int,
-                                     messages: list,
+                                     user_prompt: str,
+                                     system_prompt: str,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None):
+                                     cache_configuration: dict = None) -> AsyncIterable[str]:
         yield "my result"
 
     async def create_embeddings(self,
