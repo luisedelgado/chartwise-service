@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Annotated, Union
 
+from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
@@ -138,14 +139,15 @@ class AssistantRouter:
                 assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
+
+                supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                     refresh_token=datastore_refresh_token)
+                return StreamingResponse(self._execute_assistant_query_internal(query=query,
+                                                                                supabase_client=supabase_client,
+                                                                                session_id=session_id),
+                                        media_type="text/plain")
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-            return StreamingResponse(self._execute_assistant_query_internal(query=query,
-                                                                            datastore_access_token=datastore_access_token,
-                                                                            datastore_refresh_token=datastore_refresh_token,
-                                                                            session_id=session_id),
-                                     media_type="text/plain")
 
         @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
@@ -541,8 +543,7 @@ class AssistantRouter:
     """
     async def _execute_assistant_query_internal(self,
                                                 query: AssistantQuery,
-                                                datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                                datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                                supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]):
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
@@ -553,8 +554,6 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
