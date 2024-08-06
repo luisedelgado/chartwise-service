@@ -145,7 +145,7 @@ class AssistantRouter:
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 supabase_client=supabase_client,
                                                                                 session_id=session_id),
-                                        media_type="text/plain")
+                                        media_type="text/event-stream")
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
