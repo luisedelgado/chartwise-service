@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from enum import Enum
@@ -305,6 +306,9 @@ class SecurityRouter:
                                        "email": body.email,
                                        "language_preference": body.language_code_preference,
                                    })
+
+            # Create index in vector DB in a background task
+            asyncio.create_task(self._pinecone_client.create_index(body.id))
 
             logger.log_api_response(therapist_id=body.id,
                                     session_id=session_id,

@@ -1,4 +1,4 @@
-import json, os, uuid
+import os, uuid
 import tiktoken
 
 from fastapi import HTTPException
@@ -29,10 +29,6 @@ class PineconeClient(PineconeBaseClass):
                                      therapy_session_date: str = None):
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-
-            # If index already exists, this will silently fail so we can continue writing to it
-            self.__create_index_if_necessary(index_id)
-
             assert pc.describe_index(index_id).status['ready']
 
             index = pc.Index(index_id)
@@ -89,10 +85,6 @@ class PineconeClient(PineconeBaseClass):
                                                  auth_manager: AuthManager):
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-
-            # If index already exists, this will silently fail so we can continue writing to it
-            self.__create_index_if_necessary(index_id)
-
             assert pc.describe_index(index_id).status['ready']
 
             index = pc.Index(index_id)
@@ -138,6 +130,21 @@ class PineconeClient(PineconeBaseClass):
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
             raise Exception(str(e))
+
+    async def create_index(self, index_id):
+        try:
+            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+            pc.create_index(
+                name=index_id,
+                dimension=1536,
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-west-2')
+            )
+        except PineconeApiException as e:
+            # We expect HTTPCode 409 if index already exists - ALREADY_EXISTS
+            if e.status != 409:
+                raise Exception(e)
 
     def delete_session_vectors(self, index_id, namespace, date=None):
         try:
@@ -406,26 +413,3 @@ class PineconeClient(PineconeBaseClass):
         if len(context_docs) > 0:
             return (True, "\n".join([doc['text'] for doc in context_docs]))
         return (False, None)
-
-
-    # Private
-
-    """
-    Creates an index in the datastore. If index name already exists, the method will fail silently.
-
-    Arguments:
-    index_name – the name that should be used to create the index.
-    """
-    def __create_index_if_necessary(self, index_name: str):
-        try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-            pc.create_index(
-                name=index_name,
-                dimension=1536,
-                spec=ServerlessSpec(
-                    cloud='aws',
-                    region='us-west-2')
-            )
-        except PineconeApiException as e:
-            # We expect HTTPCode 409 if index already exists - ALREADY_EXISTS 
-            ...

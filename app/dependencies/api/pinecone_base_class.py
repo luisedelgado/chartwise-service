@@ -51,6 +51,15 @@ class PineconeBaseClass(ABC):
         pass
 
     """
+    Creates an index with the incoming id.
+
+    Arguments:
+    index_id – the id to be used for creating the index.
+    """
+    async def create_index(index_id):
+        pass
+
+    """
     Deletes session vectors. If the date param is None, it deletes everything inside the namespace.
     Otherwise it deletes the vectors that match the date filtering prefix.
 

@@ -32,6 +32,9 @@ class FakePineconeClient(PineconeBaseClass):
                                                  auth_manager: AuthManager):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
+    async def create_index(self, index_id):
+        pass
+
     def delete_session_vectors(self, index_id, namespace, date=None):
         pass
 
