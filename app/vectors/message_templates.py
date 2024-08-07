@@ -5,7 +5,7 @@ from num2words import num2words
 from pytz import timezone
 
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
-from ..internal.utilities.datetime_handler import convert_to_date_format_mm_dd_yyyy
+from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT_YYYY_MM_DD
 
 class PromptScenario(Enum):
     # keep sorted A-Z
@@ -151,7 +151,13 @@ class PromptCrafter:
         else:
             patient_gender_context = ""
 
-        last_session_date_context = "" if len(last_session_date or '') == 0 else f"\nNote that {patient_name}'s last session with the practitioner was on {convert_to_date_format_mm_dd_yyyy(last_session_date)}."
+        if len(last_session_date or '') == 0:
+            last_session_date_context = ""
+        else:
+            date_spell_out_month = convert_to_date_format_spell_out_month(session_date=last_session_date,
+                                                                          incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
+            last_session_date_context = f"\nNote that {patient_name}'s last session with the practitioner was on {date_spell_out_month}."
+
         return (
             f"A mental health practitioner is using our Practice Management Platform to inquire about a patient named {patient_name}{patient_gender_context}. "
             "The practitioner's session notes provide the available information. "
@@ -161,7 +167,7 @@ class PromptCrafter:
             "2. First, examine the `chunk_summary` to determine if the document is relevant to the question.\n"
             "3. If relevant, use both `chunk_summary` and `chunk_text` to formulate your response.\n"
             f"4. Additionally, if a `pre_existing_history_summary` is relevant to the question, include the `pre_existing_history_text` in your response, as it describes {patient_name}'s history before joining the platform.\n"
-            f"5. Always mention the session date associated with the information (use format mm-dd-yyyy).\n"
+            f"5. Always mention the session date associated with the information. Use format '%b %d, %Y' (i.e: Oct 12, 2023).\n"
             "6. If no relevant session information is found, do not mention any dates.\n"
             "7. If the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
             f"{last_session_date_context}"
@@ -234,8 +240,14 @@ class PromptCrafter:
             therapist_gender = "" if not gender_has_default_pronouns(therapist_gender) else f" ({therapist_gender})"
             patient_gender = "" if not gender_has_default_pronouns(patient_gender) else f" ({patient_gender})"
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-            last_session_date_context = ("" if len(last_session_date or '') == 0
-                                         else f"Note that {patient_name}'s last session with {therapist_name} was on {convert_to_date_format_mm_dd_yyyy(last_session_date)} (mm-dd-yyyy). ")
+
+            if len(last_session_date or '') == 0:
+                last_session_date_context = ""
+            else:
+                date_spell_out_month = convert_to_date_format_spell_out_month(session_date=last_session_date,
+                                                                              incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
+                last_session_date_context = f"Note that {patient_name}'s last session with the practitioner was on {date_spell_out_month}. "
+
             return (
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
@@ -243,8 +255,8 @@ class PromptCrafter:
                     f"The first thing you should do is say hi {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time."
                     f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: 'Most Recent Sessions' and 'Historical Themes'. "
                     f"If this is {therapist_name}'s first time meeting with {patient_name}, omit these sections and instead suggest strategies on how to establish a solid foundation. "
-                    f"For 'Most Recent Sessions' use the `session_date` value to determine and list the most recent sessions. {last_session_date_context}"
-                    "Ensure date precision. "
+                    f"For 'Most Recent Sessions' use the `session_date` value to determine and list the most recent sessions. Ensure date precision. "
+                    f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
                     "Use only the information from `chunk_summary` and `chunk_text`. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
@@ -285,7 +297,7 @@ class PromptCrafter:
                 "They can ask you about the patient's session history. "
                 "Your task is to generate three specific questions that the practitioner might ask, for which you have detailed answers based on the provided context documents. "
                 "Each question should be under 60 characters in length and be focused on specific aspects of the patient's history. "
-                "Avoid broad or vague questions like 'What happened during the session of 04/10/2022?' "
+                "Avoid broad or vague questions like 'What happened during the session of Apr 10, 2022?' "
                 "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
                 "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
                 "If there is no relevant data available for the patient, the `questions` array should be empty. "
@@ -452,6 +464,7 @@ class PromptCrafter:
                 f"The top {top_n} documents will be used to answer the question, so they must contain all the necessary information to provide a comprehensive response.\n\n"
                 "Return only a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
                 "Each document object should have three keys titled 'session_date', 'chunk_summary', and 'chunk_text', each with their respective value from the context you were given. "
+                "For the `session_date` use date format mm-dd-yyyy (i.e: 10-24-2020). "
                 "It is very important that the documents' contents remain written in the language in which they were originally written. "
                 "Do not add the literal word 'json' in the response. Simply return the object.\n"
                 r"For example, a response would look like: {'reranked_documents': [{'session_date': '10-24-2022', chunk_summary: 'Umeko was born and raised in Venezuela.', 'chunk_text': 'Umeko was born in Caracas, Venezuela, and lived there until he was 15 years old.'}, {'session_date': '02-24-2021', chunk_summary: 'Umeko had his first girlfriend when he was 17 years old.', 'chunk_text': 'Umeko began dating his high school girlfriend when he was about to turn 17 years old. They dated for about 8 months.'}, {'session_date': '06-24-2020', chunk_summary: 'Umeko enjoys soccer.', 'chunk_text': 'Umeko has always been a huge soccer fan. He's supported FC Barcelona since he was 14 years old.'}]}"

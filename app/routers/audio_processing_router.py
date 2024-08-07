@@ -245,6 +245,7 @@ class AudioProcessingRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(tz_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=session_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=tz_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"

@@ -332,6 +332,7 @@ class AssistantRouter:
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=body.date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
@@ -409,6 +410,7 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=body.date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
@@ -866,7 +868,8 @@ class AssistantRouter:
         try:
             assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(date_input=body.birth_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -944,7 +947,8 @@ class AssistantRouter:
             assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
             assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(date_input=body.birth_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)

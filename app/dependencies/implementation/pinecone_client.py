@@ -287,7 +287,9 @@ class PineconeClient(PineconeBaseClass):
         retrieved_docs = []
         for match in query_matches:
             metadata = match['metadata']
-            session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
+            formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
+                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT)
+            session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
             chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
             chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
             session_full_context = "".join([session_date,
@@ -304,8 +306,12 @@ class PineconeClient(PineconeBaseClass):
                                                                          endpoint_name=endpoint_name)
         reranked_context = ""
         reranked_documents = reranked_response_results['reranked_documents']
+        dates_contained = []
         for doc in reranked_documents:
-            doc_session_date = "".join(["`session_date` = ",f"{doc['session_date']}\n"])
+            dates_contained.append(doc['session_date'])
+            formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
+                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT)
+            doc_session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
             doc_chunk_text = "".join(["`chunk_text` = ",f"{doc['chunk_text']}\n"])
             doc_chunk_summary = "".join(["`chunk_summary` = ",f"{doc['chunk_summary']}\n"])
             doc_full_context = "".join([doc_session_date,
@@ -318,10 +324,11 @@ class PineconeClient(PineconeBaseClass):
             reranked_context = "\n".join([reranked_context, historical_context])
 
         if session_date_override is not None:
-            formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date_override.session_date)
+            formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_override.session_date,
+                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             override_date_is_already_contained = any(
-                result['session_date'].startswith(f"{formatted_session_date_override}")
-                for result in reranked_documents
+                current_date.startswith(f"{formatted_session_date_override}")
+                for current_date in dates_contained
             )
 
             if override_date_is_already_contained:
@@ -329,7 +336,8 @@ class PineconeClient(PineconeBaseClass):
 
             # Add vectors associated with the session date override since they haven't been retrieved yet.
             session_date_override_vector_ids = []
-            list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date_override.session_date)
+            list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_override.session_date,
+                                                                                       incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
                 session_date_override_vector_ids = list_ids
 
@@ -348,7 +356,9 @@ class PineconeClient(PineconeBaseClass):
                 vector_data = vectors[vector_id]
 
                 metadata = vector_data['metadata']
-                session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
+                formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
+                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT)
+                session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
                 chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
                 chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
                 session_date_override_context = "".join([session_date_override.output_prefix_override,

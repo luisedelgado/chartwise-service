@@ -287,7 +287,8 @@ class SecurityRouter:
         try:
             assert body.signup_mechanism != SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(date_input=body.birth_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
@@ -366,7 +367,8 @@ class SecurityRouter:
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(body.birth_date), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert datetime_handler.is_valid_date(date_input=body.birth_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,

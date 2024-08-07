@@ -114,8 +114,12 @@ class AssistantManager:
             if patient_last_session_date is None:
                 patient_last_session_date = body.date
             else:
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(body.date,
-                                                                                       datetime_handler.convert_to_date_format_mm_dd_yyyy(patient_last_session_date))
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=body.date,
+                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                       second_date=formatted_date,
+                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
 
             supabase_client.update(table_name="patients",
                                    payload={
@@ -172,7 +176,8 @@ class AssistantManager:
             current_mini_summary = report_query_dict['data'][0]['notes_mini_summary']
             current_session_text = report_query_dict['data'][0]['notes_text']
             current_session_date = report_query_dict['data'][0]['session_date']
-            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(current_session_date)
+            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_session_date,
+                                                                                                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             session_text_changed = body.text != current_session_text
             session_date_changed = current_session_date_formatted != body.date
 
@@ -284,7 +289,8 @@ class AssistantManager:
                                    })
 
             # Delete vector embeddings
-            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date)
+            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date,
+                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             pinecone_client.delete_session_vectors(index_id=therapist_id,
                                                    namespace=patient_id,
                                                    date=session_date_formatted)
@@ -572,7 +578,8 @@ class AssistantManager:
             patient_id = session_query_dict['data'][0]['patient_id']
             template = session_query_dict['data'][0]['diarization_template']
             session_date_raw = session_query_dict['data'][0]['session_date']
-            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date_raw)
+            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_raw,
+                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
 
             session_id_query = supabase_client.select(fields="*",
                                                       filters={
@@ -611,8 +618,12 @@ class AssistantManager:
             if patient_last_session_date is None:
                 patient_last_session_date = session_date_formatted
             else:
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(session_date_formatted,
-                                                                                       datetime_handler.convert_to_date_format_mm_dd_yyyy(patient_last_session_date))
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date_formatted,
+                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                       second_date=formatted_date,
+                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
 
             supabase_client.update(table_name="patients",
                                    payload={
