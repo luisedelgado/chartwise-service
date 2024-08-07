@@ -147,22 +147,24 @@ class PromptCrafter:
         assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
 
         if gender_has_default_pronouns(patient_gender):
-            patient_info = f"For reference, the patient is a {patient_gender}, and their name is {patient_name}."
+            patient_gender_context = f", who is a {patient_gender}"
         else:
-            patient_info = f"For reference, the patient's name is {patient_name}."
+            patient_gender_context = ""
 
-        last_session_date_param = "" if len(last_session_date or '') == 0 else f"Keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
+        last_session_date_context = "" if len(last_session_date or '') == 0 else f"\nNote that {patient_name}'s last session with the practitioner was on {convert_to_internal_date_format(last_session_date)}."
         return (
-            "A mental health practitioner is entering our Practice Management Platform, and is using you to ask questions about a patient. "
-            "The information we have available about the patient's session history is the practitioner's own session notes. "
-            f"{patient_info} "
-            "Your job is to answer the practitioner's questions based on the information context you find from the context data. "
-            "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
-            "If the chunk_summary value is related to the question, you should use it along the chunk_text value to generate your response. "
-            "Additionally, if you find values for pre_existing_history_summary, and it's related to the question, you should use it along the pre_existing_history_text since they describe the patient's pre-existing history (prior to being added to our platform). "
-            f"{last_session_date_param} "
-            "When answering a question, you should always outline the session date associated with the information you are providing (use format mm-dd-yyyy). If no session information is found, do not mention any session dates. "
-            "If the question can't be answered based on the context from the session notes, you should strictly say you can't provide an answer because that information isn't in the session notes. "
+            f"A mental health practitioner is using our Practice Management Platform to inquire about a patient named {patient_name}{patient_gender_context}. "
+            "The practitioner's session notes provide the available information. "
+            "Your task is to answer the practitioner's questions based on these notes. "
+            "\n\nInstructions:\n"
+            "1. Evaluate the provided context documents.\n"
+            "2. First, examine the `chunk_summary` to determine if the document is relevant to the question.\n"
+            "3. If relevant, use both `chunk_summary` and `chunk_text` to formulate your response.\n"
+            f"4. Additionally, if a `pre_existing_history_summary` is relevant to the question, include the `pre_existing_history_text` in your response, as it describes {patient_name}'s history before joining the platform.\n"
+            f"5. Always mention the session date associated with the information (use format mm-dd-yyyy).\n"
+            "6. If no relevant session information is found, do not mention any dates.\n"
+            "7. If the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
+            f"{last_session_date_context}"
         )
 
     def _create_qa_user_message(self,
@@ -198,11 +200,12 @@ class PromptCrafter:
 
             tz = timezone(tz_identifier)
             weekday = datetime.now(tz).strftime('%A')
-            gender_context = f"For context, {therapist_name} is a {therapist_gender}. " if gender_has_default_pronouns(therapist_gender) else ""
+            gender_context = "A " if not gender_has_default_pronouns(therapist_gender) else f"A {therapist_gender} "
             return (
-                f"A mental health practitioner is entering our Practice Management Platform. Your job is to greet them into the experience. "
-                f"Send a cheerful message about today being {weekday}. Address the practitioner by their name, which is {therapist_name}. {gender_context} "
-                f"It is very important that you craft your response using language code {language_code}. Finish off with a short fragment on productivity."
+                f"{gender_context}mental health practitioner named {therapist_name} is entering our Practice Management Platform. "
+                f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. "
+                f"Address {therapist_name} by their name, and make sure to use language code {language_code} when generating your response. "
+                "Conclude with a short statement on productivity. "
             )
         except Exception as e:
             raise Exception(str(e))
@@ -228,30 +231,27 @@ class PromptCrafter:
             assert len(patient_gender or '') > 0, "Missing patient_gender param for building system message"
             assert session_number > 0, "Something went wrong when building system message"
 
-            gender_params = ""
-            if gender_has_default_pronouns(therapist_gender):
-                gender_params += f"For reference, {therapist_name} is a {therapist_gender}. "
-            if gender_has_default_pronouns(patient_gender):
-                gender_params += f"For reference, {patient_name} is a {patient_gender}. "
+            therapist_gender = "" if not gender_has_default_pronouns(therapist_gender) else f" ({therapist_gender})"
+            patient_gender = "" if not gender_has_default_pronouns(patient_gender) else f" ({patient_gender})"
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-            last_session_date_param = "" if len(last_session_date or '') == 0 else f"Additionally, keep in mind that {patient_name}'s last session with {therapist_name} was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
+            last_session_date_context = ("" if len(last_session_date or '') == 0
+                                         else f"Note that {patient_name}'s last session with {therapist_name} was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy). ")
             return (
-                    "A mental health practitioner is entering our Practice Management Platform. "
-                    f"They are about to meet with {patient_name}, an existing patient, and need to quickly refreshen on their session history. "
-                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time. "
-                    f"{gender_params}"
-                    f"\n\nOnce you've said hi to {therapist_name}, you job is to provide a summary of {patient_name}'s session history broken down into two sections: Most Recent Sessions, and Historical Themes. "
-                    f"If you determine it's the first time that {therapist_name} will meet with {patient_name}, ignore the summary categorization, and just suggest strategies on how to establish a solid foundation. "
-                    "\nWhen populating Most Recent Sessions, use the session_date value found in the context to determine which are the most recent session(s). "
-                    "You should double-check the session dates for precision. For reference, the date format for session_date is mm-dd-yyyy. "
-                    f"{last_session_date_param} "
-                    f"\nIf {patient_name} has already met with {therapist_name}, you should end the summary with suggestions on what would be good avenues to explore during the session that's about to start. "
-                    "\nUse only the information you find based on the chunk_summary and chunk_text values. "
-                    "The total length of the summary may take up to 1600 characters. "
-                    "Return only a JSON object with a single key, 'summary', written in English, and the summary response as its only value. "
-                    f"It is very important that the summary response is written using language code {language_code}. "
+                    f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
+                    f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
+                    f"This will be their {ordinal_session_number} session together. "
+                    f"The first thing you should do is say hi {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time."
+                    f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: 'Most Recent Sessions' and 'Historical Themes'. "
+                    f"If this is {therapist_name}'s first time meeting with {patient_name}, omit these sections and instead suggest strategies on how to establish a solid foundation. "
+                    f"For 'Most Recent Sessions' use the `session_date` value to determine and list the most recent sessions. {last_session_date_context}"
+                    "Ensure date precision. "
+                    f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
+                    "Use only the information from `chunk_summary` and `chunk_text`. "
+                    f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
+                    "Return a JSON object with a single key, `summary`. "
                     "Do not add the literal word 'json' in the response. Simply return the object.\n"
-                    r"For example, a response for language code es-419 would look like: {'summary': 'Sesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo.'}"
+                    f"Example response for a practitioner named Carlos, who's about to meet with a patient named Juan, using language code es-419:\n"
+                    r"{'summary': 'Hola Carlos, te recuerdo que estás viendo a Juan por décima vez.\n\nSesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo.'}"
             )
         except Exception as e:
             raise Exception(e)
@@ -281,16 +281,17 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             return (
-                "A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. "
-                "They have the opportunity to ask you a question about the patient's session history. "
-                "Your job is to provide the practitioner with three questions that they could ask you about the patient, for which you'd have rich answers. "
-                "It is very important that each question remains under 60 characters of length. "
-                "Avoid vague questions like 'What happened during the session of 04/10/2022?', and instead aim for narrow-focused questions like 'What have we discussed about the patient's childhood?'"
-                "\nReturn only a JSON object with a key titled 'questions', written in English, and the array of questions as its value. "
-                "If based on the context, you determine that there is no data associated with the patient for whatever reason, the 'questions' array should be empty. "
-                f"It is very important that the content of each question is written using language code {language_code}. "
-                "Do not add the literal word 'json' in the response. Simply return the object.\n"
-                r"For example, a response for language code es-419 would look like: {'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?', '¿Qué tema sería beneficioso retomar con el paciente?']}"
+                "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
+                "They can ask you about the patient's session history. "
+                "Your task is to generate three specific questions that the practitioner might ask, for which you have detailed answers based on the provided context documents. "
+                "Each question should be under 60 characters in length and be focused on specific aspects of the patient's history. "
+                "Avoid broad or vague questions like 'What happened during the session of 04/10/2022?' "
+                "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
+                "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
+                "If there is no relevant data available for the patient, the `questions` array should be empty. "
+                f"Ensure that the questions are written in language code {language_code}. Do not include the literal word 'json' in your response. "
+                "Simply return the JSON object. For example, this is what a response in language code es-419 could look like:\n"
+                r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?', '¿Qué tema sería beneficioso retomar con el paciente?']}"
             )
         except Exception as e:
             raise Exception(e)
@@ -328,19 +329,19 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             return (
-                "A mental health practitioner has entered our Practice Management Platform to look at their patient's dashboard. "
-                "They want to gain insight into what are the three topics that the patient brings up the most during sessions. "
-                "Your job is to provide the practitioner with the set of frequent topics, as well as each topic's respective percentage. "
-                "For example, for a patient that has spoken equally about three topics, each topic's percentage would be 33.3%. "
-                "It is very important that the sum of the percentages add up 100%. It shouldn't be below nor above. Please double check the math. "
-                "Additionally, the string value for each topic should remain under 25 characters of length. "
-                "\nReturn only a JSON object with a single key titled 'topics', written in English, and its only value being an array containing up to three objects. "
-                f"Each object should have two keys titled 'topic' and 'percentage', written in English, and the content of each key's value needs to be written in language code {language_code}. "
-                "If based on the context, you determine that there is no data associated with the patient for whatever reason, the 'topics' array should be empty. "
-                "Do not add the literal word 'json' in the response. Simply return the object.\n"
-                r"For example, a response for language code es-419 where the patient spoke equally about the three topics would look like: {'topics':[{'topic': 'Ansiedad por el trabajo', 'percentage': '33%'},{'topic': 'Mejora en el matrimonio', 'percentage': '33%'},{'topic': 'Pensando en adoptar', 'percentage': '33%'}]}"
-                "\n"
-                r"Another example for language code en-us where the patient has spoken half of the time about a single topic, and the remaining time is broken into two other topics would look like: {'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
+                "A mental health practitioner is viewing a patient’s dashboard on our Practice Management Platform. "
+                "They need to see the top three topics the patient discusses most frequently during sessions. Provide the following:\n\n"
+                "1. Three frequent topics, each with its frequency percentage.\n"
+                "2. Ensure the percentages sum to exactly 100%. Double-check the math.\n"
+                "3. Each topic should be under 25 characters.\n\n"
+                "Return a JSON object with one key: `topics`, written in English. The value should be an array of up to three objects, each with:\n"
+                f"* `topic`: Topic written using language code {language_code}.\n"
+                f"* `percentage`: Frequency percentage.\n\n"
+                "If no context data is available, the array should be empty. Do not include the literal word 'json' in the response, just return the JSON object directly. "
+                "Example response for language code es-419 where the patient spoke equally about the three topics:\n"
+                r"{'topics':[{'topic': 'Ansiedad por el trabajo', 'percentage': '33%'},{'topic': 'Mejora en el matrimonio', 'percentage': '33%'},{'topic': 'Pensando en adoptar', 'percentage': '33%'}]}"
+                "\n\nAnother example response for language code es-419 where the patient spoke half of the time about a single topic, and the remaining time was split between two other topics:\n"
+                r"{'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
             )
         except Exception as e:
             raise Exception(e)
@@ -375,14 +376,13 @@ class PromptCrafter:
 
     def _create_chunk_summary_system_message(self) -> str:
          return (
-            "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
-            "We have implemented a Retrieval Augmented Generation system, for which we are using a chunking approach to break up the practitioner's session notes. "
-            "The goal is to create embeddings out of each chunk, and insert it in a vector database. "
-            "Your job is to come up with a short summary about the chunk you'll be given. "
-            "Keep in mind the chunk may contain only a subset of the session notes' information. "
-            "Your summary is meant to be used for enabling a quick retrieval whenever the practitioner searches for information that's contained in this chunk. "
-            "Ideally, by just looking at your summary our platform's search retriever should know exactly what information is contained in the chunk. "
-            "Your output should be generated in English, regardless of what language the chunk is written in. "
+            "A mental health practitioner is uploading session notes to our platform. "
+            "We use a Retrieval Augmented Generation system that involves chunking these notes. "
+            "Each chunk will be converted into embeddings and stored in a vector database. "
+            "Your task is to create a brief, informative summary of the chunk that will be provided. "
+            "This summary should encapsulate the key information from the chunk, enabling quick retrieval when searching. "
+            "Make sure the summary accurately reflects the content and context of the chunk. "
+            "Regardless of the original language, generate the summary in English."
         )
 
     def _create_chunk_summary_user_message(self,
@@ -397,19 +397,17 @@ class PromptCrafter:
 
     def _create_soap_template_system_message(self) -> str:
         return (
-            "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
-            "Your job is to adapt their session notes into the SOAP format. The acronym SOAP stands for Subjective, Objective, Assessment, and Plan. "
-            "'Subjective' is what brought the patient to the practitioner, including past history. "
-            "'Objective' is the objective information that can be collected from the patient encounter. "
-            "'Assessment' represents the practitioner's professional opinion in light of the subjective and objective findings. "
-            "'Plan' is the set of actions proposed either by the practitioner or the patient for addressing the patient's problem(s). "
-            "You should take what the practitioner wrote, and break it down into each of these sections. "
-            "You may paraphrase information if you believe it will make it more readable. "
-            "If there is a section that can't be populated because there isn't enough information from the session notes, just leave it blank. "
-            "Do not discard any information from the original report. If it doesn't fit in any of the categories, add it at the end, outside of the SOAP breakdown "
-            "Return the new SOAP session notes as a string, with double line breaks between each category (Subjective, Objective, Assessment, and Plan), "
-            "and single line breaks between a category's header and its content. "
-            "It is very important that category headers are written in English but the category's content should be generated in the same language in which the practitioner's session notes were written."
+            "A mental health practitioner has uploaded session notes into our platform. "
+            "Your task is to convert these notes into the SOAP format, which includes the following sections:\n\n"
+            "Subjective: Describes what brought the patient to the practitioner, including their history and reasons for the visit.\n"
+            "Objective: Contains objective information gathered during the patient encounter.\n"
+            "Assessment: The practitioner's professional opinion based on the subjective and objective information.\n"
+            "Plan: The actions proposed by the practitioner or the patient to address the issues discussed.\n\n"
+            "Break down the session notes into these sections. Paraphrase information if it improves readability. "
+            "Leave any section blank if there is insufficient information but do not discard any original content. "
+            "If some information doesn't fit into the SOAP categories, place it at the end, outside the SOAP breakdown.\n\n"
+            "Return the SOAP session notes formatted as a string, with double line breaks between sections (Subjective, Objective, Assessment, and Plan), and single line breaks between the category header and its content. "
+            "Ensure category headers are written in English, while the content is written in the same language as the original notes."
         )
 
     def _create_soap_template_user_message(self, session_notes: str) -> str:
@@ -423,11 +421,10 @@ class PromptCrafter:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return (
-                "A mental health practitioner just met with a patient, and is ready to upload their session notes into our platform. "
-                "Our platform includes a Sessions table that shows a 'preview' of every session notes' entry. "
-                "This preview is essentially a 'mini summary' of the session notes, and should be no longer than 50 characters. "
-                "Your job is to come up with this mini summary. "
-                "\nWhile you only have 50 characters, the goal is that by reading the mini summary, the practitioner should have a clear idea of what information is contained in the full session notes. "
+                "After a session with a patient, a mental health practitioner uploads their notes to our platform. "
+                "Each session entry in the Sessions table includes a 'mini summary' of no more than 50 characters. "
+                "Your task is to create this mini summary. "
+                "It should clearly convey the essence of the session notes so that practitioners can quickly understand the content of each entry. "
                 f"It is very important that your output is generated using language code {language_code}. "
             )
         except Exception as e:

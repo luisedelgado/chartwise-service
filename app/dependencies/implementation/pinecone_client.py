@@ -287,9 +287,9 @@ class PineconeClient(PineconeBaseClass):
         retrieved_docs = []
         for match in query_matches:
             metadata = match['metadata']
-            session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
-            chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
-            chunk_text = "".join(["chunk_text = ",f"{metadata['chunk_text']}\n"])
+            session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
+            chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
+            chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
             session_full_context = "".join([session_date,
                                             chunk_summary,
                                             chunk_text,
@@ -305,9 +305,9 @@ class PineconeClient(PineconeBaseClass):
         reranked_context = ""
         reranked_documents = reranked_response_results['reranked_documents']
         for doc in reranked_documents:
-            doc_session_date = "".join(["session_date = ",f"{doc['session_date']}\n"])
-            doc_chunk_text = "".join(["chunk_text = ",f"{doc['chunk_text']}\n"])
-            doc_chunk_summary = "".join(["chunk_summary = ",f"{doc['chunk_summary']}\n"])
+            doc_session_date = "".join(["`session_date` = ",f"{doc['session_date']}\n"])
+            doc_chunk_text = "".join(["`chunk_text` = ",f"{doc['chunk_text']}\n"])
+            doc_chunk_summary = "".join(["`chunk_summary` = ",f"{doc['chunk_summary']}\n"])
             doc_full_context = "".join([doc_session_date,
                                         doc_chunk_text,
                                         doc_chunk_summary,
@@ -348,9 +348,9 @@ class PineconeClient(PineconeBaseClass):
                 vector_data = vectors[vector_id]
 
                 metadata = vector_data['metadata']
-                session_date = "".join(["session_date = ",f"{metadata['session_date']}\n"])
-                chunk_summary = "".join(["chunk_summary = ",f"{metadata['chunk_summary']}\n"])
-                chunk_text = "".join(["chunk_text = ",f"{metadata['chunk_text']}\n"])
+                session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
+                chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
+                chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
                 session_date_override_context = "".join([session_date_override.output_prefix_override,
                                                          session_date,
                                                          chunk_summary,
@@ -383,8 +383,8 @@ class PineconeClient(PineconeBaseClass):
         for vector_id in vectors:
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
-            chunk_summary = "".join(["pre_existing_history_summary = ",f"{metadata['pre_existing_history_summary']}"])
-            chunk_text = "".join(["\npre_existing_history_text = ",f"{metadata['pre_existing_history_text']}\n"])
+            chunk_summary = "".join(["`pre_existing_history_summary` = ",f"{metadata['pre_existing_history_summary']}"])
+            chunk_text = "".join(["\n`pre_existing_history_text` = ",f"{metadata['pre_existing_history_text']}\n"])
             chunk_full_context = "".join([chunk_summary,
                                           chunk_text,
                                           "\n"])
