@@ -5,6 +5,8 @@ from ...managers.auth_manager import AuthManager
 
 class OpenAIBaseClass(ABC):
 
+    GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
+
     """
     Invokes a chat completion asynchronously.
 
@@ -52,4 +54,23 @@ class OpenAIBaseClass(ABC):
     """
     async def create_embeddings(auth_manager: AuthManager,
                                 text: str):
+        pass
+
+    """
+    Reranks documents based on similarity to the input query.
+
+    Arguments:
+    auth_manager – the auth_manager to be leveraged internally.
+    documents – the set of documents to be reranked.
+    top_n – the top n documents that should be returned after reranking.
+    query_input – the input query.
+    session_id – the session id.
+    endpoint_name – the endpoint name that triggered this request.
+    """
+    async def rerank_documents(auth_manager: AuthManager,
+                               documents: list,
+                               top_n: int,
+                               query_input: str,
+                               session_id: str,
+                               endpoint_name: str):
         pass

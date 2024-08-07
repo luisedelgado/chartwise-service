@@ -1,5 +1,7 @@
 import asyncio
 import os
+import tiktoken
+
 from typing import AsyncIterable, Awaitable
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
@@ -11,6 +13,7 @@ from portkey_ai import Portkey
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
+from ...vectors.message_templates import PromptCrafter, PromptScenario
 
 class OpenAIClient(OpenAIBaseClass):
 
@@ -142,3 +145,46 @@ class OpenAIClient(OpenAIBaseClass):
             for item in response.dict()['data']:
                 embeddings.extend(item['embedding'])
             return embeddings
+
+    async def rerank_documents(self,
+                               auth_manager: AuthManager,
+                               documents: list,
+                               top_n: int,
+                               query_input: str,
+                               session_id: str,
+                               endpoint_name: str):
+        try:
+            context = ""
+            for document in documents:
+                text = document['text']
+                context = "\n".join([context, text])
+
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.RERANKING,
+                                                                       query_input=query_input,
+                                                                       context=context)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.RERANKING,
+                                                                           top_n=top_n)
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            metadata = {
+                "session_id": str(session_id),
+                "query_top_k": len(documents),
+                "rerank_top_n": top_n,
+                "endpoint_name": endpoint_name
+            }
+
+            response = await self.trigger_async_chat_completion(metadata=metadata,
+                                                                max_tokens=max_tokens,
+                                                                messages=[
+                                                                    {"role": "system", "content": system_prompt},
+                                                                    {"role": "user", "content": user_prompt},
+                                                                ],
+                                                                expects_json_response=True,
+                                                                auth_manager=auth_manager)
+            evaluated_response = eval(str(response))
+            assert "reranked_documents" in evaluated_response
+            return evaluated_response
+        except Exception as e:
+            raise Exception(e)

@@ -10,7 +10,6 @@ from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessi
 from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
 
-GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
 class ChartWiseAssistant:
@@ -58,6 +57,8 @@ class ChartWiseAssistant:
                                                                      openai_client=openai_client,
                                                                      query_top_k=10,
                                                                      rerank_top_n=3,
+                                                                     endpoint_name=endpoint_name,
+                                                                     session_id=session_id,
                                                                      session_date_override=session_date_override)
 
             prompt_crafter = PromptCrafter()
@@ -72,7 +73,7 @@ class ChartWiseAssistant:
                                                                            patient_name=patient_name,
                                                                            last_session_date=last_session_date)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
                 "environment": environment,
@@ -133,7 +134,7 @@ class ChartWiseAssistant:
                                                                            tz_identifier=tz_identifier,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (therapist_id + "-greeting-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -209,6 +210,8 @@ class ChartWiseAssistant:
                                                                      namespace=namespace,
                                                                      query_top_k=10,
                                                                      rerank_top_n=4,
+                                                                     session_id=session_id,
+                                                                     endpoint_name=endpoint_name,
                                                                      session_date_override=session_date_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
@@ -227,7 +230,7 @@ class ChartWiseAssistant:
                                                                            session_number=session_number,
                                                                            last_session_date=last_session_date)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (namespace + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -292,7 +295,9 @@ class ChartWiseAssistant:
                                                                      openai_client=openai_client,
                                                                      query_input=query_input,
                                                                      index_id=index_id,
+                                                                     endpoint_name=endpoint_name,
                                                                      namespace=namespace,
+                                                                     session_id=session_id,
                                                                      query_top_k=10,
                                                                      rerank_top_n=5)
 
@@ -306,7 +311,7 @@ class ChartWiseAssistant:
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (namespace + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -371,7 +376,9 @@ class ChartWiseAssistant:
                                                                      query_input=query_input,
                                                                      openai_client=openai_client,
                                                                      index_id=index_id,
+                                                                     endpoint_name=endpoint_name,
                                                                      namespace=namespace,
+                                                                     session_id=session_id,
                                                                      query_top_k=10,
                                                                      rerank_top_n=5)
 
@@ -385,7 +392,7 @@ class ChartWiseAssistant:
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.TOPICS,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (namespace + "-topics-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
@@ -436,7 +443,7 @@ class ChartWiseAssistant:
                                                                        session_notes=text)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
                 "user": therapist_id,
@@ -476,7 +483,7 @@ class ChartWiseAssistant:
                                                                        chunk_text=chunk_text)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.CHUNK_SUMMARY)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
                 "user": therapist_id,
@@ -519,7 +526,7 @@ class ChartWiseAssistant:
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SESSION_MINI_SUMMARY,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
                 "user": therapist_id,

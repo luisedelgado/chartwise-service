@@ -8,11 +8,13 @@ from ..internal.utilities.general_utilities import gender_has_default_pronouns
 from ..internal.utilities.datetime_handler import convert_to_internal_date_format
 
 class PromptScenario(Enum):
+    # keep sorted A-Z
     CHUNK_SUMMARY = "chunk_summary"
     GREETING = "greeting"
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
+    RERANKING = "reranking"
     SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
     TOPICS = "frequent_topics"
@@ -73,6 +75,11 @@ class PromptCrafter:
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
             session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
             return self._create_session_mini_summary_user_message(session_notes=session_notes)
+        elif scenario == PromptScenario.RERANKING:
+            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
+            context = None if 'context' not in kwargs else kwargs['context']
+            return self._create_reranking_user_message(query_input=query_input,
+                                                       context=context)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -124,6 +131,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_session_mini_summary_system_message(language_code=language_code)
+        elif scenario == PromptScenario.RERANKING:
+            top_n = None if 'top_n' not in kwargs else kwargs['top_n']
+            return self._create_reranking_system_message(top_n=top_n)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -143,7 +153,8 @@ class PromptCrafter:
 
         last_session_date_param = "" if len(last_session_date or '') == 0 else f"Keep in mind that {patient_name}'s last session was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy)."
         return (
-            "A mental health practitioner is entering our Practice Management Platform, and is using you to ask questions about a patient's session history based on the practitioner's own session notes. "
+            "A mental health practitioner is entering our Practice Management Platform, and is using you to ask questions about a patient. "
+            "The information we have available about the patient's session history is the practitioner's own session notes. "
             f"{patient_info} "
             "Your job is to answer the practitioner's questions based on the information context you find from the context data. "
             "When evaluating the context, for each session you should always look first at the chunk_summary value to understand whether a given document is related to the question. "
@@ -426,5 +437,37 @@ class PromptCrafter:
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return (f"Summarize the following session notes:\n\n{session_notes}")
+        except Exception as e:
+            raise Exception(e)
+
+    # Reranking
+
+    def _create_reranking_system_message(self, top_n: int):
+        try:
+            assert top_n > 0, "Error while building user message: top_n should be bigger than 0"
+            return (
+                "A mental health practitioner is using our Practice Management Platform to ask questions about a patient. "
+                "The available information about the patient's session history consists of the practitioner's own session notes. "
+                "These session notes have been divided into chunks.\n\nYou will receive:\n\n"
+                "1. The practitioner's question.\n2. A set of chunked session notes.\n\n"
+                "Your task is to:\n\n1. Rerank the chunked documents based on their relevance to the practitioner's question.\n"
+                "2. Ensure that the most relevant documents are ranked highest.\n\n"
+                f"The top {top_n} documents will be used to answer the question, so they must contain all the necessary information to provide a comprehensive response.\n\n"
+                "Return only a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
+                "Each document object should have three keys titled 'session_date', 'chunk_summary', and 'chunk_text', each with their respective value from the context you were given. "
+                "It is very important that the documents' contents remain written in the language in which they were originally written. "
+                "Do not add the literal word 'json' in the response. Simply return the object.\n"
+                r"For example, a response would look like: {'reranked_documents': [{'session_date': '10-24-2022', chunk_summary: 'Umeko was born and raised in Venezuela.', 'chunk_text': 'Umeko was born in Caracas, Venezuela, and lived there until he was 15 years old.'}, {'session_date': '02-24-2021', chunk_summary: 'Umeko had his first girlfriend when he was 17 years old.', 'chunk_text': 'Umeko began dating his high school girlfriend when he was about to turn 17 years old. They dated for about 8 months.'}, {'session_date': '06-24-2020', chunk_summary: 'Umeko enjoys soccer.', 'chunk_text': 'Umeko has always been a huge soccer fan. He's supported FC Barcelona since he was 14 years old.'}]}"
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    def _create_reranking_user_message(self, query_input: str, context: str):
+        try:
+            return (
+                f"We have provided the chunked documents below.\n---------------------\n{context}\n---------------------\n"
+                f"\nGiven this information and the input question below, please rerank the chunked documents based on their relevance to the practitioner's question."
+                f"\n\nInput question: {query_input}"
+            )
         except Exception as e:
             raise Exception(e)

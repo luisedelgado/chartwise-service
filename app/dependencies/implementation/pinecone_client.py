@@ -1,4 +1,4 @@
-import cohere, os, uuid
+import json, os, uuid
 import tiktoken
 
 from fastapi import HTTPException
@@ -250,6 +250,8 @@ class PineconeClient(PineconeBaseClass):
                                        namespace: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
+                                       session_id: str,
+                                       endpoint_name: str,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
@@ -294,30 +296,36 @@ class PineconeClient(PineconeBaseClass):
                                             "\n"])
             retrieved_docs.append({"id": match['id'], "text": session_full_context})
 
-        cohere_client = cohere.AsyncClient(os.environ.get("COHERE_API_KEY"))
-        rerank_response = await cohere_client.rerank(
-            model="rerank-multilingual-v3.0",
-            query=query_input,
-            documents=retrieved_docs,
-            return_documents=True,
-            top_n=rerank_top_n,
-        )
-
-        reranked_response_results = rerank_response.results
-        reranked_docs = "\n".join([result.document.text for result in reranked_response_results])
+        reranked_response_results = await openai_client.rerank_documents(auth_manager=auth_manager,
+                                                                         documents=retrieved_docs,
+                                                                         top_n=rerank_top_n,
+                                                                         query_input=query_input,
+                                                                         session_id=session_id,
+                                                                         endpoint_name=endpoint_name)
+        reranked_context = ""
+        reranked_documents = reranked_response_results['reranked_documents']
+        for doc in reranked_documents:
+            doc_session_date = "".join(["session_date = ",f"{doc['session_date']}\n"])
+            doc_chunk_text = "".join(["chunk_text = ",f"{doc['chunk_text']}\n"])
+            doc_chunk_summary = "".join(["chunk_summary = ",f"{doc['chunk_summary']}\n"])
+            doc_full_context = "".join([doc_session_date,
+                                        doc_chunk_text,
+                                        doc_chunk_summary,
+                                        "\n"])
+            reranked_context = "\n".join([reranked_context, doc_full_context])
 
         if found_historical_context:
-            reranked_docs = "\n".join([reranked_docs, historical_context])
+            reranked_context = "\n".join([reranked_context, historical_context])
 
         if session_date_override is not None:
             formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
             override_date_is_already_contained = any(
-                str(result.document.id).startswith(f"{formatted_session_date_override}")
-                for result in reranked_response_results
+                result['session_date'].startswith(f"{formatted_session_date_override}")
+                for result in reranked_documents
             )
 
             if override_date_is_already_contained:
-                return reranked_docs
+                return reranked_context
 
             # Add vectors associated with the session date override since they haven't been retrieved yet.
             session_date_override_vector_ids = []
@@ -325,17 +333,17 @@ class PineconeClient(PineconeBaseClass):
             for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
                 session_date_override_vector_ids = list_ids
 
-            # Didn't find any vectors for that day, return unchanged reranked_docs
+            # Didn't find any vectors for that day, return unchanged reranked_context
             if len(session_date_override_vector_ids) == 0:
-                return reranked_docs
+                return reranked_context
 
             session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
                                                              namespace=namespace)
             vectors = session_date_override_fetch_result['vectors']
             if len(vectors or []) == 0:
-                return reranked_docs
+                return reranked_context
 
-            # Have vectors for session date override. Append them to current reranked_docs value.
+            # Have vectors for session date override. Append them to current reranked_context value.
             for vector_id in vectors:
                 vector_data = vectors[vector_id]
 
@@ -349,10 +357,10 @@ class PineconeClient(PineconeBaseClass):
                                                          chunk_text,
                                                          session_date_override.output_suffix_override,
                                                          "\n"])
-                reranked_docs = "\n".join([reranked_docs,
-                                           session_date_override_context])
+                reranked_context = "\n".join([reranked_context,
+                                              session_date_override_context])
 
-        return reranked_docs
+        return reranked_context
 
     def fetch_historical_context(self,
                                  index: Index,

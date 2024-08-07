@@ -134,6 +134,7 @@ class PineconeBaseClass(ABC):
     namespace – the namespace that should be used for querying the index.
     query_top_k – the top k results that should be retrieved from the vector store.
     rerank_top_n – the top n results that should be returned after reranking vectors.
+    session_id – the session id.
     session_date_override – the optional override for including session-date-specific vectors.
     """
     async def get_vector_store_context(auth_manager: AuthManager,
@@ -143,6 +144,7 @@ class PineconeBaseClass(ABC):
                                        namespace: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
+                                       session_id: str,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> str:
         pass
 
