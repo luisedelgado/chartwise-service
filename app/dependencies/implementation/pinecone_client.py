@@ -318,7 +318,7 @@ class PineconeClient(PineconeBaseClass):
             reranked_context = "\n".join([reranked_context, historical_context])
 
         if session_date_override is not None:
-            formatted_session_date_override = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date_override.session_date)
             override_date_is_already_contained = any(
                 result['session_date'].startswith(f"{formatted_session_date_override}")
                 for result in reranked_documents
@@ -329,7 +329,7 @@ class PineconeClient(PineconeBaseClass):
 
             # Add vectors associated with the session date override since they haven't been retrieved yet.
             session_date_override_vector_ids = []
-            list_operation_prefix = datetime_handler.convert_to_internal_date_format(session_date_override.session_date)
+            list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date_override.session_date)
             for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
                 session_date_override_vector_ids = list_ids
 

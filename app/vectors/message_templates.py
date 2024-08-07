@@ -5,7 +5,7 @@ from num2words import num2words
 from pytz import timezone
 
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
-from ..internal.utilities.datetime_handler import convert_to_internal_date_format
+from ..internal.utilities.datetime_handler import convert_to_date_format_mm_dd_yyyy
 
 class PromptScenario(Enum):
     # keep sorted A-Z
@@ -151,7 +151,7 @@ class PromptCrafter:
         else:
             patient_gender_context = ""
 
-        last_session_date_context = "" if len(last_session_date or '') == 0 else f"\nNote that {patient_name}'s last session with the practitioner was on {convert_to_internal_date_format(last_session_date)}."
+        last_session_date_context = "" if len(last_session_date or '') == 0 else f"\nNote that {patient_name}'s last session with the practitioner was on {convert_to_date_format_mm_dd_yyyy(last_session_date)}."
         return (
             f"A mental health practitioner is using our Practice Management Platform to inquire about a patient named {patient_name}{patient_gender_context}. "
             "The practitioner's session notes provide the available information. "
@@ -235,7 +235,7 @@ class PromptCrafter:
             patient_gender = "" if not gender_has_default_pronouns(patient_gender) else f" ({patient_gender})"
             ordinal_session_number = num2words(session_number, to='ordinal_num')
             last_session_date_context = ("" if len(last_session_date or '') == 0
-                                         else f"Note that {patient_name}'s last session with {therapist_name} was on {convert_to_internal_date_format(last_session_date)} (mm-dd-yyyy). ")
+                                         else f"Note that {patient_name}'s last session with {therapist_name} was on {convert_to_date_format_mm_dd_yyyy(last_session_date)} (mm-dd-yyyy). ")
             return (
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "

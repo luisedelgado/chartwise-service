@@ -4,6 +4,7 @@ from pytz import timezone
 
 DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
 DATE_FORMAT = "%m-%d-%Y"
+DATE_FORMAT_SPELL_OUT_MONTH = "%b %d, %Y"
 MONTH_YEAR_FORMAT = "%B %Y"
 
 """
@@ -44,9 +45,19 @@ def retrieve_most_recent_date(first_date: str, second_date: str) -> str:
 Returns a formatted version of the incoming date, for internal use.
 The valid format is considered to be %m-%d-%Y
 """
-def convert_to_internal_date_format(session_date: str) -> str:
+def convert_to_date_format_mm_dd_yyyy(session_date: str) -> str:
     try:
         session_date_as_date = datetime.strptime(session_date, '%Y-%m-%d')
         return datetime.strftime(session_date_as_date, DATE_FORMAT)
+    except:
+        raise Exception("Something went wrong while formatting the incoming date.")
+
+"""
+Returns a formatted version of the incoming date as "Oct 10th, 2024".
+"""
+def convert_to_date_format_spell_out_month(session_date: str) -> str:
+    try:
+        session_date_as_date = datetime.strptime(session_date, '%Y-%m-%d')
+        return datetime.strftime(session_date_as_date, DATE_FORMAT_SPELL_OUT_MONTH)
     except:
         raise Exception("Something went wrong while formatting the incoming date.")
