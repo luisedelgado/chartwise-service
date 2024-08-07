@@ -290,7 +290,7 @@ class ChartWiseAssistant:
                                           pinecone_client: PineconeBaseClass,
                                           auth_manager: AuthManager) -> str:
         try:
-            query_input = f"What are 3 questions that I could ask about {patient_name}'s session history?"
+            query_input = f"What are 3 questions about different topics that I could ask about {patient_name}'s session history?"
             context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                      openai_client=openai_client,
                                                                      query_input=query_input,
@@ -299,7 +299,7 @@ class ChartWiseAssistant:
                                                                      namespace=namespace,
                                                                      session_id=session_id,
                                                                      query_top_k=10,
-                                                                     rerank_top_n=5)
+                                                                     rerank_top_n=4)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -380,7 +380,7 @@ class ChartWiseAssistant:
                                                                      namespace=namespace,
                                                                      session_id=session_id,
                                                                      query_top_k=10,
-                                                                     rerank_top_n=5)
+                                                                     rerank_top_n=4)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
