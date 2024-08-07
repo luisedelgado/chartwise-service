@@ -73,15 +73,8 @@ class FakePineconeClient(PineconeBaseClass):
                                        endpoint_name: str,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> str:
         if not self.vector_store_context_returns_data:
-            return {}
-
-        return {
-            "language_code": "es-419",
-            "context": "fakeContext",
-            "patient_name": "fakePatientName",
-            "patient_gender": "female",
-            "query_input": "My fake query input"
-        }
+            return ""
+        return "This is my fake vector context"
 
     def fetch_historical_context(self,
                                  index: Index,

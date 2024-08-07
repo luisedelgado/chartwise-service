@@ -619,6 +619,8 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie,
