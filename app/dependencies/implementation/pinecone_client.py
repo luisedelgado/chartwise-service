@@ -294,9 +294,7 @@ class PineconeClient(PineconeBaseClass):
         retrieved_docs = []
         for match in query_matches:
             metadata = match['metadata']
-            formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
-                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT)
-            session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
+            session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
             chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
             chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
             session_full_context = "".join([session_date,

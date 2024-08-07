@@ -183,8 +183,7 @@ class OpenAIClient(OpenAIBaseClass):
                                                                 ],
                                                                 expects_json_response=True,
                                                                 auth_manager=auth_manager)
-            evaluated_response = eval(str(response))
-            assert "reranked_documents" in evaluated_response
-            return evaluated_response
+            assert "reranked_documents" in response
+            return response
         except Exception as e:
             raise Exception(e)
