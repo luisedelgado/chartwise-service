@@ -46,15 +46,22 @@ class OpenAIClient(OpenAIBaseClass):
                                         default_headers=proxy_headers,
                                         base_url=api_base)
 
+            response_format = "json_object" if expects_json_response else "text"
             response: Completion = await openai_client.chat.completions.create(
                 model=self.LLM_MODEL,
                 messages=messages,
                 temperature=0,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                response_format={
+                    "type": response_format
+                }
             )
 
-            response_text = response.choices[0].message.content.strip()
-            return response_text if not expects_json_response else eval(str(response_text))
+            response_message = response.choices[0].message
+            assert ('refusal' not in response_message or response_message['refusal'] is None), response_message.refusal
+
+            response_text = response_message.content.strip()
+            return response_text if not expects_json_response else eval(response_text)
         except Exception as e:
             raise Exception(e)
 

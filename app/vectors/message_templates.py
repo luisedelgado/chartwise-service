@@ -260,8 +260,7 @@ class PromptCrafter:
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
                     "Use only the information from `chunk_summary` and `chunk_text`. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
-                    "Return a JSON object with a single key, `summary`. "
-                    "Do not add the literal word 'json' in the response. Simply return the object.\n"
+                    "Return a JSON object with a single key, `summary`. This is what the format should look like: {\"summary\": ...}"
                     f"Example response for a practitioner named Carlos, who's about to meet with a patient named Juan, using language code es-419:\n"
                     r"{'summary': 'Hola Carlos, te recuerdo que estás viendo a Juan por décima vez.\n\nSesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo.'}"
             )
@@ -300,8 +299,9 @@ class PromptCrafter:
                 "Avoid broad or vague questions like 'What happened during the session of Apr 10, 2022?' "
                 "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
                 "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
-                f"Ensure that the questions are written in language code {language_code}. Do not include the literal word 'json' in your response. "
-                "Simply return the JSON object. For example, this is what a response in language code es-419 could look like:\n"
+                f"Ensure that the questions are written in language code {language_code}. "
+                "This is what the format should look like: {\"questions\": [..., ..., ...]}\n"
+                "Example output using language code es-419:\n"
                 r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?', '¿Qué tema sería beneficioso retomar con el paciente?']}"
             )
         except Exception as e:
@@ -348,10 +348,9 @@ class PromptCrafter:
                 "Return a JSON object with one key: `topics`, written in English. The value should be an array of up to three objects, each with:\n"
                 f"* `topic`: Topic written using language code {language_code}.\n"
                 f"* `percentage`: Frequency percentage.\n\n"
-                "If no context data is available, the array should be empty. Do not include the literal word 'json' in the response, just return the JSON object directly. "
-                "Example response for language code es-419 where the patient spoke equally about the three topics:\n"
-                r"{'topics':[{'topic': 'Ansiedad por el trabajo', 'percentage': '33%'},{'topic': 'Mejora en el matrimonio', 'percentage': '33%'},{'topic': 'Pensando en adoptar', 'percentage': '33%'}]}"
-                "\n\nAnother example response for language code es-419 where the patient spoke half of the time about a single topic, and the remaining time was split between two other topics:\n"
+                "This is what the format should look like: {\"topics\": [{\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}]}\n"
+                "If no context data is available, the array should be empty. "
+                "\n\nExample response for language code es-419 where the patient spoke half of the time about a given topic, and the remaining time was split between two other topics:\n"
                 r"{'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
             )
         except Exception as e:
@@ -461,12 +460,11 @@ class PromptCrafter:
                 "Your task is to:\n\n1. Rerank the chunked documents based on their relevance to the practitioner's question.\n"
                 "2. Ensure that the most relevant documents are ranked highest.\n\n"
                 f"The top {top_n} documents will be used to answer the question, so they must contain all the necessary information to provide a comprehensive response.\n\n"
-                "Return only a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
+                "Return a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
                 "Each document object should have three keys titled 'session_date', 'chunk_summary', and 'chunk_text', each with their respective value from the context you were given. "
                 "For the `session_date` use date format mm-dd-yyyy (i.e: 10-24-2020). "
-                "It is very important that the documents' contents remain written in the language in which they were originally written. "
-                "Do not add the literal word 'json' in the response. Simply return the object.\n"
-                r'For example, a response would look like: {"reranked_documents": [{"session_date": "10-24-2022", "chunk_summary": "Umeko was born and raised in Venezuela.", "chunk_text": "Umeko was born in Caracas, Venezuela, and lived there until he was 15 years old."}, {"session_date": "02-24-2021", "chunk_summary": "Umeko had his first girlfriend when he was 17 years old.", "chunk_text": "Umeko began dating his high school girlfriend when he was about to turn 17 years old. They dated for about 8 months."}, {"session_date": "06-24-2020", "chunk_summary": "Umeko enjoys soccer.", "chunk_text": "Umeko has always been a huge soccer fan. He has supported FC Barcelona since he was 14 years old."}]}'
+                "It is very important that the documents' contents remain written in the language in which they were originally written.\n"
+                r'Example output: {"reranked_documents": [{"session_date": "10-24-2022", "chunk_summary": "Umeko was born and raised in Venezuela.", "chunk_text": "Umeko was born in Caracas, Venezuela, and lived there until he was 15 years old."}, {"session_date": "02-24-2021", "chunk_summary": "Umeko had his first girlfriend when he was 17 years old.", "chunk_text": "Umeko began dating his high school girlfriend when he was about to turn 17 years old. They dated for about 8 months."}, {"session_date": "06-24-2020", "chunk_summary": "Umeko enjoys soccer.", "chunk_text": "Umeko has always been a huge soccer fan. He has supported FC Barcelona since he was 14 years old."}]}'
             )
         except Exception as e:
             raise Exception(e)
