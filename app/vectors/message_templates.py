@@ -300,7 +300,6 @@ class PromptCrafter:
                 "Avoid broad or vague questions like 'What happened during the session of Apr 10, 2022?' "
                 "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
                 "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
-                "If there is no relevant data available for the patient, the `questions` array should be empty. "
                 f"Ensure that the questions are written in language code {language_code}. Do not include the literal word 'json' in your response. "
                 "Simply return the JSON object. For example, this is what a response in language code es-419 could look like:\n"
                 r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?', '¿Qué tema sería beneficioso retomar con el paciente?']}"
