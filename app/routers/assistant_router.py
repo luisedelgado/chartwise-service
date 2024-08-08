@@ -142,10 +142,18 @@ class AssistantRouter:
 
                 supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                      refresh_token=datastore_refresh_token)
+                language_code_query = supabase_client.select(fields="*",
+                                                             filters={
+                                                                 'id': query.therapist_id
+                                                             },
+                                                             table_name="therapists")
+                assert (0 != len((language_code_query).data)), "Did not find therapist data."
+                language_code = language_code_query.dict()['data'][0]['language_preference']
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 supabase_client=supabase_client,
+                                                                                language_code=language_code,
                                                                                 session_id=session_id),
-                                        media_type="text/event-stream")
+                                         media_type="text/event-stream")
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -539,13 +547,14 @@ class AssistantRouter:
 
     Arguments:
     query – the query that will be executed.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    supabase_client – the supabase client to be used internally.
+    language_code – the language code associated with the request.
     session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
                                                 query: AssistantQuery,
                                                 supabase_client: SupabaseBaseClass,
+                                                language_code: str,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
@@ -556,6 +565,14 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
+            strings_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'id': self._default_streaming_error_message_id(language_code)
+                                                   },
+                                                   table_name="user_interface_strings")
+            assert (0 != len((strings_query).data))
+            default_error_string = strings_query.dict()['data'][0]['value']
+
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
@@ -574,7 +591,7 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
         except Exception as e:
-            yield json.dumps({"error": str(e)})
+            yield ("\n" + default_error_string)
             logger.log_error(session_id=session_id,
                              patient_id=query.patient_id,
                              endpoint_name=self.QUERIES_ENDPOINT,
@@ -1217,3 +1234,15 @@ class AssistantRouter:
                              method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+
+    # Private
+
+    def _default_streaming_error_message_id(self, language_code: str):
+        if language_code.startswith('es-'):
+            # Spanish
+            return 'streaming_qa_error_default_response_es'
+        elif language_code.startswith('en-'):
+            # English
+            return 'streaming_qa_error_default_response_en'
+        else:
+            raise Exception("Unsupported language code")
