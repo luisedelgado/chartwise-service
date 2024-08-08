@@ -1,6 +1,7 @@
 from abc import ABC
 
 from pinecone import Index
+from typing import Tuple
 
 from .pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..api.openai_base_class import OpenAIBaseClass
@@ -154,7 +155,7 @@ class PineconeBaseClass(ABC):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+                                       session_date_override: PineconeQuerySessionDateOverride = None) -> Tuple[bool, str]:
         pass
 
     """

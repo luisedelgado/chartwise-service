@@ -1,4 +1,5 @@
 from pinecone import Index
+from typing import Tuple
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ..api.pinecone_base_class import PineconeBaseClass
@@ -74,10 +75,10 @@ class FakePineconeClient(PineconeBaseClass):
                                        rerank_top_n: int,
                                        session_id: str,
                                        endpoint_name: str,
-                                       session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+                                       session_date_override: PineconeQuerySessionDateOverride = None) -> Tuple[bool, str]:
         if not self.vector_store_context_returns_data:
-            return ""
-        return "This is my fake vector context"
+            return (False, "")
+        return (True, "This is my fake vector context")
 
     def fetch_historical_context(self,
                                  index: Index,

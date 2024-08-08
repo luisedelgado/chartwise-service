@@ -8,6 +8,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, ServerlessSpec, Pinecone, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC 
+from typing import Tuple
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -259,13 +260,13 @@ class PineconeClient(PineconeBaseClass):
                                        rerank_top_n: int,
                                        session_id: str,
                                        endpoint_name: str,
-                                       session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+                                       session_date_override: PineconeQuerySessionDateOverride = None) -> Tuple[bool, str]:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
         missing_session_data_error = ("There's no data from patient sessions. "
                                       "They may have not gone through their first session since the practitioner added them to the platform. ")
         if index_id not in pc.list_indexes().names():
-            return missing_session_data_error
+            return (False, missing_session_data_error)
 
         index = pc.Index(index_id)
         embeddings = await openai_client.create_embeddings(auth_manager=auth_manager,
@@ -289,7 +290,7 @@ class PineconeClient(PineconeBaseClass):
 
         # There's no session data, return a message explaining this, and offer the historical context, if exists.
         if len(query_matches or []) == 0:
-            return missing_session_data_error
+            return (found_historical_context, missing_session_data_error)
 
         retrieved_docs = []
         for match in query_matches:
@@ -337,7 +338,7 @@ class PineconeClient(PineconeBaseClass):
             )
 
             if override_date_is_already_contained:
-                return reranked_context
+                return (True, reranked_context)
 
             # Add vectors associated with the session date override since they haven't been retrieved yet.
             session_date_override_vector_ids = []
@@ -348,13 +349,13 @@ class PineconeClient(PineconeBaseClass):
 
             # Didn't find any vectors for that day, return unchanged reranked_context
             if len(session_date_override_vector_ids) == 0:
-                return reranked_context
+                return (True, reranked_context)
 
             session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
                                                              namespace=namespace)
             vectors = session_date_override_fetch_result['vectors']
             if len(vectors or []) == 0:
-                return reranked_context
+                return (True, reranked_context)
 
             # Have vectors for session date override. Append them to current reranked_context value.
             for vector_id in vectors:
@@ -375,7 +376,7 @@ class PineconeClient(PineconeBaseClass):
                 reranked_context = "\n".join([reranked_context,
                                               session_date_override_context])
 
-        return reranked_context
+        return (True, reranked_context)
 
     def fetch_historical_context(self,
                                  index: Index,

@@ -1,3 +1,4 @@
+import json
 import tiktoken
 
 from datetime import datetime
@@ -6,6 +7,7 @@ from typing import AsyncIterable
 from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
+from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
@@ -50,16 +52,16 @@ class ChartWiseAssistant:
                           pinecone_client: PineconeBaseClass,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     query_input=query_input,
-                                                                     index_id=index_id,
-                                                                     namespace=namespace,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=3,
-                                                                     endpoint_name=endpoint_name,
-                                                                     session_id=session_id,
-                                                                     session_date_override=session_date_override)
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                        query_input=query_input,
+                                                                        index_id=index_id,
+                                                                        namespace=namespace,
+                                                                        openai_client=openai_client,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=3,
+                                                                        endpoint_name=endpoint_name,
+                                                                        session_id=session_id,
+                                                                        session_date_override=session_date_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
@@ -203,16 +205,16 @@ class ChartWiseAssistant:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
 
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     openai_client=openai_client,
-                                                                     query_input=query_input,
-                                                                     index_id=index_id,
-                                                                     namespace=namespace,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=4,
-                                                                     session_id=session_id,
-                                                                     endpoint_name=endpoint_name,
-                                                                     session_date_override=session_date_override)
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                        openai_client=openai_client,
+                                                                        query_input=query_input,
+                                                                        index_id=index_id,
+                                                                        namespace=namespace,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=4,
+                                                                        session_id=session_id,
+                                                                        endpoint_name=endpoint_name,
+                                                                        session_date_override=session_date_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -274,6 +276,7 @@ class ChartWiseAssistant:
     patient_gender – the patient gender.
     openai_client – the openai client to be leveraged internally.
     pinecone_client – the pinecone client to be leveraged internally.
+    supabase_client – the supabase client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def create_question_suggestions(self,
@@ -288,18 +291,33 @@ class ChartWiseAssistant:
                                           patient_gender: str,
                                           openai_client: OpenAIBaseClass,
                                           pinecone_client: PineconeBaseClass,
+                                          supabase_client: SupabaseBaseClass,
                                           auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 3 questions about different topics that I could ask about {patient_name}'s session history?"
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     openai_client=openai_client,
-                                                                     query_input=query_input,
-                                                                     index_id=index_id,
-                                                                     endpoint_name=endpoint_name,
-                                                                     namespace=namespace,
-                                                                     session_id=session_id,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=4)
+            found_context, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                                    openai_client=openai_client,
+                                                                                    query_input=query_input,
+                                                                                    index_id=index_id,
+                                                                                    endpoint_name=endpoint_name,
+                                                                                    namespace=namespace,
+                                                                                    session_id=session_id,
+                                                                                    query_top_k=10,
+                                                                                    rerank_top_n=4)
+
+            # If there's no patient data, we'll return 3 static questions as default.
+            if not found_context:
+                default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
+                strings_query = supabase_client.select_either_or_from_column(fields="*",
+                                                                             table_name="user_interface_strings",
+                                                                             column_name="id",
+                                                                             possible_values=default_question_suggestions)
+                assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
+                default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
+                response_dict = {
+                    "questions": default_question_suggestions
+                }
+                return eval(json.dumps(response_dict, ensure_ascii=False))
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -372,15 +390,15 @@ class ChartWiseAssistant:
                                     auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are the 3 topics that come up the most in {patient_name}'s sessions?"
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     query_input=query_input,
-                                                                     openai_client=openai_client,
-                                                                     index_id=index_id,
-                                                                     endpoint_name=endpoint_name,
-                                                                     namespace=namespace,
-                                                                     session_id=session_id,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=4)
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                        query_input=query_input,
+                                                                        openai_client=openai_client,
+                                                                        index_id=index_id,
+                                                                        endpoint_name=endpoint_name,
+                                                                        namespace=namespace,
+                                                                        session_id=session_id,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=4)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -544,3 +562,23 @@ class ChartWiseAssistant:
                                                                      auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
+
+    # Private
+
+    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
+        if language_code.startswith('es-'):
+            # Spanish
+            return [
+                'question_suggestions_no_data_default_es_1',
+                'question_suggestions_no_data_default_es_2',
+                'question_suggestions_no_data_default_es_3'
+            ] 
+        elif language_code.startswith('en-'):
+            # English
+            return [
+                'question_suggestions_no_data_default_en_1',
+                'question_suggestions_no_data_default_en_2',
+                'question_suggestions_no_data_default_en_3'
+            ]
+        else:
+            raise Exception("Unsupported language code")

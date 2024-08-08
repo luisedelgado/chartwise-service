@@ -89,6 +89,14 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
         raise Exception("Untracked table name")
 
+    def select_either_or_from_column(self,
+                                     fields: str,
+                                     column_name: str,
+                                     possible_values: list,
+                                     table_name: str,
+                                     order_desc_column: str = None):
+        pass
+
     def delete(self,
                filters: dict,
                table_name: str):

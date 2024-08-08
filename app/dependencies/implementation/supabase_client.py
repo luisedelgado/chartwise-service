@@ -47,6 +47,25 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def select_either_or_from_column(self,
+                                     fields: str,
+                                     column_name: str,
+                                     possible_values: list,
+                                     table_name: str,
+                                     order_desc_column: str = None):
+        try:
+            select_operation = self.client.from_(table_name).select(fields)
+
+            or_clause = ",".join(f"id.eq.{value}" for value in possible_values)
+            select_operation = select_operation.or_(or_clause)
+
+            if len(order_desc_column or '') > 0:
+                select_operation = select_operation.order(order_desc_column, desc=True)
+
+            return select_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
     def delete(self,
                filters: dict,
                table_name: str):
