@@ -1,4 +1,4 @@
-import json, uuid
+import uuid
 
 from fastapi import (APIRouter,
                      Cookie,
