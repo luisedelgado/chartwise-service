@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import (APIRouter,
+                     BackgroundTasks,
                      Cookie,
                      HTTPException,
                      Request,
@@ -66,11 +67,13 @@ class AssistantRouter:
         async def insert_new_session(body: SessionNotesInsert,
                                      request: Request,
                                      response: Response,
+                                     background_tasks: BackgroundTasks,
                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._insert_new_session_internal(body=body,
+                                                           background_tasks=background_tasks,
                                                            request=request,
                                                            response=response,
                                                            datastore_access_token=datastore_access_token,
@@ -82,6 +85,7 @@ class AssistantRouter:
         async def update_session(body: SessionNotesUpdate,
                                  request: Request,
                                  response: Response,
+                                 background_tasks: BackgroundTasks,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -89,6 +93,7 @@ class AssistantRouter:
             return await self._update_session_internal(body=body,
                                                        response=response,
                                                        request=request,
+                                                       background_tasks=background_tasks,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -97,6 +102,7 @@ class AssistantRouter:
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_session(response: Response,
                                  request: Request,
+                                 background_tasks: BackgroundTasks,
                                  therapist_id: str = None,
                                  session_report_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -105,6 +111,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_session_internal(therapist_id=therapist_id,
                                                        session_report_id=session_report_id,
+                                                       background_tasks=background_tasks,
                                                        response=response,
                                                        request=request,
                                                        datastore_access_token=datastore_access_token,
@@ -116,6 +123,7 @@ class AssistantRouter:
         async def execute_assistant_query(query: AssistantQuery,
                                           response: Response,
                                           request: Request,
+                                          background_tasks: BackgroundTasks,
                                           datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -150,6 +158,7 @@ class AssistantRouter:
                 assert (0 != len((language_code_query).data)), "Did not find therapist data."
                 language_code = language_code_query.dict()['data'][0]['language_preference']
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
+                                                                                background_tasks=background_tasks,
                                                                                 supabase_client=supabase_client,
                                                                                 language_code=language_code,
                                                                                 session_id=session_id),
@@ -160,6 +169,7 @@ class AssistantRouter:
         @self.router.get(self.GREETINGS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_greeting(response: Response,
                                  request: Request,
+                                 background_tasks: BackgroundTasks,
                                  client_timezone_identifier: str = None,
                                  therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -168,6 +178,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_greeting_internal(response=response,
                                                        request=request,
+                                                       background_tasks=background_tasks,
                                                        client_tz_identifier=client_timezone_identifier,
                                                        therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
@@ -178,6 +189,7 @@ class AssistantRouter:
         @self.router.get(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_presession_tray(response: Response,
                                         request: Request,
+                                        background_tasks: BackgroundTasks,
                                         therapist_id: str = None,
                                         patient_id: str = None,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -186,6 +198,7 @@ class AssistantRouter:
                                         session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_presession_tray_internal(response=response,
                                                               request=request,
+                                                              background_tasks=background_tasks,
                                                               therapist_id=therapist_id,
                                                               patient_id=patient_id,
                                                               datastore_access_token=datastore_access_token,
@@ -196,6 +209,7 @@ class AssistantRouter:
         @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_question_suggestions(response: Response,
                                              request: Request,
+                                             background_tasks: BackgroundTasks,
                                              therapist_id: str = None,
                                              patient_id: str = None,
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -204,6 +218,7 @@ class AssistantRouter:
                                              session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_question_suggestions_internal(response=response,
                                                                    request=request,
+                                                                   background_tasks=background_tasks,
                                                                    therapist_id=therapist_id,
                                                                    patient_id=patient_id,
                                                                    datastore_access_token=datastore_access_token,
@@ -214,6 +229,7 @@ class AssistantRouter:
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
                               request: Request,
+                              background_tasks: BackgroundTasks,
                               body: PatientInsertPayload,
                               datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                               datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -221,6 +237,7 @@ class AssistantRouter:
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(response=response,
                                                     request=request,
+                                                    background_tasks=background_tasks,
                                                     body=body,
                                                     datastore_access_token=datastore_access_token,
                                                     datastore_refresh_token=datastore_refresh_token,
@@ -230,6 +247,7 @@ class AssistantRouter:
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
                                  request: Request,
+                                 background_tasks: BackgroundTasks,
                                  body: PatientUpdatePayload,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -238,6 +256,7 @@ class AssistantRouter:
             return await self._update_patient_internal(response=response,
                                                        request=request,
                                                        body=body,
+                                                       background_tasks=background_tasks,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -246,6 +265,7 @@ class AssistantRouter:
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(response: Response,
                                  request: Request,
+                                 background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -254,6 +274,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(response=response,
                                                        request=request,
+                                                       background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
@@ -264,6 +285,7 @@ class AssistantRouter:
         @self.router.get(self.TOPICS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_frequent_topics(response: Response,
                                         request: Request,
+                                        background_tasks: BackgroundTasks,
                                         patient_id: str = None,
                                         therapist_id: str = None,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -272,6 +294,7 @@ class AssistantRouter:
                                         session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._fetch_frequent_topics_internal(response=response,
                                                               request=request,
+                                                              background_tasks=background_tasks,
                                                               patient_id=patient_id,
                                                               therapist_id=therapist_id,
                                                               datastore_access_token=datastore_access_token,
@@ -282,11 +305,13 @@ class AssistantRouter:
         @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def transform_session_with_template(response: Response,
                                                   request: Request,
+                                                  background_tasks: BackgroundTasks,
                                                   body: TemplatePayload,
                                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(response=response,
                                                                         request=request,
+                                                                        background_tasks=background_tasks,
                                                                         therapist_id=body.therapist_id,
                                                                         session_notes_text=body.session_notes_text,
                                                                         template=body.template,
@@ -300,6 +325,7 @@ class AssistantRouter:
     body – the incoming request json body.
     request – the incoming request object.
     response – the response model with which to create the final response.
+    background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -309,6 +335,7 @@ class AssistantRouter:
                                            body: SessionNotesInsert,
                                            request: Request,
                                            response: Response,
+                                           background_tasks: BackgroundTasks,
                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                            authorization: Annotated[Union[str, None], Cookie()],
@@ -330,7 +357,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                patient_id=body.patient_id,
                                therapist_id=body.therapist_id,
                                endpoint_name=self.SESSIONS_ENDPOINT,
@@ -352,7 +380,8 @@ class AssistantRouter:
                                                                                       supabase_client=supabase_client,
                                                                                       pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     therapist_id=body.therapist_id,
                                     patient_id=body.patient_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
@@ -363,7 +392,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              therapist_id=body.therapist_id,
                              patient_id=body.patient_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
@@ -380,6 +410,7 @@ class AssistantRouter:
     body – the incoming request body.
     request – the incoming request object.
     response – the response model with which to create the final response.
+    background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -389,6 +420,7 @@ class AssistantRouter:
                                        body: SessionNotesUpdate,
                                        request: Request,
                                        response: Response,
+                                       background_tasks: BackgroundTasks,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -410,7 +442,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=body.therapist_id,
                                endpoint_name=self.SESSIONS_ENDPOINT,
                                method=put_api_method)
@@ -431,7 +464,8 @@ class AssistantRouter:
                                                          supabase_client=supabase_client,
                                                          pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     therapist_id=body.therapist_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -441,7 +475,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              therapist_id=body.therapist_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
@@ -458,6 +493,7 @@ class AssistantRouter:
     session_report_id – the id for the incoming session report.
     request – the incoming request object.
     response – the response model with which to create the final response.
+    background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -468,6 +504,7 @@ class AssistantRouter:
                                        session_report_id: str,
                                        request: Request,
                                        response: Response,
+                                       background_tasks: BackgroundTasks,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -489,7 +526,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=therapist_id,
                                session_report_id=session_report_id,
                                endpoint_name=self.SESSIONS_ENDPOINT,
@@ -501,7 +539,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              therapist_id=therapist_id,
                              session_report_id=session_report_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
@@ -521,7 +560,8 @@ class AssistantRouter:
                                                    supabase_client=supabase_client,
                                                    pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     therapist_id=therapist_id,
                                     session_report_id=session_report_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
@@ -532,7 +572,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              session_report_id=session_report_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
@@ -546,19 +587,22 @@ class AssistantRouter:
     Returns the query response.
 
     Arguments:
+    background_tasks – object for scheduling concurrent tasks.
     query – the query that will be executed.
     supabase_client – the supabase client to be used internally.
     language_code – the language code associated with the request.
     session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
+                                                background_tasks: BackgroundTasks,
                                                 query: AssistantQuery,
                                                 supabase_client: SupabaseBaseClass,
                                                 language_code: str,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=query.therapist_id,
                                patient_id=query.patient_id,
                                endpoint_name=self.QUERIES_ENDPOINT,
@@ -584,7 +628,8 @@ class AssistantRouter:
                                                                     supabase_client=supabase_client):
                 yield part
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     therapist_id=query.therapist_id,
                                     patient_id=query.patient_id,
                                     endpoint_name=self.QUERIES_ENDPOINT,
@@ -592,7 +637,8 @@ class AssistantRouter:
                                     method=post_api_method)
         except Exception as e:
             yield ("\n" + default_error_string)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              patient_id=query.patient_id,
                              endpoint_name=self.QUERIES_ENDPOINT,
                              error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
@@ -605,6 +651,7 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     client_tz_identifier – the timezone identifier associated with the client.
     therapist_id – the therapist id associated with the user.
     datastore_access_token – the datastore access token.
@@ -615,6 +662,7 @@ class AssistantRouter:
     async def _fetch_greeting_internal(self,
                                        response: Response,
                                        request: Request,
+                                       background_tasks: BackgroundTasks,
                                        client_tz_identifier: str,
                                        therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -639,7 +687,8 @@ class AssistantRouter:
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         logs_description = ''.join(['tz_identifier:', client_tz_identifier])
         get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=get_api_method,
                                therapist_id=therapist_id,
                                endpoint_name=self.GREETINGS_ENDPOINT,
@@ -660,7 +709,8 @@ class AssistantRouter:
                                                                          openai_client=self._openai_client,
                                                                          supabase_client=supabase_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.GREETINGS_ENDPOINT,
                                     therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
@@ -671,7 +721,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.GREETINGS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -685,6 +736,7 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id associated with the user.
     patient_id – the id associated with the patient whose presession tray will be fetched.
     datastore_access_token – the datastore access token.
@@ -695,6 +747,7 @@ class AssistantRouter:
     async def _fetch_presession_tray_internal(self,
                                               response: Response,
                                               request: Request,
+                                              background_tasks: BackgroundTasks,
                                               therapist_id: str,
                                               patient_id: str,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -718,7 +771,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=get_api_method,
                                therapist_id=therapist_id,
                                patient_id=patient_id,
@@ -741,7 +795,8 @@ class AssistantRouter:
                                                                                  openai_client=self._openai_client,
                                                                                  supabase_client=supabase_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id,
@@ -751,7 +806,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -765,6 +821,7 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     datastore_access_token – the datastore access token.
@@ -775,6 +832,7 @@ class AssistantRouter:
     async def _fetch_question_suggestions_internal(self,
                                                    response: Response,
                                                    request: Request,
+                                                   background_tasks: BackgroundTasks,
                                                    therapist_id: str,
                                                    patient_id: str,
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -798,7 +856,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=get_api_method,
                                therapist_id=therapist_id,
                                patient_id=patient_id,
@@ -821,7 +880,8 @@ class AssistantRouter:
                                                                                       pinecone_client=self._pinecone_client,
                                                                                       supabase_client=supabase_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id,
@@ -832,7 +892,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.QUESTION_SUGGESTIONS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -846,6 +907,7 @@ class AssistantRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -855,6 +917,7 @@ class AssistantRouter:
     async def _add_patient_internal(self,
                                     response: Response,
                                     request: Request,
+                                    background_tasks: BackgroundTasks,
                                     body: PatientInsertPayload,
                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -877,7 +940,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=post_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
                                therapist_id=body.therapist_id)
@@ -897,7 +961,8 @@ class AssistantRouter:
                                                                    supabase_client=supabase_client,
                                                                    pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     method=post_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
                                     therapist_id=body.therapist_id,
@@ -908,7 +973,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              therapist_id=body.therapist_id,
@@ -923,6 +989,7 @@ class AssistantRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -932,6 +999,7 @@ class AssistantRouter:
     async def _update_patient_internal(self,
                                        response: Response,
                                        request: Request,
+                                       background_tasks: BackgroundTasks,
                                        body: PatientUpdatePayload,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -954,7 +1022,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=put_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
                                therapist_id=body.therapist_id,
@@ -976,7 +1045,8 @@ class AssistantRouter:
                                                          supabase_client=supabase_client,
                                                          pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     method=put_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
                                     therapist_id=body.therapist_id,
@@ -986,7 +1056,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              therapist_id=body.therapist_id,
@@ -1002,6 +1073,7 @@ class AssistantRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
     therapist_id – the therapist id associated with the patient to be deleted.
     datastore_access_token – the datastore access token.
@@ -1012,6 +1084,7 @@ class AssistantRouter:
     async def _delete_patient_internal(self,
                                        response: Response,
                                        request: Request,
+                                       background_tasks: BackgroundTasks,
                                        patient_id: str,
                                        therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -1035,7 +1108,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=delete_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
                                therapist_id=therapist_id,
@@ -1067,7 +1141,8 @@ class AssistantRouter:
                                                                 patient_id=patient_id,
                                                                 pinecone_client=self._pinecone_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     method=delete_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
                                     therapist_id=therapist_id,
@@ -1077,7 +1152,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              therapist_id=therapist_id,
@@ -1093,6 +1169,7 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     datastore_access_token – the datastore access token.
@@ -1103,6 +1180,7 @@ class AssistantRouter:
     async def _fetch_frequent_topics_internal(self,
                                               response: Response,
                                               request: Request,
+                                              background_tasks: BackgroundTasks,
                                               therapist_id: str,
                                               patient_id: str,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -1126,7 +1204,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=get_api_method,
                                therapist_id=therapist_id,
                                patient_id=patient_id,
@@ -1149,7 +1228,8 @@ class AssistantRouter:
                                                                               pinecone_client=self._pinecone_client,
                                                                               supabase_client=supabase_client)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.TOPICS_ENDPOINT,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id,
@@ -1160,7 +1240,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.TOPICS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -1174,6 +1255,7 @@ class AssistantRouter:
     Arguments:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id associated with the therapist user.
     session_notes_text – the session notes to be adapted into SOAP.
     template – the template to be applied.
@@ -1183,6 +1265,7 @@ class AssistantRouter:
     async def _transform_session_with_template_internal(self,
                                                         response: Response,
                                                         request: Request,
+                                                        background_tasks: BackgroundTasks,
                                                         therapist_id: str,
                                                         session_notes_text: str,
                                                         template: SessionNotesTemplate,
@@ -1202,7 +1285,8 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=post_api_method,
                                endpoint_name=self.TEMPLATES_ENDPOINT,
                                therapist_id=therapist_id,)
@@ -1217,7 +1301,8 @@ class AssistantRouter:
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.TEMPLATES_ENDPOINT,
                                     therapist_id=therapist_id,
                                     http_status_code=status.HTTP_200_OK,
@@ -1227,7 +1312,8 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.TEMPLATES_ENDPOINT,
                              error_code=status_code,
                              description=description,

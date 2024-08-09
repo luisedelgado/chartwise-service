@@ -1,6 +1,6 @@
 import os
 
-from fastapi import (File, UploadFile)
+from fastapi import (BackgroundTasks, File, UploadFile)
 
 from ..dependencies.api.deepgram_base_class import DeepgramBaseClass
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
@@ -44,6 +44,7 @@ class AudioProcessingManager:
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManager,
+                                 background_tasks: BackgroundTasks,
                                  supabase_client_factory: SupabaseFactoryBaseClass,
                                  speechmatics_client: SpeechmaticsBaseClass,
                                  session_auth_token: str,
@@ -53,6 +54,7 @@ class AudioProcessingManager:
         try:
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
             return speechmatics_client.diarize_audio(auth_manager=auth_manager,
+                                                     background_tasks=background_tasks,
                                                      session_id=session_id,
                                                      file_name=audio_copy_result.file_copy_name,
                                                      file_full_path=audio_copy_result.file_copy_full_path,

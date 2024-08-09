@@ -86,6 +86,10 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
             "session_id": "123",
         }])
+        if table_name == "user_interface_strings":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
 
         raise Exception("Untracked table name")
 

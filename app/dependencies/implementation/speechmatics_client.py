@@ -1,6 +1,6 @@
 import json, os, requests, ssl
 
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from speechmatics.models import ConnectionSettings
 from speechmatics.batch_client import BatchClient
 
@@ -41,6 +41,7 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
         }
 
     def diarize_audio(self,
+                      background_tasks: BackgroundTasks,
                       auth_manager: AuthManager,
                       session_id: str,
                       file_full_path: str,
@@ -78,7 +79,8 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
                 assert response.status_code == 201, f"Got HTTP code {response.status_code} while uploading the audio file"
                 json_response = response.json()
                 job_id = json_response['id']
-                logger.log_diarization_event(session_id=session_id,
+                logger.log_diarization_event(background_tasks=background_tasks,
+                                             session_id=session_id,
                                              job_id=job_id)
                 return job_id
             except Exception as e:
@@ -100,7 +102,8 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
                         audio=file_full_path,
                         transcription_config=config,
                     )
-                    logger.log_diarization_event(session_id=session_id,
+                    logger.log_diarization_event(background_tasks=background_tasks,
+                                                 session_id=session_id,
                                                  job_id=job_id)
                     return job_id
                 except Exception as e:

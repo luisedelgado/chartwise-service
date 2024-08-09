@@ -3,6 +3,7 @@ import uuid
 
 from enum import Enum
 from fastapi import (APIRouter,
+                     BackgroundTasks,
                      Cookie,
                      HTTPException,
                      Request,
@@ -78,10 +79,12 @@ class SecurityRouter:
     def _register_routes(self):
         @self.router.post(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
         async def login_for_access_token(body: LoginData,
+                                         background_tasks: BackgroundTasks,
                                          response: Response,
                                          request: Request,
                                          session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
             return await self._login_for_access_token_internal(body=body,
+                                                               background_tasks=background_tasks,
                                                                request=request,
                                                                response=response,
                                                                session_id=session_id)
@@ -89,11 +92,13 @@ class SecurityRouter:
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
                          request: Request,
+                         background_tasks: BackgroundTasks,
                          logout_data: LogoutData,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
                                                request=request,
+                                               background_tasks=background_tasks,
                                                therapist_id=logout_data.therapist_id,
                                                authorization=authorization,
                                                session_id=session_id)
@@ -102,6 +107,7 @@ class SecurityRouter:
         async def add_new_therapist(body: TherapistInsertPayload,
                                     response: Response,
                                     request: Request,
+                                    background_tasks: BackgroundTasks,
                                     datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                     authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -109,6 +115,7 @@ class SecurityRouter:
             return await self._add_new_therapist_internal(body=body,
                                                           response=response,
                                                           request=request,
+                                                          background_tasks=background_tasks,
                                                           datastore_access_token=datastore_access_token,
                                                           datastore_refresh_token=datastore_refresh_token,
                                                           authorization=authorization,
@@ -117,6 +124,7 @@ class SecurityRouter:
         @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_therapist_data(response: Response,
                                         request: Request,
+                                        background_tasks: BackgroundTasks,
                                         body: TherapistUpdatePayload,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -124,6 +132,7 @@ class SecurityRouter:
                                         session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_therapist_data_internal(response=response,
                                                               request=request,
+                                                              background_tasks=background_tasks,
                                                               body=body,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
@@ -133,6 +142,7 @@ class SecurityRouter:
         @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_all_therapist_data(response: Response,
                                             request: Request,
+                                            background_tasks: BackgroundTasks,
                                             therapist_id: str = None,
                                             datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -140,6 +150,7 @@ class SecurityRouter:
                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_all_therapist_data_internal(response=response,
                                                                   request=request,
+                                                                  background_tasks=background_tasks,
                                                                   therapist_id=therapist_id,
                                                                   datastore_access_token=datastore_access_token,
                                                                   datastore_refresh_token=datastore_refresh_token,
@@ -151,12 +162,14 @@ class SecurityRouter:
 
     Arguments:
     body – the body associated with the request.
+    background_tasks – object for scheduling concurrent tasks.
     request – the incoming request object.
     response – the response object to be used for creating the final response.
     session_id – the id of the current user session.
     """
     async def _login_for_access_token_internal(self,
                                                body: LoginData,
+                                               background_tasks: BackgroundTasks,
                                                request: Request,
                                                response: Response,
                                                session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
@@ -171,7 +184,8 @@ class SecurityRouter:
 
             logger = Logger(supabase_client_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
-            logger.log_api_request(session_id=session_id,
+            logger.log_api_request(background_tasks=background_tasks,
+                                   session_id=session_id,
                                    method=post_api_method,
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
@@ -188,7 +202,8 @@ class SecurityRouter:
                                                                   supabase_client_factory=self._supabase_client_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     therapist_id=body.user_id,
@@ -204,6 +219,7 @@ class SecurityRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the therapist id associated with the operation.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
@@ -211,6 +227,7 @@ class SecurityRouter:
     async def _logout_internal(self,
                                response: Response,
                                request: Request,
+                               background_tasks: BackgroundTasks,
                                therapist_id: str,
                                authorization: Annotated[Union[str, None], Cookie()],
                                session_id: Annotated[Union[str, None], Cookie()]):
@@ -228,14 +245,16 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=therapist_id,
                                method=post_api_method,
                                endpoint_name=self.LOGOUT_ENDPOINT,)
 
         self._auth_manager.logout(response)
 
-        logger.log_api_response(session_id=session_id,
+        logger.log_api_response(background_tasks=background_tasks,
+                                session_id=session_id,
                                 therapist_id=therapist_id,
                                 endpoint_name=self.LOGOUT_ENDPOINT,
                                 http_status_code=status.HTTP_200_OK,
@@ -248,6 +267,7 @@ class SecurityRouter:
 
     Arguments:
     body – the body associated with the request.
+    background_tasks – object for scheduling concurrent tasks.
     request – the incoming request object.
     response – the response model to be used for creating the final response.
     datastore_access_token – the datastore access token.
@@ -257,6 +277,7 @@ class SecurityRouter:
     """
     async def _add_new_therapist_internal(self,
                                           body: TherapistInsertPayload,
+                                          background_tasks: BackgroundTasks,
                                           request: Request,
                                           response: Response,
                                           datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -280,7 +301,8 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=post_api_method,
                                therapist_id=body.id,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
@@ -310,7 +332,8 @@ class SecurityRouter:
             # Create index in vector DB in a background task
             asyncio.create_task(self._pinecone_client.create_index(body.id))
 
-            logger.log_api_response(therapist_id=body.id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    therapist_id=body.id,
                                     session_id=session_id,
                                     endpoint_name=self.THERAPISTS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -320,7 +343,8 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.THERAPISTS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -332,6 +356,7 @@ class SecurityRouter:
     Updates data associated with a therapist.
 
     Arguments:
+    background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
     request – the incoming request object.
     body – the body associated with the request.
@@ -341,6 +366,7 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _update_therapist_data_internal(self,
+                                              background_tasks: BackgroundTasks,
                                               response: Response,
                                               request: Request,
                                               body: TherapistUpdatePayload,
@@ -365,7 +391,8 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=body.id,
                                method=put_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
@@ -391,7 +418,8 @@ class SecurityRouter:
                                        'id': body.id
                                    })
 
-            logger.log_api_response(therapist_id=body.id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    therapist_id=body.id,
                                     session_id=session_id,
                                     endpoint_name=self.THERAPISTS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -400,7 +428,8 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.THERAPISTS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -412,6 +441,7 @@ class SecurityRouter:
     Deletes all data associated with a therapist.
 
     Arguments:
+    background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
     request – the incoming request object.
     therapist_id – the id associated with the therapist data to be deleted.
@@ -421,6 +451,7 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _delete_all_therapist_data_internal(self,
+                                                  background_tasks: BackgroundTasks,
                                                   response: Response,
                                                   request: Request,
                                                   therapist_id: str,
@@ -448,7 +479,8 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                therapist_id=therapist_id,
                                method=delete_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
@@ -473,8 +505,10 @@ class SecurityRouter:
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
-            logger.log_account_deletion(therapist_id=therapist_id)
-            logger.log_api_response(therapist_id=therapist_id,
+            logger.log_account_deletion(background_tasks=background_tasks,
+                                        therapist_id=therapist_id)
+            logger.log_api_response(background_tasks=background_tasks,
+                                    therapist_id=therapist_id,
                                     session_id=session_id,
                                     endpoint_name=self.THERAPISTS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -483,7 +517,8 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.THERAPISTS_ENDPOINT,
                              error_code=status_code,
                              description=description,

@@ -1,5 +1,7 @@
 from abc import ABC
 
+from fastapi import BackgroundTasks
+
 from ..api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...managers.auth_manager import AuthManager
 
@@ -10,6 +12,7 @@ class SpeechmaticsBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth manager to be leveraged internally.
+    background_tasks – the object to schedule concurrent tasks.
     session_id – the session id.
     file_full_path – the audio file's full path.
     file_name – the audio's file name.
@@ -18,6 +21,7 @@ class SpeechmaticsBaseClass(ABC):
     endpoint url – the endpoint's url.
     """
     def diarize_audio(auth_manager: AuthManager,
+                      background_tasks: BackgroundTasks,
                       session_id: str,
                       file_full_path: str,
                       supabase_client_factory: SupabaseFactoryBaseClass,

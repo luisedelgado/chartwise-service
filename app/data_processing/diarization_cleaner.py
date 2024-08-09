@@ -1,6 +1,6 @@
 import json
 
-from fastapi import status
+from fastapi import BackgroundTasks, status
 from typing import Dict
 
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
@@ -20,10 +20,14 @@ class DiarizationCleaner:
     Returns a JSON representation of the transcription after having been transformed for easier manipulation.
 
     Arguments:
+    background_tasks – the object to schedule concurrent tasks.
     input – the diarization input.
     auth_manager – the auth manager to be leveraged internally.
     """
-    def clean_transcription(self, input: str, supabase_client_factory: SupabaseFactoryBaseClass) -> str:
+    def clean_transcription(self,
+                            background_tasks: BackgroundTasks,
+                            input: str,
+                            supabase_client_factory: SupabaseFactoryBaseClass) -> str:
         self._current_speaker = input[0]["alternatives"][0]["speaker"]
         for obj in input:
             speaker = obj["alternatives"][0]["speaker"]
@@ -37,8 +41,9 @@ class DiarizationCleaner:
                 has_attaches_to = True
                 attaches_to = obj["attaches_to"]
                 if attaches_to.lower() != "previous":
-                    Logger(supabase_client_factory=supabase_client_factory).log_diarization_event(error_code=status.HTTP_417_EXPECTATION_FAILED,
-                                                                                                    description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
+                    Logger(supabase_client_factory=supabase_client_factory).log_diarization_event(background_tasks=background_tasks,
+                                                                                                  error_code=status.HTTP_417_EXPECTATION_FAILED,
+                                                                                                  description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
 
             if "is_eos" in obj:
                 has_end_of_sentence = True

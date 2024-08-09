@@ -3,6 +3,7 @@ import json, os
 from datetime import datetime
 
 from fastapi import (APIRouter,
+                     BackgroundTasks,
                      Cookie,
                      File,
                      Form,
@@ -53,6 +54,7 @@ class AudioProcessingRouter:
         @self.router.post(self.NOTES_TRANSCRIPTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def transcribe_session_notes(response: Response,
                                            request: Request,
+                                           background_tasks: BackgroundTasks,
                                            therapist_id: Annotated[str, Form()],
                                            patient_id: Annotated[str, Form()],
                                            template: Annotated[SessionNotesTemplate, Form()],
@@ -63,6 +65,7 @@ class AudioProcessingRouter:
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
                                                                  request=request,
+                                                                 background_tasks=background_tasks,
                                                                  therapist_id=therapist_id,
                                                                  patient_id=patient_id,
                                                                  template=template,
@@ -75,6 +78,7 @@ class AudioProcessingRouter:
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def diarize_session(response: Response,
                                   request: Request,
+                                  background_tasks: BackgroundTasks,
                                   session_date: Annotated[str, Form()],
                                   therapist_id: Annotated[str, Form()],
                                   patient_id: Annotated[str, Form()],
@@ -87,6 +91,7 @@ class AudioProcessingRouter:
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(response=response,
                                                         request=request,
+                                                        background_tasks=background_tasks,
                                                         session_date=session_date,
                                                         therapist_id=therapist_id,
                                                         patient_id=patient_id,
@@ -99,8 +104,8 @@ class AudioProcessingRouter:
                                                         session_id=session_id)
 
         @self.router.post(self.DIARIZATION_NOTIFICATION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def consume_notification(request: Request):
-            return await self._consume_notification_internal(request=request)
+        async def consume_notification(request: Request, background_tasks: BackgroundTasks):
+            return await self._consume_notification_internal(request=request, background_tasks=background_tasks)
 
     """
     Returns the transcription created from the incoming audio file.
@@ -108,6 +113,7 @@ class AudioProcessingRouter:
     Arguments:
     response – the response model with which to create the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     template – the template to be used for generating the output.
@@ -120,6 +126,7 @@ class AudioProcessingRouter:
     async def _transcribe_session_notes_internal(self,
                                                  response: Response,
                                                  request: Request,
+                                                 background_tasks: BackgroundTasks,
                                                  therapist_id: Annotated[str, Form()],
                                                  patient_id: Annotated[str, Form()],
                                                  template: Annotated[SessionNotesTemplate, Form()],
@@ -142,7 +149,8 @@ class AudioProcessingRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                method=post_api_method,
                                therapist_id=therapist_id,
                                patient_id=patient_id,
@@ -171,7 +179,8 @@ class AudioProcessingRouter:
                                                                                     session_id=session_id,
                                                                                     audio_file=audio_file)
 
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id,
                                     endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
@@ -183,7 +192,8 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -197,6 +207,7 @@ class AudioProcessingRouter:
     Arguments:
     response – the response model with which to create the final response.
     request – the incoming request object.
+    background_tasks – object for scheduling concurrent tasks.
     therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     template – the template to be used for generating the output.
@@ -209,6 +220,7 @@ class AudioProcessingRouter:
     async def _diarize_session_internal(self,
                                         response: Response,
                                         request: Request,
+                                        background_tasks: BackgroundTasks,
                                         session_date: Annotated[str, Form()],
                                         therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
@@ -236,7 +248,8 @@ class AudioProcessingRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(session_id=session_id,
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
                                patient_id=patient_id,
                                therapist_id=therapist_id,
                                method=post_api_method,
@@ -262,6 +275,7 @@ class AudioProcessingRouter:
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
+                                                                                  background_tasks=background_tasks,
                                                                                   supabase_client_factory=self._supabase_client_factory,
                                                                                   session_auth_token=authorization,
                                                                                   speechmatics_client=self._speechmatics_client,
@@ -282,7 +296,8 @@ class AudioProcessingRouter:
                                    })
 
             logs_description = f"job_id={job_id}"
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.DIARIZATION_ENDPOINT,
                                     patient_id=patient_id,
                                     therapist_id=therapist_id,
@@ -294,7 +309,8 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(session_id=session_id,
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
                              endpoint_name=self.DIARIZATION_ENDPOINT,
                              error_code=status_code,
                              patient_id=patient_id,
@@ -308,8 +324,9 @@ class AudioProcessingRouter:
 
     Arguments:
     request – the incoming request.
+    background_tasks – object for scheduling concurrent tasks.
     """
-    async def _consume_notification_internal(self, request: Request):
+    async def _consume_notification_internal(self, request: Request, background_tasks: BackgroundTasks):
         try:
             authorization = request.headers["authorization"].split()[-1]
             if not self._auth_manager.access_token_is_valid(authorization):
@@ -327,7 +344,8 @@ class AudioProcessingRouter:
             json_data = json.loads(json.dumps(raw_data))
             job_id = json_data["job"]["id"]
             summary = json_data["summary"]["content"]
-            diarization = DiarizationCleaner().clean_transcription(input=json_data["results"],
+            diarization = DiarizationCleaner().clean_transcription(background_tasks=background_tasks,
+                                                                   input=json_data["results"],
                                                                    supabase_client_factory=self._supabase_client_factory)
 
             supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
@@ -338,18 +356,21 @@ class AudioProcessingRouter:
                                                                                                  job_id=job_id,
                                                                                                  diarization_summary=summary,
                                                                                                  diarization=diarization)
-            logger.log_api_response(session_id=session_id,
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
                                     endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=logger.API_METHOD_POST)
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(endpoint_name=self.DIARIZATION_ENDPOINT,
+            logger.log_error(background_tasks=background_tasks,
+                             endpoint_name=self.DIARIZATION_ENDPOINT,
                              error_code=status_code,
                              description=description,
                              method=logger.API_METHOD_POST)
-            logger.log_diarization_event(error_code=status_code,
+            logger.log_diarization_event(background_tasks=background_tasks,
+                                         error_code=status_code,
                                          description=description)
             raise HTTPException(status_code=status_code, detail=description)
 

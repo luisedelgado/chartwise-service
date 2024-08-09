@@ -2,6 +2,7 @@ import json
 
 from datetime import timedelta
 
+from fastapi import BackgroundTasks
 from fastapi.testclient import TestClient
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
@@ -452,6 +453,7 @@ class TestingHarnessAudioProcessingRouter:
         assert self.fake_pinecone_client.fake_vectors_insertion == fake_diarization_summary
 
     def test_diarization_cleaner_internal_formatting(self):
-        clean_transcription = DiarizationCleaner().clean_transcription(input=FAKE_DIARIZATION_RESULT["results"],
+        clean_transcription = DiarizationCleaner().clean_transcription(background_tasks=BackgroundTasks(),
+                                                                       input=FAKE_DIARIZATION_RESULT["results"],
                                                                        supabase_client_factory=self.fake_supabase_client_factory)
         assert clean_transcription == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'
