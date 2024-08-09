@@ -316,21 +316,22 @@ class SecurityRouter:
 
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                  access_token=datastore_access_token)
-            supabase_client.insert(table_name="therapists",
-                                   payload={
-                                       "id": body.id,
-                                       "first_name": body.first_name,
-                                       "middle_name": body.middle_name,
-                                       "last_name": body.last_name,
-                                       "gender": body.gender.value,
-                                       "birth_date": body.birth_date,
-                                       "login_mechanism": body.signup_mechanism.value,
-                                       "email": body.email,
-                                       "language_preference": body.language_code_preference,
-                                   })
+            background_tasks.add_task(supabase_client.insert,
+                                      {
+                                        "id": body.id,
+                                        "first_name": body.first_name,
+                                        "middle_name": body.middle_name,
+                                        "last_name": body.last_name,
+                                        "gender": body.gender.value,
+                                        "birth_date": body.birth_date,
+                                        "login_mechanism": body.signup_mechanism.value,
+                                        "email": body.email,
+                                        "language_preference": body.language_code_preference,
+                                      },
+                                      "therapists")
 
             # Create index in vector DB in a background task
-            asyncio.create_task(self._pinecone_client.create_index(body.id))
+            background_tasks.add_task(self._pinecone_client.create_index, body.id)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     therapist_id=body.id,
