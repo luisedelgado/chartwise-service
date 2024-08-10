@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
-from typing import AsyncIterable
+from typing import Annotated, AsyncIterable, Optional, Union
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
@@ -33,10 +33,10 @@ class SessionNotesSource(Enum):
 
 class PatientInsertPayload(BaseModel):
     first_name: str
-    middle_name: str = None
+    middle_name: Optional[str] = None
     last_name: str
     birth_date: str
-    pre_existing_history: str = None
+    pre_existing_history: Optional[str] = None
     gender: Gender
     email: str
     phone_number: str
@@ -45,15 +45,15 @@ class PatientInsertPayload(BaseModel):
 
 class PatientUpdatePayload(BaseModel):
     patient_id: str
-    first_name: str
-    middle_name: str = None
-    last_name: str
-    birth_date: str
-    pre_existing_history: str = None
-    gender: Gender
-    email: str
-    phone_number: str
-    consentment_channel: PatientConsentmentChannel
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    birth_date: Optional[str] = None
+    pre_existing_history: Optional[str] = None
+    gender: Optional[Gender] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    consentment_channel: Optional[PatientConsentmentChannel] = None
     therapist_id: str
 
 class SessionNotesInsert(BaseModel):
@@ -70,7 +70,7 @@ class SessionNotesUpdate(BaseModel):
     session_notes_id: str
     client_timezone_identifier: str
     source: SessionNotesSource
-    diarization: str = None
+    diarization: Optional[str] = None
     text: str
 
 class AssistantManager:
@@ -334,43 +334,44 @@ class AssistantManager:
 
     async def update_patient(self,
                              auth_manager: AuthManager,
-                             payload: PatientUpdatePayload,
+                             filtered_body: dict,
                              session_id: str,
                              openai_client: OpenAIBaseClass,
                              supabase_client: SupabaseBaseClass,
                              pinecone_client: PineconeBaseClass):
         patient_query = supabase_client.select(fields="*",
                                                filters={
-                                                   'id': payload.patient_id,
-                                                   'therapist_id': payload.therapist_id
+                                                   'id': filtered_body['patient_id'],
+                                                   'therapist_id': filtered_body['therapist_id']
                                                },
                                                table_name="patients")
         assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
         current_pre_existing_history = patient_query.dict()['data'][0]['pre_existing_history']
 
+        update_db_payload = {}
+        for key, value in filtered_body.items():
+            if key == 'id':
+                continue
+            if isinstance(value, Enum):
+                value = value.value
+            update_db_payload[key] = value
+
         supabase_client.update(table_name="patients",
-                               payload={
-                                   "first_name": payload.first_name,
-                                   "middle_name": payload.middle_name,
-                                   "last_name": payload.last_name,
-                                   "birth_date": payload.birth_date,
-                                   "pre_existing_history": payload.pre_existing_history,
-                                   "email": payload.email,
-                                   "gender": payload.gender.value,
-                                   "phone_number": payload.phone_number,
-                                   "consentment_channel": payload.consentment_channel.value,
-                               },
+                               payload=update_db_payload,
                                filters={
-                                   'id': payload.patient_id
+                                   'id': filtered_body['patient_id']
                                })
 
-        if len(payload.pre_existing_history or '') > 0 and payload.pre_existing_history != current_pre_existing_history:
-            await pinecone_client.update_preexisting_history_vectors(index_id=payload.therapist_id,
-                                                                     namespace=payload.patient_id,
-                                                                     text=payload.pre_existing_history,
-                                                                     session_id=session_id,
-                                                                     openai_client=openai_client,
-                                                                     auth_manager=auth_manager)
+        if ('pre_existing_history' not in filtered_body
+            or filtered_body['pre_existing_history'] == current_pre_existing_history):
+            return
+
+        await pinecone_client.update_preexisting_history_vectors(index_id=filtered_body['therapist_id'],
+                                                                    namespace=filtered_body['patient_id'],
+                                                                    text=filtered_body['pre_existing_history'],
+                                                                    session_id=session_id,
+                                                                    openai_client=openai_client,
+                                                                    auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManager,

@@ -1030,16 +1030,18 @@ class AssistantRouter:
                                patient_id=body.patient_id)
 
         try:
-            assert len(body.patient_id or '') > 0, "Missing patient_id param in payload"
-            assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(date_input=body.birth_date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            body = body.dict(exclude_unset=True)
+
+            assert len(body['patient_id'] or '') > 0, "Missing patient_id param in payload"
+            assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
+                                                                              incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
-                                                         payload=body,
+                                                         filtered_body=body,
                                                          session_id=session_id,
                                                          openai_client=self._openai_client,
                                                          supabase_client=supabase_client,
@@ -1049,8 +1051,8 @@ class AssistantRouter:
                                     session_id=session_id,
                                     method=put_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=body.therapist_id,
-                                    patient_id=body.patient_id,
+                                    therapist_id=body['therapist_id'],
+                                    patient_id=body['patient_id'],
                                     http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -1060,8 +1062,8 @@ class AssistantRouter:
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
-                             therapist_id=body.therapist_id,
-                             patient_id=body.patient_id,
+                             therapist_id=body['therapist_id'],
+                             patient_id=body['patient_id'],
                              description=description,
                              method=put_api_method)
             raise HTTPException(status_code=status_code,
