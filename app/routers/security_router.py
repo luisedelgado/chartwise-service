@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from enum import Enum
@@ -10,7 +9,7 @@ from fastapi import (APIRouter,
                      Response,
                      status,)
 from langcodes import Language
-from typing import Annotated, Union
+from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
 from ..internal import router_dependencies, security
@@ -27,8 +26,8 @@ class SignupMechanism(Enum):
     INTERNAL = "internal"
 
 class LoginData(BaseModel):
-    datastore_access_token: str = None
-    datastore_refresh_token: str = None
+    datastore_access_token: Optional[str] = None
+    datastore_refresh_token: Optional[str] = None
     user_id: str
 
 class LogoutData(BaseModel):
@@ -38,7 +37,7 @@ class TherapistInsertPayload(BaseModel):
     id: str
     email: str
     first_name: str
-    middle_name: str = None
+    middle_name: Optional[str] = None
     last_name: str
     birth_date: str
     signup_mechanism: SignupMechanism
@@ -47,13 +46,13 @@ class TherapistInsertPayload(BaseModel):
 
 class TherapistUpdatePayload(BaseModel):
     id: str
-    email: str
-    first_name: str
-    middle_name: str = None
-    last_name: str
-    birth_date: str
-    language_code_preference: str
-    gender: Gender
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    birth_date: Optional[str] = None
+    language_code_preference: Optional[str] = None
+    gender: Optional[Gender] = None
 
 class SecurityRouter:
 
@@ -398,29 +397,30 @@ class SecurityRouter:
                                method=put_api_method,
                                endpoint_name=self.THERAPISTS_ENDPOINT)
         try:
-            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(date_input=body.birth_date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
+            body = body.dict(exclude_unset=True)
+            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
+                                                                              incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert 'language_code_preference' not in body or Language.get(body['language_code_preference']).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
+            payload = {}
+            for key, value in body.items():
+                if key == 'id':
+                    continue
+                if isinstance(value, Enum):
+                    value = value.value
+                payload[key] = value
+
             supabase_client.update(table_name="therapists",
-                                   payload={
-                                       "first_name": body.first_name,
-                                       "middle_name": body.middle_name,
-                                       "last_name": body.last_name,
-                                       "gender": body.gender.value,
-                                       "birth_date": body.birth_date,
-                                       "email": body.email,
-                                       "language_preference": body.language_code_preference,
-                                   },
+                                   payload=payload,
                                    filters={
-                                       'id': body.id
+                                       'id': body['id']
                                    })
 
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=body.id,
+                                    therapist_id=body['id'],
                                     session_id=session_id,
                                     endpoint_name=self.THERAPISTS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
