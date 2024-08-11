@@ -47,6 +47,16 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                     "id": FAKE_SESSION_NOTES_ID
                 }])
+        if table_name == "patients":
+            return FakeSupabaseResult(data=[{
+                "first_name": "Fake first name",
+                "gender": "female",
+            }])
+        if table_name == "therapists":
+            return FakeSupabaseResult(data=[{
+                "first_name": "Fake first name",
+                "gender": "female",
+            }])
         else:
             ...
 

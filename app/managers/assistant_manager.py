@@ -65,11 +65,11 @@ class SessionNotesInsert(BaseModel):
 
 class SessionNotesUpdate(BaseModel):
     id: str
-    session_date: str
-    client_timezone_identifier: str
-    source: SessionNotesSource
+    session_date: Optional[str] = None
+    client_timezone_identifier: Optional[str] = None
+    source: Optional[SessionNotesSource] = None
     diarization: Optional[str] = None
-    notes_text: str
+    notes_text: Optional[str] = None
 
 class AssistantManager:
     async def process_new_session_data(self,
@@ -197,7 +197,7 @@ class AssistantManager:
                                                          filters={
                                                              'id': therapist_id
                                                          })
-                assert (0 != len((therapist_query).data))
+                assert (0 != len((therapist_query).data)), "Did not find information associated with the therapist."
 
                 language_code = therapist_query.dict()['data'][0]["language_preference"]
                 payload['notes_mini_summary'] = await ChartWiseAssistant().create_session_mini_summary(session_notes=filtered_body['notes_text'],
@@ -207,11 +207,12 @@ class AssistantManager:
                                                                                                        openai_client=openai_client,
                                                                                                        session_id=session_id)
 
-            supabase_client.update(table_name="session_reports",
-                                    payload=payload,
-                                    filters={
-                                        'id': filtered_body['id']
-                                    })
+            update_response = supabase_client.update(table_name="session_reports",
+                                                     payload=payload,
+                                                     filters={
+                                                         'id': filtered_body['id']
+                                                     })
+            assert (0 != len((update_response).data)), "Update operation could not be completed"
 
             if session_date_changed or session_text_changed:
                 await pinecone_client.update_session_vectors(index_id=therapist_id,
@@ -355,11 +356,12 @@ class AssistantManager:
                 value = value.value
             update_db_payload[key] = value
 
-        supabase_client.update(table_name="patients",
-                               payload=update_db_payload,
-                               filters={
-                                   'id': filtered_body['id']
-                               })
+        update_response = supabase_client.update(table_name="patients",
+                                                 payload=update_db_payload,
+                                                 filters={
+                                                     'id': filtered_body['id']
+                                                 })
+        assert (0 != len((update_response).data)), "Update operation could not be completed"
 
         if ('pre_existing_history' not in filtered_body
             or filtered_body['pre_existing_history'] == current_pre_existing_history):

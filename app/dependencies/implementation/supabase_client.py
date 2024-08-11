@@ -87,7 +87,7 @@ class SupabaseClient(SupabaseBaseClass):
 
     def get_current_user_id(self):
         try:
-            return self.client.auth.get_user().model_dump()['user']['id']
+            return self.client.auth.get_user().dict()['user']['id']
         except Exception as e:
             raise Exception(e)
 

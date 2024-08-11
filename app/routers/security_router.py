@@ -413,11 +413,12 @@ class SecurityRouter:
                     value = value.value
                 payload[key] = value
 
-            supabase_client.update(table_name="therapists",
-                                   payload=payload,
-                                   filters={
-                                       'id': body['id']
-                                   })
+            update_response = supabase_client.update(table_name="therapists",
+                                                     payload=payload,
+                                                     filters={
+                                                         'id': body['id']
+                                                     })
+            assert (0 != len((update_response).data)), "Update operation could not be completed."
 
             logger.log_api_response(background_tasks=background_tasks,
                                     therapist_id=body['id'],
