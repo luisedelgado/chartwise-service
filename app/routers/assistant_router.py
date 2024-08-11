@@ -1027,12 +1027,12 @@ class AssistantRouter:
                                method=put_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
                                therapist_id=body.therapist_id,
-                               patient_id=body.patient_id)
+                               patient_id=body.id)
 
         try:
             body = body.dict(exclude_unset=True)
 
-            assert len(body['patient_id'] or '') > 0, "Missing patient_id param in payload"
+            assert len(body['id'] or '') > 0, "Missing patient id param in payload"
             assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
@@ -1052,7 +1052,7 @@ class AssistantRouter:
                                     method=put_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
                                     therapist_id=body['therapist_id'],
-                                    patient_id=body['patient_id'],
+                                    patient_id=body['id'],
                                     http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -1063,7 +1063,7 @@ class AssistantRouter:
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              therapist_id=body['therapist_id'],
-                             patient_id=body['patient_id'],
+                             patient_id=body['id'],
                              description=description,
                              method=put_api_method)
             raise HTTPException(status_code=status_code,

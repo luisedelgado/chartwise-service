@@ -97,7 +97,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
                                    "signup_mechanism": "internal",
-                                   "language_code_preference": "es-419",
+                                   "language_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 401
@@ -116,7 +116,7 @@ class TestingHarnessSecurityRouter:
                                     "last_name": "bar",
                                     "birth_date": "01/01/2000",
                                     "signup_mechanism": "internal",
-                                    "language_code_preference": "es-419",
+                                    "language_preference": "es-419",
                                     "gender": "male",
                                 })
         assert response.status_code == 401
@@ -138,7 +138,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
                                    "signup_mechanism": "internal",
-                                   "language_code_preference": "es-419",
+                                   "language_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 400
@@ -160,7 +160,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
                                    "signup_mechanism": "internal",
-                                   "language_code_preference": "brbrbrbrbr",
+                                   "language_preference": "brbrbrbrbr",
                                    "gender": "male",
                                })
         assert response.status_code == 400
@@ -182,7 +182,7 @@ class TestingHarnessSecurityRouter:
                                     "last_name": "bar",
                                     "birth_date": "01-01-2000",
                                     "signup_mechanism": "internal",
-                                    "language_code_preference": "es-419",
+                                    "language_preference": "es-419",
                                     "gender": "undefined",
                                 })
         assert response.status_code == 400
@@ -204,7 +204,7 @@ class TestingHarnessSecurityRouter:
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
                                    "signup_mechanism": "undefined",
-                                   "language_code_preference": "es-419",
+                                   "language_preference": "es-419",
                                    "gender": "male",
                                })
         assert response.status_code == 400
@@ -226,7 +226,7 @@ class TestingHarnessSecurityRouter:
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
                                 "signup_mechanism": "facebook",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 200
@@ -241,7 +241,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 401
@@ -259,7 +259,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 401
@@ -280,7 +280,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "undefined",
                             })
         assert response.status_code == 400
@@ -301,7 +301,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01/01/2000",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 400
@@ -322,7 +322,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "language_code_preference": "brbrbrbr",
+                                "language_preference": "brbrbrbr",
                                 "gender": "male",
                             })
         assert response.status_code == 400
@@ -343,7 +343,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "language_code_preference": "es-419",
+                                "language_preference": "es-419",
                                 "gender": "male",
                             })
         assert response.status_code == 200

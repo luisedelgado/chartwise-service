@@ -44,7 +44,7 @@ class PatientInsertPayload(BaseModel):
     therapist_id: str
 
 class PatientUpdatePayload(BaseModel):
-    patient_id: str
+    id: str
     first_name: Optional[str] = None
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -341,7 +341,7 @@ class AssistantManager:
                              pinecone_client: PineconeBaseClass):
         patient_query = supabase_client.select(fields="*",
                                                filters={
-                                                   'id': filtered_body['patient_id'],
+                                                   'id': filtered_body['id'],
                                                    'therapist_id': filtered_body['therapist_id']
                                                },
                                                table_name="patients")
@@ -359,7 +359,7 @@ class AssistantManager:
         supabase_client.update(table_name="patients",
                                payload=update_db_payload,
                                filters={
-                                   'id': filtered_body['patient_id']
+                                   'id': filtered_body['id']
                                })
 
         if ('pre_existing_history' not in filtered_body
@@ -367,11 +367,11 @@ class AssistantManager:
             return
 
         await pinecone_client.update_preexisting_history_vectors(index_id=filtered_body['therapist_id'],
-                                                                    namespace=filtered_body['patient_id'],
-                                                                    text=filtered_body['pre_existing_history'],
-                                                                    session_id=session_id,
-                                                                    openai_client=openai_client,
-                                                                    auth_manager=auth_manager)
+                                                                 namespace=filtered_body['id'],
+                                                                 text=filtered_body['pre_existing_history'],
+                                                                 session_id=session_id,
+                                                                 openai_client=openai_client,
+                                                                 auth_manager=auth_manager)
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManager,

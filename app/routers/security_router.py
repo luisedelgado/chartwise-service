@@ -41,7 +41,7 @@ class TherapistInsertPayload(BaseModel):
     last_name: str
     birth_date: str
     signup_mechanism: SignupMechanism
-    language_code_preference: str
+    language_preference: str
     gender: Gender
 
 class TherapistUpdatePayload(BaseModel):
@@ -51,7 +51,7 @@ class TherapistUpdatePayload(BaseModel):
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
     birth_date: Optional[str] = None
-    language_code_preference: Optional[str] = None
+    language_preference: Optional[str] = None
     gender: Optional[Gender] = None
 
 class SecurityRouter:
@@ -311,7 +311,7 @@ class SecurityRouter:
             assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert datetime_handler.is_valid_date(date_input=body.birth_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert Language.get(body.language_code_preference).is_valid(), "Invalid language_preference parameter"
+            assert Language.get(body.language_preference).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                  access_token=datastore_access_token)
@@ -325,7 +325,7 @@ class SecurityRouter:
                                         "birth_date": body.birth_date,
                                         "login_mechanism": body.signup_mechanism.value,
                                         "email": body.email,
-                                        "language_preference": body.language_code_preference,
+                                        "language_preference": body.language_preference,
                                       },
                                       "therapists")
 
@@ -401,7 +401,7 @@ class SecurityRouter:
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert 'language_code_preference' not in body or Language.get(body['language_code_preference']).is_valid(), "Invalid language_preference parameter"
+            assert 'language_preference' not in body or Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
