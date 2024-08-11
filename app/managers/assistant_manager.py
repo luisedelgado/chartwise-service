@@ -214,7 +214,6 @@ class AssistantManager:
                                     })
 
             if session_date_changed or session_text_changed:
-                # Upload vector embeddings with the original session date since that's what was used for insertion.
                 await pinecone_client.update_session_vectors(index_id=therapist_id,
                                                              namespace=patient_id,
                                                              text=filtered_body.get('notes_text', current_session_text),
