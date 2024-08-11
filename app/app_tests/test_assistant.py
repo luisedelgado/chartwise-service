@@ -1019,7 +1019,7 @@ class TestingHarnessAssistantRouter:
     def test_update_patient_with_missing_auth(self):
         response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
+                                        "id": FAKE_PATIENT_ID,
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
@@ -1039,7 +1039,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
+                                        "id": FAKE_PATIENT_ID,
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
@@ -1062,7 +1062,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
+                                        "id": FAKE_PATIENT_ID,
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
@@ -1085,7 +1085,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": "",
+                                        "id": "",
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
@@ -1111,7 +1111,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
+                                        "id": FAKE_PATIENT_ID,
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
@@ -1138,7 +1138,7 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
+                                        "id": FAKE_PATIENT_ID,
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "birth_date": "10-24-1991",
