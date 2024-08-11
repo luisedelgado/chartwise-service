@@ -50,8 +50,8 @@ class TestingHarnessAssistantRouter:
                                json={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "therapist_id": FAKE_THERAPIST_ID,
-                                   "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                   "date": "01-01-2020",
+                                   "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                   "session_date": "01-01-2020",
                                    "client_timezone_identifier": TZ_IDENTIFIER,
                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
@@ -69,8 +69,8 @@ class TestingHarnessAssistantRouter:
                                 json={
                                     "patient_id": FAKE_PATIENT_ID,
                                     "therapist_id": FAKE_THERAPIST_ID,
-                                    "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                    "date": "01-01-2020",
+                                    "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                    "session_date": "01-01-2020",
                                     "client_timezone_identifier": TZ_IDENTIFIER,
                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN,
@@ -92,8 +92,8 @@ class TestingHarnessAssistantRouter:
                                         "patient_id": FAKE_PATIENT_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01/01/2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01/01/2020",
                                         "source": "manual_input"
                                     })
         assert response.status_code == 400
@@ -112,8 +112,8 @@ class TestingHarnessAssistantRouter:
                                         "patient_id": FAKE_PATIENT_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "undefined"
                                     })
         assert response.status_code == 400
@@ -135,8 +135,8 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": "",
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": insert_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": insert_text,
+                                        "session_date": "01-01-2020",
                                         "client_timezone_identifier": "gfsghfsdhgdsgs",
                                         "source": "manual_input"
                                     })
@@ -159,8 +159,8 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": "",
-                                        "text": insert_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": insert_text,
+                                        "session_date": "01-01-2020",
                                         "client_timezone_identifier": "gfsghfsdhgdsgs",
                                         "source": "manual_input"
                                     })
@@ -183,8 +183,8 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": insert_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": insert_text,
+                                        "session_date": "01-01-2020",
                                         "client_timezone_identifier": "gfsghfsdhgdsgs",
                                         "source": "manual_input"
                                     })
@@ -207,8 +207,8 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": insert_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": insert_text,
+                                        "session_date": "01-01-2020",
                                         "client_timezone_identifier": TZ_IDENTIFIER,
                                         "source": "manual_input"
                                     })
@@ -218,31 +218,27 @@ class TestingHarnessAssistantRouter:
     def test_update_session_with_missing_auth_token(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "manual_input",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 401
 
     def test_update_session_with_auth_token_but_supabase_returns_unathenticated_session(self):
-        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
+        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                cookies={
                                     "authorization": self.auth_cookie,
                                     "datastore_access_token": FAKE_ACCESS_TOKEN,
                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                 },
                                 json={
-                                    "patient_id": FAKE_PATIENT_ID,
-                                    "therapist_id": FAKE_THERAPIST_ID,
                                     "client_timezone_identifier": TZ_IDENTIFIER,
-                                    "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                    "date": "01/01/2020",
+                                    "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                    "session_date": "01/01/2020",
                                     "source": "manual_input",
-                                    "session_notes_id": FAKE_SESSION_REPORT_ID
+                                    "id": FAKE_SESSION_REPORT_ID
                                })
         assert response.status_code == 401
 
@@ -257,13 +253,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01/01/2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01/01/2020",
                                         "source": "manual_input",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 400
 
@@ -278,13 +272,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": "fsrghshfsdhfsd",
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "manual_input",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 400
 
@@ -299,34 +291,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "undefined",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
-                                    })
-        assert response.status_code == 400
-
-    def test_update_session_with_valid_auth_but_empty_patient_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
-                                        "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
-                                        "source": "undefined",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 400
 
@@ -341,13 +310,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "undefined",
-                                        "session_notes_id": ""
+                                        "id": ""
                                     })
         assert response.status_code == 400
 
@@ -362,13 +329,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "date": "01-01-2020",
+                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                                        "session_date": "01-01-2020",
                                         "source": "undefined",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 400
 
@@ -386,13 +351,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": update_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": update_text,
+                                        "session_date": "01-01-2020",
                                         "source": "manual_input",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 200
         assert self.fake_supabase_user_client.fake_text == update_text
@@ -411,13 +374,11 @@ class TestingHarnessAssistantRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "text": update_text,
-                                        "date": "01-01-2020",
+                                        "notes_text": update_text,
+                                        "session_date": "01-01-2020",
                                         "source": "manual_input",
-                                        "session_notes_id": FAKE_SESSION_REPORT_ID
+                                        "id": FAKE_SESSION_REPORT_ID
                                     })
         assert response.status_code == 200
         assert self.fake_supabase_user_client.fake_text == update_text
@@ -1051,29 +1012,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_update_patient_with_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "id": FAKE_PATIENT_ID,
-                                        "first_name": "Pepito",
-                                        "last_name": "Perez",
-                                        "birth_date": "10-24-1991",
-                                        "gender": "female",
-                                        "email": "foo@foo.foo",
-                                        "phone_number": "123",
-                                        "consentment_channel": "verbal",
-                                        "therapist_id": "",
-                                    })
-        assert response.status_code == 401
-
     def test_update_patient_with_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -1119,7 +1057,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
@@ -1147,7 +1084,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
         assert self.fake_pinecone_client.update_preexisting_history_num_invocations == 1

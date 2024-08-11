@@ -70,6 +70,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "total_sessions": 2,
                 "first_name": "Fake first name",
                 "last_name": "myLastName",
+                "therapist_id": FAKE_THERAPIST_ID,
                 "gender": "female",
                 "pre_existing_history": "preExistingHistory" if self.patient_query_returns_preexisting_history else None
             }])
@@ -114,6 +115,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
         return FakeSupabaseUser(user={
             'id': self.user_authentication_id
         })
+
+    def get_current_user_id(self):
+        return FAKE_THERAPIST_ID
 
     def refresh_session(self):
         return FakeSession(return_authenticated_session=self.return_authenticated_session,

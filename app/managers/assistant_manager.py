@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
-from typing import Annotated, AsyncIterable, Optional, Union
+from typing import AsyncIterable, Optional
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
@@ -54,24 +54,22 @@ class PatientUpdatePayload(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     consentment_channel: Optional[PatientConsentmentChannel] = None
-    therapist_id: str
 
 class SessionNotesInsert(BaseModel):
     therapist_id: str
     patient_id: str
-    text: str
-    date: str
+    notes_text: str
+    session_date: str
     client_timezone_identifier: str
     source: SessionNotesSource
 
 class SessionNotesUpdate(BaseModel):
-    therapist_id: str
-    date: str
-    session_notes_id: str
+    id: str
+    session_date: str
     client_timezone_identifier: str
     source: SessionNotesSource
     diarization: Optional[str] = None
-    text: str
+    notes_text: str
 
 class AssistantManager:
     async def process_new_session_data(self,
@@ -100,7 +98,7 @@ class AssistantManager:
             assert (0 != len(therapist_query.data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.text,
+            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.notes_text,
                                                                                   therapist_id=body.therapist_id,
                                                                                   language_code=language_code,
                                                                                   auth_manager=auth_manager,
@@ -112,11 +110,11 @@ class AssistantManager:
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
             if patient_last_session_date is None:
-                patient_last_session_date = body.date
+                patient_last_session_date = body.session_date
             else:
                 formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=body.date,
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=body.session_date,
                                                                                        first_date_format=datetime_handler.DATE_FORMAT,
                                                                                        second_date=formatted_date,
                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
@@ -133,9 +131,9 @@ class AssistantManager:
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={
-                                                       "notes_text": body.text,
+                                                       "notes_text": body.notes_text,
                                                        "notes_mini_summary": mini_summary,
-                                                       "session_date": body.date,
+                                                       "session_date": body.session_date,
                                                        "patient_id": body.patient_id,
                                                        "source": body.source.value,
                                                        "last_updated": now_timestamp,
@@ -146,8 +144,8 @@ class AssistantManager:
             # Upload vector embeddings
             await pinecone_client.insert_session_vectors(index_id=body.therapist_id,
                                                          namespace=body.patient_id,
-                                                         text=body.text,
-                                                         therapy_session_date=body.date,
+                                                         text=body.notes_text,
+                                                         therapy_session_date=body.session_date,
                                                          openai_client=openai_client,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
@@ -158,7 +156,7 @@ class AssistantManager:
 
     async def update_session(self,
                              auth_manager: AuthManager,
-                             body: SessionNotesUpdate,
+                             filtered_body: dict,
                              session_id: str,
                              openai_client: OpenAIBaseClass,
                              supabase_client: SupabaseBaseClass,
@@ -167,61 +165,62 @@ class AssistantManager:
             report_query = supabase_client.select(fields="*",
                                                   table_name="session_reports",
                                                   filters={
-                                                      'id': body.session_notes_id,
-                                                      'therapist_id': body.therapist_id,
+                                                      'id': filtered_body['id']
                                                   })
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
             report_query_dict = report_query.dict()
             patient_id = report_query_dict['data'][0]['patient_id']
-            current_mini_summary = report_query_dict['data'][0]['notes_mini_summary']
+            therapist_id = report_query_dict['data'][0]['therapist_id']
             current_session_text = report_query_dict['data'][0]['notes_text']
             current_session_date = report_query_dict['data'][0]['session_date']
             current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_session_date,
                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            session_text_changed = body.text != current_session_text
-            session_date_changed = current_session_date_formatted != body.date
+            session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
+            session_date_changed = 'session_date' in filtered_body and filtered_body['session_date'] != current_session_date_formatted
+
+            # Start populating payload for updating session.
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            payload = {
+                "last_updated": now_timestamp
+            }
+            for key, value in filtered_body.items():
+                if key == 'id':
+                    continue
+                if isinstance(value, Enum):
+                    value = value.value
+                payload[key] = value
 
             # We only have to generate a new mini_summary if the session text changed.
             if session_text_changed:
                 therapist_query = supabase_client.select(fields="*",
                                                          table_name="therapists",
                                                          filters={
-                                                             'id': body.therapist_id
+                                                             'id': therapist_id
                                                          })
                 assert (0 != len((therapist_query).data))
 
                 language_code = therapist_query.dict()['data'][0]["language_preference"]
-                mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.text,
-                                                                                      therapist_id=body.therapist_id,
-                                                                                      language_code=language_code,
-                                                                                      auth_manager=auth_manager,
-                                                                                      openai_client=openai_client,
-                                                                                      session_id=session_id)
-            else:
-                mini_summary = current_mini_summary
+                payload['notes_mini_summary'] = await ChartWiseAssistant().create_session_mini_summary(session_notes=filtered_body['notes_text'],
+                                                                                                       therapist_id=therapist_id,
+                                                                                                       language_code=language_code,
+                                                                                                       auth_manager=auth_manager,
+                                                                                                       openai_client=openai_client,
+                                                                                                       session_id=session_id)
 
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             supabase_client.update(table_name="session_reports",
-                                    payload={
-                                        "notes_text": body.text,
-                                        "notes_mini_summary": mini_summary,
-                                        "last_updated": now_timestamp,
-                                        "source": body.source.value,
-                                        "session_date": body.date,
-                                        "diarization": body.diarization,
-                                    },
+                                    payload=payload,
                                     filters={
-                                        'id': body.session_notes_id
+                                        'id': filtered_body['id']
                                     })
 
             if session_date_changed or session_text_changed:
                 # Upload vector embeddings with the original session date since that's what was used for insertion.
-                await pinecone_client.update_session_vectors(index_id=body.therapist_id,
+                await pinecone_client.update_session_vectors(index_id=therapist_id,
                                                              namespace=patient_id,
-                                                             text=body.text,
+                                                             text=filtered_body.get('notes_text', current_session_text),
                                                              session_id=session_id,
                                                              old_date=current_session_date_formatted,
-                                                             new_date=body.date,
+                                                             new_date=filtered_body.get('session_date', current_session_date_formatted),
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
         except Exception as e:
@@ -342,11 +341,12 @@ class AssistantManager:
         patient_query = supabase_client.select(fields="*",
                                                filters={
                                                    'id': filtered_body['id'],
-                                                   'therapist_id': filtered_body['therapist_id']
                                                },
                                                table_name="patients")
         assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-        current_pre_existing_history = patient_query.dict()['data'][0]['pre_existing_history']
+        patient_query_dict = patient_query.dict()
+        current_pre_existing_history = patient_query_dict['data'][0]['pre_existing_history']
+        therapist_id = patient_query_dict['data'][0]['therapist_id']
 
         update_db_payload = {}
         for key, value in filtered_body.items():
@@ -366,7 +366,7 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        await pinecone_client.update_preexisting_history_vectors(index_id=filtered_body['therapist_id'],
+        await pinecone_client.update_preexisting_history_vectors(index_id=therapist_id,
                                                                  namespace=filtered_body['id'],
                                                                  text=filtered_body['pre_existing_history'],
                                                                  session_id=session_id,

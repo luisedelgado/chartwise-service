@@ -367,7 +367,7 @@ class AssistantRouter:
         try:
             assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
-            assert datetime_handler.is_valid_date(date_input=body.date,
+            assert datetime_handler.is_valid_date(date_input=body.session_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
@@ -432,7 +432,10 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
@@ -444,21 +447,21 @@ class AssistantRouter:
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
-                               therapist_id=body.therapist_id,
+                               therapist_id=therapist_id,
                                endpoint_name=self.SESSIONS_ENDPOINT,
                                method=put_api_method)
 
         try:
-            assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
-            assert datetime_handler.is_valid_date(date_input=body.date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
-                                                  tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
+            body = body.dict(exclude_unset=True)
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                    refresh_token=datastore_refresh_token)
+            assert 'client_timezone_identifier' not in body or general_utilities.is_valid_timezone_identifier(body['client_timezone_identifier']), "Invalid timezone identifier parameter"
+            assert 'session_date' not in body or datetime_handler.is_valid_date(date_input=body['session_date'],
+                                                                                incoming_date_format=datetime_handler.DATE_FORMAT,
+                                                                                tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
+
             await self._assistant_manager.update_session(auth_manager=self._auth_manager,
-                                                         body=body,
+                                                         filtered_body=body,
                                                          session_id=session_id,
                                                          openai_client=self._openai_client,
                                                          supabase_client=supabase_client,
@@ -466,7 +469,7 @@ class AssistantRouter:
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
-                                    therapist_id=body.therapist_id,
+                                    session_report_id=body['id'],
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=put_api_method)
@@ -477,7 +480,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             therapist_id=body.therapist_id,
+                             session_report_id=body['id'],
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -1012,7 +1015,10 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
                                                      request=request,
                                                      supabase_client_factory=self._supabase_client_factory)
@@ -1026,7 +1032,7 @@ class AssistantRouter:
                                session_id=session_id,
                                method=put_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
-                               therapist_id=body.therapist_id,
+                               therapist_id=therapist_id,
                                patient_id=body.id)
 
         try:
@@ -1038,8 +1044,6 @@ class AssistantRouter:
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
@@ -1051,7 +1055,7 @@ class AssistantRouter:
                                     session_id=session_id,
                                     method=put_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=body['therapist_id'],
+                                    therapist_id=therapist_id,
                                     patient_id=body['id'],
                                     http_status_code=status.HTTP_200_OK)
             return {}
@@ -1062,7 +1066,6 @@ class AssistantRouter:
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
-                             therapist_id=body['therapist_id'],
                              patient_id=body['id'],
                              description=description,
                              method=put_api_method)

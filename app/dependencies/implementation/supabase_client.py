@@ -85,6 +85,12 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def get_current_user_id(self):
+        try:
+            return self.client.auth.get_user().model_dump()['user']['id']
+        except Exception as e:
+            raise Exception(e)
+
     def refresh_session(self):
         try:
             return self.client.auth.refresh_session()

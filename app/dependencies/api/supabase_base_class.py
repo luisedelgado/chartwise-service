@@ -76,6 +76,12 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Retrieves the current user id.
+    """
+    def get_current_user_id():
+        pass
+
+    """
     Refreshes the current session.
     """
     def refresh_session():
