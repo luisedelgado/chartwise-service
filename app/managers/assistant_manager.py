@@ -33,7 +33,6 @@ class SessionNotesSource(Enum):
 
 class PatientInsertPayload(BaseModel):
     first_name: str
-    middle_name: Optional[str] = None
     last_name: str
     birth_date: str
     pre_existing_history: Optional[str] = None
@@ -46,7 +45,6 @@ class PatientInsertPayload(BaseModel):
 class PatientUpdatePayload(BaseModel):
     id: str
     first_name: Optional[str] = None
-    middle_name: Optional[str] = None
     last_name: Optional[str] = None
     birth_date: Optional[str] = None
     pre_existing_history: Optional[str] = None
@@ -307,7 +305,6 @@ class AssistantManager:
             response = supabase_client.insert(table_name="patients",
                                               payload={
                                                   "first_name": payload.first_name,
-                                                  "middle_name": payload.middle_name,
                                                   "last_name": payload.last_name,
                                                   "birth_date": payload.birth_date,
                                                   "email": payload.email,

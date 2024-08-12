@@ -37,7 +37,6 @@ class TherapistInsertPayload(BaseModel):
     id: str
     email: str
     first_name: str
-    middle_name: Optional[str] = None
     last_name: str
     birth_date: str
     signup_mechanism: SignupMechanism
@@ -48,7 +47,6 @@ class TherapistUpdatePayload(BaseModel):
     id: str
     email: Optional[str] = None
     first_name: Optional[str] = None
-    middle_name: Optional[str] = None
     last_name: Optional[str] = None
     birth_date: Optional[str] = None
     language_preference: Optional[str] = None
@@ -319,7 +317,6 @@ class SecurityRouter:
                                       {
                                         "id": body.id,
                                         "first_name": body.first_name,
-                                        "middle_name": body.middle_name,
                                         "last_name": body.last_name,
                                         "gender": body.gender.value,
                                         "birth_date": body.birth_date,
