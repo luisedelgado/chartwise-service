@@ -275,6 +275,7 @@ class AudioProcessingRouter:
 
             endpoint_url = os.environ.get("ENVIRONMENT_URL") + self.DIARIZATION_NOTIFICATION_ENDPOINT
             job_id: str = await self._audio_processing_manager.diarize_audio_file(auth_manager=self._auth_manager,
+                                                                                  therapist_id=therapist_id,
                                                                                   background_tasks=background_tasks,
                                                                                   supabase_client_factory=self._supabase_client_factory,
                                                                                   session_auth_token=authorization,
@@ -343,19 +344,33 @@ class AudioProcessingRouter:
             raw_data = await request.json()
             json_data = json.loads(json.dumps(raw_data))
             job_id = json_data["job"]["id"]
-            summary = json_data["summary"]["content"]
+
+            supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
+            diarization_query = supabase_admin_client.select(fields="*",
+                                                             filters={
+                                                                 'job_id': job_id
+                                                             },
+                                                             table_name="diarization_logs")
+            assert (0 != len((diarization_query).data)), "No data was found for this diarization operation."
+            diarization_query_dict = diarization_query.dict()
+            therapist_id = diarization_query_dict['data'][0]['therapist_id']
+            session_id = diarization_query_dict['data'][0]['session_id']
+
             diarization = DiarizationCleaner().clean_transcription(background_tasks=background_tasks,
+                                                                   therapist_id=therapist_id,
                                                                    input=json_data["results"],
                                                                    supabase_client_factory=self._supabase_client_factory)
 
-            supabase_admin_client = self._supabase_client_factory.supabase_admin_client()
-            session_id = await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
-                                                                                                 supabase_client=supabase_admin_client,
-                                                                                                 openai_client=self._openai_client,
-                                                                                                 pinecone_client=self._pinecone_client,
-                                                                                                 job_id=job_id,
-                                                                                                 diarization_summary=summary,
-                                                                                                 diarization=diarization)
+
+            summary = json_data["summary"]["content"]
+            await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
+                                                                                    supabase_client=supabase_admin_client,
+                                                                                    openai_client=self._openai_client,
+                                                                                    pinecone_client=self._pinecone_client,
+                                                                                    job_id=job_id,
+                                                                                    session_id=session_id,
+                                                                                    diarization_summary=summary,
+                                                                                    diarization=diarization)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.DIARIZATION_NOTIFICATION_ENDPOINT,

@@ -8,6 +8,7 @@ class FakeSpeechmaticsClient(SpeechmaticsBaseClass):
 
     def diarize_audio(self,
                       auth_manager: AuthManager,
+                      therapist_id: str,
                       background_tasks: BackgroundTasks,
                       session_id: str,
                       file_full_path: str,

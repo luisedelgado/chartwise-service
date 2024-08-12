@@ -139,6 +139,7 @@ class Logger:
         if environment != "prod":
             return
 
+        therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
         error_code = None if "error_code" not in kwargs else kwargs["error_code"]
         description = None if "description" not in kwargs else kwargs["description"]
         session_id = None if "session_id" not in kwargs else kwargs["session_id"]
@@ -147,6 +148,7 @@ class Logger:
         try:
             background_tasks.add_task(self.supabase_client.insert,
                                       {
+                                          "therapist_id": therapist_id,
                                           "error_code": error_code,
                                           "session_id": session_id,
                                           "job_id": job_id,

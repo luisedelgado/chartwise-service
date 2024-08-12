@@ -41,6 +41,7 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
         }
 
     def diarize_audio(self,
+                      therapist_id: str,
                       background_tasks: BackgroundTasks,
                       auth_manager: AuthManager,
                       session_id: str,
@@ -80,6 +81,7 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
                 json_response = response.json()
                 job_id = json_response['id']
                 logger.log_diarization_event(background_tasks=background_tasks,
+                                             therapist_id=therapist_id,
                                              session_id=session_id,
                                              job_id=job_id)
                 return job_id
@@ -103,6 +105,7 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
                         transcription_config=config,
                     )
                     logger.log_diarization_event(background_tasks=background_tasks,
+                                                 therapist_id=therapist_id,
                                                  session_id=session_id,
                                                  job_id=job_id)
                     return job_id

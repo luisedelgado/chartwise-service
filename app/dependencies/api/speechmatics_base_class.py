@@ -12,6 +12,7 @@ class SpeechmaticsBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth manager to be leveraged internally.
+    therapist_id – the therapist id associated with the operation.
     background_tasks – the object to schedule concurrent tasks.
     session_id – the session id.
     file_full_path – the audio file's full path.
@@ -21,6 +22,7 @@ class SpeechmaticsBaseClass(ABC):
     endpoint url – the endpoint's url.
     """
     def diarize_audio(auth_manager: AuthManager,
+                      therapist_id: str,
                       background_tasks: BackgroundTasks,
                       session_id: str,
                       file_full_path: str,

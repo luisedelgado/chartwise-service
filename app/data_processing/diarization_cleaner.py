@@ -21,11 +21,13 @@ class DiarizationCleaner:
 
     Arguments:
     background_tasks – the object to schedule concurrent tasks.
+    therapist_id – the therapist id associated with the operation.
     input – the diarization input.
     auth_manager – the auth manager to be leveraged internally.
     """
     def clean_transcription(self,
                             background_tasks: BackgroundTasks,
+                            therapist_id: str,
                             input: str,
                             supabase_client_factory: SupabaseFactoryBaseClass) -> str:
         self._current_speaker = input[0]["alternatives"][0]["speaker"]
@@ -42,6 +44,7 @@ class DiarizationCleaner:
                 attaches_to = obj["attaches_to"]
                 if attaches_to.lower() != "previous":
                     Logger(supabase_client_factory=supabase_client_factory).log_diarization_event(background_tasks=background_tasks,
+                                                                                                  therapist_id=therapist_id,
                                                                                                   error_code=status.HTTP_417_EXPECTATION_FAILED,
                                                                                                   description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
 

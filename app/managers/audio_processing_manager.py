@@ -44,6 +44,7 @@ class AudioProcessingManager:
 
     async def diarize_audio_file(self,
                                  auth_manager: AuthManager,
+                                 therapist_id: str,
                                  background_tasks: BackgroundTasks,
                                  supabase_client_factory: SupabaseFactoryBaseClass,
                                  speechmatics_client: SpeechmaticsBaseClass,
@@ -54,6 +55,7 @@ class AudioProcessingManager:
         try:
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
             return speechmatics_client.diarize_audio(auth_manager=auth_manager,
+                                                     therapist_id=therapist_id,
                                                      background_tasks=background_tasks,
                                                      session_id=session_id,
                                                      file_name=audio_copy_result.file_copy_name,

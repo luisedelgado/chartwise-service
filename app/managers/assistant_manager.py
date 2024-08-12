@@ -563,6 +563,7 @@ class AssistantManager:
                                                         openai_client: OpenAIBaseClass,
                                                         pinecone_client: PineconeBaseClass,
                                                         job_id: str,
+                                                        session_id: str,
                                                         diarization_summary: str,
                                                         diarization: str) -> str:
         try:
@@ -581,21 +582,6 @@ class AssistantManager:
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_raw,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
 
-            session_id_query = supabase_client.select(fields="*",
-                                                      filters={
-                                                          'job_id': job_id
-                                                      },
-                                                      table_name="diarization_logs")
-            assert (0 != len((session_id_query).data)), "Expected to find a response."
-            session_id = session_id_query.dict()['data'][0]['session_id']
-
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'id': patient_id,
-                                                       'therapist_id': therapist_id
-                                                   },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data))
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
                                                          'id': therapist_id
@@ -609,6 +595,14 @@ class AssistantManager:
                                                                                   auth_manager=auth_manager,
                                                                                   openai_client=openai_client,
                                                                                   session_id=session_id)
+
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'id': patient_id,
+                                                       'therapist_id': therapist_id
+                                                   },
+                                                   table_name="patients")
+            assert (0 != len((patient_query).data))
 
             patient_query_dict = patient_query.dict()
             patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
@@ -672,7 +666,6 @@ class AssistantManager:
                                                          auth_manager=auth_manager,
                                                          openai_client=openai_client,
                                                          session_id=session_id)
-            return session_id
         except Exception as e:
             raise Exception(e)
 

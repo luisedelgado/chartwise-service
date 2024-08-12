@@ -96,6 +96,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if table_name == "diarization_logs":
             return FakeSupabaseResult(data=[{
             "session_id": "123",
+            "therapist_id": FAKE_THERAPIST_ID,
         }])
         if table_name == "user_interface_strings":
             return FakeSupabaseResult(data=[{
