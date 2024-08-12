@@ -9,6 +9,9 @@ class EndpointServiceCoordinator:
     origins = [
         # Daniel Daza Development
         "https://localhost:5173",
+        # chartwise.ai
+        "https://chartwise.ai",
+        "https://api.chartwise.ai",
         # Speechmatics Notification Servers
         "40.74.41.91",
         "52.236.157.154",
