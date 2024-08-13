@@ -34,13 +34,12 @@ class SessionNotesSource(Enum):
 class PatientInsertPayload(BaseModel):
     first_name: str
     last_name: str
-    birth_date: str
+    birth_date: Optional[str] = None
     pre_existing_history: Optional[str] = None
-    gender: Gender
-    email: str
-    phone_number: str
+    gender: Optional[Gender] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
     consentment_channel: PatientConsentmentChannel
-    therapist_id: str
 
 class PatientUpdatePayload(BaseModel):
     id: str
@@ -296,30 +295,26 @@ class AssistantManager:
 
     async def add_patient(self,
                           auth_manager: AuthManager,
-                          payload: PatientInsertPayload,
+                          filtered_body: dict,
+                          therapist_id: str,
                           session_id: str,
                           openai_client: OpenAIBaseClass,
                           supabase_client: SupabaseBaseClass,
                           pinecone_client: PineconeBaseClass) -> str:
         try:
-            response = supabase_client.insert(table_name="patients",
-                                              payload={
-                                                  "first_name": payload.first_name,
-                                                  "last_name": payload.last_name,
-                                                  "birth_date": payload.birth_date,
-                                                  "email": payload.email,
-                                                  "pre_existing_history": payload.pre_existing_history,
-                                                  "gender": payload.gender.value,
-                                                  "phone_number": payload.phone_number,
-                                                  "therapist_id": payload.therapist_id,
-                                                  "consentment_channel": payload.consentment_channel.value,
-                                              })
+            payload = {"therapist_id": therapist_id}
+            for key, value in filtered_body.items():
+                if isinstance(value, Enum):
+                    value = value.value
+                payload[key] = value
+
+            response = supabase_client.insert(table_name="patients", payload=payload)
             patient_id = response.dict()['data'][0]['id']
 
-            if len(payload.pre_existing_history or '') > 0:
-                await pinecone_client.insert_preexisting_history_vectors(index_id=payload.therapist_id,
+            if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
+                await pinecone_client.insert_preexisting_history_vectors(index_id=therapist_id,
                                                                          namespace=patient_id,
-                                                                         text=payload.pre_existing_history,
+                                                                         text=filtered_body['pre_existing_history'],
                                                                          auth_manager=auth_manager,
                                                                          openai_client=openai_client,
                                                                          session_id=session_id)

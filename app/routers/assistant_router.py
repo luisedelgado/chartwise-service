@@ -933,7 +933,10 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
@@ -947,18 +950,19 @@ class AssistantRouter:
                                session_id=session_id,
                                method=post_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
-                               therapist_id=body.therapist_id)
+                               therapist_id=therapist_id)
 
         try:
-            assert body.consentment_channel != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(date_input=body.birth_date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            body = body.dict(exclude_unset=True)
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            assert body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
+                                                                              incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+
             patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
-                                                                   payload=body,
+                                                                   filtered_body=body,
+                                                                   therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    openai_client=self._openai_client,
                                                                    supabase_client=supabase_client,
@@ -968,7 +972,7 @@ class AssistantRouter:
                                     session_id=session_id,
                                     method=post_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=body.therapist_id,
+                                    therapist_id=therapist_id,
                                     patient_id=patient_id,
                                     http_status_code=status.HTTP_200_OK)
 
@@ -980,7 +984,7 @@ class AssistantRouter:
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
-                             therapist_id=body.therapist_id,
+                             therapist_id=therapist_id,
                              description=description,
                              method=post_api_method)
             raise HTTPException(status_code=status_code,

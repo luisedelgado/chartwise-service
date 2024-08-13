@@ -38,10 +38,10 @@ class TherapistInsertPayload(BaseModel):
     email: str
     first_name: str
     last_name: str
-    birth_date: str
+    birth_date: Optional[str] = None
     signup_mechanism: SignupMechanism
     language_preference: str
-    gender: Gender
+    gender: Optional[Gender] = None
 
 class TherapistUpdatePayload(BaseModel):
     id: str
@@ -305,38 +305,35 @@ class SecurityRouter:
                                endpoint_name=self.THERAPISTS_ENDPOINT)
 
         try:
-            assert body.signup_mechanism != SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
-            assert body.gender != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert datetime_handler.is_valid_date(date_input=body.birth_date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert Language.get(body.language_preference).is_valid(), "Invalid language_preference parameter"
+            body = body.dict(exclude_unset=True)
+
+            assert body['signup_mechanism'] != SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
+            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
+                                                                              incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
 
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                  access_token=datastore_access_token)
-            background_tasks.add_task(supabase_client.insert,
-                                      {
-                                        "id": body.id,
-                                        "first_name": body.first_name,
-                                        "last_name": body.last_name,
-                                        "gender": body.gender.value,
-                                        "birth_date": body.birth_date,
-                                        "login_mechanism": body.signup_mechanism.value,
-                                        "email": body.email,
-                                        "language_preference": body.language_preference,
-                                      },
-                                      "therapists")
 
-            # Create index in vector DB in a background task
-            background_tasks.add_task(self._pinecone_client.create_index, body.id)
+            payload = {}
+            for key, value in body.items():
+                if isinstance(value, Enum):
+                    value = value.value
+                payload[key] = value
+
+            # Update both Supabase and Pinecone with new therapist info.
+            background_tasks.add_task(supabase_client.insert, payload, "therapists")
+            background_tasks.add_task(self._pinecone_client.create_index, body['id'])
 
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=body.id,
+                                    therapist_id=body['id'],
                                     session_id=session_id,
                                     endpoint_name=self.THERAPISTS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
 
-            return {"therapist_id": body.id}
+            return {"therapist_id": body['id']}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

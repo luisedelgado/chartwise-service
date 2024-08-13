@@ -840,28 +840,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_add_patient_with_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "first_name": "Pepito",
-                                        "last_name": "Perez",
-                                        "birth_date": "10-24-1991",
-                                        "gender": "male",
-                                        "email": "foo@foo.foo",
-                                        "phone_number": "123",
-                                        "consentment_channel": "verbal",
-                                        "therapist_id": "",
-                                    })
-        assert response.status_code == 401
-
     def test_add_patient_with_undefined_gender(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -946,7 +924,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -971,7 +948,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
