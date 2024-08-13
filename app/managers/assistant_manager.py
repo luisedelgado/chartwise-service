@@ -53,7 +53,6 @@ class PatientUpdatePayload(BaseModel):
     consentment_channel: Optional[PatientConsentmentChannel] = None
 
 class SessionNotesInsert(BaseModel):
-    therapist_id: str
     patient_id: str
     notes_text: str
     session_date: str
@@ -69,10 +68,12 @@ class SessionNotesUpdate(BaseModel):
     notes_text: Optional[str] = None
 
 class AssistantManager:
+
     async def process_new_session_data(self,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,
                                        session_id: str,
+                                       therapist_id: str,
                                        openai_client: OpenAIBaseClass,
                                        supabase_client: SupabaseBaseClass,
                                        pinecone_client: PineconeBaseClass) -> str:
@@ -80,7 +81,7 @@ class AssistantManager:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'id': body.patient_id,
-                                                       'therapist_id': body.therapist_id
+                                                       'therapist_id': therapist_id
                                                    },
                                                    table_name="patients")
             patient_query_dict = patient_query.dict()
@@ -89,14 +90,14 @@ class AssistantManager:
 
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
-                                                         'id': body.therapist_id
+                                                         'id': therapist_id
                                                      },
                                                      table_name="therapists")
             assert (0 != len(therapist_query.data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
             mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.notes_text,
-                                                                                  therapist_id=body.therapist_id,
+                                                                                  therapist_id=therapist_id,
                                                                                   language_code=language_code,
                                                                                   auth_manager=auth_manager,
                                                                                   openai_client=openai_client,
@@ -134,12 +135,12 @@ class AssistantManager:
                                                        "patient_id": body.patient_id,
                                                        "source": body.source.value,
                                                        "last_updated": now_timestamp,
-                                                       "therapist_id": body.therapist_id
+                                                       "therapist_id": therapist_id
                                                    })
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
-            await pinecone_client.insert_session_vectors(index_id=body.therapist_id,
+            await pinecone_client.insert_session_vectors(index_id=therapist_id,
                                                          namespace=body.patient_id,
                                                          text=body.notes_text,
                                                          therapy_session_date=body.session_date,

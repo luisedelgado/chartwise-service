@@ -78,7 +78,7 @@ class SupabaseBaseClass(ABC):
     """
     Retrieves the current user id.
     """
-    def get_current_user_id():
+    def get_current_user_id() -> str:
         pass
 
     """

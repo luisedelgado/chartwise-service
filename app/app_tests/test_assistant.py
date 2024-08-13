@@ -142,30 +142,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 400
 
-    def test_insert_new_session_with_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-
-        assert self.fake_supabase_user_client.fake_text == None
-        insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
-        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
-                                        "notes_text": insert_text,
-                                        "session_date": "01-01-2020",
-                                        "client_timezone_identifier": "gfsghfsdhgdsgs",
-                                        "source": "manual_input"
-                                    })
-        assert response.status_code == 401
-
     def test_insert_new_session_with_invalid_timezone(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN

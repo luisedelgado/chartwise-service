@@ -347,7 +347,10 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.therapist_id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
@@ -360,7 +363,7 @@ class AssistantRouter:
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                patient_id=body.patient_id,
-                               therapist_id=body.therapist_id,
+                               therapist_id=therapist_id,
                                endpoint_name=self.SESSIONS_ENDPOINT,
                                method=post_api_method,)
 
@@ -371,18 +374,17 @@ class AssistantRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                       body=body,
                                                                                       session_id=session_id,
+                                                                                      therapist_id=therapist_id,
                                                                                       openai_client=self._openai_client,
                                                                                       supabase_client=supabase_client,
                                                                                       pinecone_client=self._pinecone_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
-                                    therapist_id=body.therapist_id,
+                                    therapist_id=therapist_id,
                                     patient_id=body.patient_id,
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -394,7 +396,6 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             therapist_id=body.therapist_id,
                              patient_id=body.patient_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,

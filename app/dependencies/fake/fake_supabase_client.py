@@ -127,7 +127,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
             'id': self.user_authentication_id
         })
 
-    def get_current_user_id(self):
+    def get_current_user_id(self) -> str:
         return FAKE_THERAPIST_ID
 
     def refresh_session(self):
