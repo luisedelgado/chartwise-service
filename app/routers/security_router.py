@@ -175,10 +175,12 @@ class SecurityRouter:
             if session_id is None:
                 session_id = uuid.uuid1()
                 response.set_cookie(key="session_id",
-                            value=session_id,
-                            httponly=True,
-                            secure=True,
-                            samesite="none")
+                                    value=session_id,
+                                    domain=self._auth_manager.APP_COOKIE_DOMAIN,
+                                    path=self._auth_manager.APP_COOKIE_PATH,
+                                    httponly=True,
+                                    secure=True,
+                                    samesite="none")
 
             logger = Logger(supabase_client_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
