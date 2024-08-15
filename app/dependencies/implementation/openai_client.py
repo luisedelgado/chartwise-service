@@ -99,7 +99,10 @@ class OpenAIClient(OpenAIBaseClass):
                                                                             last_session_date=last_session_date,
                                                                             chat_history_included=(not is_first_message_in_conversation))
 
-            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{await self.flatten_chat_history()}"))
+            input_window_content = "\n".join([system_prompt,
+                                              (await self.flatten_chat_history()),
+                                              user_prompt])
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{input_window_content}"))
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             callback = AsyncIteratorCallbackHandler()
