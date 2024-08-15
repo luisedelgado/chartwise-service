@@ -13,7 +13,7 @@ from ..internal.security import Token
 class AuthManager:
 
     APP_COOKIE_DOMAIN = (None if os.environ.get("ENVIRONMENT") != "prod"
-                         else ".chartwise.ai")
+                         else "chartwise.ai")
     APP_COOKIE_PATH = (None if os.environ.get("ENVIRONMENT") != "prod"
                          else "/")
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')

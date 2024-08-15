@@ -1,7 +1,14 @@
-from typing import AsyncIterable
+import asyncio
+
+from langchain.callbacks import AsyncIteratorCallbackHandler
+from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages.ai import AIMessage
+from typing import AsyncIterable, Awaitable
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
+
+FAKE_ASSISTANT_RESPONSE = "This is my fake response"
 
 class FakeOpenAICompletions:
 
@@ -53,16 +60,41 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                      vector_context: str,
                                      language_code: str,
                                      query_input: str,
-                                     patient_id: str,
+                                     is_first_message_in_conversation: bool,
                                      patient_name: str,
                                      patient_gender: str,
                                      metadata: dict,
                                      auth_manager: AuthManager,
                                      last_session_date: str = None) -> AsyncIterable[str]:
-        yield "my result"
+        async def wrap_done(fn: Awaitable, event: asyncio.Event):
+                try:
+                    await fn
+                except Exception as e:
+                    raise Exception(e)
+                finally:
+                    event.set()
+
+        human_message = HumanMessage(content=f"{query_input}")
+        callback = AsyncIteratorCallbackHandler()
+
+        async def inline_coroutine():
+                await asyncio.sleep(1)
+                return "Hello from the inline coroutine!"
+
+        task = asyncio.create_task(wrap_done(
+            inline_coroutine(),
+            callback.done),
+        )
+
+        yield FAKE_ASSISTANT_RESPONSE
+
+        self.chat_history.append(human_message)
+        self.chat_history.append(AIMessage(content=FAKE_ASSISTANT_RESPONSE))
+
+        await task
 
     async def clear_chat_history(self):
-        pass
+        self.chat_history = []
 
     async def flatten_chat_history(self) -> str:
         pass

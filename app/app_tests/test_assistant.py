@@ -15,6 +15,7 @@ from ..service_coordinator import EndpointServiceCoordinator
 
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
+FAKE_SECOND_THERAPIST_ID = "3b0ca3b4-4d3e-42a1-94f8-59a7c141e162"
 FAKE_SESSION_REPORT_ID = "09b6da8d-a58e-45e2-9022-7d58ca02266b"
 FAKE_REFRESH_TOKEN = "3ac77394-86b5-42dc-be14-0b92414d8443"
 FAKE_ACCESS_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
@@ -570,6 +571,52 @@ class TestingHarnessAssistantRouter:
                                         "text": "Quien es el jugador favorito de Lionel?",
                                     })
         assert response.status_code == 200
+
+    def test_session_query_success_changing_patient_and_clearing_chat_history(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+
+        MESSI_QUERY = "Quien es el jugador favorito de Lionel?"
+        CRISTIANO_QUERY = "Quien es el jugador favorito de Cristiano?"
+
+        assert len(self.fake_openai_client.chat_history) == 0
+        response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": MESSI_QUERY,
+                                    })
+        assert response.status_code == 200
+        assert len(self.fake_openai_client.chat_history) == 2
+        assert MESSI_QUERY == self.fake_openai_client.chat_history[0].content
+        assert CRISTIANO_QUERY != self.fake_openai_client.chat_history[1].content
+
+        # Now trigger a query for a different patient id
+        response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "patient_id": FAKE_SECOND_THERAPIST_ID,
+                                        "therapist_id": FAKE_THERAPIST_ID,
+                                        "text": CRISTIANO_QUERY,
+                                    })
+        assert response.status_code == 200
+
+        # Previous chat history should get cleared, leaving us with the 2 new messages.
+        assert len(self.fake_openai_client.chat_history) == 2
+        assert CRISTIANO_QUERY == self.fake_openai_client.chat_history[0].content
+        assert MESSI_QUERY != self.fake_openai_client.chat_history[1].content
 
     def test_greeting_with_missing_auth_token(self):
         response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
