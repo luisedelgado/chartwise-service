@@ -39,7 +39,7 @@ class PatientInsertPayload(BaseModel):
     gender: Optional[Gender] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None
-    consentment_channel: PatientConsentmentChannel
+    consentment_channel: Optional[PatientConsentmentChannel] = None
 
 class PatientUpdatePayload(BaseModel):
     id: str

@@ -31,7 +31,6 @@ from ..managers.auth_manager import AuthManager
 class TemplatePayload(BaseModel):
     session_notes_text: str
     template: SessionNotesTemplate = SessionNotesTemplate.SOAP
-    therapist_id: str
 
 class AssistantRouter:
 
@@ -307,14 +306,17 @@ class AssistantRouter:
                                                   request: Request,
                                                   background_tasks: BackgroundTasks,
                                                   body: TemplatePayload,
+                                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(response=response,
                                                                         request=request,
                                                                         background_tasks=background_tasks,
-                                                                        therapist_id=body.therapist_id,
                                                                         session_notes_text=body.session_notes_text,
                                                                         template=body.template,
+                                                                        datastore_access_token=datastore_access_token,
+                                                                        datastore_refresh_token=datastore_refresh_token,
                                                                         authorization=authorization,
                                                                         session_id=session_id)
 
@@ -956,7 +958,7 @@ class AssistantRouter:
         try:
             body = body.dict(exclude_unset=True)
 
-            assert body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -1266,9 +1268,10 @@ class AssistantRouter:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id associated with the therapist user.
     session_notes_text – the session notes to be adapted into SOAP.
     template – the template to be applied.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -1276,15 +1279,19 @@ class AssistantRouter:
                                                         response: Response,
                                                         request: Request,
                                                         background_tasks: BackgroundTasks,
-                                                        therapist_id: str,
                                                         session_notes_text: str,
                                                         template: SessionNotesTemplate,
+                                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                         authorization: Annotated[Union[str, None], Cookie()],
                                                         session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,

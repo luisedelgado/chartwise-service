@@ -154,10 +154,9 @@ class PromptCrafter:
                                   patient_gender: str,
                                   chat_history_included: bool,
                                   last_session_date: str = None) -> str:
-        assert len(patient_gender or '') > 0, "Missing patient_gender param for building system message"
         assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
 
-        if gender_has_default_pronouns(patient_gender):
+        if patient_gender is not None and gender_has_default_pronouns(patient_gender):
             patient_gender_context = f", who is a {patient_gender}"
         else:
             patient_gender_context = ""
@@ -224,11 +223,11 @@ class PromptCrafter:
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
             assert len(tz_identifier or '') > 0, "Missing tz_identifier param for building system message"
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
-            assert len(therapist_gender or '') > 0, "Missing therapist_gender param for building system message"
 
             tz = timezone(tz_identifier)
             weekday = datetime.now(tz).strftime('%A')
-            gender_context = "A " if not gender_has_default_pronouns(therapist_gender) else f"A {therapist_gender} "
+            gender_context = ("A " if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
+                              else f"A {therapist_gender} ")
             return (
                 f"{gender_context}mental health practitioner named {therapist_name} is entering our Practice Management Platform. "
                 f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. "
@@ -254,13 +253,13 @@ class PromptCrafter:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
-            assert len(therapist_gender or '') > 0, "Missing therapist_gender param for building system message"
             assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
-            assert len(patient_gender or '') > 0, "Missing patient_gender param for building system message"
             assert session_number > 0, "Something went wrong when building system message"
 
-            therapist_gender = "" if not gender_has_default_pronouns(therapist_gender) else f" ({therapist_gender})"
-            patient_gender = "" if not gender_has_default_pronouns(patient_gender) else f" ({patient_gender})"
+            therapist_gender = ("" if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
+                                else f" ({therapist_gender})")
+            patient_gender = ("" if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
+                              else f" ({patient_gender})")
             ordinal_session_number = num2words(session_number, to='ordinal_num')
 
             if len(last_session_date or '') == 0:
@@ -339,10 +338,9 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
             assert len(context or '') > 0, "Missing context param for building user message"
             assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
-            assert len(patient_gender or '') > 0, "Missing patient_gender param for building user message"
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
 
-            if gender_has_default_pronouns(patient_gender):
+            if patient_gender is not None and gender_has_default_pronouns(patient_gender):
                 patient_info = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}."
             else:
                 patient_info = f"\nFor reference, the patient's name is {patient_name}."
@@ -388,10 +386,9 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
             assert len(context or '') > 0, "Missing context param for building user message"
             assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
-            assert len(patient_gender or '') > 0, "Missing patient_gender param for building user message"
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
 
-            if gender_has_default_pronouns(patient_gender):
+            if patient_gender is not None and gender_has_default_pronouns(patient_gender):
                 patient_info = f"\nFor reference, the patient is a {patient_gender}, and their name is {patient_name}. "
             else:
                 patient_info = f"\nFor reference, the patient's name is {patient_name}. "

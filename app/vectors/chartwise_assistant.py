@@ -70,9 +70,8 @@ class ChartWiseAssistant:
             if self.namespace_used_for_streaming != namespace:
                 await openai_client.clear_chat_history()
                 self.namespace_used_for_streaming = namespace
-                is_first_message_in_conversation = True
-            else:
-                is_first_message_in_conversation = False
+
+            is_first_message_in_conversation = len(openai_client.chat_history) == 0
 
             # If there exists a chat history already, we should reformulate the latest user question
             # So that it can be understood standalone. This helps in cleaning the chat history, and helping the assistant be more efficient.
