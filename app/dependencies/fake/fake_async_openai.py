@@ -50,13 +50,22 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         }
 
     async def stream_chat_completion(self,
+                                     vector_context: str,
+                                     language_code: str,
+                                     query_input: str,
+                                     patient_id: str,
+                                     patient_name: str,
+                                     patient_gender: str,
                                      metadata: dict,
-                                     max_tokens: int,
-                                     user_prompt: str,
-                                     system_prompt: str,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None) -> AsyncIterable[str]:
+                                     last_session_date: str = None) -> AsyncIterable[str]:
         yield "my result"
+
+    async def clear_chat_history(self):
+        pass
+
+    async def flatten_chat_history(self) -> str:
+        pass
 
     async def create_embeddings(self,
                                 auth_manager: AuthManager,

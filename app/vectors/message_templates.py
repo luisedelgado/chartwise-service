@@ -14,6 +14,7 @@ class PromptScenario(Enum):
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
+    REFORMULATE_QUERY = "reformulate_query"
     RERANKING = "reranking"
     SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
@@ -80,6 +81,11 @@ class PromptCrafter:
             context = None if 'context' not in kwargs else kwargs['context']
             return self._create_reranking_user_message(query_input=query_input,
                                                        context=context)
+        elif scenario == PromptScenario.REFORMULATE_QUERY:
+            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
+            chat_history = None if 'chat_history' not in kwargs else kwargs['chat_history']
+            return self._create_reformulate_query_user_message(chat_history=chat_history,
+                                                               query_input=query_input)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -91,9 +97,11 @@ class PromptCrafter:
             last_session_date = None if 'last_session_date' not in kwargs else kwargs['last_session_date']
             patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
             patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
+            chat_history_included = False if 'chat_history_included' not in kwargs else kwargs['chat_history_included']
             return self._create_qa_system_message(last_session_date=last_session_date,
                                                   patient_name=patient_name,
-                                                  patient_gender=patient_gender)
+                                                  patient_gender=patient_gender,
+                                                  chat_history_included=chat_history_included)
         elif scenario == PromptScenario.GREETING:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             tz_identifier = None if 'tz_identifier' not in kwargs else kwargs['tz_identifier']
@@ -134,6 +142,8 @@ class PromptCrafter:
         elif scenario == PromptScenario.RERANKING:
             top_n = None if 'top_n' not in kwargs else kwargs['top_n']
             return self._create_reranking_system_message(top_n=top_n)
+        elif scenario == PromptScenario.REFORMULATE_QUERY:
+            return self._create_reformulate_query_system_message()
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -142,6 +152,7 @@ class PromptCrafter:
     def _create_qa_system_message(self,
                                   patient_name: str,
                                   patient_gender: str,
+                                  chat_history_included: bool,
                                   last_session_date: str = None) -> str:
         assert len(patient_gender or '') > 0, "Missing patient_gender param for building system message"
         assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
@@ -158,6 +169,14 @@ class PromptCrafter:
                                                                           incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
             last_session_date_context = f"\nNote that {patient_name}'s last session with the practitioner was on {date_spell_out_month}."
 
+        if chat_history_included:
+            chat_history_instruction = (
+                "8. Consider the provided chat history to understand the ongoing context of the conversation. "
+                "Use this context to ensure that your response aligns with the practitioner's previous inquiries and your prior responses.\n"
+            )
+        else:
+            chat_history_instruction = ""
+
         return (
             f"A mental health practitioner is using our Practice Management Platform to inquire about a patient named {patient_name}{patient_gender_context}. "
             "The practitioner's session notes provide the available information. "
@@ -172,6 +191,7 @@ class PromptCrafter:
             f"5. For session data, always mention the session date associated with the information context. Use format '%b %d, %Y' (i.e: Oct 12, 2023).\n"
             "6. If no relevant session information is found, do not mention any dates.\n"
             "7. If the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
+            f"{chat_history_instruction}"
             f"{last_session_date_context}"
         )
 
@@ -477,6 +497,32 @@ class PromptCrafter:
                 f"We have provided the chunked documents below.\n---------------------\n{context}\n---------------------\n"
                 f"\nGiven this information and the input question below, please rerank the chunked documents based on their relevance to the practitioner's question."
                 f"\n\nInput question: {query_input}"
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    # Reformulate query
+
+    def _create_reformulate_query_system_message(self):
+        return (
+            "Given the chat history and the latest user question, which may reference previous context, reformulate the question into a standalone query "
+            "that can be understood without relying on the chat history. Do NOT provide an answer; only reformulate the question if necessary, otherwise return it unchanged. "
+            "The output should be generated using the same language in which the user question is written."
+        )
+
+    def _create_reformulate_query_user_message(self, chat_history: str, query_input: str):
+        try:
+            assert len(chat_history or '') > 0, "Error while building user message: chat_history should be bigger than 0"
+            assert len(query_input or '') > 0, "Error while building user message: query_input should be bigger than 0"
+
+            return (
+                "Please review the following chat history and the most recent user question. "
+                "The user question might reference information from the chat history. "
+                "Your task is to reformulate the user question into a standalone query that can be understood without the chat history. "
+                "Do NOT provide an answer; simply reformulate the question if necessary, otherwise return it as is."
+                "The output should be generated using the same language in which the latest user question is written."
+                f"\n---------------------\nChat History:\n{chat_history}\n---------------------\n"
+                f"Latest User Question:\n{query_input}\n---------------------\n"
             )
         except Exception as e:
             raise Exception(e)

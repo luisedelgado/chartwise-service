@@ -16,6 +16,9 @@ PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
 class ChartWiseAssistant:
 
+    def __init__(self):
+        self.namespace_used_for_streaming = None
+
     """
     Queries the respective datastore with the incoming parameters.
     Returns the query result.
@@ -52,31 +55,6 @@ class ChartWiseAssistant:
                           pinecone_client: PineconeBaseClass,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        query_input=query_input,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        openai_client=openai_client,
-                                                                        query_top_k=10,
-                                                                        rerank_top_n=3,
-                                                                        endpoint_name=endpoint_name,
-                                                                        session_id=session_id,
-                                                                        session_date_override=session_date_override)
-
-            prompt_crafter = PromptCrafter()
-            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
-                                                                       context=context,
-                                                                       language_code=response_language_code,
-                                                                       query_input=query_input)
-
-            last_session_date = None if session_date_override is None else session_date_override.session_date
-            system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY,
-                                                                           patient_gender=patient_gender,
-                                                                           patient_name=patient_name,
-                                                                           last_session_date=last_session_date)
-            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-
             metadata = {
                 "environment": environment,
                 "user": index_id,
@@ -88,11 +66,54 @@ class ChartWiseAssistant:
                 "method": method,
             }
 
-            async for part in openai_client.stream_chat_completion(metadata=metadata,
-                                                                   max_tokens=max_tokens,
-                                                                   user_prompt=user_prompt,
-                                                                   system_prompt=system_prompt,
-                                                                   auth_manager=auth_manager):
+            # If the user is now querying another namespace, let's clear any chat history.
+            if self.namespace_used_for_streaming != namespace:
+                await openai_client.clear_chat_history()
+                self.namespace_used_for_streaming = namespace
+                is_first_message_in_conversation = True
+            else:
+                is_first_message_in_conversation = False
+
+            # If there exists a chat history already, we should reformulate the latest user question
+            # So that it can be understood standalone. This helps in cleaning the chat history, and helping the assistant be more efficient.
+            if not is_first_message_in_conversation:
+                prompt_crafter = PromptCrafter()
+                reformulate_question_user_prompt = prompt_crafter.get_user_message_for_scenario(chat_history=(await openai_client.flatten_chat_history()),
+                                                                                                query_input=query_input,
+                                                                                                scenario=PromptScenario.REFORMULATE_QUERY)
+                reformulate_question_system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.REFORMULATE_QUERY)
+                prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{reformulate_question_system_prompt}\n{reformulate_question_user_prompt}"))
+                max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+                query_input = await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                                max_tokens=max_tokens,
+                                                                                messages=[
+                                                                                    {"role": "system", "content": reformulate_question_system_prompt},
+                                                                                    {"role": "user", "content": reformulate_question_user_prompt},
+                                                                                ],
+                                                                                auth_manager=auth_manager,
+                                                                                expects_json_response=False)
+
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                        query_input=query_input,
+                                                                        index_id=index_id,
+                                                                        namespace=namespace,
+                                                                        openai_client=openai_client,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=3,
+                                                                        endpoint_name=endpoint_name,
+                                                                        session_id=session_id,
+                                                                        session_date_override=session_date_override)
+
+            last_session_date = None if session_date_override is None else session_date_override.session_date
+            async for part in openai_client.stream_chat_completion(vector_context=context,
+                                                                   language_code=response_language_code,
+                                                                   query_input=query_input,
+                                                                   is_first_message_in_conversation=is_first_message_in_conversation,
+                                                                   patient_name=patient_name,
+                                                                   patient_gender=patient_gender,
+                                                                   metadata=metadata,
+                                                                   auth_manager=auth_manager,
+                                                                   last_session_date=last_session_date):
                 yield part
 
         except Exception as e:

@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
+from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
@@ -27,6 +28,7 @@ class TestingHarnessSecurityRouter:
         self.assistant_manager = AssistantManager()
         self.audio_processing_manager = AudioProcessingManager()
         self.fake_supabase_admin_client = FakeSupabaseClient()
+        self.fake_openai_client = FakeAsyncOpenAI()
         self.fake_supabase_user_client = FakeSupabaseClient()
         self.fake_pinecone_client = FakePineconeClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
@@ -36,7 +38,8 @@ class TestingHarnessSecurityRouter:
 
         coordinator = EndpointServiceCoordinator(routers=[SecurityRouter(auth_manager=self.auth_manager,
                                                                          assistant_manager=self.assistant_manager,
-                                                                         router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
+                                                                         router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
+                                                                                                                supabase_client_factory=self.fake_supabase_client_factory,
                                                                                                                 pinecone_client=self.fake_pinecone_client)).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)

@@ -5,8 +5,9 @@ import tiktoken
 from typing import AsyncIterable, Awaitable
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
-from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages.ai import AIMessage
+from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
@@ -66,26 +67,40 @@ class OpenAIClient(OpenAIBaseClass):
             raise Exception(e)
 
     async def stream_chat_completion(self,
+                                     vector_context: str,
+                                     language_code: str,
+                                     query_input: str,
+                                     is_first_message_in_conversation: bool,
+                                     patient_name: str,
+                                     patient_gender: str,
                                      metadata: dict,
-                                     max_tokens: int,
-                                     user_prompt: str,
-                                     system_prompt: str,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None) -> AsyncIterable[str]:
+                                     last_session_date: str = None) -> AsyncIterable[str]:
         try:
             is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
 
             if is_monitoring_proxy_reachable:
                 api_base = auth_manager.get_monitoring_proxy_url()
-                cache_max_age = None if (cache_configuration is None or 'cache_max_age' not in cache_configuration) else cache_configuration['cache_max_age']
-                caching_shard_key = None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration) else cache_configuration['caching_shard_key']
                 proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                             caching_shard_key=caching_shard_key,
-                                                                             cache_max_age=cache_max_age,
                                                                              llm_model=self.LLM_MODEL)
             else:
                 api_base = None
                 proxy_headers = None
+
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
+                                                                       context=vector_context,
+                                                                       language_code=language_code,
+                                                                       query_input=query_input)
+
+            system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY,
+                                                                            patient_gender=patient_gender,
+                                                                            patient_name=patient_name,
+                                                                            last_session_date=last_session_date,
+                                                                            chat_history_included=(not is_first_message_in_conversation))
+
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{await self.flatten_chat_history()}"))
+            max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             callback = AsyncIteratorCallbackHandler()
             llm_client = ChatOpenAI(
@@ -108,23 +123,50 @@ class OpenAIClient(OpenAIBaseClass):
                 finally:
                     event.set()
 
+            system_message = SystemMessage(content=f"{system_prompt}")
+            human_message = HumanMessage(content=f"{user_prompt}")
+
             task = asyncio.create_task(wrap_done(
                 llm_client.agenerate(messages=[
                     [
-                        SystemMessage(content=f"{system_prompt}"),
-                        HumanMessage(content=f"{user_prompt}")
-                    ],
+                        system_message,
+                        *self.chat_history,
+                        human_message
+                    ]
                 ]),
                 callback.done),
             )
 
+            model_output = ""
             async for token in callback.aiter():
+                model_output = "".join([model_output, token])
                 yield f"{token}"
+
+            self.chat_history.append(HumanMessage(content=f"{query_input}\n"))
+            self.chat_history.append(AIMessage(content=f"{model_output}\n"))
 
             await task
 
         except Exception as e:
             raise Exception(e)
+
+    async def clear_chat_history(self):
+        self.chat_history = []
+
+    async def flatten_chat_history(self) -> str:
+        flattened_chat_history = ""
+        for chat_message in self.chat_history:
+            chat_message_formatted = ""
+            if isinstance(chat_message, SystemMessage):
+                chat_message_formatted = f"System:\n{chat_message}\n"
+            elif isinstance(chat_message, HumanMessage):
+                chat_message_formatted = f"User:\n{chat_message}\n"
+            elif isinstance(chat_message, AIMessage):
+                chat_message_formatted = f"Assistant:\n{chat_message}\n"
+            else:
+                raise Exception("Untracked message type.")
+            flattened_chat_history = "\n".join([flattened_chat_history, chat_message_formatted])
+        return flattened_chat_history
 
     async def create_embeddings(self,
                                 auth_manager: AuthManager,

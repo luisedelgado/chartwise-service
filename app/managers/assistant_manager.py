@@ -69,6 +69,9 @@ class SessionNotesUpdate(BaseModel):
 
 class AssistantManager:
 
+    def __init__(self):
+        self.chartwise_assistant = ChartWiseAssistant()
+
     async def process_new_session_data(self,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,
@@ -445,21 +448,20 @@ class AssistantManager:
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
-            chartwise_assistant = ChartWiseAssistant()
-            async for part in chartwise_assistant.query_store(index_id=query.therapist_id,
-                                                              namespace=query.patient_id,
-                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                              patient_gender=patient_gender,
-                                                              query_input=query.text,
-                                                              response_language_code=language_code,
-                                                              session_id=session_id,
-                                                              endpoint_name=endpoint_name,
-                                                              method=api_method,
-                                                              environment=environment,
-                                                              auth_manager=auth_manager,
-                                                              openai_client=openai_client,
-                                                              pinecone_client=pinecone_client,
-                                                              session_date_override=session_date_override):
+            async for part in self.chartwise_assistant.query_store(index_id=query.therapist_id,
+                                                                   namespace=query.patient_id,
+                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                   patient_gender=patient_gender,
+                                                                   query_input=query.text,
+                                                                   response_language_code=language_code,
+                                                                   session_id=session_id,
+                                                                   endpoint_name=endpoint_name,
+                                                                   method=api_method,
+                                                                   environment=environment,
+                                                                   auth_manager=auth_manager,
+                                                                   openai_client=openai_client,
+                                                                   pinecone_client=pinecone_client,
+                                                                   session_date_override=session_date_override):
                 yield part
         except Exception as e:
             raise Exception(e)
@@ -708,23 +710,22 @@ class AssistantManager:
             else:
                 session_date_override = None
 
-            chartwise_assistant = ChartWiseAssistant()
-            result = await chartwise_assistant.create_briefing(index_id=therapist_id,
-                                                               namespace=patient_id,
-                                                               environment=environment,
-                                                               language_code=language_code,
-                                                               session_id=session_id,
-                                                               endpoint_name=endpoint_name,
-                                                               method=api_method,
-                                                               patient_name=patient_name,
-                                                               patient_gender=patient_gender,
-                                                               therapist_name=therapist_name,
-                                                               therapist_gender=therapist_gender,
-                                                               session_number=session_number,
-                                                               auth_manager=auth_manager,
-                                                               openai_client=openai_client,
-                                                               pinecone_client=pinecone_client,
-                                                               session_date_override=session_date_override)
+            result = await self.chartwise_assistant.create_briefing(index_id=therapist_id,
+                                                                    namespace=patient_id,
+                                                                    environment=environment,
+                                                                    language_code=language_code,
+                                                                    session_id=session_id,
+                                                                    endpoint_name=endpoint_name,
+                                                                    method=api_method,
+                                                                    patient_name=patient_name,
+                                                                    patient_gender=patient_gender,
+                                                                    therapist_name=therapist_name,
+                                                                    therapist_gender=therapist_gender,
+                                                                    session_number=session_number,
+                                                                    auth_manager=auth_manager,
+                                                                    openai_client=openai_client,
+                                                                    pinecone_client=pinecone_client,
+                                                                    session_date_override=session_date_override)
 
             assert 'summary' in result, "Something went wrong in generating a response. Please try again"
             return result

@@ -67,6 +67,7 @@ class SecurityRouter:
         self._assistant_manager = assistant_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory
         self._pinecone_client = router_dependencies.pinecone_client
+        self._openai_client = router_dependencies.openai_client
         self.router = APIRouter()
         self._register_routes()
 
@@ -193,6 +194,7 @@ class SecurityRouter:
                                                                                         supabase_client=supabase_client)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
 
+            await self._openai_client.clear_chat_history()
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
@@ -249,6 +251,7 @@ class SecurityRouter:
                                endpoint_name=self.LOGOUT_ENDPOINT,)
 
         self._auth_manager.logout(response)
+        await self._openai_client.clear_chat_history()
 
         logger.log_api_response(background_tasks=background_tasks,
                                 session_id=session_id,

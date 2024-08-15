@@ -1,4 +1,5 @@
 from abc import ABC
+from langchain.schema import BaseMessage
 from typing import AsyncIterable
 
 from ...managers.auth_manager import AuthManager
@@ -6,6 +7,7 @@ from ...managers.auth_manager import AuthManager
 class OpenAIBaseClass(ABC):
 
     GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
+    chat_history: list[BaseMessage] = []
 
     """
     Invokes a chat completion asynchronously.
@@ -30,19 +32,37 @@ class OpenAIBaseClass(ABC):
     Streams a chat completion asynchronously.
 
     Arguments:
+    vector_context – the context found from the vector store.
+    language_code – the language code in which the response should be streamed.
+    query_input – the query input.
+    patient_id – the patient id.
+    patient_name – the patient name.
+    patient_gender – the patient gender.
     metadata – the metadata to be used when logging.
-    max_tokens – the max tokens allowed for the response output.
-    user_prompt – the user prompt to be used.
-    system_prompt – the system prompt to be used.
     auth_manager – the auth_manager to be leveraged internally.
-    cache_configuration – the optional cache configuration.
+    last_session_date – the optional last session date for further contextualizing the prompts.
     """
-    async def stream_chat_completion(metadata: dict,
-                                     max_tokens: int,
-                                     user_prompt: str,
-                                     system_prompt: str,
+    async def stream_chat_completion(vector_context: str,
+                                     language_code: str,
+                                     query_input: str,
+                                     patient_id: str,
+                                     patient_name: str,
+                                     patient_gender: str,
+                                     metadata: dict,
                                      auth_manager: AuthManager,
-                                     cache_configuration: dict = None) -> AsyncIterable[str]:
+                                     last_session_date: str = None) -> AsyncIterable[str]:
+        pass
+
+    """
+    Clears any existing chat history.
+    """
+    async def clear_chat_history():
+        pass
+
+    """
+    Returns a flattened version of the full chat history.
+    """
+    async def flatten_chat_history() -> str:
         pass
 
     """
