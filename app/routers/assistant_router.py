@@ -1288,6 +1288,9 @@ class AssistantRouter:
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)

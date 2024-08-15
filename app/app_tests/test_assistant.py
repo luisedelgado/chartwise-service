@@ -1188,38 +1188,34 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_transform_with_template_with_empty_therapist_id(self):
-        response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
-                                    json={
-                                        "template": "soap",
-                                        "therapist_id": "",
-                                        "session_notes_text": "My fake session notes"
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                    },)
-        assert response.status_code == 401
-
     def test_transform_with_template_with_empty_session_notes_text(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
                                     json={
                                         "template": "soap",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "session_notes_text": ""
                                     },
                                     cookies={
                                         "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },)
         assert response.status_code == 400
 
     def test_transform_with_template_success(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
                                     json={
                                         "template": "soap",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "session_notes_text": "My fake session notes"
                                     },
                                     cookies={
                                         "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     },)
         assert response.status_code == 200
