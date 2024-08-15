@@ -170,8 +170,8 @@ class PromptCrafter:
 
         if chat_history_included:
             chat_history_instruction = (
-                "8. Consider the provided chat history to understand the ongoing context of the conversation. "
-                "Use this context to ensure that your response aligns with the practitioner's previous inquiries and your prior responses.\n"
+                "8. For coherence, consider the provided chat history to understand what the conversation has been so far. "
+                "The `chunk_summary` fields still take precedence when you're looking for information with which to answer the user question.\n"
             )
         else:
             chat_history_instruction = ""
@@ -183,11 +183,11 @@ class PromptCrafter:
             "\n\nInstructions:\n"
             "1. Evaluate the provided context documents.\n"
             "2. First, examine the `chunk_summary` to determine if the document is relevant to the question.\n"
-            "3. If relevant, use both `chunk_summary` and `chunk_text` to formulate your response.\n"
-            f"4. If there exists a `pre_existing_history_summary`, and **only** if it is relevant to the question, use it along the `pre_existing_history_text` to build on your response. "
+            "3. If relevant, use the `chunk_summary` to formulate your response.\n"
+            f"4. If there exists a `pre_existing_history_summary`, and **only** if it is relevant to the question, use it to build on your response. "
             "In that case, also mention the fact that you referenced the patient's pre-existing history. "
             "Otherwise, if the pre-existing history is not related to the question, ignore it.\n"
-            f"5. For session data, always mention the session date associated with the information context. Use format '%b %d, %Y' (i.e: Oct 12, 2023).\n"
+            f"5. When referencing a `chunk_summary`, always mention the session date associated with the information context. Use format '%b %d, %Y' (i.e: Oct 12, 2023).\n"
             "6. If no relevant session information is found, do not mention any dates.\n"
             "7. If the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
             f"{chat_history_instruction}"
@@ -279,7 +279,7 @@ class PromptCrafter:
                     f"For 'Most Recent Sessions' use the `session_date` value to determine and list the most recent sessions. Ensure date precision. "
                     f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
-                    "Use only the information from `chunk_summary` and `chunk_text`. "
+                    "Use only the information you find from the `chunk_summary` fields. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
                     "Return a JSON object with a single key, `summary`. This is what the format should look like: {\"summary\": ...}"
                     f"Example response for a practitioner named Carlos, who's about to meet with a patient named Juan, using language code es-419:\n"
@@ -480,10 +480,10 @@ class PromptCrafter:
                 "2. Ensure that the most relevant documents are ranked highest.\n\n"
                 f"The top {top_n} documents will be used to answer the question, so they must contain all the necessary information to provide a comprehensive response.\n\n"
                 "Return a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
-                "Each document object should have three keys titled 'session_date', 'chunk_summary', and 'chunk_text', each with their respective value from the context you were given. "
+                "Each document object should have two keys titled 'session_date' and 'chunk_summary', each with their respective value from the context you were given. "
                 "For the `session_date` use date format mm-dd-yyyy (i.e: 10-24-2020). "
                 "It is very important that the documents' contents remain written in the language in which they were originally written.\n"
-                r'Example output: {"reranked_documents": [{"session_date": "10-24-2022", "chunk_summary": "Umeko was born and raised in Venezuela.", "chunk_text": "Umeko was born in Caracas, Venezuela, and lived there until he was 15 years old."}, {"session_date": "02-24-2021", "chunk_summary": "Umeko had his first girlfriend when he was 17 years old.", "chunk_text": "Umeko began dating his high school girlfriend when he was about to turn 17 years old. They dated for about 8 months."}, {"session_date": "06-24-2020", "chunk_summary": "Umeko enjoys soccer.", "chunk_text": "Umeko has always been a huge soccer fan. He has supported FC Barcelona since he was 14 years old."}]}'
+                r'Example output: {"reranked_documents": [{"session_date": "10-24-2022", "chunk_summary": "Umeko was born and raised in Venezuela."}, {"session_date": "02-24-2021", "chunk_summary": "Umeko had his first girlfriend when he was 17 years old."}, {"session_date": "06-24-2020", "chunk_summary": "Umeko enjoys soccer."}]}'
             )
         except Exception as e:
             raise Exception(e)

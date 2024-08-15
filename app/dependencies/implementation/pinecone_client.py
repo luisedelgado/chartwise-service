@@ -276,7 +276,7 @@ class PineconeClient(PineconeBaseClass):
         found_historical_context, historical_context = self.fetch_historical_context(index=index, namespace=namespace)
 
         if found_historical_context:
-            historical_context = ("Here's an outline of the patient's pre-existing history, written by the therapist:\n" + historical_context)
+            historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
             missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
                                           "They may have not gone through their first session since the practitioner added them to the platform. ")
         else:
@@ -297,10 +297,8 @@ class PineconeClient(PineconeBaseClass):
             metadata = match['metadata']
             session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
             chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
-            chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
             session_full_context = "".join([session_date,
                                             chunk_summary,
-                                            chunk_text,
                                             "\n"])
             retrieved_docs.append({"id": match['id'], "text": session_full_context})
 
@@ -318,10 +316,8 @@ class PineconeClient(PineconeBaseClass):
             formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
                                                                                      incoming_date_format=datetime_handler.DATE_FORMAT)
             doc_session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
-            doc_chunk_text = "".join(["`chunk_text` = ",f"{doc['chunk_text']}\n"])
-            doc_chunk_summary = "".join(["`chunk_summary` = ",f"{doc['chunk_summary']}\n"])
+            doc_chunk_summary = "".join(["`chunk_summary` = ",f"{doc['chunk_summary']}"])
             doc_full_context = "".join([doc_session_date,
-                                        doc_chunk_text,
                                         doc_chunk_summary,
                                         "\n"])
             reranked_context = "\n".join([reranked_context, doc_full_context])
@@ -366,11 +362,9 @@ class PineconeClient(PineconeBaseClass):
                                                                                          incoming_date_format=datetime_handler.DATE_FORMAT)
                 session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
                 chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
-                chunk_text = "".join(["`chunk_text` = ",f"{metadata['chunk_text']}\n"])
                 session_date_override_context = "".join([session_date_override.output_prefix_override,
                                                          session_date,
                                                          chunk_summary,
-                                                         chunk_text,
                                                          session_date_override.output_suffix_override,
                                                          "\n"])
                 reranked_context = "\n".join([reranked_context,
@@ -400,9 +394,7 @@ class PineconeClient(PineconeBaseClass):
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
             chunk_summary = "".join(["`pre_existing_history_summary` = ",f"{metadata['pre_existing_history_summary']}"])
-            chunk_text = "".join(["\n`pre_existing_history_text` = ",f"{metadata['pre_existing_history_text']}\n"])
             chunk_full_context = "".join([chunk_summary,
-                                          chunk_text,
                                           "\n"])
             context_docs.append({
                 "id": vector_data['id'],
