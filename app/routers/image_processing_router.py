@@ -47,7 +47,6 @@ class ImageProcessingRouter:
         async def upload_session_notes_image(response: Response,
                                              request: Request,
                                              background_tasks: BackgroundTasks,
-                                             patient_id: Annotated[str, Form()],
                                              image: UploadFile = File(...),
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -56,7 +55,6 @@ class ImageProcessingRouter:
             return await self._upload_session_notes_image_internal(response=response,
                                                                    request=request,
                                                                    background_tasks=background_tasks,
-                                                                   patient_id=patient_id,
                                                                    image=image,
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
@@ -90,7 +88,6 @@ class ImageProcessingRouter:
     response – the response model with which to create the final response.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
     authorization – the authorization cookie, if exists.
     datastore_access_token – the datastore access token.
@@ -101,7 +98,6 @@ class ImageProcessingRouter:
                                                    response: Response,
                                                    request: Request,
                                                    background_tasks: BackgroundTasks,
-                                                   patient_id: Annotated[str, Form()],
                                                    image: UploadFile,
                                                    authorization: Annotated[Union[str, None], Cookie()],
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -130,21 +126,11 @@ class ImageProcessingRouter:
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=post_api_method,
-                               patient_id=patient_id,
                                therapist_id=therapist_id,
                                endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
-            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
-
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
                                                                                             image=image,
@@ -158,7 +144,6 @@ class ImageProcessingRouter:
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
-                                    patient_id=patient_id,
                                     endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method,

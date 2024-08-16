@@ -367,6 +367,7 @@ class AssistantRouter:
 
             session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
                                                                                       body=body,
+                                                                                      background_tasks=background_tasks,
                                                                                       session_id=session_id,
                                                                                       therapist_id=therapist_id,
                                                                                       openai_client=self._openai_client,
@@ -452,7 +453,8 @@ class AssistantRouter:
                                                                                 tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            await self._assistant_manager.update_session(auth_manager=self._auth_manager,
+            await self._assistant_manager.update_session(background_tasks=background_tasks,
+                                                         auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
                                                          openai_client=self._openai_client,
@@ -547,7 +549,9 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            self._assistant_manager.delete_session(therapist_id=therapist_id,
+            self._assistant_manager.delete_session(background_tasks=background_tasks,
+                                                   openai_client=self._openai_client,
+                                                   therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
                                                    supabase_client=supabase_client,
                                                    pinecone_client=self._pinecone_client)

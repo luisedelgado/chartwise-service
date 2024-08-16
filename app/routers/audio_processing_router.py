@@ -55,7 +55,6 @@ class AudioProcessingRouter:
         async def transcribe_session_notes(response: Response,
                                            request: Request,
                                            background_tasks: BackgroundTasks,
-                                           patient_id: Annotated[str, Form()],
                                            template: Annotated[SessionNotesTemplate, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -65,7 +64,6 @@ class AudioProcessingRouter:
             return await self._transcribe_session_notes_internal(response=response,
                                                                  request=request,
                                                                  background_tasks=background_tasks,
-                                                                 patient_id=patient_id,
                                                                  template=template,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
@@ -110,7 +108,6 @@ class AudioProcessingRouter:
     response – the response model with which to create the final response.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    patient_id – the id of the patient associated with the session notes.
     template – the template to be used for generating the output.
     audio_file – the audio file for which the transcription will be created.
     authorization – the authorization cookie, if exists.
@@ -122,7 +119,6 @@ class AudioProcessingRouter:
                                                  response: Response,
                                                  request: Request,
                                                  background_tasks: BackgroundTasks,
-                                                 patient_id: Annotated[str, Form()],
                                                  template: Annotated[SessionNotesTemplate, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
@@ -150,20 +146,10 @@ class AudioProcessingRouter:
                                session_id=session_id,
                                method=post_api_method,
                                therapist_id=therapist_id,
-                               patient_id=patient_id,
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
-            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
-
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
             transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
                                                                                     openai_client=self._openai_client,
@@ -177,7 +163,6 @@ class AudioProcessingRouter:
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
-                                    patient_id=patient_id,
                                     endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)

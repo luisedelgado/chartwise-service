@@ -1,5 +1,3 @@
-import json
-
 from datetime import timedelta
 
 from fastapi import BackgroundTasks
@@ -189,7 +187,6 @@ class TestingHarnessAudioProcessingRouter:
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
-                                   "patient_id": FAKE_PATIENT_ID,
                                    "template": "soap"
                                },
                                files=files)
@@ -205,7 +202,6 @@ class TestingHarnessAudioProcessingRouter:
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
-                                   "patient_id": FAKE_PATIENT_ID,
                                    "template": "soap"
                                },
                                files=files,
@@ -225,7 +221,6 @@ class TestingHarnessAudioProcessingRouter:
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
-                                   "patient_id": FAKE_PATIENT_ID,
                                    "template": "free_form"
                                },
                                files=files,

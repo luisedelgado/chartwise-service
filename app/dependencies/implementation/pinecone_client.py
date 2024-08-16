@@ -132,7 +132,7 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise Exception(str(e))
 
-    async def create_index(self, index_id):
+    async def create_index(self, index_id: str):
         try:
             pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             pc.create_index(

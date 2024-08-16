@@ -99,7 +99,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
-                                   "signup_mechanism": "internal",
+                                   "login_mechanism": "internal",
                                    "language_preference": "es-419",
                                    "gender": "male",
                                })
@@ -118,7 +118,7 @@ class TestingHarnessSecurityRouter:
                                     "first_name": "foo",
                                     "last_name": "bar",
                                     "birth_date": "01/01/2000",
-                                    "signup_mechanism": "internal",
+                                    "login_mechanism": "internal",
                                     "language_preference": "es-419",
                                     "gender": "male",
                                 })
@@ -140,7 +140,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01/01/2000",
-                                   "signup_mechanism": "internal",
+                                   "login_mechanism": "internal",
                                    "language_preference": "es-419",
                                    "gender": "male",
                                })
@@ -162,7 +162,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
-                                   "signup_mechanism": "internal",
+                                   "login_mechanism": "internal",
                                    "language_preference": "brbrbrbrbr",
                                    "gender": "male",
                                })
@@ -184,13 +184,13 @@ class TestingHarnessSecurityRouter:
                                     "first_name": "foo",
                                     "last_name": "bar",
                                     "birth_date": "01-01-2000",
-                                    "signup_mechanism": "internal",
+                                    "login_mechanism": "internal",
                                     "language_preference": "es-419",
                                     "gender": "undefined",
                                 })
         assert response.status_code == 400
 
-    def test_add_therapist_with_valid_credentials_but_undefined_signup_mechanism(self):
+    def test_add_therapist_with_valid_credentials_but_undefined_login_mechanism(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -206,7 +206,7 @@ class TestingHarnessSecurityRouter:
                                    "first_name": "foo",
                                    "last_name": "bar",
                                    "birth_date": "01-01-2000",
-                                   "signup_mechanism": "undefined",
+                                   "login_mechanism": "undefined",
                                    "language_preference": "es-419",
                                    "gender": "male",
                                })
@@ -227,7 +227,7 @@ class TestingHarnessSecurityRouter:
                                 "first_name": "foo",
                                 "last_name": "bar",
                                 "birth_date": "01-01-2000",
-                                "signup_mechanism": "facebook",
+                                "login_mechanism": "facebook",
                                 "language_preference": "es-419",
                                 "gender": "male",
                             })

@@ -19,7 +19,7 @@ from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 
-class SignupMechanism(Enum):
+class LoginMechanism(Enum):
     UNDEFINED = "undefined"
     GOOGLE = "google"
     FACEBOOK = "facebook"
@@ -35,7 +35,7 @@ class TherapistInsertPayload(BaseModel):
     first_name: str
     last_name: str
     birth_date: Optional[str] = None
-    signup_mechanism: SignupMechanism
+    login_mechanism: LoginMechanism
     language_preference: str
     gender: Optional[Gender] = None
 
@@ -310,7 +310,7 @@ class SecurityRouter:
         try:
             body = body.dict(exclude_unset=True)
 
-            assert body['signup_mechanism'] != SignupMechanism.UNDEFINED, '''Invalid parameter 'undefined' for signup_mechanism.'''
+            assert body['login_mechanism'] != LoginMechanism.UNDEFINED, '''Invalid parameter 'undefined' for login_mechanism.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -322,9 +322,8 @@ class SecurityRouter:
                     value = value.value
                 payload[key] = value
 
-            # Update both Supabase and Pinecone with new therapist info.
-            background_tasks.add_task(supabase_client.insert, payload, "therapists")
-            background_tasks.add_task(self._pinecone_client.create_index, user_id)
+            supabase_client.insert(payload=payload, table_name="therapists")
+            await self._pinecone_client.create_index(user_id)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     therapist_id=user_id,

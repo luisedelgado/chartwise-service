@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
+from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from typing import AsyncIterable, Optional
 
@@ -72,6 +73,7 @@ class AssistantManager:
         self.chartwise_assistant = ChartWiseAssistant()
 
     async def process_new_session_data(self,
+                                       background_tasks: BackgroundTasks,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,
                                        session_id: str,
@@ -150,11 +152,15 @@ class AssistantManager:
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
 
+            # Given our chat history may be stale based on the new data, let's clear anything we have
+            background_tasks.add_task(openai_client.clear_chat_history)
+
             return session_notes_id
         except Exception as e:
             raise Exception(e)
 
     async def update_session(self,
+                             background_tasks: BackgroundTasks,
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
@@ -223,10 +229,16 @@ class AssistantManager:
                                                              new_date=filtered_body.get('session_date', current_session_date_formatted),
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
+
+            # Given our chat history may be stale based on the new data, let's clear anything we have
+            background_tasks.add_task(openai_client.clear_chat_history)
+
         except Exception as e:
             raise Exception(e)
 
     def delete_session(self,
+                       background_tasks: BackgroundTasks,
+                       openai_client: OpenAIBaseClass,
                        therapist_id: str,
                        session_report_id: str,
                        supabase_client: SupabaseBaseClass,
@@ -293,6 +305,10 @@ class AssistantManager:
             pinecone_client.delete_session_vectors(index_id=therapist_id,
                                                    namespace=patient_id,
                                                    date=session_date_formatted)
+
+            # Given our chat history may be stale based on the deleted data, let's clear anything we have
+            background_tasks.add_task(openai_client.clear_chat_history)
+
         except Exception as e:
             raise Exception(e)
 

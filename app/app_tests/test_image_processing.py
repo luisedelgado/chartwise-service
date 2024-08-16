@@ -25,12 +25,6 @@ DUMMY_PNG_FILE_LOCATION = "app/app_tests/data/test2.png"
 IMAGE_PDF_FILETYPE = "application/pdf"
 IMAGE_PNG_FILETYPE = "image/png"
 
-# SOAP_TEMPLATE = "soap"
-# FAKE_AUTH_COOKIE = "my-auth-cookie"
-# FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
-# FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
-# ENVIRONMENT = "testing"
-
 class TestingHarnessImageProcessingRouter:
 
     def setup_method(self):
@@ -60,7 +54,6 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    data={"patient_id": FAKE_PATIENT_ID},
                                     files=files)
         assert response.status_code == 401
 
@@ -73,9 +66,6 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    },
                                     files=files,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -91,9 +81,6 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    },
                                     files=files,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -112,9 +99,6 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    },
                                     files=files,
                                     cookies={
                                         "authorization": self.auth_cookie,

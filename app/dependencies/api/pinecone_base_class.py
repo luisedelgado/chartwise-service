@@ -57,7 +57,7 @@ class PineconeBaseClass(ABC):
     Arguments:
     index_id – the id to be used for creating the index.
     """
-    async def create_index(index_id):
+    async def create_index(index_id: str):
         pass
 
     """
