@@ -86,11 +86,10 @@ class TestingHarnessSecurityRouter:
                                         "user_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 200
-        # TODO(re-enable for testing cookie domain and path)
-        # assert response.cookies.get("datastore_access_token", domain=".chartwise.ai", path="/") == FAKE_ACCESS_TOKEN
-        # assert response.cookies.get("datastore_refresh_token", domain=".chartwise.ai", path="/") == FAKE_REFRESH_TOKEN
-        # assert len(response.cookies.get("authorization") or '') > 0
-        # assert response.cookies.get("session_id") is not None
+        assert response.cookies.get("datastore_access_token") == FAKE_ACCESS_TOKEN
+        assert response.cookies.get("datastore_refresh_token") == FAKE_REFRESH_TOKEN
+        assert len(response.cookies.get("authorization") or '') > 0
+        assert response.cookies.get("session_id") is not None
 
     def test_add_therapist_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
@@ -235,8 +234,7 @@ class TestingHarnessSecurityRouter:
                             })
         assert response.status_code == 200
         assert response.json()["therapist_id"] == FAKE_THERAPIST_ID
-        # TODO(re-enable for testing cookie domain and path)
-        # assert response.cookies.get("authorization") is not None
+        assert response.cookies.get("authorization") is not None
 
     def test_update_therapist_with_invalid_credentials(self):
         response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
