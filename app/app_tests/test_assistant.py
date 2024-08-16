@@ -50,7 +50,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                json={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                    "session_date": "01-01-2020",
                                    "client_timezone_identifier": TZ_IDENTIFIER,
@@ -69,7 +68,6 @@ class TestingHarnessAssistantRouter:
                                 },
                                 json={
                                     "patient_id": FAKE_PATIENT_ID,
-                                    "therapist_id": FAKE_THERAPIST_ID,
                                     "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                     "session_date": "01-01-2020",
                                     "client_timezone_identifier": TZ_IDENTIFIER,
@@ -92,7 +90,6 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "session_date": "01/01/2020",
                                         "source": "manual_input"
@@ -112,7 +109,6 @@ class TestingHarnessAssistantRouter:
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "session_date": "01-01-2020",
                                         "source": "undefined"
@@ -135,7 +131,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "notes_text": insert_text,
                                         "session_date": "01-01-2020",
                                         "client_timezone_identifier": "gfsghfsdhgdsgs",
@@ -159,7 +154,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "notes_text": insert_text,
                                         "session_date": "01-01-2020",
                                         "client_timezone_identifier": "gfsghfsdhgdsgs",
@@ -183,7 +177,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "notes_text": insert_text,
                                         "session_date": "01-01-2020",
                                         "client_timezone_identifier": TZ_IDENTIFIER,
@@ -364,7 +357,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                         params={
                                             "session_report_id": FAKE_SESSION_REPORT_ID,
-                                            "therapist_id": FAKE_THERAPIST_ID,
                                         })
         assert response.status_code == 401
 
@@ -380,7 +372,6 @@ class TestingHarnessAssistantRouter:
                                         },
                                         params={
                                             "session_report_id": FAKE_SESSION_REPORT_ID,
-                                            "therapist_id": FAKE_THERAPIST_ID,
                                         })
         assert response.status_code == 400
 
@@ -396,7 +387,6 @@ class TestingHarnessAssistantRouter:
                                         },
                                         params={
                                             "session_report_id": "",
-                                            "therapist_id": FAKE_THERAPIST_ID,
                                         })
         assert response.status_code == 400
 
@@ -412,7 +402,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "session_report_id": "4123sdggsdgsdgdsgsdg",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -428,25 +417,8 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
-
-    def test_delete_session_with_valid_auth_but_invalid_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "session_report_id": FAKE_SESSION_REPORT_ID,
-                                        "therapist_id": ""
-                                    })
-        assert response.status_code == 401
 
     def test_delete_session_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -461,7 +433,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 200
 
@@ -469,7 +440,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "Quien es el jugador favorito de Lionel Andres?",
                                     })
         assert response.status_code == 401
@@ -483,7 +453,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "Quien es el jugador favorito de Lionel Andres?",
                                     })
         assert response.status_code == 401
@@ -497,24 +466,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
-                                        "text": "Quien es el jugador favorito de Lionel Andres?",
-                                    })
-        assert response.status_code == 401
-
-    def test_session_query_with_valid_auth_token_but_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
                                         "text": "Quien es el jugador favorito de Lionel Andres?",
                                     })
         assert response.status_code == 401
@@ -531,7 +482,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "Quien es el jugador favorito de Lionel Andres?",
                                     })
         assert response.status_code == 400
@@ -548,7 +498,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "",
                                     })
         assert response.status_code == 400
@@ -567,7 +516,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": "Quien es el jugador favorito de Lionel?",
                                     })
         assert response.status_code == 200
@@ -591,7 +539,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": MESSI_QUERY,
                                     })
         assert response.status_code == 200
@@ -608,7 +555,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     json={
                                         "patient_id": FAKE_SECOND_THERAPIST_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "text": CRISTIANO_QUERY,
                                     })
         assert response.status_code == 200
@@ -622,7 +568,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
                                     params={
                                         "client_tz_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -635,7 +580,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "client_tz_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -651,25 +595,8 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "client_timezone_identifier": "gfshsh",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
-
-    def test_greeting_with_valid_auth_but_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": "",
-                                    })
-        assert response.status_code == 401
 
     def test_greeting_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -684,7 +611,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "client_timezone_identifier": TZ_IDENTIFIER,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
 
@@ -692,7 +618,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 401
 
@@ -705,23 +630,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID
-                                    })
-        assert response.status_code == 401
-
-    def test_presession_summary_with_valid_tokens_but_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.PRESESSION_TRAY_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": ""
                                     })
         assert response.status_code == 401
 
@@ -737,7 +645,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 400
 
@@ -754,7 +661,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID
                                     })
         assert response.status_code == 200
 
@@ -762,7 +668,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -775,23 +680,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_question_suggestions_with_auth_token_but_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
                                     })
         assert response.status_code == 401
 
@@ -807,7 +695,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -825,7 +712,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
 
@@ -840,7 +726,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -859,7 +744,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -881,7 +765,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -903,7 +786,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "undefined",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -925,7 +807,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -987,7 +868,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -1007,7 +887,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -1030,7 +909,6 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -1091,7 +969,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -1104,23 +981,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_delete_patient_with_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
                                     })
         assert response.status_code == 401
 
@@ -1136,7 +996,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -1153,7 +1012,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
 
@@ -1161,7 +1019,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 401
 
@@ -1172,23 +1029,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_frequent_topics_with_missing_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.TOPICS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": "",
                                     })
         assert response.status_code == 401
 
@@ -1204,7 +1044,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": "",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 400
 
@@ -1222,7 +1061,6 @@ class TestingHarnessAssistantRouter:
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                     })
         assert response.status_code == 200
 
@@ -1230,7 +1068,6 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(AssistantRouter.TEMPLATES_ENDPOINT,
                                     json={
                                         "template": "soap",
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "session_notes_text": "My fake session notes"
                                     })
         assert response.status_code == 401

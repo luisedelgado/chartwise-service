@@ -3,10 +3,6 @@ from pydantic import BaseModel
 from .fake_supabase_session import FakeSession
 from ..api.supabase_base_class import SupabaseBaseClass
 
-FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
-FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
-FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
-
 class FakeSupabaseResult(BaseModel):
     data: list
 
@@ -14,6 +10,10 @@ class FakeSupabaseUser(BaseModel):
     user: dict
 
 class FakeSupabaseClient(SupabaseBaseClass):
+
+    FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
+    FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
+    FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
 
     return_authenticated_session: bool = False
     fake_access_token: str = None
@@ -29,11 +29,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if table_name == "session_reports":
             self.fake_text = None if "notes_text" not in payload else payload["notes_text"]
             return FakeSupabaseResult(data=[{
-                    "id": FAKE_SESSION_NOTES_ID
+                    "id": self.FAKE_SESSION_NOTES_ID
                 }])
         if table_name == "patients":
             return FakeSupabaseResult(data=[{
-                "id": FAKE_PATIENT_ID,
+                "id": self.FAKE_PATIENT_ID,
             }])
         else:
             ...
@@ -45,7 +45,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if table_name == "session_reports":
             self.fake_text = None if "notes_text" not in payload else payload["notes_text"]
             return FakeSupabaseResult(data=[{
-                    "id": FAKE_SESSION_NOTES_ID
+                    "id": self.FAKE_SESSION_NOTES_ID
                 }])
         if table_name == "patients":
             return FakeSupabaseResult(data=[{
@@ -80,7 +80,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "total_sessions": 2,
                 "first_name": "Fake first name",
                 "last_name": "myLastName",
-                "therapist_id": FAKE_THERAPIST_ID,
+                "therapist_id": self.FAKE_THERAPIST_ID,
                 "gender": "female",
                 "pre_existing_history": "preExistingHistory" if self.patient_query_returns_preexisting_history else None
             }])
@@ -89,14 +89,14 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "notes_mini_summary":"My fake mini summary",
                 "notes_text": "My fake notes text",
                 "session_date": "2023-01-01",
-                "patient_id": FAKE_PATIENT_ID,
-                "therapist_id": FAKE_THERAPIST_ID,
+                "patient_id": self.FAKE_PATIENT_ID,
+                "therapist_id": self.FAKE_THERAPIST_ID,
                 "diarization_template": "free_form",
             }])
         if table_name == "diarization_logs":
             return FakeSupabaseResult(data=[{
             "session_id": "123",
-            "therapist_id": FAKE_THERAPIST_ID,
+            "therapist_id": self.FAKE_THERAPIST_ID,
         }])
         if table_name == "user_interface_strings":
             return FakeSupabaseResult(data=[{
@@ -117,8 +117,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
                filters: dict,
                table_name: str):
         return FakeSupabaseResult(data=[{
-            "therapist_id": FAKE_THERAPIST_ID,
-            "patient_id": FAKE_PATIENT_ID,
+            "therapist_id": self.FAKE_THERAPIST_ID,
+            "patient_id": self.FAKE_PATIENT_ID,
             "session_date": "2023-01-01",
         }])
 
@@ -128,7 +128,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
         })
 
     def get_current_user_id(self) -> str:
-        return FAKE_THERAPIST_ID
+        return self.FAKE_THERAPIST_ID
 
     def refresh_session(self):
         return FakeSession(return_authenticated_session=self.return_authenticated_session,

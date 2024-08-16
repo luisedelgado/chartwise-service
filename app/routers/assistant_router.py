@@ -102,14 +102,12 @@ class AssistantRouter:
         async def delete_session(response: Response,
                                  request: Request,
                                  background_tasks: BackgroundTasks,
-                                 therapist_id: str = None,
                                  session_report_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_session_internal(therapist_id=therapist_id,
-                                                       session_report_id=session_report_id,
+            return await self._delete_session_internal(session_report_id=session_report_id,
                                                        background_tasks=background_tasks,
                                                        response=response,
                                                        request=request,
@@ -134,30 +132,31 @@ class AssistantRouter:
                 raise security.DATASTORE_TOKENS_ERROR
 
             try:
-                await self._auth_manager.refresh_session(user_id=query.therapist_id,
+                supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                     refresh_token=datastore_refresh_token)
+                therapist_id = supabase_client.get_current_user_id()
+                await self._auth_manager.refresh_session(user_id=therapist_id,
                                                          request=request,
                                                          response=response,
                                                          supabase_client_factory=self._supabase_client_factory)
             except Exception as e:
-                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
                 raise HTTPException(status_code=status_code, detail=str(e))
 
             try:
-                assert len(query.therapist_id or '') > 0, "Invalid therapist_id in payload"
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                     refresh_token=datastore_refresh_token)
                 language_code_query = supabase_client.select(fields="*",
                                                              filters={
-                                                                 'id': query.therapist_id
+                                                                 'id': therapist_id
                                                              },
                                                              table_name="therapists")
                 assert (0 != len((language_code_query).data)), "Did not find therapist data."
                 language_code = language_code_query.dict()['data'][0]['language_preference']
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 background_tasks=background_tasks,
+                                                                                therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
                                                                                 language_code=language_code,
                                                                                 session_id=session_id),
@@ -170,7 +169,6 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  client_timezone_identifier: str = None,
-                                 therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -179,7 +177,6 @@ class AssistantRouter:
                                                        request=request,
                                                        background_tasks=background_tasks,
                                                        client_tz_identifier=client_timezone_identifier,
-                                                       therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -189,7 +186,6 @@ class AssistantRouter:
         async def fetch_presession_tray(response: Response,
                                         request: Request,
                                         background_tasks: BackgroundTasks,
-                                        therapist_id: str = None,
                                         patient_id: str = None,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -198,7 +194,6 @@ class AssistantRouter:
             return await self._fetch_presession_tray_internal(response=response,
                                                               request=request,
                                                               background_tasks=background_tasks,
-                                                              therapist_id=therapist_id,
                                                               patient_id=patient_id,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
@@ -209,7 +204,6 @@ class AssistantRouter:
         async def fetch_question_suggestions(response: Response,
                                              request: Request,
                                              background_tasks: BackgroundTasks,
-                                             therapist_id: str = None,
                                              patient_id: str = None,
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -218,7 +212,6 @@ class AssistantRouter:
             return await self._fetch_question_suggestions_internal(response=response,
                                                                    request=request,
                                                                    background_tasks=background_tasks,
-                                                                   therapist_id=therapist_id,
                                                                    patient_id=patient_id,
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
@@ -266,7 +259,6 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  patient_id: str = None,
-                                 therapist_id: str = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -275,7 +267,6 @@ class AssistantRouter:
                                                        request=request,
                                                        background_tasks=background_tasks,
                                                        patient_id=patient_id,
-                                                       therapist_id=therapist_id,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -286,7 +277,6 @@ class AssistantRouter:
                                         request: Request,
                                         background_tasks: BackgroundTasks,
                                         patient_id: str = None,
-                                        therapist_id: str = None,
                                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                         authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -295,7 +285,6 @@ class AssistantRouter:
                                                               request=request,
                                                               background_tasks=background_tasks,
                                                               patient_id=patient_id,
-                                                              therapist_id=therapist_id,
                                                               datastore_access_token=datastore_access_token,
                                                               datastore_refresh_token=datastore_refresh_token,
                                                               authorization=authorization,
@@ -357,7 +346,7 @@ class AssistantRouter:
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -443,7 +432,7 @@ class AssistantRouter:
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -495,7 +484,6 @@ class AssistantRouter:
     Deletes a session report.
 
     Arguments:
-    therapist_id – the therapist id associated with the session report to be deleted.
     session_report_id – the id for the incoming session report.
     request – the incoming request object.
     response – the response model with which to create the final response.
@@ -506,7 +494,6 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _delete_session_internal(self,
-                                       therapist_id: str,
                                        session_report_id: str,
                                        request: Request,
                                        response: Response,
@@ -522,12 +509,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -557,10 +547,6 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            assert len(therapist_id or '') > 0, "Received invalid therapist_id param"
-
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             self._assistant_manager.delete_session(therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
                                                    supabase_client=supabase_client,
@@ -595,6 +581,7 @@ class AssistantRouter:
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
     query – the query that will be executed.
+    therapist_id – the therapist id associated with the query.
     supabase_client – the supabase client to be used internally.
     language_code – the language code associated with the request.
     session_id – the session_id cookie, if exists.
@@ -602,6 +589,7 @@ class AssistantRouter:
     async def _execute_assistant_query_internal(self,
                                                 background_tasks: BackgroundTasks,
                                                 query: AssistantQuery,
+                                                therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 language_code: str,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
@@ -609,7 +597,7 @@ class AssistantRouter:
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
-                               therapist_id=query.therapist_id,
+                               therapist_id=therapist_id,
                                patient_id=query.patient_id,
                                endpoint_name=self.QUERIES_ENDPOINT,
                                method=post_api_method)
@@ -627,6 +615,7 @@ class AssistantRouter:
                                                                     query=query,
                                                                     session_id=session_id,
                                                                     api_method=post_api_method,
+                                                                    therapist_id=therapist_id,
                                                                     endpoint_name=self.QUERIES_ENDPOINT,
                                                                     environment=self._environment,
                                                                     pinecone_client=self._pinecone_client,
@@ -636,7 +625,7 @@ class AssistantRouter:
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
-                                    therapist_id=query.therapist_id,
+                                    therapist_id=therapist_id,
                                     patient_id=query.patient_id,
                                     endpoint_name=self.QUERIES_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
@@ -659,7 +648,6 @@ class AssistantRouter:
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     client_tz_identifier – the timezone identifier associated with the client.
-    therapist_id – the therapist id associated with the user.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -670,7 +658,6 @@ class AssistantRouter:
                                        request: Request,
                                        background_tasks: BackgroundTasks,
                                        client_tz_identifier: str,
-                                       therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -682,12 +669,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -703,8 +693,6 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_timezone_identifier(client_tz_identifier), "Invalid timezone identifier parameter"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             result = await self._assistant_manager.fetch_todays_greeting(client_tz_identifier=client_tz_identifier,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
@@ -743,7 +731,6 @@ class AssistantRouter:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id associated with the user.
     patient_id – the id associated with the patient whose presession tray will be fetched.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -754,7 +741,6 @@ class AssistantRouter:
                                               response: Response,
                                               request: Request,
                                               background_tasks: BackgroundTasks,
-                                              therapist_id: str,
                                               patient_id: str,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -767,12 +753,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -785,11 +774,8 @@ class AssistantRouter:
                                endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
 
         try:
-            assert len(therapist_id or '') > 0, "Missing therapist_id param"
             assert len(patient_id or '') > 0, "Missing patient_id param"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
                                                                                  therapist_id=therapist_id,
                                                                                  environment=self._environment,
@@ -828,7 +814,6 @@ class AssistantRouter:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -839,7 +824,6 @@ class AssistantRouter:
                                                    response: Response,
                                                    request: Request,
                                                    background_tasks: BackgroundTasks,
-                                                   therapist_id: str,
                                                    patient_id: str,
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -852,12 +836,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -873,8 +860,6 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             json_questions = await self._assistant_manager.fetch_question_suggestions(therapist_id=therapist_id,
                                                                                       patient_id=patient_id,
                                                                                       auth_manager=self._auth_manager,
@@ -944,7 +929,7 @@ class AssistantRouter:
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -1030,7 +1015,7 @@ class AssistantRouter:
                                                      request=request,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -1087,7 +1072,6 @@ class AssistantRouter:
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
-    therapist_id – the therapist id associated with the patient to be deleted.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -1098,7 +1082,6 @@ class AssistantRouter:
                                        request: Request,
                                        background_tasks: BackgroundTasks,
                                        patient_id: str,
-                                       therapist_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                        authorization: Annotated[Union[str, None], Cookie()],
@@ -1110,12 +1093,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response,
                                                      request=request,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -1130,9 +1116,6 @@ class AssistantRouter:
         try:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
-
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
 
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -1182,7 +1165,6 @@ class AssistantRouter:
     response – the response model used for the final response that will be returned.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id associated with the therapist user.
     patient_id – the id associated with the patient whose sessions will be used to fetch suggested questions.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -1193,7 +1175,6 @@ class AssistantRouter:
                                               response: Response,
                                               request: Request,
                                               background_tasks: BackgroundTasks,
-                                              therapist_id: str,
                                               patient_id: str,
                                               datastore_access_token: Annotated[Union[str, None], Cookie()],
                                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -1206,12 +1187,15 @@ class AssistantRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -1227,8 +1211,6 @@ class AssistantRouter:
             assert len(patient_id or '') > 0, "Missing patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             json_topics = await self._assistant_manager.fetch_frequent_topics(therapist_id=therapist_id,
                                                                               patient_id=patient_id,
                                                                               auth_manager=self._auth_manager,
@@ -1300,7 +1282,7 @@ class AssistantRouter:
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)

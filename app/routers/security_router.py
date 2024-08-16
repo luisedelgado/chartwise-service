@@ -30,11 +30,7 @@ class LoginData(BaseModel):
     datastore_refresh_token: Optional[str] = None
     user_id: str
 
-class LogoutData(BaseModel):
-    therapist_id: str
-
 class TherapistInsertPayload(BaseModel):
-    id: str
     email: str
     first_name: str
     last_name: str
@@ -44,7 +40,6 @@ class TherapistInsertPayload(BaseModel):
     gender: Optional[Gender] = None
 
 class TherapistUpdatePayload(BaseModel):
-    id: str
     email: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -57,7 +52,7 @@ class SecurityRouter:
     ROUTER_TAG = "authentication"
     LOGOUT_ENDPOINT = "/v1/logout"
     TOKEN_ENDPOINT = "/token"
-    THERAPISTS_ENDPOINT = "/v1/therapists"
+    ACCOUNT_ENDPOINT = "/v1/account"
 
     def __init__(self,
                  auth_manager: AuthManager,
@@ -89,71 +84,69 @@ class SecurityRouter:
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
-                         request: Request,
                          background_tasks: BackgroundTasks,
-                         logout_data: LogoutData,
+                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                          authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
-                                               request=request,
+                                               datastore_access_token=datastore_access_token,
+                                               datastore_refresh_token=datastore_refresh_token,
                                                background_tasks=background_tasks,
-                                               therapist_id=logout_data.therapist_id,
                                                authorization=authorization,
                                                session_id=session_id)
 
-        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def add_new_therapist(body: TherapistInsertPayload,
-                                    response: Response,
-                                    request: Request,
-                                    background_tasks: BackgroundTasks,
-                                    datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                                    authorization: Annotated[Union[str, None], Cookie()] = None,
-                                    session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._add_new_therapist_internal(body=body,
-                                                          response=response,
-                                                          request=request,
-                                                          background_tasks=background_tasks,
-                                                          datastore_access_token=datastore_access_token,
-                                                          datastore_refresh_token=datastore_refresh_token,
-                                                          authorization=authorization,
-                                                          session_id=session_id)
+        @self.router.post(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def add_new_account(body: TherapistInsertPayload,
+                                  response: Response,
+                                  request: Request,
+                                  background_tasks: BackgroundTasks,
+                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
+                                  authorization: Annotated[Union[str, None], Cookie()] = None,
+                                  session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._add_new_account_internal(body=body,
+                                                        response=response,
+                                                        request=request,
+                                                        background_tasks=background_tasks,
+                                                        datastore_access_token=datastore_access_token,
+                                                        datastore_refresh_token=datastore_refresh_token,
+                                                        authorization=authorization,
+                                                        session_id=session_id)
 
-        @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def update_therapist_data(response: Response,
-                                        request: Request,
-                                        background_tasks: BackgroundTasks,
-                                        body: TherapistUpdatePayload,
-                                        datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                                        authorization: Annotated[Union[str, None], Cookie()] = None,
-                                        session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._update_therapist_data_internal(response=response,
-                                                              request=request,
-                                                              background_tasks=background_tasks,
-                                                              body=body,
-                                                              datastore_access_token=datastore_access_token,
-                                                              datastore_refresh_token=datastore_refresh_token,
-                                                              authorization=authorization,
-                                                              session_id=session_id)
+        @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def update_account_data(response: Response,
+                                      request: Request,
+                                      background_tasks: BackgroundTasks,
+                                      body: TherapistUpdatePayload,
+                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
+                                      authorization: Annotated[Union[str, None], Cookie()] = None,
+                                      session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._update_account_data_internal(response=response,
+                                                            request=request,
+                                                            background_tasks=background_tasks,
+                                                            body=body,
+                                                            datastore_access_token=datastore_access_token,
+                                                            datastore_refresh_token=datastore_refresh_token,
+                                                            authorization=authorization,
+                                                            session_id=session_id)
 
-        @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_all_therapist_data(response: Response,
-                                            request: Request,
-                                            background_tasks: BackgroundTasks,
-                                            therapist_id: str = None,
-                                            datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                                            authorization: Annotated[Union[str, None], Cookie()] = None,
-                                            session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_all_therapist_data_internal(response=response,
-                                                                  request=request,
-                                                                  background_tasks=background_tasks,
-                                                                  therapist_id=therapist_id,
-                                                                  datastore_access_token=datastore_access_token,
-                                                                  datastore_refresh_token=datastore_refresh_token,
-                                                                  authorization=authorization,
-                                                                  session_id=session_id)
+        @self.router.delete(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def delete_all_account_data(response: Response,
+                                          request: Request,
+                                          background_tasks: BackgroundTasks,
+                                          datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                                          datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
+                                          authorization: Annotated[Union[str, None], Cookie()] = None,
+                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._delete_all_account_data_internal(response=response,
+                                                                request=request,
+                                                                background_tasks=background_tasks,
+                                                                datastore_access_token=datastore_access_token,
+                                                                datastore_refresh_token=datastore_refresh_token,
+                                                                authorization=authorization,
+                                                                session_id=session_id)
 
     """
     Returns an oauth token to be used for invoking the endpoints.
@@ -219,27 +212,29 @@ class SecurityRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the therapist id associated with the operation.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
                                response: Response,
-                               request: Request,
                                background_tasks: BackgroundTasks,
-                               therapist_id: str,
+                               datastore_access_token: Annotated[Union[str, None], Cookie()],
+                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                authorization: Annotated[Union[str, None], Cookie()],
                                session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
+
         try:
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
+                                                                                 access_token=datastore_access_token)
+            therapist_id = supabase_client
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             raise HTTPException(status_code=status_code, detail=str(e))
@@ -252,8 +247,8 @@ class SecurityRouter:
                                method=post_api_method,
                                endpoint_name=self.LOGOUT_ENDPOINT,)
 
-        self._auth_manager.logout(response)
         await self._openai_client.clear_chat_history()
+        self._auth_manager.logout(response)
 
         logger.log_api_response(background_tasks=background_tasks,
                                 session_id=session_id,
@@ -277,15 +272,15 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _add_new_therapist_internal(self,
-                                          body: TherapistInsertPayload,
-                                          background_tasks: BackgroundTasks,
-                                          request: Request,
-                                          response: Response,
-                                          datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                          datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                          authorization: Annotated[Union[str, None], Cookie()],
-                                          session_id: Annotated[Union[str, None], Cookie()]):
+    async def _add_new_account_internal(self,
+                                        body: TherapistInsertPayload,
+                                        background_tasks: BackgroundTasks,
+                                        request: Request,
+                                        response: Response,
+                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                        authorization: Annotated[Union[str, None], Cookie()],
+                                        session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -293,12 +288,15 @@ class SecurityRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
+                                                                                 access_token=datastore_access_token)
+            user_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=user_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -306,8 +304,8 @@ class SecurityRouter:
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=post_api_method,
-                               therapist_id=body.id,
-                               endpoint_name=self.THERAPISTS_ENDPOINT)
+                               therapist_id=user_id,
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
             body = body.dict(exclude_unset=True)
@@ -318,9 +316,6 @@ class SecurityRouter:
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
-                                                                                 access_token=datastore_access_token)
-
             payload = {}
             for key, value in body.items():
                 if isinstance(value, Enum):
@@ -329,22 +324,22 @@ class SecurityRouter:
 
             # Update both Supabase and Pinecone with new therapist info.
             background_tasks.add_task(supabase_client.insert, payload, "therapists")
-            background_tasks.add_task(self._pinecone_client.create_index, body['id'])
+            background_tasks.add_task(self._pinecone_client.create_index, user_id)
 
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=body['id'],
+                                    therapist_id=user_id,
                                     session_id=session_id,
-                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    endpoint_name=self.ACCOUNT_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
 
-            return {"therapist_id": body['id']}
+            return {"therapist_id": user_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
                              description=description,
                              method=post_api_method)
@@ -364,15 +359,15 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _update_therapist_data_internal(self,
-                                              background_tasks: BackgroundTasks,
-                                              response: Response,
-                                              request: Request,
-                                              body: TherapistUpdatePayload,
-                                              datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                              authorization: Annotated[Union[str, None], Cookie()],
-                                              session_id: Annotated[Union[str, None], Cookie()]):
+    async def _update_account_data_internal(self,
+                                            background_tasks: BackgroundTasks,
+                                            response: Response,
+                                            request: Request,
+                                            body: TherapistUpdatePayload,
+                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                            authorization: Annotated[Union[str, None], Cookie()],
+                                            session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -380,21 +375,24 @@ class SecurityRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
-            await self._auth_manager.refresh_session(user_id=body.id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            user_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=user_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
-                               therapist_id=body.id,
+                               therapist_id=user_id,
                                method=put_api_method,
-                               endpoint_name=self.THERAPISTS_ENDPOINT)
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
         try:
             body = body.dict(exclude_unset=True)
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
@@ -402,12 +400,8 @@ class SecurityRouter:
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert 'language_preference' not in body or Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             payload = {}
             for key, value in body.items():
-                if key == 'id':
-                    continue
                 if isinstance(value, Enum):
                     value = value.value
                 payload[key] = value
@@ -415,14 +409,14 @@ class SecurityRouter:
             update_response = supabase_client.update(table_name="therapists",
                                                      payload=payload,
                                                      filters={
-                                                         'id': body['id']
+                                                         'id': user_id
                                                      })
             assert (0 != len((update_response).data)), "Update operation could not be completed."
 
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=body['id'],
+                                    therapist_id=user_id,
                                     session_id=session_id,
-                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    endpoint_name=self.ACCOUNT_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=put_api_method)
             return {}
@@ -431,7 +425,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
                              description=description,
                              method=put_api_method)
@@ -445,54 +439,49 @@ class SecurityRouter:
     background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
     request – the incoming request object.
-    therapist_id – the id associated with the therapist data to be deleted.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _delete_all_therapist_data_internal(self,
-                                                  background_tasks: BackgroundTasks,
-                                                  response: Response,
-                                                  request: Request,
-                                                  therapist_id: str,
-                                                  datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                                  authorization: Annotated[Union[str, None], Cookie()],
-                                                  session_id: Annotated[Union[str, None], Cookie()]):
+    async def _delete_all_account_data_internal(self,
+                                                background_tasks: BackgroundTasks,
+                                                response: Response,
+                                                request: Request,
+                                                datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                                datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                                authorization: Annotated[Union[str, None], Cookie()],
+                                                session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        if len(therapist_id or '') == 0:
-            raise HTTPException(detail="Invalid or empty therapist_id to be deleted", status_code=status.HTTP_400_BAD_REQUEST)
-
         try:
-            await self._auth_manager.refresh_session(user_id=therapist_id,
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            user_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=user_id,
                                                      response=response,
                                                      request=request,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
-                               therapist_id=therapist_id,
+                               therapist_id=user_id,
                                method=delete_api_method,
-                               endpoint_name=self.THERAPISTS_ENDPOINT)
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
-
             # Delete therapist and all their patients (through cascading)
             delete_response = supabase_client.delete(table_name="therapists",
                                                      filters={
-                                                         'id': therapist_id
+                                                         'id': user_id
                                                      })
             assert len(delete_response.dict()['data']) > 0, "No therapist found with the incoming id"
 
@@ -500,18 +489,18 @@ class SecurityRouter:
             supabase_client.sign_out()
 
             # Delete vectors associated with therapist's patients
-            self._assistant_manager.delete_all_sessions_for_therapist(id=therapist_id,
+            self._assistant_manager.delete_all_sessions_for_therapist(id=user_id,
                                                                       pinecone_client=self._pinecone_client)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
             logger.log_account_deletion(background_tasks=background_tasks,
-                                        therapist_id=therapist_id)
+                                        therapist_id=user_id)
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=therapist_id,
+                                    therapist_id=user_id,
                                     session_id=session_id,
-                                    endpoint_name=self.THERAPISTS_ENDPOINT,
+                                    endpoint_name=self.ACCOUNT_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=delete_api_method)
             return {}
@@ -520,7 +509,7 @@ class SecurityRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             endpoint_name=self.THERAPISTS_ENDPOINT,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
                              description=description,
                              method=delete_api_method)

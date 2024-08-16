@@ -48,7 +48,6 @@ class ImageProcessingRouter:
                                              request: Request,
                                              background_tasks: BackgroundTasks,
                                              patient_id: Annotated[str, Form()],
-                                             therapist_id: Annotated[str, Form()],
                                              image: UploadFile = File(...),
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -58,7 +57,6 @@ class ImageProcessingRouter:
                                                                    request=request,
                                                                    background_tasks=background_tasks,
                                                                    patient_id=patient_id,
-                                                                   therapist_id=therapist_id,
                                                                    image=image,
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
@@ -69,18 +67,18 @@ class ImageProcessingRouter:
         async def extract_text(response: Response,
                                request: Request,
                                background_tasks: BackgroundTasks,
-                               therapist_id: str = None,
-                               patient_id: str = None,
                                document_id: str = None,
+                               datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
+                               datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                template: SessionNotesTemplate = SessionNotesTemplate.FREE_FORM,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
                                                      request=request,
                                                      background_tasks=background_tasks,
-                                                     therapist_id=therapist_id,
-                                                     patient_id=patient_id,
                                                      document_id=document_id,
+                                                     datastore_access_token=datastore_access_token,
+                                                     datastore_refresh_token=datastore_refresh_token,
                                                      template=template,
                                                      authorization=authorization,
                                                      session_id=session_id)
@@ -92,7 +90,6 @@ class ImageProcessingRouter:
     response – the response model with which to create the final response.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     image – the image to be uploaded.
     authorization – the authorization cookie, if exists.
@@ -105,7 +102,6 @@ class ImageProcessingRouter:
                                                    request: Request,
                                                    background_tasks: BackgroundTasks,
                                                    patient_id: Annotated[str, Form()],
-                                                   therapist_id: Annotated[str, Form()],
                                                    image: UploadFile,
                                                    authorization: Annotated[Union[str, None], Cookie()],
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -115,12 +111,15 @@ class ImageProcessingRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -136,8 +135,6 @@ class ImageProcessingRouter:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': therapist_id,
@@ -179,10 +176,10 @@ class ImageProcessingRouter:
     request – the incoming request object.
     response – the response model to be used for crafting the final response.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the therapist_id for the operation.
-    patient_id – the patient_id for the operation.
     document_id – the id of the document to be textracted.
     template – the template to be used for returning the output.
+    datastore_access_token – the datastore access token.
+    datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -190,22 +187,25 @@ class ImageProcessingRouter:
                                      request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
-                                     therapist_id: str,
-                                     patient_id: str,
                                      document_id: str,
                                      template: SessionNotesTemplate,
+                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
+                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                      authorization: Annotated[Union[str, None], Cookie()],
                                      session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -214,12 +214,9 @@ class ImageProcessingRouter:
                                session_id=session_id,
                                method=get_api_method,
                                therapist_id=therapist_id,
-                               patient_id=patient_id,
                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
-            assert len(therapist_id or '') > 0, "Missing therapist_id param."
-            assert len(patient_id or '') > 0, "Missing patient_id param."
             assert len(document_id or '') > 0, "Didn't receive a valid document id."
 
             textraction = self._image_processing_manager.extract_text(document_id=document_id,
@@ -229,7 +226,6 @@ class ImageProcessingRouter:
                 logger.log_api_response(background_tasks=background_tasks,
                                         session_id=session_id,
                                         therapist_id=therapist_id,
-                                        patient_id=patient_id,
                                         endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                                         http_status_code=status.HTTP_200_OK,
                                         method=get_api_method)
@@ -245,7 +241,6 @@ class ImageProcessingRouter:
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
-                                    patient_id=patient_id,
                                     endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=get_api_method)
@@ -257,7 +252,6 @@ class ImageProcessingRouter:
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              therapist_id=therapist_id,
-                             patient_id=patient_id,
                              endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                              error_code=status_code,
                              description=description,

@@ -55,7 +55,6 @@ class AudioProcessingRouter:
         async def transcribe_session_notes(response: Response,
                                            request: Request,
                                            background_tasks: BackgroundTasks,
-                                           therapist_id: Annotated[str, Form()],
                                            patient_id: Annotated[str, Form()],
                                            template: Annotated[SessionNotesTemplate, Form()],
                                            audio_file: UploadFile = File(...),
@@ -66,7 +65,6 @@ class AudioProcessingRouter:
             return await self._transcribe_session_notes_internal(response=response,
                                                                  request=request,
                                                                  background_tasks=background_tasks,
-                                                                 therapist_id=therapist_id,
                                                                  patient_id=patient_id,
                                                                  template=template,
                                                                  audio_file=audio_file,
@@ -80,7 +78,6 @@ class AudioProcessingRouter:
                                   request: Request,
                                   background_tasks: BackgroundTasks,
                                   session_date: Annotated[str, Form()],
-                                  therapist_id: Annotated[str, Form()],
                                   patient_id: Annotated[str, Form()],
                                   client_timezone_identifier: Annotated[str, Form()],
                                   template: Annotated[SessionNotesTemplate, Form()],
@@ -93,7 +90,6 @@ class AudioProcessingRouter:
                                                         request=request,
                                                         background_tasks=background_tasks,
                                                         session_date=session_date,
-                                                        therapist_id=therapist_id,
                                                         patient_id=patient_id,
                                                         tz_identifier=client_timezone_identifier,
                                                         template=template,
@@ -114,7 +110,6 @@ class AudioProcessingRouter:
     response – the response model with which to create the final response.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     template – the template to be used for generating the output.
     audio_file – the audio file for which the transcription will be created.
@@ -127,7 +122,6 @@ class AudioProcessingRouter:
                                                  response: Response,
                                                  request: Request,
                                                  background_tasks: BackgroundTasks,
-                                                 therapist_id: Annotated[str, Form()],
                                                  patient_id: Annotated[str, Form()],
                                                  template: Annotated[SessionNotesTemplate, Form()],
                                                  audio_file: UploadFile,
@@ -139,12 +133,15 @@ class AudioProcessingRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -160,8 +157,6 @@ class AudioProcessingRouter:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': therapist_id,
@@ -208,7 +203,6 @@ class AudioProcessingRouter:
     response – the response model with which to create the final response.
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
-    therapist_id – the id of the therapist associated with the session notes.
     patient_id – the id of the patient associated with the session notes.
     template – the template to be used for generating the output.
     audio_file – the audio file for which the diarized transcription will be created.
@@ -222,7 +216,6 @@ class AudioProcessingRouter:
                                         request: Request,
                                         background_tasks: BackgroundTasks,
                                         session_date: Annotated[str, Form()],
-                                        therapist_id: Annotated[str, Form()],
                                         patient_id: Annotated[str, Form()],
                                         tz_identifier: Annotated[str, Form()],
                                         template: Annotated[SessionNotesTemplate, Form()],
@@ -238,12 +231,15 @@ class AudioProcessingRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         try:
+            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
+                                                                                 refresh_token=datastore_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
                                                      response=response,
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             raise HTTPException(status_code=status_code, detail=str(e))
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
@@ -263,8 +259,6 @@ class AudioProcessingRouter:
             assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': therapist_id,

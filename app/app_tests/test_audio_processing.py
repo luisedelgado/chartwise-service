@@ -190,7 +190,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "template": "soap"
                                },
                                files=files)
@@ -207,7 +206,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "template": "soap"
                                },
                                files=files,
@@ -228,7 +226,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "template": "free_form"
                                },
                                files=files,
@@ -245,7 +242,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC"
@@ -265,34 +261,12 @@ class TestingHarnessAudioProcessingRouter:
                                     },
                                     data={
                                         "patient_id": FAKE_PATIENT_ID,
-                                        "therapist_id": FAKE_THERAPIST_ID,
                                         "session_date": "10-24-2020",
                                         "template": "soap",
                                         "client_timezone_identifier": "UTC"
                                     },
                                     files=files)
         assert response.status_code == 401
-
-    def test_invoke_diarization_with_valid_auth_but_empty_therapist_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-                               data={
-                                   "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": "",
-                                   "session_date": "10-24-2020",
-                                   "template": "soap",
-                                   "client_timezone_identifier": "UTC"
-                               },
-                               files=files,
-                               cookies={
-                                   "authorization": self.auth_cookie,
-                               })
-        assert response.status_code == 422
 
     def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -304,7 +278,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": "",
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC"
@@ -325,7 +298,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10/24/2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC"
@@ -346,7 +318,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "gfhhfhdfhhs"
@@ -370,7 +341,6 @@ class TestingHarnessAudioProcessingRouter:
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
-                                   "therapist_id": FAKE_THERAPIST_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC"

@@ -16,7 +16,6 @@ from ..vectors.chartwise_assistant import ChartWiseAssistant
 
 class AssistantQuery(BaseModel):
     patient_id: str
-    therapist_id: str
     text: str
 
 class PatientConsentmentChannel(Enum):
@@ -409,6 +408,7 @@ class AssistantManager:
     async def query_session(self,
                             auth_manager: AuthManager,
                             query: AssistantQuery,
+                            therapist_id: str,
                             session_id: str,
                             api_method: str,
                             endpoint_name: str,
@@ -421,7 +421,7 @@ class AssistantManager:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'id': query.patient_id,
-                                                       'therapist_id': query.therapist_id
+                                                       'therapist_id': therapist_id
                                                    },
                                                    table_name="patients")
             patient_therapist_match = (0 != len((patient_query).data))
@@ -442,13 +442,13 @@ class AssistantManager:
 
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
-                                                         'id': query.therapist_id
+                                                         'id': therapist_id
                                                      },
                                                      table_name="therapists")
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
 
-            async for part in self.chartwise_assistant.query_store(index_id=query.therapist_id,
+            async for part in self.chartwise_assistant.query_store(index_id=therapist_id,
                                                                    namespace=query.patient_id,
                                                                    patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                    patient_gender=patient_gender,
