@@ -167,8 +167,7 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_speechmatics_client = FakeSpeechmaticsClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
-        self.auth_cookie = self.auth_manager.create_access_token(data={"sub": FAKE_THERAPIST_ID},
-                                                                 expires_delta=timedelta(minutes=5))
+        self.auth_cookie = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,

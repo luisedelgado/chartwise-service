@@ -35,33 +35,7 @@ class AuthManager:
         except Exception as e:
             raise Exception(str(e))
 
-    def create_access_token(self,
-                            data: dict,
-                            expires_delta: Union[timedelta, None] = None):
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.now(timezone.utc) + expires_delta
-        else:
-            expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
-        return encoded_jwt
-
-    def access_token_is_valid(self, access_token: str) -> bool:
-        try:
-            payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            user_id: str = payload.get("sub")
-            if user_id is None:
-                return False
-        except:
-            return False
-
-        # Check that token hasn't expired
-        token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
-                                                       tz=timezone.utc)
-        return (token_expiration_date > datetime.now(timezone.utc))
-
-    def update_auth_token_for_entity(self, user_id: str, response: Response) -> Token:
+    def create_access_token(self, user_id: str):
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,18 +43,26 @@ class AuthManager:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = self.create_access_token(
-            data={"sub": user_id}, expires_delta=access_token_expires
-        )
-        response.set_cookie(key="authorization",
-                            value=access_token,
-                            domain=self.APP_COOKIE_DOMAIN,
-                            path=self.APP_COOKIE_PATH,
-                            httponly=True,
-                            secure=True,
-                            samesite="none")
-        return Token(access_token=access_token, token_type="bearer")
+        data = {"sub": user_id}
+        to_encode = data.copy()
+        expiration_delta = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expiration_time = datetime.now(timezone.utc) + expiration_delta
+        to_encode.update({"exp": expiration_time})
+        return jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+
+    def access_token_is_valid(self, access_token: str) -> bool:
+        try:
+            payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id == None:
+                return False
+
+            # Check that token hasn't expired
+            token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
+                                                           tz=timezone.utc)
+            return (token_expiration_date > datetime.now(timezone.utc))
+        except:
+            return False
 
     async def refresh_session(self,
                               user_id: str,
@@ -90,7 +72,14 @@ class AuthManager:
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
-            auth_token = self.update_auth_token_for_entity(user_id, response)
+            access_token = self.create_access_token(user_id)
+            response.set_cookie(key="authorization",
+                                value=access_token,
+                                domain=self.APP_COOKIE_DOMAIN,
+                                path=self.APP_COOKIE_PATH,
+                                httponly=True,
+                                secure=True,
+                                samesite="none")
 
             # We are being sent new datastore tokens. Let's update cookies.
             if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
@@ -135,7 +124,7 @@ class AuthManager:
                 datastore_access_token = None
                 datastore_refresh_token = None
 
-            return auth_token
+            return Token(access_token=access_token, token_type="bearer")
         except Exception as e:
             raise HTTPException(detail=str(e), status_code=status.HTTP_401_UNAUTHORIZED)
 
