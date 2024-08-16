@@ -110,6 +110,9 @@ class ImageProcessingRouter:
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -147,6 +150,10 @@ class ImageProcessingRouter:
                                                                                             image=image,
                                                                                             docupanda_client=self._docupanda_client)
 
+            logger.log_textraction_event(background_tasks=background_tasks,
+                                         therapist_id=therapist_id,
+                                         session_id=session_id,
+                                         job_id=document_id)
             logs_description = f"document_id={document_id}"
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -161,6 +168,9 @@ class ImageProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            logger.log_diarization_event(background_tasks=background_tasks,
+                                         error_code=status_code,
+                                         description=description)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
@@ -196,6 +206,9 @@ class ImageProcessingRouter:
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -217,8 +230,40 @@ class ImageProcessingRouter:
                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
-            assert len(document_id or '') > 0, "Didn't receive a valid document id."
+            assert len(document_id or '') > 0
+        except:
+            description = "Didn't receive a valid document id."
+            status_code = status.HTTP_400_BAD_REQUEST
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
+        try:
+            textraction_query = supabase_client.select(fields="*",
+                                                       filters={
+                                                           'job_id': document_id
+                                                       },
+                                                       table_name="textraction_logs")
+            assert (0 != len((textraction_query).data))
+            assert textraction_query.dict()['data'][0]['therapist_id'] == therapist_id
+        except Exception as e:
+            description = "Invalid textraction request."
+            status_code = status.HTTP_403_FORBIDDEN
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
+
+        try:
             textraction = self._image_processing_manager.extract_text(document_id=document_id,
                                                                       docupanda_client=self._docupanda_client)
 

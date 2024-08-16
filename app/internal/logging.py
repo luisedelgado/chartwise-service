@@ -159,6 +159,38 @@ class Logger:
             print(f"Silently failing when trying to log response - Error: {str(e)}")
 
     """
+    Logs an event associated with a textraction operation.
+
+    Arguments:
+    background_tasks – object for scheduling concurrent tasks.
+    kwargs – the set of associated optional args.
+    """
+    def log_textraction_event(self, background_tasks: BackgroundTasks, **kwargs):
+        # We don't want to log if we're in staging or dev
+        environment = os.environ.get("ENVIRONMENT").lower()
+        if environment != "prod":
+            return
+
+        therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
+        error_code = None if "error_code" not in kwargs else kwargs["error_code"]
+        description = None if "description" not in kwargs else kwargs["description"]
+        session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+        job_id = None if "job_id" not in kwargs else kwargs["job_id"]
+
+        try:
+            background_tasks.add_task(self.supabase_client.insert,
+                                      {
+                                          "therapist_id": therapist_id,
+                                          "error_code": error_code,
+                                          "session_id": session_id,
+                                          "job_id": job_id,
+                                          "description": description
+                                      },
+                                      "textraction_logs")
+        except Exception as e:
+            print(f"Silently failing when trying to log response - Error: {str(e)}")
+
+    """
     Event logged when a user deletes all their account data.
 
     Arguments:

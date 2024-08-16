@@ -355,7 +355,6 @@ class AudioProcessingRouter:
                                                                    input=json_data["results"],
                                                                    supabase_client_factory=self._supabase_client_factory)
 
-
             summary = json_data["summary"]["content"]
             await self._assistant_manager.update_diarization_with_notification_data(auth_manager=self._auth_manager,
                                                                                     supabase_client=supabase_admin_client,

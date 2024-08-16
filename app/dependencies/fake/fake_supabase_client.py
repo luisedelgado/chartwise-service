@@ -98,6 +98,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
             "session_id": "123",
             "therapist_id": self.FAKE_THERAPIST_ID,
         }])
+        if table_name == "textraction_logs":
+            return FakeSupabaseResult(data=[{
+            "session_id": "123",
+            "therapist_id": self.FAKE_THERAPIST_ID,
+        }])
         if table_name == "user_interface_strings":
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
