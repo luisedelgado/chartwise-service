@@ -73,6 +73,7 @@ class AssistantManager:
         self.chartwise_assistant = ChartWiseAssistant()
 
     async def process_new_session_data(self,
+                                       environment: str,
                                        background_tasks: BackgroundTasks,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,
@@ -154,6 +155,17 @@ class AssistantManager:
 
             # Given our chat history may be stale based on the new data, let's clear anything we have
             background_tasks.add_task(openai_client.clear_chat_history)
+
+            # Update this patient's presession tray for future fetches.
+            background_tasks.add_task(self.update_presession_tray,
+                                      therapist_id,
+                                      body.patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client)
 
             return session_notes_id
         except Exception as e:
@@ -683,14 +695,12 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
-    async def create_patient_summary(self,
+    async def update_presession_tray(self,
                                      therapist_id: str,
                                      patient_id: str,
                                      auth_manager: AuthManager,
                                      environment: str,
                                      session_id: str,
-                                     endpoint_name: str,
-                                     api_method: str,
                                      pinecone_client: PineconeBaseClass,
                                      openai_client: OpenAIBaseClass,
                                      supabase_client: SupabaseBaseClass):
@@ -726,25 +736,46 @@ class AssistantManager:
             else:
                 session_date_override = None
 
-            result = await self.chartwise_assistant.create_briefing(index_id=therapist_id,
-                                                                    namespace=patient_id,
-                                                                    environment=environment,
-                                                                    language_code=language_code,
-                                                                    session_id=session_id,
-                                                                    endpoint_name=endpoint_name,
-                                                                    method=api_method,
-                                                                    patient_name=patient_name,
-                                                                    patient_gender=patient_gender,
-                                                                    therapist_name=therapist_name,
-                                                                    therapist_gender=therapist_gender,
-                                                                    session_number=session_number,
-                                                                    auth_manager=auth_manager,
-                                                                    openai_client=openai_client,
-                                                                    pinecone_client=pinecone_client,
-                                                                    session_date_override=session_date_override)
+            briefing = await self.chartwise_assistant.create_briefing(index_id=therapist_id,
+                                                                       namespace=patient_id,
+                                                                       environment=environment,
+                                                                       language_code=language_code,
+                                                                       session_id=session_id,
+                                                                       patient_name=patient_name,
+                                                                       patient_gender=patient_gender,
+                                                                       therapist_name=therapist_name,
+                                                                       therapist_gender=therapist_gender,
+                                                                       session_number=session_number,
+                                                                       auth_manager=auth_manager,
+                                                                       openai_client=openai_client,
+                                                                       pinecone_client=pinecone_client,
+                                                                       session_date_override=session_date_override)
 
-            assert 'summary' in result, "Something went wrong in generating a response. Please try again"
-            return result
+            briefing_query = supabase_client.select(fields="*",
+                                                    filters={
+                                                        'therapist_id': therapist_id,
+                                                        'patient_id': patient_id
+                                                    },
+                                                    table_name="patient_briefings")
+
+            if 0 != len((briefing_query).data):
+                # Update existing result in Supabase
+                supabase_client.update(payload={
+                                           "briefing": briefing
+                                       },
+                                       filters={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                       },
+                                       table_name="patient_briefings")
+            else:
+                # Insert result to Supabase
+                supabase_client.insert(payload={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                           "briefing": briefing
+                                       },
+                                       table_name="patient_briefings")
         except Exception as e:
             raise Exception(e)
 

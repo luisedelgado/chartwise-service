@@ -99,7 +99,6 @@ class ChartWiseAssistant:
                                                                         openai_client=openai_client,
                                                                         query_top_k=10,
                                                                         rerank_top_n=3,
-                                                                        endpoint_name=endpoint_name,
                                                                         session_id=session_id,
                                                                         session_date_override=session_date_override)
 
@@ -194,8 +193,6 @@ class ChartWiseAssistant:
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
-    endpoint_name – the endpoint that was invoked.
-    method – the API method that was invoked.
     patient_name – the name by which the patient should be referred to.
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
@@ -210,8 +207,6 @@ class ChartWiseAssistant:
                               environment: str,
                               language_code: str,
                               session_id: str,
-                              endpoint_name: str,
-                              method: str,
                               patient_name: str,
                               patient_gender: str,
                               therapist_name: str,
@@ -223,7 +218,7 @@ class ChartWiseAssistant:
                               session_date_override: PineconeQuerySessionDateOverride = None) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
-            "What do I need to remember, and what would be good avenues to explore in our upcoming session?")
+            "What's most valuable for me to remember, and what would be good avenues to explore in our upcoming session?")
 
             _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                         openai_client=openai_client,
@@ -231,9 +226,8 @@ class ChartWiseAssistant:
                                                                         index_id=index_id,
                                                                         namespace=namespace,
                                                                         query_top_k=10,
-                                                                        rerank_top_n=4,
+                                                                        rerank_top_n=5,
                                                                         session_id=session_id,
-                                                                        endpoint_name=endpoint_name,
                                                                         session_date_override=session_date_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
@@ -261,8 +255,6 @@ class ChartWiseAssistant:
                 "patient": namespace,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
-                "endpoint_name": endpoint_name,
-                "method": method,
                 "language_code": language_code,
             }
 
@@ -276,7 +268,7 @@ class ChartWiseAssistant:
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
-                                                                     expects_json_response=True,
+                                                                     expects_json_response=False,
                                                                      auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
@@ -319,7 +311,6 @@ class ChartWiseAssistant:
                                                                                     openai_client=openai_client,
                                                                                     query_input=query_input,
                                                                                     index_id=index_id,
-                                                                                    endpoint_name=endpoint_name,
                                                                                     namespace=namespace,
                                                                                     session_id=session_id,
                                                                                     query_top_k=10,
@@ -414,7 +405,6 @@ class ChartWiseAssistant:
                                                                         query_input=query_input,
                                                                         openai_client=openai_client,
                                                                         index_id=index_id,
-                                                                        endpoint_name=endpoint_name,
                                                                         namespace=namespace,
                                                                         session_id=session_id,
                                                                         query_top_k=10,

@@ -259,7 +259,6 @@ class PineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       endpoint_name: str,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> Tuple[bool, str]:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
@@ -306,8 +305,7 @@ class PineconeClient(PineconeBaseClass):
                                                                          documents=retrieved_docs,
                                                                          top_n=rerank_top_n,
                                                                          query_input=query_input,
-                                                                         session_id=session_id,
-                                                                         endpoint_name=endpoint_name)
+                                                                         session_id=session_id)
         reranked_context = ""
         reranked_documents = reranked_response_results['reranked_documents']
         dates_contained = []

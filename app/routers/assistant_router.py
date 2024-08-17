@@ -37,7 +37,6 @@ class AssistantRouter:
     SESSIONS_ENDPOINT = "/v1/sessions"
     QUERIES_ENDPOINT = "/v1/queries"
     GREETINGS_ENDPOINT = "/v1/greetings"
-    PRESESSION_TRAY_ENDPOINT = "/v1/pre-session"
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
     PATIENTS_ENDPOINT = "/v1/patients"
     TOPICS_ENDPOINT = "/v1/topics"
@@ -181,24 +180,6 @@ class AssistantRouter:
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
                                                        session_id=session_id)
-
-        @self.router.get(self.PRESESSION_TRAY_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def fetch_presession_tray(response: Response,
-                                        request: Request,
-                                        background_tasks: BackgroundTasks,
-                                        patient_id: str = None,
-                                        datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                                        authorization: Annotated[Union[str, None], Cookie()] = None,
-                                        session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._fetch_presession_tray_internal(response=response,
-                                                              request=request,
-                                                              background_tasks=background_tasks,
-                                                              patient_id=patient_id,
-                                                              datastore_access_token=datastore_access_token,
-                                                              datastore_refresh_token=datastore_refresh_token,
-                                                              authorization=authorization,
-                                                              session_id=session_id)
 
         @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def fetch_question_suggestions(response: Response,
@@ -365,7 +346,8 @@ class AssistantRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            session_notes_id = await self._assistant_manager.process_new_session_data(auth_manager=self._auth_manager,
+            session_notes_id = await self._assistant_manager.process_new_session_data(environment=self._environment,
+                                                                                      auth_manager=self._auth_manager,
                                                                                       body=body,
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
@@ -722,89 +704,6 @@ class AssistantRouter:
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.GREETINGS_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=get_api_method)
-            raise HTTPException(status_code=status_code,
-                                detail=description)
-
-    """
-    Returns a pre-session tray.
-
-    Arguments:
-    response – the response model used for the final response that will be returned.
-    request – the incoming request object.
-    background_tasks – object for scheduling concurrent tasks.
-    patient_id – the id associated with the patient whose presession tray will be fetched.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
-    authorization – the authorization cookie, if exists.
-    session_id – the session_id cookie, if exists.
-    """
-    async def _fetch_presession_tray_internal(self,
-                                              response: Response,
-                                              request: Request,
-                                              background_tasks: BackgroundTasks,
-                                              patient_id: str,
-                                              datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                                              authorization: Annotated[Union[str, None], Cookie()],
-                                              session_id: Annotated[Union[str, None], Cookie()]):
-        if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
-
-        if datastore_access_token is None or datastore_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
-
-        try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=get_api_method,
-                               therapist_id=therapist_id,
-                               patient_id=patient_id,
-                               endpoint_name=self.PRESESSION_TRAY_ENDPOINT)
-
-        try:
-            assert len(patient_id or '') > 0, "Missing patient_id param"
-
-            json_response = await self._assistant_manager.create_patient_summary(patient_id=patient_id,
-                                                                                 therapist_id=therapist_id,
-                                                                                 environment=self._environment,
-                                                                                 session_id=session_id,
-                                                                                 endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                                                                 api_method=get_api_method,
-                                                                                 auth_manager=self._auth_manager,
-                                                                                 pinecone_client=self._pinecone_client,
-                                                                                 openai_client=self._openai_client,
-                                                                                 supabase_client=supabase_client)
-
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=get_api_method)
-            return json_response
-        except Exception as e:
-            description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PRESESSION_TRAY_ENDPOINT,
                              error_code=status_code,
                              description=description,
                              method=get_api_method)

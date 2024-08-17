@@ -74,7 +74,6 @@ class FakePineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       endpoint_name: str,
                                        session_date_override: PineconeQuerySessionDateOverride = None) -> Tuple[bool, str]:
         if not self.vector_store_context_returns_data:
             return (False, "")

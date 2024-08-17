@@ -203,8 +203,7 @@ class OpenAIClient(OpenAIBaseClass):
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str,
-                               endpoint_name: str):
+                               session_id: str):
         try:
             context = ""
             for document in documents:
@@ -223,8 +222,7 @@ class OpenAIClient(OpenAIBaseClass):
             metadata = {
                 "session_id": str(session_id),
                 "query_top_k": len(documents),
-                "rerank_top_n": top_n,
-                "endpoint_name": endpoint_name
+                "rerank_top_n": top_n
             }
 
             response = await self.trigger_async_chat_completion(metadata=metadata,
