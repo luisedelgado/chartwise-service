@@ -11,6 +11,7 @@ from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessi
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..managers.auth_manager import AuthManager
+from ..internal.logging import Logger
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler
 from ..vectors.chartwise_assistant import ChartWiseAssistant
@@ -158,6 +159,7 @@ class AssistantManager:
 
             # Update this patient's presession tray for future fetches.
             background_tasks.add_task(self.update_presession_tray,
+                                      background_tasks,
                                       therapist_id,
                                       body.patient_id,
                                       auth_manager,
@@ -165,6 +167,18 @@ class AssistantManager:
                                       session_id,
                                       pinecone_client,
                                       openai_client,
+                                      supabase_client)
+
+            # Update this patient's frequent topics for future fetches.
+            background_tasks.add_task(self.update_patient_frequent_topics,
+                                      therapist_id,
+                                      body.patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      background_tasks,
+                                      openai_client,
+                                      pinecone_client,
                                       supabase_client)
 
             return session_notes_id
@@ -248,6 +262,7 @@ class AssistantManager:
 
             # Update this patient's presession tray for future fetches.
             background_tasks.add_task(self.update_presession_tray,
+                                      background_tasks,
                                       therapist_id,
                                       patient_id,
                                       auth_manager,
@@ -255,6 +270,18 @@ class AssistantManager:
                                       session_id,
                                       pinecone_client,
                                       openai_client,
+                                      supabase_client)
+
+            # Update this patient's frequent topics for future fetches.
+            background_tasks.add_task(self.update_patient_frequent_topics,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      background_tasks,
+                                      openai_client,
+                                      pinecone_client,
                                       supabase_client)
         except Exception as e:
             raise Exception(e)
@@ -337,6 +364,7 @@ class AssistantManager:
 
             # Update this patient's presession tray for future fetches.
             background_tasks.add_task(self.update_presession_tray,
+                                      background_tasks,
                                       therapist_id,
                                       patient_id,
                                       auth_manager,
@@ -344,6 +372,18 @@ class AssistantManager:
                                       session_id,
                                       pinecone_client,
                                       openai_client,
+                                      supabase_client)
+
+            # Update this patient's frequent topics for future fetches.
+            background_tasks.add_task(self.update_patient_frequent_topics,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      background_tasks,
+                                      openai_client,
+                                      pinecone_client,
                                       supabase_client)
         except Exception as e:
             raise Exception(e)
@@ -720,6 +760,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_presession_tray(self,
+                                     background_tasks: BackgroundTasks,
                                      therapist_id: str,
                                      patient_id: str,
                                      auth_manager: AuthManager,
@@ -801,19 +842,22 @@ class AssistantManager:
                                        },
                                        table_name="patient_briefings")
         except Exception as e:
+            Logger().log_error(background_tasks=background_tasks,
+                               session_id=session_id,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id)
             raise Exception(e)
 
-    async def fetch_frequent_topics(self,
-                                    therapist_id: str,
-                                    patient_id: str,
-                                    auth_manager: AuthManager,
-                                    environment: str,
-                                    session_id: str,
-                                    endpoint_name: str,
-                                    api_method: str,
-                                    openai_client: OpenAIBaseClass,
-                                    pinecone_client: PineconeBaseClass,
-                                    supabase_client: SupabaseBaseClass):
+    async def update_patient_frequent_topics(self,
+                                             therapist_id: str,
+                                             patient_id: str,
+                                             auth_manager: AuthManager,
+                                             environment: str,
+                                             session_id: str,
+                                             background_tasks: BackgroundTasks,
+                                             openai_client: OpenAIBaseClass,
+                                             pinecone_client: PineconeBaseClass,
+                                             supabase_client: SupabaseBaseClass):
         try:
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
@@ -836,21 +880,46 @@ class AssistantManager:
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
 
-            response = await ChartWiseAssistant().fetch_frequent_topics(language_code=language_code,
-                                                                        session_id=session_id,
-                                                                        endpoint_name=endpoint_name,
-                                                                        index_id=therapist_id,
-                                                                        namespace=patient_id,
-                                                                        method=api_method,
-                                                                        environment=environment,
-                                                                        pinecone_client=pinecone_client,
-                                                                        openai_client=openai_client,
-                                                                        auth_manager=auth_manager,
-                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                        patient_gender=patient_gender)
+            frequent_topics = await ChartWiseAssistant().fetch_frequent_topics(language_code=language_code,
+                                                                               session_id=session_id,
+                                                                               index_id=therapist_id,
+                                                                               namespace=patient_id,
+                                                                               environment=environment,
+                                                                               pinecone_client=pinecone_client,
+                                                                               openai_client=openai_client,
+                                                                               auth_manager=auth_manager,
+                                                                               patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                               patient_gender=patient_gender)
+            assert 'topics' in frequent_topics, "Missing json key for frequent topics response. Please try again"
 
-            error_message = "Something went wrong in generating a response. Please try again"
-            assert 'topics' in response, error_message
-            return response
+            topics_query = supabase_client.select(fields="*",
+                                                  filters={
+                                                      'therapist_id': therapist_id,
+                                                      'patient_id': patient_id
+                                                  },
+                                                  table_name="patient_frequent_topics")
+
+            if 0 != len((topics_query).data):
+                # Update existing result in Supabase
+                supabase_client.update(payload={
+                                           "frequent_topics": frequent_topics
+                                       },
+                                       filters={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                       },
+                                       table_name="patient_frequent_topics")
+            else:
+                # Insert result to Supabase
+                supabase_client.insert(payload={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                           "frequent_topics": frequent_topics
+                                       },
+                                       table_name="patient_frequent_topics")
         except Exception as e:
+            Logger().log_error(background_tasks=background_tasks,
+                               session_id=session_id,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id)
             raise Exception(e)
