@@ -281,6 +281,7 @@ class PromptCrafter:
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
                     "Use only the information you find from the `chunk_summary` fields. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
+                    "Ensure the headers for 'Most Recent Sessions,' 'Historical Themes,' and 'Suggestions for Next Session' are bolded using appropriate mark-up. "
                     "Return a JSON object with a single key, `summary`. This is what the format should look like: {\"summary\": ...}"
                     f"Example response for a practitioner named Carlos, who's about to meet with a patient named Juan, using language code es-419:\n"
                     r"{'summary': 'Hola Carlos, te recuerdo que estás viendo a Juan por décima vez.\n\nSesiones más recientes:\nEn las últimas sesiones, Juan ha hablado sobre la dificultad para equilibrar su vida laboral y personal.\n\nTemas históricos:\nJuan ha luchado con problemas de autoexigencia y perfeccionismo.'}"
