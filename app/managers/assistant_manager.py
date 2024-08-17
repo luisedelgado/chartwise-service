@@ -172,6 +172,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_session(self,
+                             environment: str,
                              background_tasks: BackgroundTasks,
                              auth_manager: AuthManager,
                              filtered_body: dict,
@@ -245,10 +246,23 @@ class AssistantManager:
             # Given our chat history may be stale based on the new data, let's clear anything we have
             background_tasks.add_task(openai_client.clear_chat_history)
 
+            # Update this patient's presession tray for future fetches.
+            background_tasks.add_task(self.update_presession_tray,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client)
         except Exception as e:
             raise Exception(e)
 
     def delete_session(self,
+                       auth_manager: AuthManager,
+                       environment: str,
+                       session_id: str,
                        background_tasks: BackgroundTasks,
                        openai_client: OpenAIBaseClass,
                        therapist_id: str,
@@ -321,6 +335,16 @@ class AssistantManager:
             # Given our chat history may be stale based on the deleted data, let's clear anything we have
             background_tasks.add_task(openai_client.clear_chat_history)
 
+            # Update this patient's presession tray for future fetches.
+            background_tasks.add_task(self.update_presession_tray,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client)
         except Exception as e:
             raise Exception(e)
 

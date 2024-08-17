@@ -435,7 +435,8 @@ class AssistantRouter:
                                                                                 tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            await self._assistant_manager.update_session(background_tasks=background_tasks,
+            await self._assistant_manager.update_session(environment=self._environment,
+                                                         background_tasks=background_tasks,
                                                          auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
@@ -531,7 +532,10 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            self._assistant_manager.delete_session(background_tasks=background_tasks,
+            self._assistant_manager.delete_session(auth_manager=self._auth_manager,
+                                                   environment=self._environment,
+                                                   session_id=session_id,
+                                                   background_tasks=background_tasks,
                                                    openai_client=self._openai_client,
                                                    therapist_id=therapist_id,
                                                    session_report_id=session_report_id,
