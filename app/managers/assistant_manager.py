@@ -154,32 +154,15 @@ class AssistantManager:
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
 
-            # Given our chat history may be stale based on the new data, let's clear anything we have
-            background_tasks.add_task(openai_client.clear_chat_history)
-
-            # Update this patient's presession tray for future fetches.
-            background_tasks.add_task(self.update_presession_tray,
-                                      background_tasks,
-                                      therapist_id,
-                                      body.patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
-                                      supabase_client)
-
-            # Update this patient's frequent topics for future fetches.
-            background_tasks.add_task(self.update_patient_frequent_topics,
-                                      therapist_id,
-                                      body.patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      background_tasks,
-                                      openai_client,
-                                      pinecone_client,
-                                      supabase_client)
+            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                              therapist_id=therapist_id,
+                                                              patient_id=body.patient_id,
+                                                              auth_manager=auth_manager,
+                                                              environment=environment,
+                                                              session_id=session_id,
+                                                              pinecone_client=pinecone_client,
+                                                              supabase_client=supabase_client,
+                                                              openai_client=openai_client)
 
             return session_notes_id
         except Exception as e:
@@ -257,32 +240,15 @@ class AssistantManager:
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
 
-            # Given our chat history may be stale based on the new data, let's clear anything we have
-            background_tasks.add_task(openai_client.clear_chat_history)
-
-            # Update this patient's presession tray for future fetches.
-            background_tasks.add_task(self.update_presession_tray,
-                                      background_tasks,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
-                                      supabase_client)
-
-            # Update this patient's frequent topics for future fetches.
-            background_tasks.add_task(self.update_patient_frequent_topics,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      background_tasks,
-                                      openai_client,
-                                      pinecone_client,
-                                      supabase_client)
+            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                              therapist_id=therapist_id,
+                                                              patient_id=patient_id,
+                                                              auth_manager=auth_manager,
+                                                              environment=environment,
+                                                              session_id=session_id,
+                                                              pinecone_client=pinecone_client,
+                                                              supabase_client=supabase_client,
+                                                              openai_client=openai_client)
         except Exception as e:
             raise Exception(e)
 
@@ -359,32 +325,15 @@ class AssistantManager:
                                                    namespace=patient_id,
                                                    date=session_date_formatted)
 
-            # Given our chat history may be stale based on the deleted data, let's clear anything we have
-            background_tasks.add_task(openai_client.clear_chat_history)
-
-            # Update this patient's presession tray for future fetches.
-            background_tasks.add_task(self.update_presession_tray,
-                                      background_tasks,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
-                                      supabase_client)
-
-            # Update this patient's frequent topics for future fetches.
-            background_tasks.add_task(self.update_patient_frequent_topics,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      background_tasks,
-                                      openai_client,
-                                      pinecone_client,
-                                      supabase_client)
+            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                              therapist_id=therapist_id,
+                                                              patient_id=patient_id,
+                                                              auth_manager=auth_manager,
+                                                              environment=environment,
+                                                              session_id=session_id,
+                                                              pinecone_client=pinecone_client,
+                                                              supabase_client=supabase_client,
+                                                              openai_client=openai_client)
         except Exception as e:
             raise Exception(e)
 
@@ -595,17 +544,15 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
-    async def fetch_question_suggestions(self,
-                                         therapist_id: str,
-                                         patient_id: str,
-                                         auth_manager: AuthManager,
-                                         environment: str,
-                                         session_id: str,
-                                         endpoint_name: str,
-                                         api_method: str,
-                                         openai_client: OpenAIBaseClass,
-                                         pinecone_client: PineconeBaseClass,
-                                         supabase_client: SupabaseBaseClass):
+    async def update_question_suggestions(self,
+                                          therapist_id: str,
+                                          patient_id: str,
+                                          auth_manager: AuthManager,
+                                          environment: str,
+                                          session_id: str,
+                                          openai_client: OpenAIBaseClass,
+                                          pinecone_client: PineconeBaseClass,
+                                          supabase_client: SupabaseBaseClass):
         try:
             therapist_query = supabase_client.select(fields="*",
                                                      table_name="therapists",
@@ -630,10 +577,8 @@ class AssistantManager:
 
             response = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
                                                                               session_id=session_id,
-                                                                              endpoint_name=endpoint_name,
                                                                               index_id=therapist_id,
                                                                               namespace=patient_id,
-                                                                              method=api_method,
                                                                               environment=environment,
                                                                               auth_manager=auth_manager,
                                                                               openai_client=openai_client,
@@ -923,3 +868,52 @@ class AssistantManager:
                                therapist_id=therapist_id,
                                patient_id=patient_id)
             raise Exception(e)
+
+    async def generate_insights_after_session_data_updates(self,
+                                                           background_tasks: BackgroundTasks,
+                                                           therapist_id: str,
+                                                           patient_id: str,
+                                                           auth_manager: AuthManager,
+                                                           environment: str,
+                                                           session_id: str,
+                                                           pinecone_client: PineconeBaseClass,
+                                                           openai_client: OpenAIBaseClass,
+                                                           supabase_client: SupabaseBaseClass):
+
+        # Given our chat history may be stale based on the new data, let's clear anything we have
+        background_tasks.add_task(openai_client.clear_chat_history)
+
+        # Update this patient's presession tray for future fetches.
+        background_tasks.add_task(self.update_presession_tray,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  pinecone_client,
+                                  openai_client,
+                                  supabase_client)
+
+        # Update this patient's frequent topics for future fetches.
+        background_tasks.add_task(self.update_patient_frequent_topics,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  background_tasks,
+                                  openai_client,
+                                  pinecone_client,
+                                  supabase_client)
+
+        # Update this patient's question suggestions for future fetches.
+        background_tasks.add_task(self.update_question_suggestions,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  openai_client,
+                                  pinecone_client,
+                                  supabase_client)

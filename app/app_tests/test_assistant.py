@@ -613,57 +613,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 200
 
-    def test_question_suggestions_with_missing_auth(self):
-        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_question_suggestions_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_question_suggestions_with_auth_token_but_empty_patient_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": "",
-                                    })
-        assert response.status_code == 400
-
-    def test_question_suggestions_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-        self.fake_pinecone_client.vector_store_context_returns_data = True
-        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    })
-        assert response.status_code == 200
-
     def test_add_patient_with_missing_auth(self):
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     json={

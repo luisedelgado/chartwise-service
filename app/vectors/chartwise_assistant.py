@@ -282,8 +282,6 @@ class ChartWiseAssistant:
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
-    endpoint_name – the endpoint that was invoked.
-    method – the API method that was invoked.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     openai_client – the openai client to be leveraged internally.
@@ -297,8 +295,6 @@ class ChartWiseAssistant:
                                           environment: str,
                                           language_code: str,
                                           session_id: str,
-                                          endpoint_name: str,
-                                          method: str,
                                           patient_name: str,
                                           patient_gender: str,
                                           openai_client: OpenAIBaseClass,
@@ -349,8 +345,6 @@ class ChartWiseAssistant:
                 "patient": namespace,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
-                "endpoint_name": endpoint_name,
-                "method": method,
                 "language_code": language_code,
             }
 
