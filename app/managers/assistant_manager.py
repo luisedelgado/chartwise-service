@@ -154,15 +154,15 @@ class AssistantManager:
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
 
-            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
-                                                              therapist_id=therapist_id,
-                                                              patient_id=body.patient_id,
-                                                              auth_manager=auth_manager,
-                                                              environment=environment,
-                                                              session_id=session_id,
-                                                              pinecone_client=pinecone_client,
-                                                              supabase_client=supabase_client,
-                                                              openai_client=openai_client)
+            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                                    therapist_id=therapist_id,
+                                                                    patient_id=body.patient_id,
+                                                                    auth_manager=auth_manager,
+                                                                    environment=environment,
+                                                                    session_id=session_id,
+                                                                    pinecone_client=pinecone_client,
+                                                                    supabase_client=supabase_client,
+                                                                    openai_client=openai_client)
 
             return session_notes_id
         except Exception as e:
@@ -240,28 +240,28 @@ class AssistantManager:
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
 
-            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
-                                                              therapist_id=therapist_id,
-                                                              patient_id=patient_id,
-                                                              auth_manager=auth_manager,
-                                                              environment=environment,
-                                                              session_id=session_id,
-                                                              pinecone_client=pinecone_client,
-                                                              supabase_client=supabase_client,
-                                                              openai_client=openai_client)
+            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                                    therapist_id=therapist_id,
+                                                                    patient_id=patient_id,
+                                                                    auth_manager=auth_manager,
+                                                                    environment=environment,
+                                                                    session_id=session_id,
+                                                                    pinecone_client=pinecone_client,
+                                                                    supabase_client=supabase_client,
+                                                                    openai_client=openai_client)
         except Exception as e:
             raise Exception(e)
 
-    def delete_session(self,
-                       auth_manager: AuthManager,
-                       environment: str,
-                       session_id: str,
-                       background_tasks: BackgroundTasks,
-                       openai_client: OpenAIBaseClass,
-                       therapist_id: str,
-                       session_report_id: str,
-                       supabase_client: SupabaseBaseClass,
-                       pinecone_client: PineconeBaseClass):
+    async def delete_session(self,
+                             auth_manager: AuthManager,
+                             environment: str,
+                             session_id: str,
+                             background_tasks: BackgroundTasks,
+                             openai_client: OpenAIBaseClass,
+                             therapist_id: str,
+                             session_report_id: str,
+                             supabase_client: SupabaseBaseClass,
+                             pinecone_client: PineconeBaseClass):
         try:
             # Validate the session report is linked to the therapist id
             report_query = supabase_client.select(fields="*",
@@ -325,15 +325,15 @@ class AssistantManager:
                                                    namespace=patient_id,
                                                    date=session_date_formatted)
 
-            self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
-                                                              therapist_id=therapist_id,
-                                                              patient_id=patient_id,
-                                                              auth_manager=auth_manager,
-                                                              environment=environment,
-                                                              session_id=session_id,
-                                                              pinecone_client=pinecone_client,
-                                                              supabase_client=supabase_client,
-                                                              openai_client=openai_client)
+            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+                                                                    therapist_id=therapist_id,
+                                                                    patient_id=patient_id,
+                                                                    auth_manager=auth_manager,
+                                                                    environment=environment,
+                                                                    session_id=session_id,
+                                                                    pinecone_client=pinecone_client,
+                                                                    supabase_client=supabase_client,
+                                                                    openai_client=openai_client)
         except Exception as e:
             raise Exception(e)
 

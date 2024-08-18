@@ -161,6 +161,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_insert_new_session_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -307,6 +308,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_update_session_with_different_text_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -330,6 +332,7 @@ class TestingHarnessAssistantRouter:
         assert self.fake_supabase_user_client.fake_text == update_text
 
     def test_update_session_with_same_text_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -420,6 +423,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_delete_session_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN

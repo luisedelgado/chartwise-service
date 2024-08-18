@@ -36,7 +36,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "id": self.FAKE_PATIENT_ID,
             }])
         else:
-            ...
+            pass
 
     def update(self,
                payload: dict,
@@ -58,7 +58,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "gender": "female",
             }])
         else:
-            ...
+            pass
 
     def select(self,
                fields: str,
@@ -104,6 +104,18 @@ class FakeSupabaseClient(SupabaseBaseClass):
             "therapist_id": self.FAKE_THERAPIST_ID,
         }])
         if table_name == "user_interface_strings":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
+        if table_name == "patient_frequent_topics":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
+        if table_name == "patient_question_suggestions":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
+        if table_name == "patient_briefings":
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])

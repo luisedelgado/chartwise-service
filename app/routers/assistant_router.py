@@ -494,15 +494,15 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            self._assistant_manager.delete_session(auth_manager=self._auth_manager,
-                                                   environment=self._environment,
-                                                   session_id=session_id,
-                                                   background_tasks=background_tasks,
-                                                   openai_client=self._openai_client,
-                                                   therapist_id=therapist_id,
-                                                   session_report_id=session_report_id,
-                                                   supabase_client=supabase_client,
-                                                   pinecone_client=self._pinecone_client)
+            await self._assistant_manager.delete_session(auth_manager=self._auth_manager,
+                                                         environment=self._environment,
+                                                         session_id=session_id,
+                                                         background_tasks=background_tasks,
+                                                         openai_client=self._openai_client,
+                                                         therapist_id=therapist_id,
+                                                         session_report_id=session_report_id,
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=self._pinecone_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
