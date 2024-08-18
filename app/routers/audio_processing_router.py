@@ -331,9 +331,9 @@ class AudioProcessingRouter:
                                                              },
                                                              table_name="diarization_logs")
             assert (0 != len((diarization_query).data)), "No data was found for this diarization operation."
-            diarization_query_dict = diarization_query.dict()
-            therapist_id = diarization_query_dict['data'][0]['therapist_id']
-            session_id = diarization_query_dict['data'][0]['session_id']
+            diarization_query_data = diarization_query.dict()['data'][0]
+            therapist_id = diarization_query_data['therapist_id']
+            session_id = diarization_query_data['session_id']
 
             diarization = DiarizationCleaner().clean_transcription(background_tasks=background_tasks,
                                                                    therapist_id=therapist_id,

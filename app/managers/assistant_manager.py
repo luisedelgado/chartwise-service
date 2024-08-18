@@ -90,9 +90,10 @@ class AssistantManager:
                                                        'therapist_id': therapist_id
                                                    },
                                                    table_name="patients")
-            patient_query_dict = patient_query.dict()
-            patient_therapist_match = (0 != len(patient_query_dict['data']))
+            patient_query_data = patient_query.dict()['data']
+            patient_therapist_match = (0 != len(patient_query_data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+            patient_query_data = patient_query_data[0]
 
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
@@ -109,7 +110,7 @@ class AssistantManager:
                                                                                   openai_client=openai_client,
                                                                                   session_id=session_id)
 
-            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_last_session_date = patient_query_data['last_session_date']
 
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
@@ -126,7 +127,7 @@ class AssistantManager:
             supabase_client.update(table_name="patients",
                                    payload={
                                        "last_session_date": patient_last_session_date,
-                                       "total_sessions": (1 + (patient_query_dict['data'][0]['total_sessions'])),
+                                       "total_sessions": (1 + (patient_query_data['total_sessions'])),
                                    },
                                    filters={
                                        'id': body.patient_id
@@ -184,11 +185,11 @@ class AssistantManager:
                                                       'id': filtered_body['id']
                                                   })
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
-            report_query_dict = report_query.dict()
-            patient_id = report_query_dict['data'][0]['patient_id']
-            therapist_id = report_query_dict['data'][0]['therapist_id']
-            current_session_text = report_query_dict['data'][0]['notes_text']
-            current_session_date = report_query_dict['data'][0]['session_date']
+            report_query_data = report_query.dict()['data'][0]
+            patient_id = report_query_data['patient_id']
+            therapist_id = report_query_data['therapist_id']
+            current_session_text = report_query_data['notes_text']
+            current_session_date = report_query_data['session_date']
             current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_session_date,
                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
@@ -280,21 +281,22 @@ class AssistantManager:
                                                        'therapist_id': therapist_id
                                                    },
                                                    table_name="patients")
-            patient_query_dict = patient_query.dict()
-            assert len(patient_query_dict['data']) > 0, "No patient data found"
-            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_query_data = patient_query.dict()['data']
+            assert len(patient_query_data) > 0, "No patient data found"
+            patient_last_session_date = patient_query_data[0]['last_session_date']
 
             # Delete the session notes from Supabase
             delete_result = supabase_client.delete(table_name="session_reports",
                                                    filters={
                                                        'id': session_report_id
                                                    })
-            delete_result_dict = delete_result.dict()
-            assert len(delete_result_dict['data']) > 0, "No session found with the incoming session_report_id"
+            delete_result_data = delete_result.dict()['data']
+            assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
+            delete_result_data = delete_result_data[0]
 
-            therapist_id = delete_result_dict['data'][0]['therapist_id']
-            patient_id = delete_result_dict['data'][0]['patient_id']
-            session_date = delete_result_dict['data'][0]['session_date']
+            therapist_id = delete_result_data['therapist_id']
+            patient_id = delete_result_data['patient_id']
+            session_date = delete_result_data['session_date']
 
             # If we deleted the last_session_date we were tracking for the patient, we should update what the new last_session_date is
             if session_date == patient_last_session_date:
@@ -304,14 +306,14 @@ class AssistantManager:
                                                                             "patient_id": patient_id
                                                                         },
                                                                         order_desc_column="session_date")
-                patient_session_notes_response_dict = patient_session_notes_response.dict()
-                patient_last_session_date = (None if len(patient_session_notes_response_dict['data']) == 0
-                                             else patient_session_notes_response_dict['data'][0]['session_date'])
+                patient_session_notes_response_dict = patient_session_notes_response.dict()['data']
+                patient_last_session_date = (None if len(patient_session_notes_response_dict) == 0
+                                             else patient_session_notes_response_dict[0]['session_date'])
 
             # Update total_sessions and last_session_date
             supabase_client.update(table_name="patients",
                                    payload={
-                                       "total_sessions": (patient_query_dict['data'][0]['total_sessions'] - 1),
+                                       "total_sessions": (patient_query_data[0]['total_sessions'] - 1),
                                        "last_session_date": patient_last_session_date,
                                    },
                                    filters={
@@ -380,9 +382,9 @@ class AssistantManager:
                                                },
                                                table_name="patients")
         assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-        patient_query_dict = patient_query.dict()
-        current_pre_existing_history = patient_query_dict['data'][0]['pre_existing_history']
-        therapist_id = patient_query_dict['data'][0]['therapist_id']
+        patient_query_data = patient_query.dict()['data'][0]
+        current_pre_existing_history = patient_query_data['pre_existing_history']
+        therapist_id = patient_query_data['therapist_id']
 
         update_db_payload = {}
         for key, value in filtered_body.items():
@@ -468,11 +470,11 @@ class AssistantManager:
             patient_therapist_match = (0 != len((patient_query).data))
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-            patient_query_dict = patient_query.dict()
-            patient_first_name = patient_query_dict['data'][0]['first_name']
-            patient_last_name = patient_query_dict['data'][0]['last_name']
-            patient_gender = patient_query_dict['data'][0]['gender']
-            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_query_data = patient_query.dict()['data'][0]
+            patient_first_name = patient_query_data['first_name']
+            patient_last_name = patient_query_data['last_name']
+            patient_gender = patient_query_data['gender']
+            patient_last_session_date = patient_query_data['last_session_date']
 
             if len(patient_last_session_date or '') > 0:
                 session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
@@ -525,10 +527,10 @@ class AssistantManager:
                                                      table_name="therapists")
             assert (0 != len((therapist_query).data)), "No user was found with the incoming id"
 
-            therapist_query_dict = therapist_query.dict()
-            addressing_name = therapist_query_dict['data'][0]["first_name"]
-            language_code = therapist_query_dict['data'][0]["language_preference"]
-            therapist_gender = therapist_query_dict['data'][0]["gender"]
+            therapist_query_data = therapist_query.dict()['data'][0]
+            addressing_name = therapist_query_data["first_name"]
+            language_code = therapist_query_data["language_preference"]
+            therapist_gender = therapist_query_data["gender"]
             result = await ChartWiseAssistant().create_greeting(therapist_name=addressing_name,
                                                                 therapist_gender=therapist_gender,
                                                                 language_code=language_code,
@@ -571,10 +573,10 @@ class AssistantManager:
                                                    })
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
-            patient_query_dict = patient_query.dict()
-            patient_first_name = patient_query_dict['data'][0]['first_name']
-            patient_last_name = patient_query_dict['data'][0]['last_name']
-            patient_gender = patient_query_dict['data'][0]['gender']
+            patient_query_data = patient_query.dict()['data'][0]
+            patient_first_name = patient_query_data['first_name']
+            patient_last_name = patient_query_data['last_name']
+            patient_gender = patient_query_data['gender']
 
             questions_json = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
                                                                                     session_id=session_id,
@@ -642,11 +644,11 @@ class AssistantManager:
                                                        'diarization_job_id': job_id
                                                    },
                                                    table_name="session_reports")
-            session_query_dict = session_query.dict()
-            therapist_id = session_query_dict['data'][0]['therapist_id']
-            patient_id = session_query_dict['data'][0]['patient_id']
-            template = session_query_dict['data'][0]['diarization_template']
-            session_date_raw = session_query_dict['data'][0]['session_date']
+            session_query_data = session_query.dict()['data'][0]
+            therapist_id = session_query_data['therapist_id']
+            patient_id = session_query_data['patient_id']
+            template = session_query_data['diarization_template']
+            session_date_raw = session_query_data['session_date']
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_raw,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
 
@@ -672,8 +674,8 @@ class AssistantManager:
                                                    table_name="patients")
             assert (0 != len((patient_query).data))
 
-            patient_query_dict = patient_query.dict()
-            patient_last_session_date = patient_query_dict['data'][0]['last_session_date']
+            patient_query_data = patient_query.dict()['data'][0]
+            patient_last_session_date = patient_query_data['last_session_date']
 
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
@@ -690,7 +692,7 @@ class AssistantManager:
             supabase_client.update(table_name="patients",
                                    payload={
                                        "last_session_date": patient_last_session_date,
-                                       "total_sessions": (1 + (patient_query_dict['data'][0]['total_sessions'])),
+                                       "total_sessions": (1 + (patient_query_data['total_sessions'])),
                                    },
                                    filters={
                                        'id': patient_id
@@ -756,21 +758,21 @@ class AssistantManager:
                                                    table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
-            patient_response_dict = patient_query.dict()
-            patient_name = patient_response_dict['data'][0]['first_name']
-            patient_gender = patient_response_dict['data'][0]['gender']
-            last_session_date = patient_response_dict['data'][0]['last_session_date']
-            session_number = 1 + patient_response_dict['data'][0]['total_sessions']
+            patient_response_data = patient_query.dict()['data'][0]
+            patient_name = patient_response_data['first_name']
+            patient_gender = patient_response_data['gender']
+            last_session_date = patient_response_data['last_session_date']
+            session_number = 1 + patient_response_data['total_sessions']
 
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
                                                          "id": therapist_id
                                                      },
                                                      table_name="therapists")
-            therapist_response_dict = therapist_query.dict()
-            therapist_name = therapist_response_dict['data'][0]['first_name']
-            language_code = therapist_response_dict['data'][0]['language_preference']
-            therapist_gender = therapist_response_dict['data'][0]['gender']
+            therapist_response_data = therapist_query.dict()['data'][0]
+            therapist_name = therapist_response_data['first_name']
+            language_code = therapist_response_data['language_preference']
+            therapist_gender = therapist_response_data['gender']
 
             if len(last_session_date or '') > 0:
                 session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
@@ -857,10 +859,10 @@ class AssistantManager:
                                                    table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
 
-            patient_query_dict = patient_query.dict()
-            patient_first_name = patient_query_dict['data'][0]['first_name']
-            patient_last_name = patient_query_dict['data'][0]['last_name']
-            patient_gender = patient_query_dict['data'][0]['gender']
+            patient_query_data = patient_query.dict()['data'][0]
+            patient_first_name = patient_query_data['first_name']
+            patient_last_name = patient_query_data['last_name']
+            patient_gender = patient_query_data['gender']
 
             frequent_topics = await ChartWiseAssistant().fetch_frequent_topics(language_code=language_code,
                                                                                session_id=session_id,
