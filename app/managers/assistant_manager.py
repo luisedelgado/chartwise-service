@@ -547,6 +547,7 @@ class AssistantManager:
     async def update_question_suggestions(self,
                                           therapist_id: str,
                                           patient_id: str,
+                                          background_tasks: BackgroundTasks,
                                           auth_manager: AuthManager,
                                           environment: str,
                                           session_id: str,
@@ -575,21 +576,49 @@ class AssistantManager:
             patient_last_name = patient_query_dict['data'][0]['last_name']
             patient_gender = patient_query_dict['data'][0]['gender']
 
-            response = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
-                                                                              session_id=session_id,
-                                                                              index_id=therapist_id,
-                                                                              namespace=patient_id,
-                                                                              environment=environment,
-                                                                              auth_manager=auth_manager,
-                                                                              openai_client=openai_client,
-                                                                              pinecone_client=pinecone_client,
-                                                                              supabase_client=supabase_client,
-                                                                              patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                              patient_gender=patient_gender)
+            questions_json = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
+                                                                                    session_id=session_id,
+                                                                                    index_id=therapist_id,
+                                                                                    namespace=patient_id,
+                                                                                    environment=environment,
+                                                                                    auth_manager=auth_manager,
+                                                                                    openai_client=openai_client,
+                                                                                    pinecone_client=pinecone_client,
+                                                                                    supabase_client=supabase_client,
+                                                                                    patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                                    patient_gender=patient_gender)
+            assert 'questions' in questions_json, "Missing json key for frequent topics response. Please try again"
 
-            assert 'questions' in response, "Something went wrong in generating a response. Please try again"
-            return response
+            question_suggestions_query = supabase_client.select(fields="*",
+                                                                filters={
+                                                                    'therapist_id': therapist_id,
+                                                                    'patient_id': patient_id
+                                                                },
+                                                                table_name="patient_question_suggestions")
+            if 0 != len((question_suggestions_query).data):
+                # Update existing result in Supabase
+                supabase_client.update(payload={
+                                           "questions": questions_json
+                                       },
+                                       filters={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                       },
+                                       table_name="patient_question_suggestions")
+            else:
+                # Insert result to Supabase
+                supabase_client.insert(payload={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                           "questions": questions_json
+                                       },
+                                       table_name="patient_question_suggestions")
         except Exception as e:
+            Logger().log_error(background_tasks=background_tasks,
+                               description="Updating the question suggestions in a background task failed",
+                               session_id=session_id,
+                               therapist_id=therapist_id,
+                               patient_id=patient_id)
             raise Exception(e)
 
     async def update_diarization_with_notification_data(self,
@@ -788,6 +817,7 @@ class AssistantManager:
                                        table_name="patient_briefings")
         except Exception as e:
             Logger().log_error(background_tasks=background_tasks,
+                               description="Updating the presession tray in a background task failed",
                                session_id=session_id,
                                therapist_id=therapist_id,
                                patient_id=patient_id)
@@ -864,6 +894,7 @@ class AssistantManager:
                                        table_name="patient_frequent_topics")
         except Exception as e:
             Logger().log_error(background_tasks=background_tasks,
+                               description="Updating the frequent topics in a background task failed",
                                session_id=session_id,
                                therapist_id=therapist_id,
                                patient_id=patient_id)
@@ -883,18 +914,6 @@ class AssistantManager:
         # Given our chat history may be stale based on the new data, let's clear anything we have
         background_tasks.add_task(openai_client.clear_chat_history)
 
-        # Update this patient's presession tray for future fetches.
-        background_tasks.add_task(self.update_presession_tray,
-                                  background_tasks,
-                                  therapist_id,
-                                  patient_id,
-                                  auth_manager,
-                                  environment,
-                                  session_id,
-                                  pinecone_client,
-                                  openai_client,
-                                  supabase_client)
-
         # Update this patient's frequent topics for future fetches.
         background_tasks.add_task(self.update_patient_frequent_topics,
                                   therapist_id,
@@ -911,9 +930,22 @@ class AssistantManager:
         background_tasks.add_task(self.update_question_suggestions,
                                   therapist_id,
                                   patient_id,
+                                  background_tasks,
                                   auth_manager,
                                   environment,
                                   session_id,
                                   openai_client,
                                   pinecone_client,
+                                  supabase_client)
+
+        # Update this patient's presession tray for future fetches.
+        background_tasks.add_task(self.update_presession_tray,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  pinecone_client,
+                                  openai_client,
                                   supabase_client)
