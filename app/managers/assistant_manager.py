@@ -595,10 +595,13 @@ class AssistantManager:
                                                                     'patient_id': patient_id
                                                                 },
                                                                 table_name="patient_question_suggestions")
+
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len((question_suggestions_query).data):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
-                                           "questions": questions_json
+                                           "questions": questions_json,
+                                           "last_updated": now_timestamp,
                                        },
                                        filters={
                                            "patient_id": patient_id,
@@ -609,6 +612,7 @@ class AssistantManager:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
                                            "patient_id": patient_id,
+                                           "last_updated": now_timestamp,
                                            "therapist_id": therapist_id,
                                            "questions": questions_json
                                        },
@@ -797,10 +801,12 @@ class AssistantManager:
                                                     },
                                                     table_name="patient_briefings")
 
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len((briefing_query).data):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
-                                           "briefing": briefing
+                                           "briefing": briefing,
+                                           "last_updated": now_timestamp
                                        },
                                        filters={
                                            "patient_id": patient_id,
@@ -810,6 +816,7 @@ class AssistantManager:
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
+                                           "last_updated": now_timestamp,
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                            "briefing": briefing
@@ -874,9 +881,11 @@ class AssistantManager:
                                                   },
                                                   table_name="patient_frequent_topics")
 
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len((topics_query).data):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
+                                           "last_updated": now_timestamp,
                                            "frequent_topics": frequent_topics
                                        },
                                        filters={
@@ -887,6 +896,7 @@ class AssistantManager:
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
+                                           "last_updated": now_timestamp,
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                            "frequent_topics": frequent_topics
