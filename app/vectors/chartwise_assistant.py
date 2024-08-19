@@ -13,6 +13,7 @@ from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
 
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
+TOPICS_CONTEXT_SESSIONS_CAP = 6
 
 class ChartWiseAssistant:
 
@@ -100,7 +101,7 @@ class ChartWiseAssistant:
                                                                         query_top_k=10,
                                                                         rerank_top_n=3,
                                                                         session_id=session_id,
-                                                                        session_date_override=session_date_override)
+                                                                        session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
             async for part in openai_client.stream_chat_completion(vector_context=context,
@@ -228,7 +229,7 @@ class ChartWiseAssistant:
                                                                         query_top_k=10,
                                                                         rerank_top_n=5,
                                                                         session_id=session_id,
-                                                                        session_date_override=session_date_override)
+                                                                        session_dates_override=[session_date_override])
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -374,31 +375,38 @@ class ChartWiseAssistant:
     session_id – the session id.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
+    supabase_client – the supabase client to be leveraged internally.
     openai_client – the openai client to be leveraged internally.
     pinecone_client – the pinecone client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
-    async def fetch_frequent_topics(self,
-                                    index_id: str,
-                                    namespace: str,
-                                    environment: str,
-                                    language_code: str,
-                                    session_id: str,
-                                    patient_name: str,
-                                    patient_gender: str,
-                                    openai_client: OpenAIBaseClass,
-                                    pinecone_client: PineconeBaseClass,
-                                    auth_manager: AuthManager) -> str:
+    async def fetch_recent_topics(self,
+                                  index_id: str,
+                                  namespace: str,
+                                  environment: str,
+                                  language_code: str,
+                                  session_id: str,
+                                  patient_name: str,
+                                  patient_gender: str,
+                                  supabase_client: SupabaseBaseClass,
+                                  openai_client: OpenAIBaseClass,
+                                  pinecone_client: PineconeBaseClass,
+                                  auth_manager: AuthManager) -> str:
         try:
-            query_input = f"What are the 3 topics that come up the most in {patient_name}'s sessions?"
+            query_input = f"What are the topics that have come up the most in {patient_name}'s most recent sessions?"
+
+            session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
+                                                                                patient_id=namespace,
+                                                                                n=TOPICS_CONTEXT_SESSIONS_CAP)
             _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                         query_input=query_input,
                                                                         openai_client=openai_client,
                                                                         index_id=index_id,
                                                                         namespace=namespace,
                                                                         session_id=session_id,
-                                                                        query_top_k=10,
-                                                                        rerank_top_n=4)
+                                                                        query_top_k=0,
+                                                                        rerank_top_n=0,
+                                                                        session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -438,10 +446,10 @@ class ChartWiseAssistant:
             raise Exception(e)
 
     """
-    Create insight for a given set of frequent topics.
+    Create insight for a given set of recent topics.
 
     Arguments:
-    frequent_topics_json – the set of frequent topics to be analyzed.
+    recent_topics_json – the set of recent topics to be analyzed.
     index_id – the index id that should be queried inside the datastore.
     namespace – the namespace within the index that should be queried.
     environment – the current running environment.
@@ -449,32 +457,39 @@ class ChartWiseAssistant:
     session_id – the session id.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
+    supabase_client – the supabase client to be leveraged internally.
     openai_client – the openai client to be leveraged internally.
     pinecone_client – the pinecone client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
-    async def generate_frequent_topics_insights(self,
-                                                frequent_topics_json: str,
-                                                index_id: str,
-                                                namespace: str,
-                                                environment: str,
-                                                language_code: str,
-                                                session_id: str,
-                                                patient_name: str,
-                                                patient_gender: str,
-                                                openai_client: OpenAIBaseClass,
-                                                pinecone_client: PineconeBaseClass,
-                                                auth_manager: AuthManager) -> str:
+    async def generate_recent_topics_insights(self,
+                                              recent_topics_json: str,
+                                              index_id: str,
+                                              namespace: str,
+                                              environment: str,
+                                              language_code: str,
+                                              session_id: str,
+                                              patient_name: str,
+                                              patient_gender: str,
+                                              supabase_client: SupabaseBaseClass,
+                                              openai_client: OpenAIBaseClass,
+                                              pinecone_client: PineconeBaseClass,
+                                              auth_manager: AuthManager) -> str:
         try:
-            query_input = f"Please help me analyze the following set of topics that frequently come up during my sessions with {patient_name}, my patient:\n{frequent_topics_json}"
+            query_input = f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
+
+            session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
+                                                                                patient_id=namespace,
+                                                                                n=TOPICS_CONTEXT_SESSIONS_CAP)
             _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                         query_input=query_input,
                                                                         openai_client=openai_client,
                                                                         index_id=index_id,
                                                                         namespace=namespace,
                                                                         session_id=session_id,
-                                                                        query_top_k=10,
-                                                                        rerank_top_n=4)
+                                                                        query_top_k=0,
+                                                                        rerank_top_n=0,
+                                                                        session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,
@@ -638,6 +653,31 @@ class ChartWiseAssistant:
             raise Exception(e)
 
     # Private
+
+    def _retrieve_n_most_recent_session_dates(self,
+                                              supabase_client: SupabaseBaseClass,
+                                              patient_id: str,
+                                              n: int) -> list[PineconeQuerySessionDateOverride]:
+        try:
+            dates_response = supabase_client.select(fields="session_date",
+                                                    filters={
+                                                        "patient_id": patient_id,
+                                                    },
+                                                    table_name="session_reports",
+                                                    limit=n,
+                                                    order_desc_column="session_date")
+            assert (0 != len((dates_response).data))
+            dates_response_data = dates_response.dict()['data']
+
+            overrides = []
+            for date in dates_response_data:
+                plain_date = date['session_date']
+                overrides.append(
+                    PineconeQuerySessionDateOverride(session_date=plain_date)
+                )
+            return overrides
+        except Exception as e:
+            raise Exception(e)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):

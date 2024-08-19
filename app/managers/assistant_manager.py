@@ -838,17 +838,17 @@ class AssistantManager:
                                patient_id=patient_id)
             raise Exception(e)
 
-    async def update_patient_frequent_topics(self,
-                                             therapist_id: str,
-                                             patient_id: str,
-                                             auth_manager: AuthManager,
-                                             environment: str,
-                                             session_id: str,
-                                             background_tasks: BackgroundTasks,
-                                             openai_client: OpenAIBaseClass,
-                                             pinecone_client: PineconeBaseClass,
-                                             supabase_client: SupabaseBaseClass,
-                                             logger_worker: Logger):
+    async def update_patient_recent_topics(self,
+                                           therapist_id: str,
+                                           patient_id: str,
+                                           auth_manager: AuthManager,
+                                           environment: str,
+                                           session_id: str,
+                                           background_tasks: BackgroundTasks,
+                                           openai_client: OpenAIBaseClass,
+                                           pinecone_client: PineconeBaseClass,
+                                           supabase_client: SupabaseBaseClass,
+                                           logger_worker: Logger):
         try:
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
@@ -873,50 +873,52 @@ class AssistantManager:
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
             chartwise_assistant = ChartWiseAssistant()
-            frequent_topics_json = await chartwise_assistant.fetch_frequent_topics(language_code=language_code,
-                                                                                   session_id=session_id,
-                                                                                   index_id=therapist_id,
-                                                                                   namespace=patient_id,
-                                                                                   environment=environment,
-                                                                                   pinecone_client=pinecone_client,
-                                                                                   openai_client=openai_client,
-                                                                                   auth_manager=auth_manager,
-                                                                                   patient_name=patient_full_name,
-                                                                                   patient_gender=patient_gender)
-            assert 'topics' in frequent_topics_json, "Missing json key for frequent topics response. Please try again"
+            recent_topics_json = await chartwise_assistant.fetch_recent_topics(language_code=language_code,
+                                                                               session_id=session_id,
+                                                                               index_id=therapist_id,
+                                                                               namespace=patient_id,
+                                                                               environment=environment,
+                                                                               pinecone_client=pinecone_client,
+                                                                               supabase_client=supabase_client,
+                                                                               openai_client=openai_client,
+                                                                               auth_manager=auth_manager,
+                                                                               patient_name=patient_full_name,
+                                                                               patient_gender=patient_gender)
+            assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
-            topics_insights = await chartwise_assistant.generate_frequent_topics_insights(frequent_topics_json=frequent_topics_json,
-                                                                                          index_id=therapist_id,
-                                                                                           namespace=patient_id,
-                                                                                           environment=environment,
-                                                                                           language_code=language_code,
-                                                                                           session_id=session_id,
-                                                                                           patient_name=patient_full_name,
-                                                                                           patient_gender=patient_gender,
-                                                                                           openai_client=openai_client,
-                                                                                           pinecone_client=pinecone_client,
-                                                                                           auth_manager=auth_manager)
+            topics_insights = await chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
+                                                                                        index_id=therapist_id,
+                                                                                        namespace=patient_id,
+                                                                                        environment=environment,
+                                                                                        language_code=language_code,
+                                                                                        session_id=session_id,
+                                                                                        patient_name=patient_full_name,
+                                                                                        patient_gender=patient_gender,
+                                                                                        supabase_client=supabase_client,
+                                                                                        openai_client=openai_client,
+                                                                                        pinecone_client=pinecone_client,
+                                                                                        auth_manager=auth_manager)
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
                                                       'therapist_id': therapist_id,
                                                       'patient_id': patient_id
                                                   },
-                                                  table_name="patient_frequent_topics")
+                                                  table_name="patient_topics")
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len((topics_query).data):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "last_updated": now_timestamp,
-                                           "frequent_topics": frequent_topics_json,
+                                           "topics": recent_topics_json,
                                            "insights": topics_insights
                                        },
                                        filters={
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="patient_frequent_topics")
+                                       table_name="patient_topics")
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -924,12 +926,12 @@ class AssistantManager:
                                            "insights": topics_insights,
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
-                                           "frequent_topics": frequent_topics_json
+                                           "topics": recent_topics_json
                                        },
-                                       table_name="patient_frequent_topics")
+                                       table_name="patient_topics")
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the frequent topics in a background task failed",
+                                    description="Updating the recent topics in a background task failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -950,8 +952,8 @@ class AssistantManager:
         # Given our chat history may be stale based on the new data, let's clear anything we have
         background_tasks.add_task(openai_client.clear_chat_history)
 
-        # Update this patient's frequent topics for future fetches.
-        background_tasks.add_task(self.update_patient_frequent_topics,
+        # Update this patient's recent topics for future fetches.
+        background_tasks.add_task(self.update_patient_recent_topics,
                                   therapist_id,
                                   patient_id,
                                   auth_manager,

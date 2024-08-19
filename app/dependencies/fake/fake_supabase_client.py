@@ -64,6 +64,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                fields: str,
                filters: dict,
                table_name: str,
+               limit: int = None,
                order_desc_column: str = None):
         if not self.select_returns_data:
             return FakeSupabaseResult(data=[])
@@ -107,7 +108,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
-        if table_name == "patient_frequent_topics":
+        if table_name == "patient_topics":
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])

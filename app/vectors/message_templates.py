@@ -18,8 +18,8 @@ class PromptScenario(Enum):
     RERANKING = "reranking"
     SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
-    TOPICS = "frequent_topics"
-    TOPICS_INSIGHTS = "frequent_topics_insights"
+    TOPICS = "recent_topics"
+    TOPICS_INSIGHTS = "recent_topics_insights"
     UNDEFINED = "undefined"
 
 class PromptCrafter:
@@ -63,7 +63,7 @@ class PromptCrafter:
             patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
             patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
             query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_frequent_topics_user_message(language_code=language_code,
+            return self._create_recent_topics_user_message(language_code=language_code,
                                                              context=context,
                                                              patient_name=patient_name,
                                                              patient_gender=patient_gender,
@@ -143,7 +143,7 @@ class PromptCrafter:
             return self._create_question_suggestions_system_message(language_code=language_code)
         elif scenario == PromptScenario.TOPICS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            return self._create_frequent_topics_system_message(language_code=language_code)
+            return self._create_recent_topics_system_message(language_code=language_code)
         elif scenario == PromptScenario.CHUNK_SUMMARY:
             return self._create_chunk_summary_system_message()
         elif scenario == PromptScenario.SOAP_TEMPLATE:
@@ -366,20 +366,20 @@ class PromptCrafter:
         except Exception as e:
             raise Exception(e)
 
-    # Frequent Topics
+    # Recent Topics
 
-    def _create_frequent_topics_system_message(self, language_code: str) -> str:
+    def _create_recent_topics_system_message(self, language_code: str) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             return (
                 "A mental health practitioner is viewing a patient’s dashboard on our Practice Management Platform. "
-                "They need to see the top three topics the patient discusses most frequently during sessions. Provide the following:\n\n"
+                "They need to see the top three topics the patient has discussed most frequently during sessions. Provide the following:\n\n"
                 "1. Three frequent topics, each with its frequency percentage.\n"
                 "2. Ensure the percentages sum to exactly 100%. Double-check the math.\n"
                 "3. Each topic should be under 25 characters.\n\n"
                 "Return a JSON object with one key: `topics`, written in English. The value should be an array of up to three objects, each with:\n"
-                f"* `topic`: Topic written using language code {language_code}.\n"
+                f"* `topic`: Distinct topic written using language code {language_code}.\n"
                 f"* `percentage`: Frequency percentage.\n\n"
                 "This is what the format should look like: {\"topics\": [{\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}]}\n"
                 "If no context data is available, the array should be empty. "
@@ -389,12 +389,12 @@ class PromptCrafter:
         except Exception as e:
             raise Exception(e)
 
-    def _create_frequent_topics_user_message(self,
-                                             language_code: str,
-                                             context: str,
-                                             patient_name: str,
-                                             query_input: str,
-                                             patient_gender: str) -> str:
+    def _create_recent_topics_user_message(self,
+                                           language_code: str,
+                                           context: str,
+                                           patient_name: str,
+                                           query_input: str,
+                                           patient_gender: str) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
             assert len(context or '') > 0, "Missing context param for building user message"
@@ -545,10 +545,13 @@ class PromptCrafter:
         assert len(language_code or '') > 0, "Missing language_code param for building system message"
         return (
             "You are a mental health assistant helping practitioners analyze their patients' session data. "
-            "You will receive an array of topics, each with a corresponding frequency percentage, indicating how often the patient has spoken about these topics in their sessions. "
+            "You will receive an array of topics, each with a corresponding frequency percentage, indicating how often the patient has spoken about these topics in their most recent sessions. "
             "Your task is to briefly analyze this information and generate a concise paragraph that highlights any patterns, underlying themes, or notable insights. "
-            "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state. "
-            f"It is very important that your output is generated using language code {language_code}. "
+            "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state.\n"
+            "\nIt is very important that the output meets the following criteria:\n"
+            "1. Format the output in bullet points.\n"
+            "2. Limit the output to 500 characters.\n"
+            f"3. Ensure the output is generated using language code {language_code}.\n"
         )
 
     def _create_topics_insights_user_message(self,

@@ -33,12 +33,16 @@ class SupabaseClient(SupabaseBaseClass):
                fields: str,
                filters: dict,
                table_name: str,
+               limit: int = None,
                order_desc_column: str = None):
         try:
             select_operation = self.client.from_(table_name).select(fields)
 
             for key, value in filters.items():
                 select_operation = select_operation.eq(f"{key}", f"{value}")
+
+            if limit is not None:
+                select_operation.limit(limit)
 
             if len(order_desc_column or '') > 0:
                 select_operation = select_operation.order(order_desc_column, desc=True)
