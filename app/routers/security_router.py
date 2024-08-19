@@ -170,7 +170,6 @@ class SecurityRouter:
                 response.set_cookie(key="session_id",
                                     value=session_id,
                                     domain=self._auth_manager.APP_COOKIE_DOMAIN,
-                                    path=self._auth_manager.APP_COOKIE_PATH,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")

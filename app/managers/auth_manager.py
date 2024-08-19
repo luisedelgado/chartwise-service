@@ -14,8 +14,6 @@ class AuthManager:
 
     APP_COOKIE_DOMAIN = (None if os.environ.get("ENVIRONMENT") != "prod"
                          else "chartwise.ai")
-    APP_COOKIE_PATH = (None if os.environ.get("ENVIRONMENT") != "prod"
-                         else "/")
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -76,7 +74,6 @@ class AuthManager:
             response.set_cookie(key="authorization",
                                 value=access_token,
                                 domain=self.APP_COOKIE_DOMAIN,
-                                path=self.APP_COOKIE_PATH,
                                 httponly=True,
                                 secure=True,
                                 samesite="none")
@@ -86,14 +83,12 @@ class AuthManager:
                 response.set_cookie(key="datastore_access_token",
                                     value=datastore_access_token,
                                     domain=self.APP_COOKIE_DOMAIN,
-                                    path=self.APP_COOKIE_PATH,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
                 response.set_cookie(key="datastore_refresh_token",
                                     value=datastore_refresh_token,
                                     domain=self.APP_COOKIE_DOMAIN,
-                                    path=self.APP_COOKIE_PATH,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
@@ -109,14 +104,12 @@ class AuthManager:
                 response.set_cookie(key="datastore_access_token",
                                     value=datastore_access_token,
                                     domain=self.APP_COOKIE_DOMAIN,
-                                    path=self.APP_COOKIE_PATH,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
                 response.set_cookie(key="datastore_refresh_token",
                                     value=datastore_refresh_token,
                                     domain=self.APP_COOKIE_DOMAIN,
-                                    path=self.APP_COOKIE_PATH,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
