@@ -438,6 +438,82 @@ class ChartWiseAssistant:
             raise Exception(e)
 
     """
+    Create insight for a given set of frequent topics.
+
+    Arguments:
+    frequent_topics_json – the set of frequent topics to be analyzed.
+    index_id – the index id that should be queried inside the datastore.
+    namespace – the namespace within the index that should be queried.
+    environment – the current running environment.
+    language_code – the language code to be used in the response.
+    session_id – the session id.
+    patient_name – the name by which the patient should be addressed.
+    patient_gender – the patient gender.
+    openai_client – the openai client to be leveraged internally.
+    pinecone_client – the pinecone client to be leveraged internally.
+    auth_manager – the auth manager to be leveraged internally.
+    """
+    async def generate_frequent_topics_insights(self,
+                                                frequent_topics_json: str,
+                                                index_id: str,
+                                                namespace: str,
+                                                environment: str,
+                                                language_code: str,
+                                                session_id: str,
+                                                patient_name: str,
+                                                patient_gender: str,
+                                                openai_client: OpenAIBaseClass,
+                                                pinecone_client: PineconeBaseClass,
+                                                auth_manager: AuthManager) -> str:
+        try:
+            query_input = f"Please help me analyze the following set of topics that frequently come up during my sessions with {patient_name}, my patient:\n{frequent_topics_json}"
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                        query_input=query_input,
+                                                                        openai_client=openai_client,
+                                                                        index_id=index_id,
+                                                                        namespace=namespace,
+                                                                        session_id=session_id,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=4)
+
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,
+                                                                       context=context,
+                                                                       language_code=language_code,
+                                                                       patient_gender=patient_gender,
+                                                                       patient_name=patient_name,
+                                                                       query_input=query_input)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,
+                                                                           language_code=language_code)
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            caching_shard_key = (namespace + "-topics-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            metadata = {
+                "environment": environment,
+                "user": index_id,
+                "patient": namespace,
+                "session_id": str(session_id),
+                "caching_shard_key": caching_shard_key,
+                "language_code": language_code,
+            }
+
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=False,
+                                                                     auth_manager=auth_manager)
+        except Exception as e:
+            raise Exception(e)
+
+    """
     Creates and returns a SOAP report with the incoming data.
 
     Arguments:

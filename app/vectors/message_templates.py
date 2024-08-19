@@ -19,6 +19,7 @@ class PromptScenario(Enum):
     SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
     TOPICS = "frequent_topics"
+    TOPICS_INSIGHTS = "frequent_topics_insights"
     UNDEFINED = "undefined"
 
 class PromptCrafter:
@@ -86,6 +87,17 @@ class PromptCrafter:
             chat_history = None if 'chat_history' not in kwargs else kwargs['chat_history']
             return self._create_reformulate_query_user_message(chat_history=chat_history,
                                                                query_input=query_input)
+        elif scenario == PromptScenario.TOPICS_INSIGHTS:
+            context = None if 'context' not in kwargs else kwargs['context']
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
+            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
+            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
+            return self._create_topics_insights_user_message(context=context,
+                                                             language_code=language_code,
+                                                             patient_gender=patient_gender,
+                                                             patient_name=patient_name,
+                                                             query_input=query_input)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -144,6 +156,9 @@ class PromptCrafter:
             return self._create_reranking_system_message(top_n=top_n)
         elif scenario == PromptScenario.REFORMULATE_QUERY:
             return self._create_reformulate_query_system_message()
+        elif scenario == PromptScenario.TOPICS_INSIGHTS:
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            return self._create_topics_insights_system_message(language_code=language_code)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -488,6 +503,8 @@ class PromptCrafter:
 
     def _create_reranking_user_message(self, query_input: str, context: str):
         try:
+            assert len(context or '') > 0, "Missing context param for building user message"
+            assert len(query_input or '') > 0, "Missing query_input param for building user message"
             return (
                 f"We have provided the chunked documents below.\n---------------------\n{context}\n---------------------\n"
                 f"\nGiven this information and the input question below, please rerank the chunked documents based on their relevance to the practitioner's question."
@@ -518,6 +535,40 @@ class PromptCrafter:
                 "The output should be generated using the same language in which the latest user question is written."
                 f"\n---------------------\nChat History:\n{chat_history}\n---------------------\n"
                 f"Latest User Question:\n{query_input}\n---------------------\n"
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    # Topics Insights
+
+    def _create_topics_insights_system_message(self, language_code: str):
+        assert len(language_code or '') > 0, "Missing language_code param for building system message"
+        return (
+            "You are a mental health assistant helping practitioners analyze their patients' session data. "
+            "You will receive an array of topics, each with a corresponding frequency percentage, indicating how often the patient has spoken about these topics in their sessions. "
+            "Your task is to briefly analyze this information and generate a concise paragraph that highlights any patterns, underlying themes, or notable insights. "
+            "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state. "
+            f"It is very important that your output is generated using language code {language_code}. "
+        )
+
+    def _create_topics_insights_user_message(self,
+                                             context: str,
+                                             language_code: str,
+                                             patient_gender: str,
+                                             patient_name: str,
+                                             query_input: str):
+        try:
+            assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
+            assert len(language_code or '') > 0, "Missing language_code param for building user message"
+
+            gender_context = (". " if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
+                              else f" ({patient_gender}). ")
+
+            return (
+                f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
+                f"\nIt is very important that your output is written using language code {language_code}. "
+                f"Note that the patient name is {patient_name}{gender_context}"
+                f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
             raise Exception(e)

@@ -311,6 +311,7 @@ class AssistantRouter:
             session_notes_id = await self._assistant_manager.process_new_session_data(environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
                                                                                       body=body,
+                                                                                      logger_worker=logger,
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
                                                                                       therapist_id=therapist_id,
@@ -399,6 +400,7 @@ class AssistantRouter:
 
             await self._assistant_manager.update_session(environment=self._environment,
                                                          background_tasks=background_tasks,
+                                                         logger_worker=logger,
                                                          auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
@@ -499,6 +501,7 @@ class AssistantRouter:
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
                                                          openai_client=self._openai_client,
+                                                         logger_worker=logger,
                                                          therapist_id=therapist_id,
                                                          session_report_id=session_report_id,
                                                          supabase_client=supabase_client,

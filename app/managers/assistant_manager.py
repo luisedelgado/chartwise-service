@@ -82,7 +82,8 @@ class AssistantManager:
                                        therapist_id: str,
                                        openai_client: OpenAIBaseClass,
                                        supabase_client: SupabaseBaseClass,
-                                       pinecone_client: PineconeBaseClass) -> str:
+                                       pinecone_client: PineconeBaseClass,
+                                       logger_worker: Logger) -> str:
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -163,13 +164,15 @@ class AssistantManager:
                                                                     session_id=session_id,
                                                                     pinecone_client=pinecone_client,
                                                                     supabase_client=supabase_client,
-                                                                    openai_client=openai_client)
+                                                                    openai_client=openai_client,
+                                                                    logger_worker=logger_worker)
 
             return session_notes_id
         except Exception as e:
             raise Exception(e)
 
     async def update_session(self,
+                             logger_worker: Logger,
                              environment: str,
                              background_tasks: BackgroundTasks,
                              auth_manager: AuthManager,
@@ -249,7 +252,8 @@ class AssistantManager:
                                                                     session_id=session_id,
                                                                     pinecone_client=pinecone_client,
                                                                     supabase_client=supabase_client,
-                                                                    openai_client=openai_client)
+                                                                    openai_client=openai_client,
+                                                                    logger_worker=logger_worker)
         except Exception as e:
             raise Exception(e)
 
@@ -261,6 +265,7 @@ class AssistantManager:
                              openai_client: OpenAIBaseClass,
                              therapist_id: str,
                              session_report_id: str,
+                             logger_worker: Logger,
                              supabase_client: SupabaseBaseClass,
                              pinecone_client: PineconeBaseClass):
         try:
@@ -333,6 +338,7 @@ class AssistantManager:
                                                                     auth_manager=auth_manager,
                                                                     environment=environment,
                                                                     session_id=session_id,
+                                                                    logger_worker=logger_worker,
                                                                     pinecone_client=pinecone_client,
                                                                     supabase_client=supabase_client,
                                                                     openai_client=openai_client)
@@ -589,7 +595,7 @@ class AssistantManager:
                                                                                     supabase_client=supabase_client,
                                                                                     patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                                     patient_gender=patient_gender)
-            assert 'questions' in questions_json, "Missing json key for frequent topics response. Please try again"
+            assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             question_suggestions_query = supabase_client.select(fields="*",
                                                                 filters={
@@ -841,7 +847,8 @@ class AssistantManager:
                                              background_tasks: BackgroundTasks,
                                              openai_client: OpenAIBaseClass,
                                              pinecone_client: PineconeBaseClass,
-                                             supabase_client: SupabaseBaseClass):
+                                             supabase_client: SupabaseBaseClass,
+                                             logger_worker: Logger):
         try:
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
@@ -863,18 +870,32 @@ class AssistantManager:
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
+            patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
-            frequent_topics = await ChartWiseAssistant().fetch_frequent_topics(language_code=language_code,
-                                                                               session_id=session_id,
-                                                                               index_id=therapist_id,
-                                                                               namespace=patient_id,
-                                                                               environment=environment,
-                                                                               pinecone_client=pinecone_client,
-                                                                               openai_client=openai_client,
-                                                                               auth_manager=auth_manager,
-                                                                               patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                               patient_gender=patient_gender)
-            assert 'topics' in frequent_topics, "Missing json key for frequent topics response. Please try again"
+            chartwise_assistant = ChartWiseAssistant()
+            frequent_topics_json = await chartwise_assistant.fetch_frequent_topics(language_code=language_code,
+                                                                                   session_id=session_id,
+                                                                                   index_id=therapist_id,
+                                                                                   namespace=patient_id,
+                                                                                   environment=environment,
+                                                                                   pinecone_client=pinecone_client,
+                                                                                   openai_client=openai_client,
+                                                                                   auth_manager=auth_manager,
+                                                                                   patient_name=patient_full_name,
+                                                                                   patient_gender=patient_gender)
+            assert 'topics' in frequent_topics_json, "Missing json key for frequent topics response. Please try again"
+
+            topics_insights = await chartwise_assistant.generate_frequent_topics_insights(frequent_topics_json=frequent_topics_json,
+                                                                                          index_id=therapist_id,
+                                                                                           namespace=patient_id,
+                                                                                           environment=environment,
+                                                                                           language_code=language_code,
+                                                                                           session_id=session_id,
+                                                                                           patient_name=patient_full_name,
+                                                                                           patient_gender=patient_gender,
+                                                                                           openai_client=openai_client,
+                                                                                           pinecone_client=pinecone_client,
+                                                                                           auth_manager=auth_manager)
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
@@ -888,7 +909,8 @@ class AssistantManager:
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "last_updated": now_timestamp,
-                                           "frequent_topics": frequent_topics
+                                           "frequent_topics": frequent_topics_json,
+                                           "insights": topics_insights
                                        },
                                        filters={
                                            "patient_id": patient_id,
@@ -899,17 +921,18 @@ class AssistantManager:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
                                            "last_updated": now_timestamp,
+                                           "insights": topics_insights,
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
-                                           "frequent_topics": frequent_topics
+                                           "frequent_topics": frequent_topics_json
                                        },
                                        table_name="patient_frequent_topics")
         except Exception as e:
-            Logger().log_error(background_tasks=background_tasks,
-                               description="Updating the frequent topics in a background task failed",
-                               session_id=session_id,
-                               therapist_id=therapist_id,
-                               patient_id=patient_id)
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the frequent topics in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
             raise Exception(e)
 
     async def generate_insights_after_session_data_updates(self,
@@ -921,7 +944,8 @@ class AssistantManager:
                                                            session_id: str,
                                                            pinecone_client: PineconeBaseClass,
                                                            openai_client: OpenAIBaseClass,
-                                                           supabase_client: SupabaseBaseClass):
+                                                           supabase_client: SupabaseBaseClass,
+                                                           logger_worker: Logger):
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
         background_tasks.add_task(openai_client.clear_chat_history)
@@ -936,7 +960,8 @@ class AssistantManager:
                                   background_tasks,
                                   openai_client,
                                   pinecone_client,
-                                  supabase_client)
+                                  supabase_client,
+                                  logger_worker)
 
         # Update this patient's question suggestions for future fetches.
         background_tasks.add_task(self.update_question_suggestions,
