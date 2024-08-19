@@ -240,20 +240,21 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             tz = timezone(tz_identifier)
-            weekday = datetime.now(tz).strftime('%A')
+            datetime_now = datetime.now(tz)
+            weekday = datetime_now.strftime('%A')
             gender_context = ("A " if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
                               else f"A {therapist_gender} ")
             return (
                 f"{gender_context}mental health practitioner named {therapist_name} is entering our Practice Management Platform. "
-                f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. "
+                f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. Do not overuse exclamation marks. "
                 f"Address {therapist_name} by their name, and make sure to use language code {language_code} when generating your response. "
-                "Conclude with a short statement on productivity. "
+                "Conclude with a short statement on productivity to pump their motivation. "
             )
         except Exception as e:
             raise Exception(str(e))
 
     def _create_greeting_user_message(self) -> str:
-        return f"Write a welcoming message for the practitioner. Your response should not go over 180 characters."
+        return f"Write a welcoming message for the practitioner. Do not overuse exclamation marks. Your response should not go over 72 characters."
 
     # Briefing Prompt
 
