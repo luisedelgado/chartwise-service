@@ -75,6 +75,7 @@ class AssistantManager:
 
     async def process_new_session_data(self,
                                        environment: str,
+                                       language_code: str,
                                        background_tasks: BackgroundTasks,
                                        auth_manager: AuthManager,
                                        body: SessionNotesInsert,
@@ -96,14 +97,6 @@ class AssistantManager:
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
             patient_query_data = patient_query_data[0]
 
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     },
-                                                     table_name="therapists")
-            assert (0 != len(therapist_query.data))
-
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=body.notes_text,
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
@@ -156,7 +149,8 @@ class AssistantManager:
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
 
-            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+            await self.generate_insights_after_session_data_updates(language_code=language_code,
+                                                                    background_tasks=background_tasks,
                                                                     therapist_id=therapist_id,
                                                                     patient_id=body.patient_id,
                                                                     auth_manager=auth_manager,
@@ -172,6 +166,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_session(self,
+                             language_code: str,
                              logger_worker: Logger,
                              environment: str,
                              background_tasks: BackgroundTasks,
@@ -212,14 +207,6 @@ class AssistantManager:
 
             # We only have to generate a new mini_summary if the session text changed.
             if session_text_changed:
-                therapist_query = supabase_client.select(fields="*",
-                                                         table_name="therapists",
-                                                         filters={
-                                                             'id': therapist_id
-                                                         })
-                assert (0 != len((therapist_query).data)), "Did not find information associated with the therapist."
-
-                language_code = therapist_query.dict()['data'][0]["language_preference"]
                 payload['notes_mini_summary'] = await self.chartwise_assistant.create_session_mini_summary(session_notes=filtered_body['notes_text'],
                                                                                                            therapist_id=therapist_id,
                                                                                                            language_code=language_code,
@@ -244,7 +231,8 @@ class AssistantManager:
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
 
-            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+            await self.generate_insights_after_session_data_updates(language_code=language_code,
+                                                                    background_tasks=background_tasks,
                                                                     therapist_id=therapist_id,
                                                                     patient_id=patient_id,
                                                                     auth_manager=auth_manager,
@@ -258,6 +246,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def delete_session(self,
+                             language_code: str,
                              auth_manager: AuthManager,
                              environment: str,
                              session_id: str,
@@ -332,7 +321,8 @@ class AssistantManager:
                                                    namespace=patient_id,
                                                    date=session_date_formatted)
 
-            await self.generate_insights_after_session_data_updates(background_tasks=background_tasks,
+            await self.generate_insights_after_session_data_updates(language_code=language_code,
+                                                                    background_tasks=background_tasks,
                                                                     therapist_id=therapist_id,
                                                                     patient_id=patient_id,
                                                                     auth_manager=auth_manager,
@@ -455,6 +445,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def query_session(self,
+                            language_code: str,
                             auth_manager: AuthManager,
                             query: AssistantQuery,
                             therapist_id: str,
@@ -488,14 +479,6 @@ class AssistantManager:
                                                                          session_date=patient_last_session_date)
             else:
                 session_date_override = None
-
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     },
-                                                     table_name="therapists")
-            assert (0 != len((therapist_query).data))
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
 
             async for part in self.chartwise_assistant.query_store(index_id=therapist_id,
                                                                    namespace=query.patient_id,
@@ -553,6 +536,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_question_suggestions(self,
+                                          language_code: str,
                                           therapist_id: str,
                                           patient_id: str,
                                           background_tasks: BackgroundTasks,
@@ -563,14 +547,6 @@ class AssistantManager:
                                           pinecone_client: PineconeBaseClass,
                                           supabase_client: SupabaseBaseClass):
         try:
-            therapist_query = supabase_client.select(fields="*",
-                                                     table_name="therapists",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     })
-            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
-
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
             patient_query = supabase_client.select(fields="*",
                                                    table_name="patients",
                                                    filters={
@@ -839,6 +815,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_patient_recent_topics(self,
+                                           language_code: str,
                                            therapist_id: str,
                                            patient_id: str,
                                            auth_manager: AuthManager,
@@ -850,14 +827,6 @@ class AssistantManager:
                                            supabase_client: SupabaseBaseClass,
                                            logger_worker: Logger):
         try:
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     },
-                                                     table_name="therapists")
-            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
-
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
             patient_query = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': therapist_id,
@@ -937,6 +906,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def generate_attendance_insights(self,
+                                           language_code: str,
                                            background_tasks: BackgroundTasks,
                                            therapist_id: str,
                                            patient_id: str,
@@ -947,14 +917,6 @@ class AssistantManager:
                                            supabase_client: SupabaseBaseClass,
                                            logger_worker: Logger):
         try:
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     },
-                                                     table_name="therapists")
-            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
-            language_code = therapist_query.dict()['data'][0]["language_preference"]
-
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(therapist_id=therapist_id,
                                                                                               patient_id=patient_id,
                                                                                               environment=environment,
@@ -1002,6 +964,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def generate_insights_after_session_data_updates(self,
+                                                           language_code: str,
                                                            background_tasks: BackgroundTasks,
                                                            therapist_id: str,
                                                            patient_id: str,
@@ -1018,6 +981,7 @@ class AssistantManager:
 
         # Update this patient's recent topics for future fetches.
         background_tasks.add_task(self.update_patient_recent_topics,
+                                  language_code,
                                   therapist_id,
                                   patient_id,
                                   auth_manager,
@@ -1031,6 +995,7 @@ class AssistantManager:
 
         # Update this patient's question suggestions for future fetches.
         background_tasks.add_task(self.update_question_suggestions,
+                                  language_code,
                                   therapist_id,
                                   patient_id,
                                   background_tasks,
@@ -1043,6 +1008,7 @@ class AssistantManager:
 
         # Update attendance insights
         background_tasks.add_task(self.generate_attendance_insights,
+                                  language_code,
                                   background_tasks,
                                   therapist_id,
                                   patient_id,

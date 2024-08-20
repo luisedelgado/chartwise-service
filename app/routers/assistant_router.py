@@ -52,6 +52,7 @@ class AssistantRouter:
         self._openai_client = router_dependencies.openai_client
         self._pinecone_client = router_dependencies.pinecone_client
         self._supabase_client_factory = router_dependencies.supabase_client_factory
+        self.language_code: str = None
         self.router = APIRouter()
         self._register_routes()
 
@@ -144,13 +145,8 @@ class AssistantRouter:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                language_code_query = supabase_client.select(fields="*",
-                                                             filters={
-                                                                 'id': therapist_id
-                                                             },
-                                                             table_name="therapists")
-                assert (0 != len((language_code_query).data)), "Did not find therapist data."
-                language_code = language_code_query.dict()['data'][0]['language_preference']
+                language_code = self._get_user_language_code(user_id=therapist_id,
+                                                             supabase_client=supabase_client)
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 background_tasks=background_tasks,
                                                                                 therapist_id=therapist_id,
@@ -308,7 +304,10 @@ class AssistantRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            session_notes_id = await self._assistant_manager.process_new_session_data(environment=self._environment,
+            language_code = self._get_user_language_code(user_id=therapist_id,
+                                                         supabase_client=supabase_client)
+            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
+                                                                                      environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
                                                                                       body=body,
                                                                                       logger_worker=logger,
@@ -398,7 +397,10 @@ class AssistantRouter:
                                                                                 tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            await self._assistant_manager.update_session(environment=self._environment,
+            language_code = self._get_user_language_code(user_id=therapist_id,
+                                                         supabase_client=supabase_client)
+            await self._assistant_manager.update_session(language_code=language_code,
+                                                         environment=self._environment,
                                                          background_tasks=background_tasks,
                                                          logger_worker=logger,
                                                          auth_manager=self._auth_manager,
@@ -496,7 +498,10 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            await self._assistant_manager.delete_session(auth_manager=self._auth_manager,
+            language_code = self._get_user_language_code(user_id=therapist_id,
+                                                         supabase_client=supabase_client)
+            await self._assistant_manager.delete_session(language_code=language_code,
+                                                         auth_manager=self._auth_manager,
                                                          environment=self._environment,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
@@ -566,7 +571,8 @@ class AssistantRouter:
             assert (0 != len((strings_query).data))
             default_error_string = strings_query.dict()['data'][0]['value']
 
-            async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
+            async for part in self._assistant_manager.query_session(language_code=language_code,
+                                                                    auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
                                                                     api_method=post_api_method,
@@ -1026,6 +1032,23 @@ class AssistantRouter:
                                 detail=description)
 
     # Private
+
+    def _get_user_language_code(self,
+                                user_id: str,
+                                supabase_client: SupabaseBaseClass):
+        try:
+            if self.language_code is not None:
+                return self.language_code
+            therapist_query = supabase_client.select(fields="*",
+                                                        filters={
+                                                            'id': user_id
+                                                        },
+                                                        table_name="therapists")
+            assert (0 != len((therapist_query).data))
+            self.language_code = therapist_query.dict()['data'][0]["language_preference"]
+            return self.language_code
+        except Exception as e:
+            raise Exception("Encountered an issue while pulling user's language preference.")
 
     def _default_streaming_error_message_id(self, language_code: str):
         if language_code.startswith('es-'):
