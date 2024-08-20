@@ -104,12 +104,12 @@ class AssistantManager:
             assert (0 != len(therapist_query.data))
 
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=body.notes_text,
-                                                                                  therapist_id=therapist_id,
-                                                                                  language_code=language_code,
-                                                                                  auth_manager=auth_manager,
-                                                                                  openai_client=openai_client,
-                                                                                  session_id=session_id)
+            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=body.notes_text,
+                                                                                      therapist_id=therapist_id,
+                                                                                      language_code=language_code,
+                                                                                      auth_manager=auth_manager,
+                                                                                      openai_client=openai_client,
+                                                                                      session_id=session_id)
 
             patient_last_session_date = patient_query_data['last_session_date']
 
@@ -220,12 +220,12 @@ class AssistantManager:
                 assert (0 != len((therapist_query).data)), "Did not find information associated with the therapist."
 
                 language_code = therapist_query.dict()['data'][0]["language_preference"]
-                payload['notes_mini_summary'] = await ChartWiseAssistant().create_session_mini_summary(session_notes=filtered_body['notes_text'],
-                                                                                                       therapist_id=therapist_id,
-                                                                                                       language_code=language_code,
-                                                                                                       auth_manager=auth_manager,
-                                                                                                       openai_client=openai_client,
-                                                                                                       session_id=session_id)
+                payload['notes_mini_summary'] = await self.chartwise_assistant.create_session_mini_summary(session_notes=filtered_body['notes_text'],
+                                                                                                           therapist_id=therapist_id,
+                                                                                                           language_code=language_code,
+                                                                                                           auth_manager=auth_manager,
+                                                                                                           openai_client=openai_client,
+                                                                                                           session_id=session_id)
 
             update_response = supabase_client.update(table_name="session_reports",
                                                      payload=payload,
@@ -425,11 +425,11 @@ class AssistantManager:
                                           session_notes_text: str,
                                           session_id: str) -> str:
         try:
-            soap_report = await ChartWiseAssistant().create_soap_report(text=session_notes_text,
-                                                                        therapist_id=therapist_id,
-                                                                        auth_manager=auth_manager,
-                                                                        openai_client=openai_client,
-                                                                        session_id=session_id)
+            soap_report = await self.chartwise_assistant.create_soap_report(text=session_notes_text,
+                                                                            therapist_id=therapist_id,
+                                                                            auth_manager=auth_manager,
+                                                                            openai_client=openai_client,
+                                                                            session_id=session_id)
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -537,17 +537,17 @@ class AssistantManager:
             addressing_name = therapist_query_data["first_name"]
             language_code = therapist_query_data["language_preference"]
             therapist_gender = therapist_query_data["gender"]
-            result = await ChartWiseAssistant().create_greeting(therapist_name=addressing_name,
-                                                                therapist_gender=therapist_gender,
-                                                                language_code=language_code,
-                                                                tz_identifier=client_tz_identifier,
-                                                                session_id=session_id,
-                                                                endpoint_name=endpoint_name,
-                                                                therapist_id=therapist_id,
-                                                                method=api_method,
-                                                                environment=environment,
-                                                                openai_client=openai_client,
-                                                                auth_manager=auth_manager)
+            result = await self.chartwise_assistant.create_greeting(therapist_name=addressing_name,
+                                                                    therapist_gender=therapist_gender,
+                                                                    language_code=language_code,
+                                                                    tz_identifier=client_tz_identifier,
+                                                                    session_id=session_id,
+                                                                    endpoint_name=endpoint_name,
+                                                                    therapist_id=therapist_id,
+                                                                    method=api_method,
+                                                                    environment=environment,
+                                                                    openai_client=openai_client,
+                                                                    auth_manager=auth_manager)
             return result
         except Exception as e:
             raise Exception(e)
@@ -584,17 +584,17 @@ class AssistantManager:
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
 
-            questions_json = await ChartWiseAssistant().create_question_suggestions(language_code=language_code,
-                                                                                    session_id=session_id,
-                                                                                    index_id=therapist_id,
-                                                                                    namespace=patient_id,
-                                                                                    environment=environment,
-                                                                                    auth_manager=auth_manager,
-                                                                                    openai_client=openai_client,
-                                                                                    pinecone_client=pinecone_client,
-                                                                                    supabase_client=supabase_client,
-                                                                                    patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                                    patient_gender=patient_gender)
+            questions_json = await self.chartwise_assistant.create_question_suggestions(language_code=language_code,
+                                                                                        session_id=session_id,
+                                                                                        index_id=therapist_id,
+                                                                                        namespace=patient_id,
+                                                                                        environment=environment,
+                                                                                        auth_manager=auth_manager,
+                                                                                        openai_client=openai_client,
+                                                                                        pinecone_client=pinecone_client,
+                                                                                        supabase_client=supabase_client,
+                                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
+                                                                                        patient_gender=patient_gender)
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             question_suggestions_query = supabase_client.select(fields="*",
@@ -665,12 +665,12 @@ class AssistantManager:
                                                      table_name="therapists")
             assert (0 != len((therapist_query).data))
             language_code = therapist_query.dict()['data'][0]["language_preference"]
-            mini_summary = await ChartWiseAssistant().create_session_mini_summary(session_notes=diarization_summary,
-                                                                                  therapist_id=therapist_id,
-                                                                                  language_code=language_code,
-                                                                                  auth_manager=auth_manager,
-                                                                                  openai_client=openai_client,
-                                                                                  session_id=session_id)
+            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=diarization_summary,
+                                                                                      therapist_id=therapist_id,
+                                                                                      language_code=language_code,
+                                                                                      auth_manager=auth_manager,
+                                                                                      openai_client=openai_client,
+                                                                                      session_id=session_id)
 
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -872,32 +872,31 @@ class AssistantManager:
             patient_gender = patient_query_data['gender']
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
-            chartwise_assistant = ChartWiseAssistant()
-            recent_topics_json = await chartwise_assistant.fetch_recent_topics(language_code=language_code,
-                                                                               session_id=session_id,
-                                                                               index_id=therapist_id,
-                                                                               namespace=patient_id,
-                                                                               environment=environment,
-                                                                               pinecone_client=pinecone_client,
-                                                                               supabase_client=supabase_client,
-                                                                               openai_client=openai_client,
-                                                                               auth_manager=auth_manager,
-                                                                               patient_name=patient_full_name,
-                                                                               patient_gender=patient_gender)
+            recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(language_code=language_code,
+                                                                                    session_id=session_id,
+                                                                                    index_id=therapist_id,
+                                                                                    namespace=patient_id,
+                                                                                    environment=environment,
+                                                                                    pinecone_client=pinecone_client,
+                                                                                    supabase_client=supabase_client,
+                                                                                    openai_client=openai_client,
+                                                                                    auth_manager=auth_manager,
+                                                                                    patient_name=patient_full_name,
+                                                                                    patient_gender=patient_gender)
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
-            topics_insights = await chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
-                                                                                        index_id=therapist_id,
-                                                                                        namespace=patient_id,
-                                                                                        environment=environment,
-                                                                                        language_code=language_code,
-                                                                                        session_id=session_id,
-                                                                                        patient_name=patient_full_name,
-                                                                                        patient_gender=patient_gender,
-                                                                                        supabase_client=supabase_client,
-                                                                                        openai_client=openai_client,
-                                                                                        pinecone_client=pinecone_client,
-                                                                                        auth_manager=auth_manager)
+            topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
+                                                                                             index_id=therapist_id,
+                                                                                             namespace=patient_id,
+                                                                                             environment=environment,
+                                                                                             language_code=language_code,
+                                                                                             session_id=session_id,
+                                                                                             patient_name=patient_full_name,
+                                                                                             patient_gender=patient_gender,
+                                                                                             supabase_client=supabase_client,
+                                                                                             openai_client=openai_client,
+                                                                                             pinecone_client=pinecone_client,
+                                                                                             auth_manager=auth_manager)
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
@@ -932,6 +931,71 @@ class AssistantManager:
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
                                     description="Updating the recent topics in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)
+
+    async def generate_attendance_insights(self,
+                                           background_tasks: BackgroundTasks,
+                                           therapist_id: str,
+                                           patient_id: str,
+                                           session_id: str,
+                                           environment: str,
+                                           auth_manager: AuthManager,
+                                           openai_client: OpenAIBaseClass,
+                                           supabase_client: SupabaseBaseClass,
+                                           logger_worker: Logger):
+        try:
+            therapist_query = supabase_client.select(fields="*",
+                                                     filters={
+                                                         'id': therapist_id
+                                                     },
+                                                     table_name="therapists")
+            assert (0 != len((therapist_query).data)), "Did not find any store data for incoming user."
+            language_code = therapist_query.dict()['data'][0]["language_preference"]
+
+            attendance_insights = await self.chartwise_assistant.generate_attendance_insights(therapist_id=therapist_id,
+                                                                                              patient_id=patient_id,
+                                                                                              environment=environment,
+                                                                                              language_code=language_code,
+                                                                                              session_id=session_id,
+                                                                                              supabase_client=supabase_client,
+                                                                                              openai_client=openai_client,
+                                                                                              auth_manager=auth_manager)
+
+            attendance_query = supabase_client.select(fields="*",
+                                                      filters={
+                                                          'therapist_id': therapist_id,
+                                                          'patient_id': patient_id
+                                                      },
+                                                      table_name="patient_attendance")
+
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            if 0 != len((attendance_query).data):
+                # Update existing result in Supabase
+                supabase_client.update(payload={
+                                           "last_updated": now_timestamp,
+                                           "insights": attendance_insights
+                                       },
+                                       filters={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                       },
+                                       table_name="patient_attendance")
+            else:
+                # Insert result to Supabase
+                supabase_client.insert(payload={
+                                           "last_updated": now_timestamp,
+                                           "insights": attendance_insights,
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id
+                                       },
+                                       table_name="patient_attendance")
+
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the attendance insights in a background task failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -976,6 +1040,18 @@ class AssistantManager:
                                   openai_client,
                                   pinecone_client,
                                   supabase_client)
+
+        # Update attendance insights
+        background_tasks.add_task(self.generate_attendance_insights,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  session_id,
+                                  environment,
+                                  auth_manager,
+                                  openai_client,
+                                  supabase_client,
+                                  logger_worker)
 
         # Update this patient's presession tray for future fetches.
         background_tasks.add_task(self.update_presession_tray,

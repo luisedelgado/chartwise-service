@@ -120,6 +120,10 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
+        if table_name == "patient_attendance":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
 
         raise Exception("Untracked table name")
 

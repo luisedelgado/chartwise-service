@@ -9,6 +9,7 @@ from ..internal.utilities.datetime_handler import convert_to_date_format_spell_o
 
 class PromptScenario(Enum):
     # keep sorted A-Z
+    ATTENDANCE_INSIGHTS = "attendance_insights"
     CHUNK_SUMMARY = "chunk_summary"
     GREETING = "greeting"
     PRESESSION_BRIEFING = "presession_briefing"
@@ -98,6 +99,9 @@ class PromptCrafter:
                                                              patient_gender=patient_gender,
                                                              patient_name=patient_name,
                                                              query_input=query_input)
+        elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
+            patient_session_dates = [] if 'patient_session_dates' not in kwargs else kwargs['patient_session_dates']
+            return self._create_attendance_insights_user_message(patient_session_dates=patient_session_dates)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -159,6 +163,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.TOPICS_INSIGHTS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_topics_insights_system_message(language_code=language_code)
+        elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            return self._create_attendance_insights_system_message(language_code=language_code)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -574,5 +581,34 @@ class PromptCrafter:
                 f"Note that the patient name is {patient_name}{gender_context}"
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
+        except Exception as e:
+            raise Exception(e)
+
+    # Attendance Insights
+
+    def _create_attendance_insights_user_message(self,
+                                                 patient_session_dates: list[str]):
+        try:
+            assert len(patient_session_dates or '') > 0, "Missing patient_session_dates param for building user message"
+            return ("Given the following dates of sessions that a patient has had with their therapist, provide an analysis of the patient's attendance pattern. "
+                    "Highlight any trends, consistency, or notable gaps in the sessions. "
+                    "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance.\n\n"
+                    f"Here are the dates: {patient_session_dates}")
+        except Exception as e:
+            raise Exception(e)
+
+    def _create_attendance_insights_system_message(self,
+                                                   language_code: str):
+        try:
+            assert len(language_code or '') > 0, "Missing language_code param for building system message"
+            return ("You are a mental health assistant helping practitioners analyze their patients' attendance patterns. "
+                    "You receive an array of dates (with format YYYY-MM-DD) representing the last N sessions a patient has had with their therapist. "
+                    "Your task is to generate a brief, insightful set of bullet points that highlights trends or irregularities in the patient's attendance. "
+                    "Consider factors such as consistency, gaps between sessions, and any changes in frequency over time. "
+                    "Provide analytics that could help the therapist understand the patient's commitment, punctuality, or potential barriers to consistent attendance. "
+                    "\n\nIt is very important that the output meets the following criteria:\n"
+                    "1. Format the output in bullet points.\n"
+                    "2. Limit the output to 500 characters.\n"
+                    f"3. Ensure the output is generated using language code {language_code}.\n")
         except Exception as e:
             raise Exception(e)

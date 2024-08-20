@@ -14,6 +14,7 @@ from ..managers.auth_manager import AuthManager
 
 PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 TOPICS_CONTEXT_SESSIONS_CAP = 6
+ATTENDANCE_CONTEXT_SESSION_CAP = 52
 
 class ChartWiseAssistant:
 
@@ -508,6 +509,52 @@ class ChartWiseAssistant:
                 "environment": environment,
                 "user": index_id,
                 "patient": namespace,
+                "session_id": str(session_id),
+                "caching_shard_key": caching_shard_key,
+                "language_code": language_code,
+            }
+
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
+                                                                     messages=[
+                                                                         {"role": "system", "content": system_prompt},
+                                                                         {"role": "user", "content": user_prompt},
+                                                                     ],
+                                                                     expects_json_response=False,
+                                                                     auth_manager=auth_manager)
+        except Exception as e:
+            raise Exception(e)
+
+    async def generate_attendance_insights(self,
+                                           therapist_id: str,
+                                           patient_id: str,
+                                           environment: str,
+                                           language_code: str,
+                                           session_id: str,
+                                           supabase_client: SupabaseBaseClass,
+                                           openai_client: OpenAIBaseClass,
+                                           auth_manager: AuthManager) -> str:
+        try:
+            patient_session_dates = [date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
+                                                                                                                                 patient_id=patient_id,
+                                                                                                                                 n=ATTENDANCE_CONTEXT_SESSION_CAP)]
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.ATTENDANCE_INSIGHTS,
+                                                                       patient_session_dates=patient_session_dates)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.ATTENDANCE_INSIGHTS,
+                                                                           language_code=language_code)
+            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            caching_shard_key = (patient_id + "-attendance-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            metadata = {
+                "environment": environment,
+                "user": therapist_id,
+                "patient": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
