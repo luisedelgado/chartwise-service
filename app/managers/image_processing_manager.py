@@ -84,6 +84,10 @@ class ImageProcessingManager:
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
             session_report_data = session_report_data[0]
 
+            # If the textraction has already been stored in Supabase we can return early.
+            if len(session_report_data['notes_text'] or '') > 0:
+                return session_report_data['id']
+
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                                   openai_client=openai_client,
