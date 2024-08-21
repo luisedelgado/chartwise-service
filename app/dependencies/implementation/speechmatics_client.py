@@ -40,16 +40,16 @@ class SpeechmaticsClient(SpeechmaticsBaseClass):
             },
         }
 
-    def diarize_audio(self,
-                      therapist_id: str,
-                      background_tasks: BackgroundTasks,
-                      auth_manager: AuthManager,
-                      session_id: str,
-                      file_full_path: str,
-                      supabase_client_factory: SupabaseFactoryBaseClass,
-                      session_auth_token: str,
-                      endpoint_url: str,
-                      file_name: str) -> str:
+    async def diarize_audio(self,
+                            therapist_id: str,
+                            background_tasks: BackgroundTasks,
+                            auth_manager: AuthManager,
+                            session_id: str,
+                            file_full_path: str,
+                            supabase_client_factory: SupabaseFactoryBaseClass,
+                            session_auth_token: str,
+                            endpoint_url: str,
+                            file_name: str) -> str:
         logger = Logger(supabase_client_factory=supabase_client_factory)
         config = self.diarization_config(auth_token=session_auth_token,
                                          endpoint_url=endpoint_url)

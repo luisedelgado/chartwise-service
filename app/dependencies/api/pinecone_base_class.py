@@ -165,6 +165,6 @@ class PineconeBaseClass(ABC):
     index_id – the index that should be used to query the data.
     namespace – the namespace that should be used for querying the index.
     """
-    def fetch_historical_context(index: Index,
-                                 namespace: str):
+    async def fetch_historical_context(index: Index,
+                                       namespace: str):
         pass

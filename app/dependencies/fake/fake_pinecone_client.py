@@ -79,7 +79,7 @@ class FakePineconeClient(PineconeBaseClass):
             return (False, "")
         return (True, "This is my fake vector context")
 
-    def fetch_historical_context(self,
-                                 index: Index,
-                                 namespace: str):
+    async def fetch_historical_context(self,
+                                       index: Index,
+                                       namespace: str):
         pass

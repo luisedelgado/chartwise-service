@@ -270,7 +270,7 @@ class PineconeClient(PineconeBaseClass):
         index = pc.Index(index_id)
 
         # Fetch patient's historical context
-        found_historical_context, historical_context = self.fetch_historical_context(index=index, namespace=namespace)
+        found_historical_context, historical_context = await self.fetch_historical_context(index=index, namespace=namespace)
 
         if found_historical_context:
             historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
@@ -389,9 +389,9 @@ class PineconeClient(PineconeBaseClass):
 
         return (True, reranked_context)
 
-    def fetch_historical_context(self,
-                                 index: Index,
-                                 namespace: str):
+    async def fetch_historical_context(self,
+                                       index: Index,
+                                       namespace: str):
         historial_context_namespace = ("".join([namespace,
                                                   "-",
                                                   PRE_EXISTING_HISTORY_PREFIX]))

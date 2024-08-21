@@ -88,15 +88,15 @@ class AudioProcessingManager:
                                  audio_file: UploadFile = File(...)) -> str:
         try:
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
-            return speechmatics_client.diarize_audio(auth_manager=auth_manager,
-                                                     therapist_id=therapist_id,
-                                                     background_tasks=background_tasks,
-                                                     session_id=session_id,
-                                                     file_name=audio_copy_result.file_copy_name,
-                                                     file_full_path=audio_copy_result.file_copy_full_path,
-                                                     supabase_client_factory=supabase_client_factory,
-                                                     session_auth_token=session_auth_token,
-                                                     endpoint_url=endpoint_url)
+            return await speechmatics_client.diarize_audio(auth_manager=auth_manager,
+                                                           therapist_id=therapist_id,
+                                                           background_tasks=background_tasks,
+                                                           session_id=session_id,
+                                                           file_name=audio_copy_result.file_copy_name,
+                                                           file_full_path=audio_copy_result.file_copy_full_path,
+                                                           supabase_client_factory=supabase_client_factory,
+                                                           session_auth_token=session_auth_token,
+                                                           endpoint_url=endpoint_url)
         except Exception as e:
             raise Exception(e)
         finally:
