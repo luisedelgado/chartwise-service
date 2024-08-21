@@ -288,7 +288,6 @@ class ChartWiseAssistant:
     patient_gender – the patient gender.
     openai_client – the openai client to be leveraged internally.
     pinecone_client – the pinecone client to be leveraged internally.
-    supabase_client – the supabase client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
     """
     async def create_question_suggestions(self,
@@ -301,18 +300,17 @@ class ChartWiseAssistant:
                                           patient_gender: str,
                                           openai_client: OpenAIBaseClass,
                                           pinecone_client: PineconeBaseClass,
-                                          supabase_client: SupabaseBaseClass,
                                           auth_manager: AuthManager) -> str:
         try:
-            query_input = f"What are 3 questions about different topics that I could ask about {patient_name}'s session history?"
+            query_input = f"What are 2 questions about different topics that I could ask about {patient_name}'s session history?"
             _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                                    openai_client=openai_client,
-                                                                                    query_input=query_input,
-                                                                                    index_id=index_id,
-                                                                                    namespace=namespace,
-                                                                                    session_id=session_id,
-                                                                                    query_top_k=10,
-                                                                                    rerank_top_n=4)
+                                                                        openai_client=openai_client,
+                                                                        query_input=query_input,
+                                                                        index_id=index_id,
+                                                                        namespace=namespace,
+                                                                        session_id=session_id,
+                                                                        query_top_k=10,
+                                                                        rerank_top_n=4)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,

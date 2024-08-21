@@ -133,7 +133,10 @@ class FakeSupabaseClient(SupabaseBaseClass):
                                      possible_values: list,
                                      table_name: str,
                                      order_desc_column: str = None):
-        pass
+        if table_name == "user_interface_strings":
+            return FakeSupabaseResult(data=[{
+                "value": "fake_string"
+            }])
 
     def delete(self,
                filters: dict,

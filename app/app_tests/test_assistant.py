@@ -716,6 +716,7 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -738,6 +739,7 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={

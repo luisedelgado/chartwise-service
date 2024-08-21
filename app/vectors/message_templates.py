@@ -336,15 +336,15 @@ class PromptCrafter:
             return (
                 "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
                 "They can ask you about the patient's session history. "
-                "Your task is to generate three specific questions that the practitioner might ask, for which you have detailed answers based on the provided context documents. "
+                "Your task is to generate two specific questions that the practitioner might ask, for which you have detailed answers based on the provided context documents. "
                 "Each question should be under 60 characters in length and be focused on specific aspects of the patient's history. "
                 "Avoid broad or vague questions like 'What happened during the session of Apr 10, 2022?' "
                 "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
                 "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
                 f"Ensure that the questions are written in language code {language_code}. "
-                "This is what the format should look like: {\"questions\": [..., ..., ...]}\n"
+                "This is what the format should look like: {\"questions\": [..., ...]}\n"
                 "Example output using language code es-419:\n"
-                r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?', '¿Qué tema sería beneficioso retomar con el paciente?']}"
+                r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?']}"
             )
         except Exception as e:
             raise Exception(e)

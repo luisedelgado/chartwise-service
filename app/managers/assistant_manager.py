@@ -590,7 +590,6 @@ class AssistantManager:
                                                                                         auth_manager=auth_manager,
                                                                                         openai_client=openai_client,
                                                                                         pinecone_client=pinecone_client,
-                                                                                        supabase_client=supabase_client,
                                                                                         patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                                         patient_gender=patient_gender)
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
