@@ -565,6 +565,7 @@ class AssistantManager:
                                           auth_manager: AuthManager,
                                           environment: str,
                                           session_id: str,
+                                          logger_worker: Logger,
                                           openai_client: OpenAIBaseClass,
                                           pinecone_client: PineconeBaseClass,
                                           supabase_client: SupabaseBaseClass):
@@ -623,11 +624,11 @@ class AssistantManager:
                                        },
                                        table_name="patient_question_suggestions")
         except Exception as e:
-            Logger().log_error(background_tasks=background_tasks,
-                               description="Updating the question suggestions in a background task failed",
-                               session_id=session_id,
-                               therapist_id=therapist_id,
-                               patient_id=patient_id)
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the question suggestions in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
             raise Exception(e)
 
     async def update_diarization_with_notification_data(self,
@@ -1023,6 +1024,7 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
+                                  logger_worker,
                                   openai_client,
                                   pinecone_client,
                                   supabase_client)

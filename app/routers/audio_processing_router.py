@@ -15,6 +15,7 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
+from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
@@ -32,10 +33,12 @@ class AudioProcessingRouter:
     ROUTER_TAG = "audio-files"
 
     def __init__(self,
-                auth_manager: AuthManager,
-                assistant_manager: AssistantManager,
-                audio_processing_manager: AudioProcessingManager,
-                router_dependencies: RouterDependencies):
+                 environment: str,
+                 auth_manager: AuthManager,
+                 assistant_manager: AssistantManager,
+                 audio_processing_manager: AudioProcessingManager,
+                 router_dependencies: RouterDependencies):
+            self._environment = environment
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
             self._audio_processing_manager = audio_processing_manager
@@ -45,6 +48,7 @@ class AudioProcessingRouter:
             self._supabase_client_factory = router_dependencies.supabase_client_factory
             self._openai_client = router_dependencies.openai_client
             self.router = APIRouter()
+            self.language_code = None
             self._register_routes()
 
     """
@@ -56,6 +60,9 @@ class AudioProcessingRouter:
                                            request: Request,
                                            background_tasks: BackgroundTasks,
                                            template: Annotated[SessionNotesTemplate, Form()],
+                                           patient_id: Annotated[str, Form()],
+                                           session_date: Annotated[str, Form()],
+                                           client_timezone_identifier: Annotated[str, Form()],
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
@@ -65,6 +72,9 @@ class AudioProcessingRouter:
                                                                  request=request,
                                                                  background_tasks=background_tasks,
                                                                  template=template,
+                                                                 patient_id=patient_id,
+                                                                 session_date=session_date,
+                                                                 client_timezone_identifier=client_timezone_identifier,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
                                                                  datastore_access_token=datastore_access_token,
@@ -109,6 +119,9 @@ class AudioProcessingRouter:
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     template – the template to be used for generating the output.
+    patient_id – the patient id associated with the operation.
+    session_date – the session date associated with the operation.
+    client_timezone_identifier – the timezone associated with the client.
     audio_file – the audio file for which the transcription will be created.
     authorization – the authorization cookie, if exists.
     datastore_access_token – the datastore access token.
@@ -120,6 +133,9 @@ class AudioProcessingRouter:
                                                  request: Request,
                                                  background_tasks: BackgroundTasks,
                                                  template: Annotated[SessionNotesTemplate, Form()],
+                                                 patient_id: Annotated[str, Form()],
+                                                 session_date: Annotated[str, Form()],
+                                                 client_timezone_identifier: Annotated[str, Form()],
                                                  audio_file: UploadFile,
                                                  authorization: Annotated[Union[str, None], Cookie()],
                                                  datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -127,6 +143,9 @@ class AudioProcessingRouter:
                                                  session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if datastore_access_token is None or datastore_refresh_token is None:
+            raise security.DATASTORE_TOKENS_ERROR
 
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
@@ -149,16 +168,31 @@ class AudioProcessingRouter:
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
-            assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
+            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+            assert general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert datetime_handler.is_valid_date(date_input=session_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
+                                                  tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            transcript = await self._audio_processing_manager.transcribe_audio_file(assistant_manager=self._assistant_manager,
-                                                                                    openai_client=self._openai_client,
-                                                                                    deepgram_client=self._deepgram_client,
-                                                                                    auth_manager=self._auth_manager,
-                                                                                    template=template,
-                                                                                    therapist_id=therapist_id,
-                                                                                    session_id=session_id,
-                                                                                    audio_file=audio_file)
+            language_code = self._get_user_language_code(user_id=therapist_id,
+                                                         supabase_client=supabase_client)
+            session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
+                                                                                           assistant_manager=self._assistant_manager,
+                                                                                           openai_client=self._openai_client,
+                                                                                           deepgram_client=self._deepgram_client,
+                                                                                           supabase_client=supabase_client,
+                                                                                           pinecone_client=self._pinecone_client,
+                                                                                           auth_manager=self._auth_manager,
+                                                                                           template=template,
+                                                                                           therapist_id=therapist_id,
+                                                                                           session_id=session_id,
+                                                                                           audio_file=audio_file,
+                                                                                           logger_worker=logger,
+                                                                                           session_date=session_date,
+                                                                                           patient_id=patient_id,
+                                                                                           client_timezone_identifier=client_timezone_identifier,
+                                                                                           environment=self._environment,
+                                                                                           language_code=language_code)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -167,8 +201,7 @@ class AudioProcessingRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
 
-            key = "soap_transcript" if template == SessionNotesTemplate.SOAP else "transcript"
-            return {key: transcript}
+            return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
@@ -368,3 +401,22 @@ class AudioProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         return {}
+
+    # Private
+
+    def _get_user_language_code(self,
+                                user_id: str,
+                                supabase_client: SupabaseBaseClass):
+        try:
+            if self.language_code is not None:
+                return self.language_code
+            therapist_query = supabase_client.select(fields="*",
+                                                        filters={
+                                                            'id': user_id
+                                                        },
+                                                        table_name="therapists")
+            assert (0 != len((therapist_query).data))
+            self.language_code = therapist_query.dict()['data'][0]["language_preference"]
+            return self.language_code
+        except Exception as e:
+            raise Exception("Encountered an issue while pulling user's language preference.")

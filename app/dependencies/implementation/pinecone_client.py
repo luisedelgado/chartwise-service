@@ -384,6 +384,9 @@ class PineconeClient(PineconeBaseClass):
                     reranked_context = "\n".join([reranked_context,
                                                   session_date_override_context])
 
+        if len(reranked_context or '') == 0:
+            return (False, missing_session_data_error)
+
         return (True, reranked_context)
 
     def fetch_historical_context(self,

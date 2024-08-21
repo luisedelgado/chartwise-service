@@ -14,4 +14,4 @@ class FakeDeepgramClient(DeepgramBaseClass):
                                openai_client: OpenAIBaseClass,
                                assistant_manager: AssistantManager,
                                template: SessionNotesTemplate) -> str:
-        pass
+        return "fake transcription"

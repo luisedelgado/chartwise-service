@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from fastapi import BackgroundTasks
 from fastapi.testclient import TestClient
 
@@ -169,7 +167,8 @@ class TestingHarnessAudioProcessingRouter:
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
 
-        coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(auth_manager=self.auth_manager,
+        coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT,
+                                                                                auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,
                                                                                 audio_processing_manager=self.audio_processing_manager,
                                                                                 router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
@@ -185,13 +184,17 @@ class TestingHarnessAudioProcessingRouter:
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-                               data={
-                                   "template": "soap"
-                               },
-                               files=files)
+                                    data={
+                                        "template": "soap",
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "04-04-2022",
+                                        "client_timezone_identifier": "UTC",
+                                    },
+                                    files=files)
         assert response.status_code == 401
 
     def test_invoke_soap_transcription_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -200,17 +203,23 @@ class TestingHarnessAudioProcessingRouter:
             "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-                               data={
-                                   "template": "soap"
-                               },
-                               files=files,
-                               cookies={
-                                   "authorization": self.auth_cookie,
-                               })
+                                    data={
+                                        "template": "soap",
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "04-04-2022",
+                                        "client_timezone_identifier": "UTC",
+                                    },
+                                    files=files,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                    })
         assert response.status_code == 200
-        assert "soap_transcript" in response.json()
+        assert "session_report_id" in response.json()
 
     def test_invoke_free_form_transcription_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -220,14 +229,19 @@ class TestingHarnessAudioProcessingRouter:
         }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
-                                   "template": "free_form"
-                               },
+                                    "template": "soap",
+                                    "patient_id": FAKE_PATIENT_ID,
+                                    "session_date": "04-04-2022",
+                                    "client_timezone_identifier": "UTC",
+                                },
                                files=files,
                                cookies={
                                    "authorization": self.auth_cookie,
+                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                })
         assert response.status_code == 200
-        assert "transcript" in response.json()
+        assert "session_report_id" in response.json()
 
     def test_invoke_diarization_with_no_auth(self):
         files = {
