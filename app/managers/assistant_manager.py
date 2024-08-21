@@ -1,3 +1,5 @@
+import json
+
 from datetime import datetime
 from enum import Enum
 
@@ -336,6 +338,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def add_patient(self,
+                          language_code: str,
                           auth_manager: AuthManager,
                           filtered_body: dict,
                           therapist_id: str,
@@ -360,6 +363,25 @@ class AssistantManager:
                                                                          auth_manager=auth_manager,
                                                                          openai_client=openai_client,
                                                                          session_id=session_id)
+
+            # Insert default question suggestions for patient without any session data
+            default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
+            strings_query = supabase_client.select_either_or_from_column(fields="*",
+                                                                         table_name="user_interface_strings",
+                                                                         column_name="id",
+                                                                         possible_values=default_question_suggestions)
+            assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
+
+            default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
+            response_dict = {
+                "questions": default_question_suggestions
+            }
+
+            supabase_client.insert(table_name="patient_question_suggestions", payload={
+                "patient_id": patient_id,
+                "therapist_id": therapist_id,
+                "questions": eval(json.dumps(response_dict, ensure_ascii=False))
+            })
 
             return patient_id
         except Exception as e:
@@ -1030,3 +1052,19 @@ class AssistantManager:
                                   pinecone_client,
                                   openai_client,
                                   supabase_client)
+
+    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
+        if language_code.startswith('es-'):
+            # Spanish
+            return [
+                'question_suggestions_no_data_default_es_1',
+                'question_suggestions_no_data_default_es_2'
+            ]
+        elif language_code.startswith('en-'):
+            # English
+            return [
+                'question_suggestions_no_data_default_en_1',
+                'question_suggestions_no_data_default_en_2'
+            ]
+        else:
+            raise Exception("Unsupported language code")

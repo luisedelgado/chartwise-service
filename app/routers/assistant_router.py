@@ -741,7 +741,10 @@ class AssistantRouter:
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            patient_id = await self._assistant_manager.add_patient(auth_manager=self._auth_manager,
+            language_code = self._get_user_language_code(user_id=therapist_id,
+                                                         supabase_client=supabase_client)
+            patient_id = await self._assistant_manager.add_patient(language_code=language_code,
+                                                                   auth_manager=self._auth_manager,
                                                                    filtered_body=body,
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,

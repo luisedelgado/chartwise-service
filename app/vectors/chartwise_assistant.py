@@ -305,7 +305,7 @@ class ChartWiseAssistant:
                                           auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 3 questions about different topics that I could ask about {patient_name}'s session history?"
-            found_context, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                                     openai_client=openai_client,
                                                                                     query_input=query_input,
                                                                                     index_id=index_id,
@@ -313,20 +313,6 @@ class ChartWiseAssistant:
                                                                                     session_id=session_id,
                                                                                     query_top_k=10,
                                                                                     rerank_top_n=4)
-
-            # If there's no patient data, we'll return 3 static questions as default.
-            if not found_context:
-                default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
-                strings_query = supabase_client.select_either_or_from_column(fields="*",
-                                                                             table_name="user_interface_strings",
-                                                                             column_name="id",
-                                                                             possible_values=default_question_suggestions)
-                assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
-                default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
-                response_dict = {
-                    "questions": default_question_suggestions
-                }
-                return eval(json.dumps(response_dict, ensure_ascii=False))
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -725,21 +711,3 @@ class ChartWiseAssistant:
             return overrides
         except Exception as e:
             raise Exception(e)
-
-    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
-        if language_code.startswith('es-'):
-            # Spanish
-            return [
-                'question_suggestions_no_data_default_es_1',
-                'question_suggestions_no_data_default_es_2',
-                'question_suggestions_no_data_default_es_3'
-            ] 
-        elif language_code.startswith('en-'):
-            # English
-            return [
-                'question_suggestions_no_data_default_en_1',
-                'question_suggestions_no_data_default_en_2',
-                'question_suggestions_no_data_default_en_3'
-            ]
-        else:
-            raise Exception("Unsupported language code")
