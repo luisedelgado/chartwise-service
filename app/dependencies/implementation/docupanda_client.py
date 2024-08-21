@@ -8,10 +8,10 @@ from ...managers.auth_manager import AuthManager
 
 class DocupandaClient(DocupandaBaseClass):
 
-    def upload_image(self,
-                     auth_manager: AuthManager,
-                     image_filepath: str,
-                     image_filename: str) -> str:
+    async def upload_image(self,
+                           auth_manager: AuthManager,
+                           image_filepath: str,
+                           image_filename: str) -> str:
         base_url = os.getenv("DOCUPANDA_BASE_URL")
         document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
         pdf_extension = "pdf"
@@ -44,7 +44,7 @@ class DocupandaClient(DocupandaBaseClass):
 
         return doc_id
 
-    def retrieve_text_from_document(self, document_id) -> str:
+    async def retrieve_text_from_document(self, document_id) -> str:
         try:
             base_url = os.getenv("DOCUPANDA_BASE_URL")
             document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")

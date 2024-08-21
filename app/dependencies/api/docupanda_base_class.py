@@ -12,9 +12,9 @@ class DocupandaBaseClass(ABC):
     image_filepath – the local filepath for the image that will be uploaded.
     image_filename – the file name of the image that will be uploaded.
     """
-    def upload_image(auth_manager: AuthManager,
-                     image_filepath: str,
-                     image_filename: str) -> str:
+    async def upload_image(auth_manager: AuthManager,
+                           image_filepath: str,
+                           image_filename: str) -> str:
         pass
 
     """
@@ -23,5 +23,5 @@ class DocupandaBaseClass(ABC):
     Arguments:
     document_id – the document id to be textracted.
     """
-    def retrieve_text_from_document(document_id) -> str:
+    async def retrieve_text_from_document(document_id) -> str:
         pass

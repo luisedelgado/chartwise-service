@@ -37,9 +37,9 @@ class ImageProcessingManager:
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            doc_id = docupanda_client.upload_image(auth_manager=auth_manager,
-                                                   image_filepath=image_copy_path,
-                                                   image_filename=image.filename)
+            doc_id = await docupanda_client.upload_image(auth_manager=auth_manager,
+                                                         image_filepath=image_copy_path,
+                                                         image_filename=image.filename)
 
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={
@@ -73,7 +73,7 @@ class ImageProcessingManager:
                                   auth_manager: AuthManager,
                                   assistant_manager: AssistantManager) -> str:
         try:
-            textraction = docupanda_client.retrieve_text_from_document(document_id)
+            textraction = await docupanda_client.retrieve_text_from_document(document_id)
 
             session_report_query = supabase_client.select(fields="*",
                                                           table_name="session_reports",
