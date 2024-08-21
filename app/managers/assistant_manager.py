@@ -800,6 +800,7 @@ class AssistantManager:
                                                                        session_number=session_number,
                                                                        auth_manager=auth_manager,
                                                                        openai_client=openai_client,
+                                                                       supabase_client=supabase_client,
                                                                        pinecone_client=pinecone_client,
                                                                        session_date_override=session_date_override)
 

@@ -302,7 +302,7 @@ class PromptCrafter:
                     f"The first thing you should do is say hi {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time."
                     f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: 'Most Recent Sessions' and 'Historical Themes'. "
                     f"If this is {therapist_name}'s first time meeting with {patient_name}, omit these sections and instead suggest strategies on how to establish a solid foundation. "
-                    f"For 'Most Recent Sessions' use the `session_date` value to determine and list the most recent sessions. Ensure date precision. "
+                    f"For 'Most Recent Sessions' list the most recent sessions sorted by most recent first. Ensure date precision. "
                     f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
                     "Use only the information you find from the `chunk_summary` fields. "
