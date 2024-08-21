@@ -9,7 +9,7 @@ class FakeDocupandaClient(DocupandaBaseClass):
                      auth_manager: AuthManager,
                      image_filepath: str,
                      image_filename: str) -> str:
-        pass
+        return "Fake ID"
 
     def retrieve_text_from_document(self, document_id) -> str:
         if self.retrieving_non_existing_doc_id:

@@ -1,7 +1,5 @@
 import json, os
 
-from datetime import datetime
-
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
@@ -15,7 +13,6 @@ from fastapi import (APIRouter,
 from typing import Annotated, Union
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
@@ -174,8 +171,8 @@ class AudioProcessingRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            language_code = self._get_user_language_code(user_id=therapist_id,
-                                                         supabase_client=supabase_client)
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
                                                                                            openai_client=self._openai_client,
@@ -192,7 +189,7 @@ class AudioProcessingRouter:
                                                                                            patient_id=patient_id,
                                                                                            client_timezone_identifier=client_timezone_identifier,
                                                                                            environment=self._environment,
-                                                                                           language_code=language_code)
+                                                                                           language_code=self.language_code)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -296,15 +293,13 @@ class AudioProcessingRouter:
                                                                                   audio_file=audio_file,
                                                                                   endpoint_url=endpoint_url)
 
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             supabase_client.insert(table_name="session_reports",
                                    payload={
                                        "diarization_job_id": job_id,
-                                       "diarization_template": template.value,
+                                       "template": template.value,
                                        "session_date": session_date,
                                        "therapist_id": therapist_id,
                                        "patient_id": patient_id,
-                                       "last_updated": now_timestamp,
                                        "source": SessionNotesSource.FULL_SESSION_RECORDING.value,
                                    })
 
@@ -401,22 +396,3 @@ class AudioProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         return {}
-
-    # Private
-
-    def _get_user_language_code(self,
-                                user_id: str,
-                                supabase_client: SupabaseBaseClass):
-        try:
-            if self.language_code is not None:
-                return self.language_code
-            therapist_query = supabase_client.select(fields="*",
-                                                        filters={
-                                                            'id': user_id
-                                                        },
-                                                        table_name="therapists")
-            assert (0 != len((therapist_query).data))
-            self.language_code = therapist_query.dict()['data'][0]["language_preference"]
-            return self.language_code
-        except Exception as e:
-            raise Exception("Encountered an issue while pulling user's language preference.")

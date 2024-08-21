@@ -145,13 +145,13 @@ class AssistantRouter:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                language_code = self._get_user_language_code(user_id=therapist_id,
-                                                             supabase_client=supabase_client)
+                self.language_code = (self.language_code if self.language_code is not None
+                                      else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 background_tasks=background_tasks,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
-                                                                                language_code=language_code,
+                                                                                language_code=self.language_code,
                                                                                 session_id=session_id),
                                          media_type="text/event-stream")
             except Exception as e:
@@ -304,12 +304,15 @@ class AssistantRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            language_code = self._get_user_language_code(user_id=therapist_id,
-                                                         supabase_client=supabase_client)
-            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=self.language_code,
                                                                                       environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
-                                                                                      body=body,
+                                                                                      patient_id=body.patient_id,
+                                                                                      notes_text=body.notes_text,
+                                                                                      session_date=body.session_date,
+                                                                                      source=body.source,
                                                                                       logger_worker=logger,
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
@@ -397,9 +400,9 @@ class AssistantRouter:
                                                                                 tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
             assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
-            language_code = self._get_user_language_code(user_id=therapist_id,
-                                                         supabase_client=supabase_client)
-            await self._assistant_manager.update_session(language_code=language_code,
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            await self._assistant_manager.update_session(language_code=self.language_code,
                                                          environment=self._environment,
                                                          background_tasks=background_tasks,
                                                          logger_worker=logger,
@@ -498,9 +501,10 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            language_code = self._get_user_language_code(user_id=therapist_id,
-                                                         supabase_client=supabase_client)
-            await self._assistant_manager.delete_session(language_code=language_code,
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+
+            await self._assistant_manager.delete_session(language_code=self.language_code,
                                                          auth_manager=self._auth_manager,
                                                          environment=self._environment,
                                                          session_id=session_id,
@@ -741,9 +745,9 @@ class AssistantRouter:
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            language_code = self._get_user_language_code(user_id=therapist_id,
-                                                         supabase_client=supabase_client)
-            patient_id = await self._assistant_manager.add_patient(language_code=language_code,
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            patient_id = await self._assistant_manager.add_patient(language_code=self.language_code,
                                                                    auth_manager=self._auth_manager,
                                                                    filtered_body=body,
                                                                    therapist_id=therapist_id,
@@ -1035,23 +1039,6 @@ class AssistantRouter:
                                 detail=description)
 
     # Private
-
-    def _get_user_language_code(self,
-                                user_id: str,
-                                supabase_client: SupabaseBaseClass):
-        try:
-            if self.language_code is not None:
-                return self.language_code
-            therapist_query = supabase_client.select(fields="*",
-                                                        filters={
-                                                            'id': user_id
-                                                        },
-                                                        table_name="therapists")
-            assert (0 != len((therapist_query).data))
-            self.language_code = therapist_query.dict()['data'][0]["language_preference"]
-            return self.language_code
-        except Exception as e:
-            raise Exception("Encountered an issue while pulling user's language preference.")
 
     def _default_streaming_error_message_id(self, language_code: str):
         if language_code.startswith('es-'):

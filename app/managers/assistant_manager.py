@@ -80,7 +80,10 @@ class AssistantManager:
                                        language_code: str,
                                        background_tasks: BackgroundTasks,
                                        auth_manager: AuthManager,
-                                       body: SessionNotesInsert,
+                                       patient_id: str,
+                                       notes_text: str,
+                                       session_date: str,
+                                       source: SessionNotesSource,
                                        session_id: str,
                                        therapist_id: str,
                                        openai_client: OpenAIBaseClass,
@@ -90,7 +93,7 @@ class AssistantManager:
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
-                                                       'id': body.patient_id,
+                                                       'id': patient_id,
                                                        'therapist_id': therapist_id
                                                    },
                                                    table_name="patients")
@@ -99,7 +102,7 @@ class AssistantManager:
             assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
             patient_query_data = patient_query_data[0]
 
-            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=body.notes_text,
+            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
                                                                                       auth_manager=auth_manager,
@@ -111,11 +114,11 @@ class AssistantManager:
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
             if patient_last_session_date is None:
-                patient_last_session_date = body.session_date
+                patient_last_session_date = session_date
             else:
                 formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=body.session_date,
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
                                                                                        first_date_format=datetime_handler.DATE_FORMAT,
                                                                                        second_date=formatted_date,
                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
@@ -126,17 +129,17 @@ class AssistantManager:
                                        "total_sessions": (1 + (patient_query_data['total_sessions'])),
                                    },
                                    filters={
-                                       'id': body.patient_id
+                                       'id': patient_id
                                    })
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={
-                                                       "notes_text": body.notes_text,
+                                                       "notes_text": notes_text,
                                                        "notes_mini_summary": mini_summary,
-                                                       "session_date": body.session_date,
-                                                       "patient_id": body.patient_id,
-                                                       "source": body.source.value,
+                                                       "session_date": session_date,
+                                                       "patient_id": patient_id,
+                                                       "source": source.value,
                                                        "last_updated": now_timestamp,
                                                        "therapist_id": therapist_id
                                                    })
@@ -144,9 +147,9 @@ class AssistantManager:
 
             # Upload vector embeddings
             await pinecone_client.insert_session_vectors(index_id=therapist_id,
-                                                         namespace=body.patient_id,
-                                                         text=body.notes_text,
-                                                         therapy_session_date=body.session_date,
+                                                         namespace=patient_id,
+                                                         text=notes_text,
+                                                         therapy_session_date=session_date,
                                                          openai_client=openai_client,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
@@ -154,7 +157,7 @@ class AssistantManager:
             await self.generate_insights_after_session_data_updates(language_code=language_code,
                                                                     background_tasks=background_tasks,
                                                                     therapist_id=therapist_id,
-                                                                    patient_id=body.patient_id,
+                                                                    patient_id=patient_id,
                                                                     auth_manager=auth_manager,
                                                                     environment=environment,
                                                                     session_id=session_id,
@@ -651,7 +654,7 @@ class AssistantManager:
             session_query_data = session_query.dict()['data'][0]
             therapist_id = session_query_data['therapist_id']
             patient_id = session_query_data['patient_id']
-            template = session_query_data['diarization_template']
+            template = session_query_data['template']
             session_date_raw = session_query_data['session_date']
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date_raw,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)

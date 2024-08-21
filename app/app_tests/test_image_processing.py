@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_docupanda_client import FakeDocupandaClient
+from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..internal.router_dependencies import RouterDependencies
@@ -35,15 +36,18 @@ class TestingHarnessImageProcessingRouter:
         self.fake_docupanda_client = FakeDocupandaClient()
         self.fake_supabase_admin_client = FakeSupabaseClient()
         self.fake_supabase_user_client = FakeSupabaseClient()
+        self.fake_pinecone_client = FakePineconeClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
 
-        coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(auth_manager=self.auth_manager,
+        coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(environment=ENVIRONMENT,
+                                                                                auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,
                                                                                 image_processing_manager=self.image_processing_manager,
                                                                                 router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
                                                                                                                        openai_client=self.fake_openai_client,
+                                                                                                                       pinecone_client=self.fake_pinecone_client,
                                                                                                                        docupanda_client=self.fake_docupanda_client)).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
@@ -53,7 +57,13 @@ class TestingHarnessImageProcessingRouter:
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
-                                    files=files)
+                                    files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTC",
+                                        "template": "soap"
+                                    })
         assert response.status_code == 401
 
     def test_invoke_image_upload_with_auth_but_no_datastore_tokens(self):
@@ -66,12 +76,18 @@ class TestingHarnessImageProcessingRouter:
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
                                     files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTC",
+                                        "template": "soap"
+                                    },
                                     cookies={
                                         "authorization": self.auth_cookie,
                                     })
         assert response.status_code == 401
 
-    def test_invoke_png_image_upload_success(self):
+    def test_invoke_image_upload_with_auth_but_invalid_timezone(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -81,6 +97,35 @@ class TestingHarnessImageProcessingRouter:
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
                                     files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTCfdsgdsghds",
+                                        "template": "soap"
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                    })
+        assert response.status_code == 400
+
+    def test_invoke_png_image_upload_soap_format_success(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        files = {
+            "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
+        }
+        response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
+                                    files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTC",
+                                        "template": "soap"
+                                    },
                                     cookies={
                                         "authorization": self.auth_cookie,
                                         "datastore_access_token": FAKE_ACCESS_TOKEN,
@@ -88,6 +133,30 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "document_id" in response.json()
+
+    def test_invoke_png_image_upload_soap_format_success(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        files = {
+            "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
+        }
+        response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
+                                    files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTC",
+                                        "template": "free_form"
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                    })
+        assert response.status_code == 200
+        assert "session_report_id" in response.json()
 
     def test_invoke_pdf_image_upload_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -99,13 +168,19 @@ class TestingHarnessImageProcessingRouter:
         }
         response = self.client.post(ImageProcessingRouter.IMAGE_UPLOAD_ENDPOINT,
                                     files=files,
+                                    data={
+                                        "patient_id": FAKE_PATIENT_ID,
+                                        "session_date": "01-01-2000",
+                                        "client_timezone_identifier": "UTC",
+                                        "template": "soap"
+                                    },
                                     cookies={
                                         "authorization": self.auth_cookie,
                                         "datastore_access_token": FAKE_ACCESS_TOKEN,
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                     })
         assert response.status_code == 200
-        assert "document_id" in response.json()
+        assert "session_report_id" in response.json()
 
     def test_invoke_textraction_with_no_auth(self):
         response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
@@ -162,38 +237,19 @@ class TestingHarnessImageProcessingRouter:
                                 },)
         assert response.status_code == 400
 
-    def test_invoke_free_form_textraction_with_auth_and_valid_doc_id(self):
+    def test_invoke_textraction_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                               params={
-                                   "document_id": "12345",
-                                    "template": "free_form"
-                                },
-                                cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                })
+                                   params={
+                                       "document_id": "12345"
+                                   },
+                                   cookies={
+                                       "authorization": self.auth_cookie,
+                                       "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                       "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   })
         assert response.status_code == 200
-        assert "textraction" in response.json()
-
-    def test_invoke_soap_textraction_with_auth_and_valid_doc_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.select_returns_data = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                               params={
-                                   "document_id": "12345",
-                                    "template": "soap"
-                                },
-                                cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                })
-        assert response.status_code == 200
-        assert "soap_textraction" in response.json()

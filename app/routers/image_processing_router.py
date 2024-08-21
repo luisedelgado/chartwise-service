@@ -14,7 +14,7 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
 from ..internal.router_dependencies import RouterDependencies
-from ..internal.utilities import general_utilities
+from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 from ..managers.image_processing_manager import ImageProcessingManager
@@ -26,16 +26,20 @@ class ImageProcessingRouter:
     ROUTER_TAG = "image-files"
 
     def __init__(self,
+                 environment: str,
                  assistant_manager: AssistantManager,
                  auth_manager: AuthManager,
                  image_processing_manager: ImageProcessingManager,
                  router_dependencies: RouterDependencies):
+        self.language_code = None
+        self._environment = environment
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
         self._image_processing_manager = image_processing_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory
         self._openai_client = router_dependencies.openai_client
         self._docupanda_client = router_dependencies.docupanda_client
+        self._pinecone_client = router_dependencies.pinecone_client
         self.router = APIRouter()
         self._register_routes()
 
@@ -47,6 +51,10 @@ class ImageProcessingRouter:
         async def upload_session_notes_image(response: Response,
                                              request: Request,
                                              background_tasks: BackgroundTasks,
+                                             patient_id: Annotated[str, Form()],
+                                             session_date: Annotated[str, Form()],
+                                             template: Annotated[SessionNotesTemplate, Form()],
+                                             client_timezone_identifier: Annotated[str, Form()],
                                              image: UploadFile = File(...),
                                              datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                              datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
@@ -55,6 +63,10 @@ class ImageProcessingRouter:
             return await self._upload_session_notes_image_internal(response=response,
                                                                    request=request,
                                                                    background_tasks=background_tasks,
+                                                                   patient_id=patient_id,
+                                                                   session_date=session_date,
+                                                                   client_timezone_identifier=client_timezone_identifier,
+                                                                   template=template,
                                                                    image=image,
                                                                    datastore_access_token=datastore_access_token,
                                                                    datastore_refresh_token=datastore_refresh_token,
@@ -68,7 +80,6 @@ class ImageProcessingRouter:
                                document_id: str = None,
                                datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                               template: SessionNotesTemplate = SessionNotesTemplate.FREE_FORM,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
@@ -77,7 +88,6 @@ class ImageProcessingRouter:
                                                      document_id=document_id,
                                                      datastore_access_token=datastore_access_token,
                                                      datastore_refresh_token=datastore_refresh_token,
-                                                     template=template,
                                                      authorization=authorization,
                                                      session_id=session_id)
 
@@ -89,6 +99,10 @@ class ImageProcessingRouter:
     request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     image – the image to be uploaded.
+    template – the template to be used for returning the output.
+    patient_id – the patient id.
+    session_date – the associated session date.
+    client_timezone_identifier – the client timezone id.
     authorization – the authorization cookie, if exists.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
@@ -99,6 +113,10 @@ class ImageProcessingRouter:
                                                    request: Request,
                                                    background_tasks: BackgroundTasks,
                                                    image: UploadFile,
+                                                   template: SessionNotesTemplate,
+                                                   patient_id: str,
+                                                   session_date: str,
+                                                   client_timezone_identifier: str,
                                                    authorization: Annotated[Union[str, None], Cookie()],
                                                    datastore_access_token: Annotated[Union[str, None], Cookie()],
                                                    datastore_refresh_token: Annotated[Union[str, None], Cookie()],
@@ -130,26 +148,44 @@ class ImageProcessingRouter:
                                endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
 
         try:
-            assert len(therapist_id or '') > 0, "Invalid therapist_id payload value"
+            assert len(patient_id or '') > 0, "Didn't receive a valid document id."
+            assert general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert datetime_handler.is_valid_date(date_input=session_date,
+                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
+                                                  tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
-            document_id = await self._image_processing_manager.upload_image_for_textraction(auth_manager=self._auth_manager,
-                                                                                            image=image,
-                                                                                            docupanda_client=self._docupanda_client)
+        try:
+            job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(background_tasks=background_tasks,
+                                                                                                  patient_id=patient_id,
+                                                                                                  therapist_id=therapist_id,
+                                                                                                  session_date=session_date,
+                                                                                                  supabase_client=supabase_client,
+                                                                                                  auth_manager=self._auth_manager,
+                                                                                                  image=image,
+                                                                                                  template=template,
+                                                                                                  docupanda_client=self._docupanda_client)
 
-            logger.log_textraction_event(background_tasks=background_tasks,
-                                         therapist_id=therapist_id,
-                                         session_id=session_id,
-                                         job_id=document_id)
-            logs_description = f"document_id={document_id}"
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method,
-                                    description=logs_description)
+                                    method=post_api_method)
 
-            return {"document_id": document_id}
+            return {
+                "session_report_id": session_report_id,
+                "job_id": job_id
+            }
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
@@ -172,7 +208,6 @@ class ImageProcessingRouter:
     response – the response model to be used for crafting the final response.
     background_tasks – object for scheduling concurrent tasks.
     document_id – the id of the document to be textracted.
-    template – the template to be used for returning the output.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
@@ -183,7 +218,6 @@ class ImageProcessingRouter:
                                      response: Response,
                                      background_tasks: BackgroundTasks,
                                      document_id: str,
-                                     template: SessionNotesTemplate,
                                      datastore_access_token: Annotated[Union[str, None], Cookie()],
                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                      authorization: Annotated[Union[str, None], Cookie()],
@@ -215,9 +249,9 @@ class ImageProcessingRouter:
                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
-            assert len(document_id or '') > 0
-        except:
-            description = "Didn't receive a valid document id."
+            assert len(document_id or '') > 0, "Didn't receive a valid document id."
+        except Exception as e:
+            description = str(e)
             status_code = status.HTTP_400_BAD_REQUEST
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
@@ -229,13 +263,13 @@ class ImageProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
-            textraction_query = supabase_client.select(fields="*",
-                                                       filters={
-                                                           'job_id': document_id
-                                                       },
-                                                       table_name="textraction_logs")
-            assert (0 != len((textraction_query).data))
-            assert textraction_query.dict()['data'][0]['therapist_id'] == therapist_id
+            session_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'textraction_job_id': document_id
+                                                   },
+                                                   table_name="session_reports")
+            assert (0 != len((session_query).data))
+            assert session_query.dict()['data'][0]['therapist_id'] == therapist_id
         except Exception as e:
             description = "Invalid textraction request."
             status_code = status.HTTP_403_FORBIDDEN
@@ -249,24 +283,20 @@ class ImageProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
-            textraction = self._image_processing_manager.extract_text(document_id=document_id,
-                                                                      docupanda_client=self._docupanda_client)
-
-            if template == SessionNotesTemplate.FREE_FORM:
-                logger.log_api_response(background_tasks=background_tasks,
-                                        session_id=session_id,
-                                        therapist_id=therapist_id,
-                                        endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                        http_status_code=status.HTTP_200_OK,
-                                        method=get_api_method)
-                return {"textraction": textraction}
-
-            assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
-            soap_textraction = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                         openai_client=self._openai_client,
-                                                                                         therapist_id=therapist_id,
-                                                                                         session_id=session_id,
-                                                                                         session_notes_text=textraction)
+            self.language_code = (self.language_code if self.language_code is not None
+                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            await self._image_processing_manager.process_textraction(document_id=document_id,
+                                                                     docupanda_client=self._docupanda_client,
+                                                                     session_id=session_id,
+                                                                     environment=self._environment,
+                                                                     language_code=self.language_code,
+                                                                     logger_worker=logger,
+                                                                     background_tasks=background_tasks,
+                                                                     openai_client=self._openai_client,
+                                                                     supabase_client=supabase_client,
+                                                                     pinecone_client=self._pinecone_client,
+                                                                     auth_manager=self._auth_manager,
+                                                                     assistant_manager=self._assistant_manager)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -275,7 +305,7 @@ class ImageProcessingRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=get_api_method)
 
-            return {"soap_textraction": soap_textraction}
+            return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

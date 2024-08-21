@@ -1,3 +1,5 @@
+import random
+
 from datetime import datetime
 from enum import Enum
 
@@ -251,11 +253,12 @@ class PromptCrafter:
             weekday = datetime_now.strftime('%A')
             gender_context = ("A " if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
                               else f"A {therapist_gender} ")
+            use_emoji_context = ("" if random.random() > 1/2 else "Add an emoji to go along your message.")
             return (
                 f"{gender_context}mental health practitioner named {therapist_name} is entering our Practice Management Platform. "
                 f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. Do not overuse exclamation marks. "
                 f"Address {therapist_name} by their name, and make sure to use language code {language_code} when generating your response. "
-                "Conclude with a short statement on productivity to pump their motivation. "
+                f"Conclude with a short statement on productivity to pump their motivation. {use_emoji_context}"
             )
         except Exception as e:
             raise Exception(str(e))

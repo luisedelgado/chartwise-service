@@ -1,6 +1,8 @@
 from fastapi import status
 from pytz import timezone
 
+from ...dependencies.api.supabase_base_class import SupabaseBaseClass
+
 """
 Returns a flag representing whether or not the incoming timezone identifier is valid.
 For context: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -29,3 +31,19 @@ def extract_status_code(exception, fallback: status):
             if isinstance(value, int):
                 return value
     return fallback
+
+"""
+Retrieves the current user's language preference.
+"""
+def get_user_language_code(user_id: str,
+                           supabase_client: SupabaseBaseClass):
+    try:
+        therapist_query = supabase_client.select(fields="*",
+                                                    filters={
+                                                        'id': user_id
+                                                    },
+                                                    table_name="therapists")
+        assert (0 != len((therapist_query).data))
+        return therapist_query.dict()['data'][0]["language_preference"]
+    except Exception as e:
+        raise Exception("Encountered an issue while pulling user's language preference.")
