@@ -194,7 +194,7 @@ class PromptCrafter:
 
         if chat_history_included:
             chat_history_instruction = (
-                "8. For coherence, consider the provided chat history to understand what the conversation has been so far. "
+                "9. For coherence, consider the provided chat history to understand what the conversation has been so far. "
                 "The `chunk_summary` fields still take precedence when you're looking for information with which to answer the user question.\n"
             )
         else:
@@ -213,7 +213,8 @@ class PromptCrafter:
             "Otherwise, if the pre-existing history is not related to the question, ignore it.\n"
             f"5. When referencing a `chunk_summary`, always mention the session date associated with the information context. Use format '%b %d, %Y' (i.e: Oct 12, 2023).\n"
             "6. If no relevant session information is found, do not mention any dates.\n"
-            "7. If the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
+            "7. If the question is about future sessions or planning, and no relevant session notes exist, freely provide guidance to assist the practitioner.\n"
+            "8. For questions directly related to the patient's session history, if the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
             f"{chat_history_instruction}"
             f"{last_session_date_context}"
         )
