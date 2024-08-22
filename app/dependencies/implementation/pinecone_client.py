@@ -140,7 +140,7 @@ class PineconeClient(PineconeBaseClass):
                 dimension=1536,
                 spec=ServerlessSpec(
                     cloud='aws',
-                    region='us-west-2')
+                    region='us-east-1')
             )
         except PineconeApiException as e:
             # We expect HTTPCode 409 if index already exists - ALREADY_EXISTS
