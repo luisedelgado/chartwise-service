@@ -20,6 +20,7 @@ class OpenAIClient(OpenAIBaseClass):
 
     LLM_MODEL = "gpt-4o-mini"
     EMBEDDING_MODEL = "text-embedding-3-small"
+    RERANK_ACTION_NAME = "rerank_vectors"
 
     async def trigger_async_chat_completion(self,
                                             metadata: dict,
@@ -203,7 +204,8 @@ class OpenAIClient(OpenAIBaseClass):
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str):
+                               session_id: str,
+                               user_id: str):
         try:
             context = ""
             for document in documents:
@@ -220,9 +222,11 @@ class OpenAIClient(OpenAIBaseClass):
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
+                "action": self.RERANK_ACTION_NAME,
                 "session_id": str(session_id),
                 "query_top_k": len(documents),
-                "rerank_top_n": top_n
+                "rerank_top_n": top_n,
+                "user": user_id
             }
 
             response = await self.trigger_async_chat_completion(metadata=metadata,

@@ -109,7 +109,8 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str):
+                               session_id: str,
+                               user_id: str):
         pass
 
     @property

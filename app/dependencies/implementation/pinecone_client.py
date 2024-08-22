@@ -309,7 +309,8 @@ class PineconeClient(PineconeBaseClass):
                                                                             documents=retrieved_docs,
                                                                             top_n=rerank_top_n,
                                                                             query_input=query_input,
-                                                                            session_id=session_id)
+                                                                            session_id=session_id,
+                                                                            user_id=index_id)
             reranked_context = ""
             reranked_documents = reranked_response_results['reranked_documents']
             dates_contained = []

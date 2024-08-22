@@ -85,10 +85,12 @@ class OpenAIBaseClass(ABC):
     top_n – the top n documents that should be returned after reranking.
     query_input – the input query.
     session_id – the session id.
+    user_id – the user id.
     """
     async def rerank_documents(auth_manager: AuthManager,
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str):
+                               session_id: str,
+                               user_id: str):
         pass

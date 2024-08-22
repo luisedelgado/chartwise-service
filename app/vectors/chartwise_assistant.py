@@ -16,6 +16,16 @@ PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 TOPICS_CONTEXT_SESSIONS_CAP = 6
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 5
+QUERY_ACTON_NAME = "assistant_query"
+GREETING_ACTON_NAME = "greeting"
+BRIEFING_ACTON_NAME = "briefing"
+QUESTION_SUGGESTIONS_ACTION_NAME = "question_suggestions"
+TOPICS_ACTION_NAME = "topics"
+TOPICS_INSIGHTS_ACTION_NAME = "topics_insights"
+ATTENDANCE_INSIGHTS_ACTION_NAME = "attendance_insights"
+SOAP_REPORT_ACTION_NAME = "soap_report"
+SUMMARIZE_CHUNK_ACTION_NAME = "summarize_chunk"
+MINI_SUMMARY_ACTION_NAME = "mini_summary"
 
 class ChartWiseAssistant:
 
@@ -34,7 +44,6 @@ class ChartWiseAssistant:
     query_input – the user input for the query.
     response_language_code – the language code to be used in the response.
     session_id – the session id.
-    endpoint_name – the endpoint that was invoked.
     method – the API method that was invoked.
     environment – the current running environment.
     auth_manager – the auth manager to be leveraged internally.
@@ -50,7 +59,6 @@ class ChartWiseAssistant:
                           query_input: str,
                           response_language_code: str,
                           session_id: str,
-                          endpoint_name: str,
                           method: str,
                           environment: str,
                           auth_manager: AuthManager,
@@ -65,7 +73,7 @@ class ChartWiseAssistant:
                 "namespace": namespace,
                 "language_code": response_language_code,
                 "session_id": str(session_id),
-                "endpoint_name": endpoint_name,
+                "action": QUERY_ACTON_NAME,
                 "method": method,
             }
 
@@ -130,7 +138,6 @@ class ChartWiseAssistant:
     language_code – the language_code to be used in the greeting.
     tz_identifier – the timezone identifier to be used for calculating the client's current time.
     session_id – the session id.
-    endpoint_name – the endpoint that was invoked.
     therapist_id – the therapist_id.
     method – the API method that was invoked.
     environment – the current running environment.
@@ -143,7 +150,6 @@ class ChartWiseAssistant:
                               language_code: str,
                               tz_identifier: str,
                               session_id: str,
-                              endpoint_name: str,
                               therapist_id: str,
                               method: str,
                               environment: str,
@@ -166,7 +172,7 @@ class ChartWiseAssistant:
                 "user": therapist_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
-                "endpoint_name": endpoint_name,
+                "action": GREETING_ACTON_NAME,
                 "method": method,
                 "tz_identifier": tz_identifier,
                 "language_code": language_code,
@@ -263,6 +269,7 @@ class ChartWiseAssistant:
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
+                "action": BRIEFING_ACTON_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -337,6 +344,7 @@ class ChartWiseAssistant:
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
+                "action": QUESTION_SUGGESTIONS_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -418,6 +426,7 @@ class ChartWiseAssistant:
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
+                "action": TOPICS_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -501,6 +510,7 @@ class ChartWiseAssistant:
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
+                "action": TOPICS_INSIGHTS_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -547,6 +557,7 @@ class ChartWiseAssistant:
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
+                "action": ATTENDANCE_INSIGHTS_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -591,6 +602,7 @@ class ChartWiseAssistant:
             metadata = {
                 "user": therapist_id,
                 "session_id": str(session_id),
+                "action": SOAP_REPORT_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -630,7 +642,8 @@ class ChartWiseAssistant:
 
             metadata = {
                 "user": therapist_id,
-                "session_id": str(session_id)
+                "session_id": str(session_id),
+                "action": SUMMARIZE_CHUNK_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
@@ -675,6 +688,7 @@ class ChartWiseAssistant:
                 "user": therapist_id,
                 "session_id": str(session_id),
                 "language_code": language_code,
+                "action": MINI_SUMMARY_ACTION_NAME
             }
 
             return await openai_client.trigger_async_chat_completion(metadata=metadata,
