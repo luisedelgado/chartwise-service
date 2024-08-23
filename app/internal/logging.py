@@ -136,7 +136,7 @@ class Logger:
     def log_diarization_event(self, background_tasks: BackgroundTasks, **kwargs):
         # We don't want to log if we're in staging or dev
         environment = os.environ.get("ENVIRONMENT").lower()
-        if environment != "prod":
+        if environment != "prod" and environment != "staging":
             return
 
         therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
