@@ -372,7 +372,7 @@ class PromptCrafter:
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\n{patient_info} "
-                f"It is very important that each question is written using language code {language_code}, and that it remains under 50 characters of length. "
+                f"It is very important that each question is written using language code {language_code}, and that it remains under 60 characters of length. "
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
