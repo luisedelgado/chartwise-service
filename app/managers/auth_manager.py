@@ -12,8 +12,9 @@ from ..internal.security import Token
 
 class AuthManager:
 
-    APP_COOKIE_DOMAIN = (None if os.environ.get("ENVIRONMENT") != "prod"
-                         else "chartwise.ai")
+    APP_COOKIE_DOMAIN = ("chartwise.ai" if (os.environ.get("ENVIRONMENT") == "prod"
+                                            or os.environ.get("ENVIRONMENT") == "staging")
+                         else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
