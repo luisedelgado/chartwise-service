@@ -528,41 +528,6 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
-    async def fetch_todays_greeting(self,
-                                    client_tz_identifier: str,
-                                    therapist_id: str,
-                                    session_id: str,
-                                    api_method: str,
-                                    environment: str,
-                                    auth_manager: AuthManager,
-                                    openai_client: OpenAIBaseClass,
-                                    supabase_client: SupabaseBaseClass) -> str:
-        try:
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         'id': therapist_id
-                                                     },
-                                                     table_name="therapists")
-            assert (0 != len((therapist_query).data)), "No user was found with the incoming id"
-
-            therapist_query_data = therapist_query.dict()['data'][0]
-            addressing_name = therapist_query_data["first_name"]
-            language_code = therapist_query_data["language_preference"]
-            therapist_gender = therapist_query_data["gender"]
-            result = await self.chartwise_assistant.create_greeting(therapist_name=addressing_name,
-                                                                    therapist_gender=therapist_gender,
-                                                                    language_code=language_code,
-                                                                    tz_identifier=client_tz_identifier,
-                                                                    session_id=session_id,
-                                                                    therapist_id=therapist_id,
-                                                                    method=api_method,
-                                                                    environment=environment,
-                                                                    openai_client=openai_client,
-                                                                    auth_manager=auth_manager)
-            return result
-        except Exception as e:
-            raise Exception(e)
-
     async def update_question_suggestions(self,
                                           language_code: str,
                                           therapist_id: str,

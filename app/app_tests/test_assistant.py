@@ -567,56 +567,6 @@ class TestingHarnessAssistantRouter:
         assert CRISTIANO_QUERY == self.fake_openai_client.chat_history[0].content
         assert MESSI_QUERY != self.fake_openai_client.chat_history[1].content
 
-    def test_greeting_with_missing_auth_token(self):
-        response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
-                                    params={
-                                        "client_tz_identifier": TZ_IDENTIFIER,
-                                    })
-        assert response.status_code == 401
-
-    def test_greeting_with_auth_but_auth_token_but_supabase_returns_unathenticated_session(self):
-        response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "client_tz_identifier": TZ_IDENTIFIER,
-                                    })
-        assert response.status_code == 401
-
-    def test_greeting_with_valid_auth_but_invalid_tz_identifier(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "client_timezone_identifier": "gfshsh",
-                                    })
-        assert response.status_code == 400
-
-    def test_greeting_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-        response = self.client.get(AssistantRouter.GREETINGS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "client_timezone_identifier": TZ_IDENTIFIER,
-                                    })
-        assert response.status_code == 200
-
     def test_add_patient_with_missing_auth(self):
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     json={

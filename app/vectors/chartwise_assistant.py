@@ -16,7 +16,6 @@ TOPICS_CONTEXT_SESSIONS_CAP = 6
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 5
 QUERY_ACTON_NAME = "assistant_query"
-GREETING_ACTON_NAME = "greeting"
 BRIEFING_ACTON_NAME = "briefing"
 QUESTION_SUGGESTIONS_ACTION_NAME = "question_suggestions"
 TOPICS_ACTION_NAME = "topics"
@@ -123,71 +122,6 @@ class ChartWiseAssistant:
                                                                    last_session_date=last_session_date):
                 yield part
 
-        except Exception as e:
-            raise Exception(e)
-
-    """
-    Creates a greeting with the incoming values.
-    Returns the greeting result.
-
-    Arguments:
-    name – the addressing name to be used in the greeting.
-    therapist_gender – the therapist gender.
-    language_code – the language_code to be used in the greeting.
-    tz_identifier – the timezone identifier to be used for calculating the client's current time.
-    session_id – the session id.
-    therapist_id – the therapist_id.
-    method – the API method that was invoked.
-    environment – the current running environment.
-    openai_client – the openai client.
-    auth_manager – the auth manager to be leveraged internally.
-    """
-    async def create_greeting(self,
-                              therapist_name: str,
-                              therapist_gender: str,
-                              language_code: str,
-                              tz_identifier: str,
-                              session_id: str,
-                              therapist_id: str,
-                              method: str,
-                              environment: str,
-                              openai_client: OpenAIBaseClass,
-                              auth_manager: AuthManager) -> str:
-        try:
-            prompt_crafter = PromptCrafter()
-            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.GREETING)
-            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.GREETING,
-                                                                           therapist_name=therapist_name,
-                                                                           therapist_gender=therapist_gender,
-                                                                           tz_identifier=tz_identifier,
-                                                                           language_code=language_code)
-            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
-            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-
-            caching_shard_key = (therapist_id + "-greeting-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            metadata = {
-                "environment": environment,
-                "user_id": therapist_id,
-                "session_id": str(session_id),
-                "caching_shard_key": caching_shard_key,
-                "action": GREETING_ACTON_NAME,
-                "method": method,
-                "tz_identifier": tz_identifier,
-                "language_code": language_code,
-            }
-
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
-                                                                     messages=[
-                                                                         {"role": "system", "content": system_prompt},
-                                                                         {"role": "user", "content": user_prompt},
-                                                                     ],
-                                                                     expects_json_response=False,
-                                                                     auth_manager=auth_manager)
         except Exception as e:
             raise Exception(e)
 

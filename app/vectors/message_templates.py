@@ -13,7 +13,6 @@ class PromptScenario(Enum):
     # keep sorted A-Z
     ATTENDANCE_INSIGHTS = "attendance_insights"
     CHUNK_SUMMARY = "chunk_summary"
-    GREETING = "greeting"
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
@@ -38,8 +37,6 @@ class PromptCrafter:
             return self._create_qa_user_message(context=context,
                                                 language_code=language_code,
                                                 query_input=query_input)
-        elif scenario == PromptScenario.GREETING:
-            return self._create_greeting_user_message()
         elif scenario == PromptScenario.PRESESSION_BRIEFING:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
@@ -120,15 +117,6 @@ class PromptCrafter:
                                                   patient_name=patient_name,
                                                   patient_gender=patient_gender,
                                                   chat_history_included=chat_history_included)
-        elif scenario == PromptScenario.GREETING:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            tz_identifier = None if 'tz_identifier' not in kwargs else kwargs['tz_identifier']
-            therapist_name = None if 'therapist_name' not in kwargs else kwargs['therapist_name']
-            therapist_gender = None if 'therapist_gender' not in kwargs else kwargs['therapist_gender']
-            return self._create_greeting_system_message(therapist_name=therapist_name,
-                                                        therapist_gender=therapist_gender,
-                                                        tz_identifier=tz_identifier,
-                                                        language_code=language_code)
         elif scenario == PromptScenario.PRESESSION_BRIEFING:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
@@ -235,37 +223,6 @@ class PromptCrafter:
             )
         except Exception as e:
             raise Exception(e)
-
-    # Greeting Prompt
-
-    def _create_greeting_system_message(self,
-                                        therapist_name: str,
-                                        tz_identifier: str,
-                                        language_code: str,
-                                        therapist_gender: str) -> str | None:
-
-        try:
-            assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
-            assert len(tz_identifier or '') > 0, "Missing tz_identifier param for building system message"
-            assert len(language_code or '') > 0, "Missing language_code param for building system message"
-
-            tz = timezone(tz_identifier)
-            datetime_now = datetime.now(tz)
-            weekday = datetime_now.strftime('%A')
-            gender_context = ("A " if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
-                              else f"A {therapist_gender} ")
-            use_emoji_context = ("" if random.random() > 1/2 else "Add an emoji to go along your message.")
-            return (
-                f"{gender_context}mental health practitioner named {therapist_name} is entering our Practice Management Platform. "
-                f"Your job is to greet them into the experience. Send a cheerful message about today being {weekday}. Do not overuse exclamation marks. "
-                f"Address {therapist_name} by their name, and make sure to use language code {language_code} when generating your response. "
-                f"Conclude with a short statement on productivity to pump their motivation. {use_emoji_context}"
-            )
-        except Exception as e:
-            raise Exception(str(e))
-
-    def _create_greeting_user_message(self) -> str:
-        return f"Write a welcoming message for the practitioner. Do not overuse exclamation marks. Your response should not go over 72 characters."
 
     # Briefing Prompt
 
