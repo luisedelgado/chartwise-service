@@ -378,6 +378,7 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 401
 
     def test_delete_therapist_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN

@@ -322,7 +322,6 @@ class SecurityRouter:
                 payload[key] = value
 
             supabase_client.insert(payload=payload, table_name="therapists")
-            await self._pinecone_client.create_index(user_id)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     therapist_id=user_id,
@@ -476,6 +475,15 @@ class SecurityRouter:
                                method=delete_api_method,
                                endpoint_name=self.ACCOUNT_ENDPOINT)
         try:
+            patients_response = supabase_client.select(fields="id",
+                                                       filters={
+                                                           "therapist_id": user_id
+                                                       },
+                                                       table_name="patients")
+            patients_response_data = patients_response.dict()
+            assert 'data' in patients_response_data, "Failed to retrieve therapist data for patients"
+            patient_ids = patients_response_data['data']
+
             # Delete therapist and all their patients (through cascading)
             delete_response = supabase_client.delete(table_name="therapists",
                                                      filters={
@@ -487,7 +495,8 @@ class SecurityRouter:
             supabase_client.sign_out()
 
             # Delete vectors associated with therapist's patients
-            self._assistant_manager.delete_all_sessions_for_therapist(id=user_id,
+            self._assistant_manager.delete_all_sessions_for_therapist(user_id=user_id,
+                                                                      patient_ids=patient_ids,
                                                                       pinecone_client=self._pinecone_client)
 
             # Delete auth and session cookies

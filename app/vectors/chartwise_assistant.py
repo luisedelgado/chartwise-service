@@ -1,4 +1,3 @@
-import json
 import tiktoken
 
 from datetime import datetime
@@ -37,8 +36,8 @@ class ChartWiseAssistant:
     Returns the query result.
 
     Arguments:
-    index_id – the index id that should be queried inside the datastore.
-    namespace – the namespace within the index that should be queried.
+    user_id – the user id associated with the query operation.
+    patient_id – the patient id associated with the query operation.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient's gender.
     query_input – the user input for the query.
@@ -52,8 +51,8 @@ class ChartWiseAssistant:
     session_date_override – the optional override for including date-specific vectors.
     """
     async def query_store(self,
-                          index_id: str,
-                          namespace: str,
+                          user_id: str,
+                          patient_id: str,
                           patient_name: str,
                           patient_gender: str,
                           query_input: str,
@@ -68,19 +67,18 @@ class ChartWiseAssistant:
         try:
             metadata = {
                 "environment": environment,
-                "user": index_id,
-                "vector_index": index_id,
-                "namespace": namespace,
+                "user_id": user_id,
+                "patient_id": patient_id,
                 "language_code": response_language_code,
                 "session_id": str(session_id),
                 "action": QUERY_ACTON_NAME,
                 "method": method,
             }
 
-            # If the user is now querying another namespace, let's clear any chat history.
-            if self.namespace_used_for_streaming != namespace:
+            # If the user is now querying another patient, let's clear any chat history.
+            if self.namespace_used_for_streaming != patient_id:
                 await openai_client.clear_chat_history()
-                self.namespace_used_for_streaming = namespace
+                self.namespace_used_for_streaming = patient_id
 
             is_first_message_in_conversation = len(openai_client.chat_history) == 0
 
@@ -103,15 +101,15 @@ class ChartWiseAssistant:
                                                                                 auth_manager=auth_manager,
                                                                                 expects_json_response=False)
 
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        query_input=query_input,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        openai_client=openai_client,
-                                                                        query_top_k=10,
-                                                                        rerank_top_n=3,
-                                                                        session_id=session_id,
-                                                                        session_dates_override=[session_date_override])
+            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                     query_input=query_input,
+                                                                     user_id=user_id,
+                                                                     patient_id=patient_id,
+                                                                     openai_client=openai_client,
+                                                                     query_top_k=10,
+                                                                     rerank_top_n=3,
+                                                                     session_id=session_id,
+                                                                     session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
             async for part in openai_client.stream_chat_completion(vector_context=context,
@@ -169,7 +167,7 @@ class ChartWiseAssistant:
             caching_shard_key = (therapist_id + "-greeting-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": therapist_id,
+                "user_id": therapist_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "action": GREETING_ACTON_NAME,
@@ -197,8 +195,8 @@ class ChartWiseAssistant:
     Creates and returns a briefing on the incoming patient id's data.
 
     Arguments:
-    index_id – the index id that should be queried inside the datastore.
-    namespace – the namespace within the index that should be queried.
+    user_id – the user id associated with the briefing operation.
+    patient_id – the patient id associated with the briefing operation.
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
@@ -211,8 +209,8 @@ class ChartWiseAssistant:
     session_date_override – the optional session date override for including in the (vector) briefing context.
     """
     async def create_briefing(self,
-                              index_id: str,
-                              namespace: str,
+                              user_id: str,
+                              patient_id: str,
                               environment: str,
                               language_code: str,
                               session_id: str,
@@ -231,17 +229,17 @@ class ChartWiseAssistant:
             "What's most valuable for me to remember, and what would be good avenues to explore in our upcoming session?")
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
-                                                                                patient_id=namespace,
+                                                                                patient_id=patient_id,
                                                                                 n=BRIEFING_CONTEXT_SESSIONS_CAP)
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        openai_client=openai_client,
-                                                                        query_input=query_input,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        query_top_k=0,
-                                                                        rerank_top_n=0,
-                                                                        session_id=session_id,
-                                                                        session_dates_override=session_dates_override)
+            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                     openai_client=openai_client,
+                                                                     query_input=query_input,
+                                                                     user_id=user_id,
+                                                                     patient_id=patient_id,
+                                                                     query_top_k=0,
+                                                                     rerank_top_n=0,
+                                                                     session_id=session_id,
+                                                                     session_dates_override=session_dates_override)
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -261,11 +259,11 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (namespace + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (patient_id + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": index_id,
-                "patient": namespace,
+                "user_id": user_id,
+                "patient_id": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
@@ -291,8 +289,8 @@ class ChartWiseAssistant:
     Fetches a set of questions to be suggested to the user for feeding the assistant.
 
     Arguments:
-    index_id – the index id that should be queried inside the datastore.
-    namespace – the namespace within the index that should be queried.
+    user_id – the user id associated with the question suggestions operation.
+    patient_id – the patient id associated with the question suggestions operation.
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
@@ -303,8 +301,8 @@ class ChartWiseAssistant:
     auth_manager – the auth manager to be leveraged internally.
     """
     async def create_question_suggestions(self,
-                                          index_id: str,
-                                          namespace: str,
+                                          user_id: str,
+                                          patient_id: str,
                                           environment: str,
                                           language_code: str,
                                           session_id: str,
@@ -315,14 +313,14 @@ class ChartWiseAssistant:
                                           auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 2 questions about different topics that I could ask about {patient_name}'s session history?"
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        openai_client=openai_client,
-                                                                        query_input=query_input,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        session_id=session_id,
-                                                                        query_top_k=10,
-                                                                        rerank_top_n=4)
+            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                     openai_client=openai_client,
+                                                                     query_input=query_input,
+                                                                     user_id=user_id,
+                                                                     patient_id=patient_id,
+                                                                     session_id=session_id,
+                                                                     query_top_k=10,
+                                                                     rerank_top_n=4)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -336,11 +334,11 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (namespace + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (patient_id + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": index_id,
-                "patient": namespace,
+                "user_id": user_id,
+                "patient_id": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
@@ -366,8 +364,8 @@ class ChartWiseAssistant:
     Fetches a set of topics associated with the user along with respective density percentages.
 
     Arguments:
-    index_id – the index id that should be queried inside the datastore.
-    namespace – the namespace within the index that should be queried.
+    user_id – the user id associated with the topics operation.
+    patient_id – the patient id associated with the topics operation.
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
@@ -379,8 +377,8 @@ class ChartWiseAssistant:
     auth_manager – the auth manager to be leveraged internally.
     """
     async def fetch_recent_topics(self,
-                                  index_id: str,
-                                  namespace: str,
+                                  user_id: str,
+                                  patient_id: str,
                                   environment: str,
                                   language_code: str,
                                   session_id: str,
@@ -394,17 +392,17 @@ class ChartWiseAssistant:
             query_input = f"What are the topics that have come up the most in {patient_name}'s most recent sessions?"
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
-                                                                                patient_id=namespace,
+                                                                                patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        query_input=query_input,
-                                                                        openai_client=openai_client,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        session_id=session_id,
-                                                                        query_top_k=0,
-                                                                        rerank_top_n=0,
-                                                                        session_dates_override=session_dates_override)
+            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                     query_input=query_input,
+                                                                     openai_client=openai_client,
+                                                                     user_id=user_id,
+                                                                     patient_id=patient_id,
+                                                                     session_id=session_id,
+                                                                     query_top_k=0,
+                                                                     rerank_top_n=0,
+                                                                     session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -418,11 +416,11 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (namespace + "-topics-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (patient_id + "-topics-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": index_id,
-                "patient": namespace,
+                "user_id": user_id,
+                "patient_id": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
@@ -449,8 +447,8 @@ class ChartWiseAssistant:
 
     Arguments:
     recent_topics_json – the set of recent topics to be analyzed.
-    index_id – the index id that should be queried inside the datastore.
-    namespace – the namespace within the index that should be queried.
+    user_id – the user id associated with the topics insights operation.
+    patient_id – the patient id associated with the topics insights operation.
     environment – the current running environment.
     language_code – the language code to be used in the response.
     session_id – the session id.
@@ -463,8 +461,8 @@ class ChartWiseAssistant:
     """
     async def generate_recent_topics_insights(self,
                                               recent_topics_json: str,
-                                              index_id: str,
-                                              namespace: str,
+                                              user_id: str,
+                                              patient_id: str,
                                               environment: str,
                                               language_code: str,
                                               session_id: str,
@@ -478,17 +476,17 @@ class ChartWiseAssistant:
             query_input = f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
-                                                                                patient_id=namespace,
+                                                                                patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
-            _, context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                        query_input=query_input,
-                                                                        openai_client=openai_client,
-                                                                        index_id=index_id,
-                                                                        namespace=namespace,
-                                                                        session_id=session_id,
-                                                                        query_top_k=0,
-                                                                        rerank_top_n=0,
-                                                                        session_dates_override=session_dates_override)
+            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
+                                                                     query_input=query_input,
+                                                                     openai_client=openai_client,
+                                                                     user_id=user_id,
+                                                                     patient_id=patient_id,
+                                                                     session_id=session_id,
+                                                                     query_top_k=0,
+                                                                     rerank_top_n=0,
+                                                                     session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,
@@ -502,11 +500,11 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (namespace + "-topics-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (patient_id + "-topics-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": index_id,
-                "patient": namespace,
+                "user_id": user_id,
+                "patient_id": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
@@ -552,8 +550,8 @@ class ChartWiseAssistant:
             caching_shard_key = (patient_id + "-attendance-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
-                "user": therapist_id,
-                "patient": patient_id,
+                "user_id": therapist_id,
+                "patient_id": patient_id,
                 "session_id": str(session_id),
                 "caching_shard_key": caching_shard_key,
                 "language_code": language_code,
@@ -600,7 +598,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
-                "user": therapist_id,
+                "user_id": therapist_id,
                 "session_id": str(session_id),
                 "action": SOAP_REPORT_ACTION_NAME
             }
@@ -641,7 +639,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
-                "user": therapist_id,
+                "user_id": therapist_id,
                 "session_id": str(session_id),
                 "action": SUMMARIZE_CHUNK_ACTION_NAME
             }
@@ -685,7 +683,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
-                "user": therapist_id,
+                "user_id": therapist_id,
                 "session_id": str(session_id),
                 "language_code": language_code,
                 "action": MINI_SUMMARY_ACTION_NAME

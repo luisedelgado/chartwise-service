@@ -146,8 +146,8 @@ class AssistantManager:
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
-            await pinecone_client.insert_session_vectors(index_id=therapist_id,
-                                                         namespace=patient_id,
+            await pinecone_client.insert_session_vectors(user_id=therapist_id,
+                                                         patient_id=patient_id,
                                                          text=notes_text,
                                                          therapy_session_date=session_date,
                                                          openai_client=openai_client,
@@ -227,8 +227,8 @@ class AssistantManager:
             assert (0 != len((update_response).data)), "Update operation could not be completed"
 
             if session_date_changed or session_text_changed:
-                await pinecone_client.update_session_vectors(index_id=therapist_id,
-                                                             namespace=patient_id,
+                await pinecone_client.update_session_vectors(user_id=therapist_id,
+                                                             patient_id=patient_id,
                                                              text=filtered_body.get('notes_text', current_session_text),
                                                              session_id=session_id,
                                                              old_date=current_session_date_formatted,
@@ -322,8 +322,8 @@ class AssistantManager:
             # Delete vector embeddings
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            pinecone_client.delete_session_vectors(index_id=therapist_id,
-                                                   namespace=patient_id,
+            pinecone_client.delete_session_vectors(user_id=therapist_id,
+                                                   patient_id=patient_id,
                                                    date=session_date_formatted)
 
             await self.generate_insights_after_session_data_updates(language_code=language_code,
@@ -360,8 +360,8 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                await pinecone_client.insert_preexisting_history_vectors(index_id=therapist_id,
-                                                                         namespace=patient_id,
+                await pinecone_client.insert_preexisting_history_vectors(user_id=therapist_id,
+                                                                         patient_id=patient_id,
                                                                          text=filtered_body['pre_existing_history'],
                                                                          auth_manager=auth_manager,
                                                                          openai_client=openai_client,
@@ -426,12 +426,15 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        await pinecone_client.update_preexisting_history_vectors(index_id=therapist_id,
-                                                                 namespace=filtered_body['id'],
+        await pinecone_client.update_preexisting_history_vectors(user_id=therapist_id,
+                                                                 patient_id=filtered_body['id'],
                                                                  text=filtered_body['pre_existing_history'],
                                                                  session_id=session_id,
                                                                  openai_client=openai_client,
                                                                  auth_manager=auth_manager)
+
+        # New pre-existing history content means we should clear any existing conversation.
+        await openai_client.clear_chat_history()
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManager,
@@ -454,18 +457,22 @@ class AssistantManager:
                                     therapist_id: str,
                                     patient_id: str):
         try:
-            pinecone_client.delete_session_vectors(index_id=therapist_id, namespace=patient_id)
-            pinecone_client.delete_preexisting_history_vectors(index_id=therapist_id, namespace=patient_id)
+            pinecone_client.delete_session_vectors(user_id=therapist_id, patient_id=patient_id)
+            pinecone_client.delete_preexisting_history_vectors(user_id=therapist_id,
+                                                               patient_id=patient_id)
         except Exception as e:
             # Index doesn't exist, failing silently. Patient may have been queued for deletion prior to having any
             # data in our vector db
             pass
 
     def delete_all_sessions_for_therapist(self,
-                                          id: str,
+                                          user_id: str,
+                                          patient_ids: list[str],
                                           pinecone_client: PineconeBaseClass):
         try:
-            pinecone_client.delete_index(id)
+            for patient_id in patient_ids:
+                pinecone_client.delete_session_vectors(user_id=user_id,
+                                                       patient_id=patient_id)
         except Exception as e:
             raise Exception(e)
 
@@ -504,8 +511,8 @@ class AssistantManager:
             else:
                 session_date_override = None
 
-            async for part in self.chartwise_assistant.query_store(index_id=therapist_id,
-                                                                   namespace=query.patient_id,
+            async for part in self.chartwise_assistant.query_store(user_id=therapist_id,
+                                                                   patient_id=query.patient_id,
                                                                    patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                    patient_gender=patient_gender,
                                                                    query_input=query.text,
@@ -584,8 +591,8 @@ class AssistantManager:
 
             questions_json = await self.chartwise_assistant.create_question_suggestions(language_code=language_code,
                                                                                         session_id=session_id,
-                                                                                        index_id=therapist_id,
-                                                                                        namespace=patient_id,
+                                                                                        user_id=therapist_id,
+                                                                                        patient_id=patient_id,
                                                                                         environment=environment,
                                                                                         auth_manager=auth_manager,
                                                                                         openai_client=openai_client,
@@ -732,8 +739,8 @@ class AssistantManager:
                                            'diarization_job_id': job_id
                                        })
 
-            await pinecone_client.insert_session_vectors(index_id=therapist_id,
-                                                         namespace=patient_id,
+            await pinecone_client.insert_session_vectors(user_id=therapist_id,
+                                                         patient_id=patient_id,
                                                          text=diarization_summary,
                                                          therapy_session_date=session_date_formatted,
                                                          auth_manager=auth_manager,
@@ -784,21 +791,21 @@ class AssistantManager:
             else:
                 session_date_override = None
 
-            briefing = await self.chartwise_assistant.create_briefing(index_id=therapist_id,
-                                                                       namespace=patient_id,
-                                                                       environment=environment,
-                                                                       language_code=language_code,
-                                                                       session_id=session_id,
-                                                                       patient_name=patient_name,
-                                                                       patient_gender=patient_gender,
-                                                                       therapist_name=therapist_name,
-                                                                       therapist_gender=therapist_gender,
-                                                                       session_number=session_number,
-                                                                       auth_manager=auth_manager,
-                                                                       openai_client=openai_client,
-                                                                       supabase_client=supabase_client,
-                                                                       pinecone_client=pinecone_client,
-                                                                       session_date_override=session_date_override)
+            briefing = await self.chartwise_assistant.create_briefing(user_id=therapist_id,
+                                                                      patient_id=patient_id,
+                                                                      environment=environment,
+                                                                      language_code=language_code,
+                                                                      session_id=session_id,
+                                                                      patient_name=patient_name,
+                                                                      patient_gender=patient_gender,
+                                                                      therapist_name=therapist_name,
+                                                                      therapist_gender=therapist_gender,
+                                                                      session_number=session_number,
+                                                                      auth_manager=auth_manager,
+                                                                      openai_client=openai_client,
+                                                                      supabase_client=supabase_client,
+                                                                      pinecone_client=pinecone_client,
+                                                                      session_date_override=session_date_override)
 
             briefing_query = supabase_client.select(fields="*",
                                                     filters={
@@ -865,8 +872,8 @@ class AssistantManager:
 
             recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(language_code=language_code,
                                                                                     session_id=session_id,
-                                                                                    index_id=therapist_id,
-                                                                                    namespace=patient_id,
+                                                                                    user_id=therapist_id,
+                                                                                    patient_id=patient_id,
                                                                                     environment=environment,
                                                                                     pinecone_client=pinecone_client,
                                                                                     supabase_client=supabase_client,
@@ -877,8 +884,8 @@ class AssistantManager:
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
             topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
-                                                                                             index_id=therapist_id,
-                                                                                             namespace=patient_id,
+                                                                                             user_id=therapist_id,
+                                                                                             patient_id=patient_id,
                                                                                              environment=environment,
                                                                                              language_code=language_code,
                                                                                              session_id=session_id,
