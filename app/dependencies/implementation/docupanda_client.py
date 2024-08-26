@@ -1,4 +1,4 @@
-import base64, os, requests
+import base64, json, os, requests
 
 from fastapi import HTTPException, status
 from portkey_ai import Portkey
@@ -26,7 +26,10 @@ class DocupandaClient(DocupandaBaseClass):
             portkey = Portkey(
                 api_key=os.environ.get("PORTKEY_API_KEY"),
                 virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),
-                custom_host=base_url
+                custom_host=base_url,
+                metadata={
+                    "hidden_provider": "docupanda"
+                }
             )
             response = portkey.post('/document', document=payload)
             response_as_dict = response.dict()
@@ -36,6 +39,7 @@ class DocupandaClient(DocupandaBaseClass):
                 "accept": "application/json",
                 "content-type": "application/json",
                 "X-API-Key": os.getenv("DOCUPANDA_API_KEY"),
+                "x-portkey-metadata": json.dumps({"hidden_provider": "docupanda"})
             }
             url = base_url + document_endpoint
             response = requests.post(url, json={"document": payload}, headers=headers)
