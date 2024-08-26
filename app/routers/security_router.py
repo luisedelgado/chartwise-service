@@ -26,8 +26,8 @@ class LoginMechanism(Enum):
     INTERNAL = "internal"
 
 class LoginData(BaseModel):
-    datastore_access_token: Optional[str] = None
-    datastore_refresh_token: Optional[str] = None
+    datastore_access_token: str
+    datastore_refresh_token: str
     user_id: str
 
 class TherapistInsertPayload(BaseModel):
