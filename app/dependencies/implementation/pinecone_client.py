@@ -342,7 +342,7 @@ class PineconeClient(PineconeBaseClass):
                 )
 
                 if override_date_is_already_contained:
-                    return reranked_context
+                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
                 # Add vectors associated with the session date override since they haven't been retrieved yet.
                 session_date_override_vector_ids = []
@@ -353,13 +353,13 @@ class PineconeClient(PineconeBaseClass):
 
                 # Didn't find any vectors for that day, return unchanged reranked_context
                 if len(session_date_override_vector_ids) == 0:
-                    return reranked_context
+                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
                 session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
                                                                  namespace=namespace)
                 vectors = session_date_override_fetch_result['vectors']
                 if len(vectors or []) == 0:
-                    return reranked_context
+                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
                 # Have vectors for session date override. Append them to current reranked_context value.
                 for vector_id in vectors:
@@ -384,10 +384,7 @@ class PineconeClient(PineconeBaseClass):
                     reranked_context = "\n".join([reranked_context,
                                                   session_date_override_context])
 
-        if len(reranked_context or '') == 0:
-            return missing_session_data_error
-
-        return reranked_context
+        return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
     async def fetch_historical_context(self,
                                        index: Index,
