@@ -123,10 +123,10 @@ class AssistantRouter:
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             if not self._auth_manager.access_token_is_valid(authorization):
-                raise security.AUTH_TOKEN_EXPIRED_ERROR
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
 
             if datastore_access_token is None or datastore_refresh_token is None:
-                raise security.DATASTORE_TOKENS_ERROR
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
 
             try:
                 supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
@@ -138,7 +138,7 @@ class AssistantRouter:
                                                          supabase_client_factory=self._supabase_client_factory)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-                raise HTTPException(status_code=status_code, detail=str(e))
+                raise HTTPException(status_code=status_code)
 
             try:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
@@ -154,7 +154,7 @@ class AssistantRouter:
                                                                                 session_id=session_id),
                                          media_type="text/event-stream")
             except Exception as e:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
