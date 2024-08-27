@@ -7,8 +7,7 @@ from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, Pinecone, PineconeApiException
 from pinecone.exceptions import NotFoundException
-from pinecone.grpc import PineconeGRPC 
-from typing import Tuple
+from pinecone.grpc import PineconeGRPC
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride

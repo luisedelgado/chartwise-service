@@ -4,10 +4,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Request, Response
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
+from typing import Tuple
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.security import Token
+from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class AuthManager:
 
@@ -32,7 +34,7 @@ class AuthManager:
         except Exception as e:
             raise Exception(str(e))
 
-    def create_access_token(self, user_id: str):
+    def create_access_token(self, user_id: str) -> Tuple[str, str]:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,7 +47,9 @@ class AuthManager:
         expiration_delta = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
         expiration_time = datetime.now(timezone.utc) + expiration_delta
         to_encode.update({"exp": expiration_time})
-        return jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+
+        formatted_expiration_time = expiration_time.strftime(DATE_TIME_FORMAT)
+        return (jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM), formatted_expiration_time)
 
     def access_token_is_valid(self, access_token: str) -> bool:
         try:
@@ -69,7 +73,7 @@ class AuthManager:
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
-            access_token = self.create_access_token(user_id)
+            access_token, expiration_timestamp = self.create_access_token(user_id)
             response.set_cookie(key="authorization",
                                 value=access_token,
                                 domain=self.APP_COOKIE_DOMAIN,
@@ -116,7 +120,9 @@ class AuthManager:
                 datastore_access_token = None
                 datastore_refresh_token = None
 
-            return Token(access_token=access_token, token_type="bearer")
+            return Token(access_token=access_token,
+                         token_type="bearer",
+                         expiration_timestamp=expiration_timestamp)
         except Exception as e:
             raise HTTPException(detail=str(e), status_code=status.HTTP_401_UNAUTHORIZED)
 

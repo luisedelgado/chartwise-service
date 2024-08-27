@@ -34,7 +34,7 @@ class TestingHarnessAssistantRouter:
         self.fake_pinecone_client = FakePineconeClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
-        self.auth_cookie = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
+        self.auth_cookie, _ = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
                                                                           auth_manager=self.auth_manager,

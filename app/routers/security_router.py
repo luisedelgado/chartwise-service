@@ -240,7 +240,7 @@ class SecurityRouter:
                                                     request: Request,
                                                     response: Response,
                                                     authorization: Annotated[Union[str, None], Cookie()],
-                                                    session_id: Annotated[Union[str, None], Cookie()]):
+                                                    session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         try:
             assert len(authorization or '') > 0, "There isn't an existing authorization token to be refreshed."
             assert len(user_id or '') > 0, "user_id param is missing"
