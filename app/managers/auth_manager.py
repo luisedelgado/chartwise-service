@@ -1,10 +1,9 @@
 import jwt, logging, os, requests, uuid
 
 from datetime import datetime, timedelta, timezone
-from fastapi import Cookie, HTTPException, status, Request, Response
+from fastapi import HTTPException, status, Request, Response
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
-from typing import Union
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
@@ -16,7 +15,7 @@ class AuthManager:
                          else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES = 65
 
     def __init__(self):
         self._pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

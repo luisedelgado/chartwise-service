@@ -10,7 +10,6 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
-                                          SessionNotesInsert,
                                           SessionNotesSource,
                                           SessionNotesTemplate)
 from ..managers.auth_manager import AuthManager

@@ -74,16 +74,16 @@ class SecurityRouter:
     """
     def _register_routes(self):
         @self.router.post(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def login_for_access_token(body: LoginData,
-                                         background_tasks: BackgroundTasks,
-                                         response: Response,
-                                         request: Request,
-                                         session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-            return await self._login_for_access_token_internal(body=body,
-                                                               background_tasks=background_tasks,
-                                                               request=request,
-                                                               response=response,
-                                                               session_id=session_id)
+        async def request_new_access_token(body: LoginData,
+                                           background_tasks: BackgroundTasks,
+                                           response: Response,
+                                           request: Request,
+                                           session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+            return await self._request_new_access_token_internal(body=body,
+                                                                 background_tasks=background_tasks,
+                                                                 request=request,
+                                                                 response=response,
+                                                                 session_id=session_id)
 
         @self.router.put(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
         async def refresh_access_token(refresh_data: RefreshAuthData,
@@ -175,12 +175,12 @@ class SecurityRouter:
     response – the response object to be used for creating the final response.
     session_id – the id of the current user session.
     """
-    async def _login_for_access_token_internal(self,
-                                               body: LoginData,
-                                               background_tasks: BackgroundTasks,
-                                               request: Request,
-                                               response: Response,
-                                               session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+    async def _request_new_access_token_internal(self,
+                                                 body: LoginData,
+                                                 background_tasks: BackgroundTasks,
+                                                 request: Request,
+                                                 response: Response,
+                                                 session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         try:
             if session_id is None:
                 session_id = uuid.uuid1()
