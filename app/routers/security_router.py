@@ -30,6 +30,9 @@ class LoginData(BaseModel):
     datastore_refresh_token: str
     user_id: str
 
+class RefreshAuthData(BaseModel):
+    user_id: str
+
 class TherapistInsertPayload(BaseModel):
     email: str
     first_name: str
@@ -81,6 +84,20 @@ class SecurityRouter:
                                                                request=request,
                                                                response=response,
                                                                session_id=session_id)
+
+        @self.router.put(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def refresh_access_token(refresh_data: RefreshAuthData,
+                                       background_tasks: BackgroundTasks,
+                                       response: Response,
+                                       request: Request,
+                                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                                       session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+            return await self._refresh_authorization_token_internal(user_id=refresh_data.user_id,
+                                                                    background_tasks=background_tasks,
+                                                                    request=request,
+                                                                    response=response,
+                                                                    authorization=authorization,
+                                                                    session_id=session_id)
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
@@ -201,6 +218,55 @@ class SecurityRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     therapist_id=body.user_id,
                                     method=post_api_method)
+            return auth_token
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            raise HTTPException(detail=str(e), status_code=status_code)
+
+    """
+    Refreshes an existing authorization token that may or may have not expired.
+
+    Arguments:
+    user_id – the current user's id.
+    background_tasks – object for scheduling concurrent tasks.
+    request – the incoming request object.
+    response – the response object to be used for creating the final response.
+    authorization – the current authorization token to be updated.
+    session_id – the id of the current user session.
+    """
+    async def _refresh_authorization_token_internal(self,
+                                                    user_id: str,
+                                                    background_tasks: BackgroundTasks,
+                                                    request: Request,
+                                                    response: Response,
+                                                    authorization: Annotated[Union[str, None], Cookie()],
+                                                    session_id: Annotated[Union[str, None], Cookie()]):
+        try:
+            assert len(authorization or '') > 0, "There isn't an existing authorization token to be refreshed."
+            assert len(user_id or '') > 0, "user_id param is missing"
+        except Exception as e:
+            raise HTTPException(detail=str(e),
+                                status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            logger = Logger(supabase_client_factory=self._supabase_client_factory)
+            put_api_method = logger.API_METHOD_PUT
+            logger.log_api_request(background_tasks=background_tasks,
+                                   session_id=session_id,
+                                   method=put_api_method,
+                                   endpoint_name=self.TOKEN_ENDPOINT,
+                                   therapist_id=user_id)
+
+            auth_token = await self._auth_manager.refresh_session(user_id=user_id,
+                                                                  request=request,
+                                                                  response=response,
+                                                                  supabase_client_factory=self._supabase_client_factory)
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
+                                    endpoint_name=self.TOKEN_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    therapist_id=user_id,
+                                    method=put_api_method)
             return auth_token
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)

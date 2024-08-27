@@ -22,6 +22,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     select_returns_data: bool = False
     patient_query_returns_preexisting_history = False
     user_authentication_id = None
+    invoked_refresh_session: bool = False
 
     def insert(self,
                payload: dict,
@@ -157,6 +158,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
         return self.FAKE_THERAPIST_ID
 
     def refresh_session(self):
+        self.invoked_refresh_session = True
         return FakeSession(return_authenticated_session=self.return_authenticated_session,
                            fake_access_token=self.fake_access_token,
                            fake_refresh_token=self.fake_refresh_token)
