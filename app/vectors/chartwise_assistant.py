@@ -11,7 +11,6 @@ from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessi
 from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
 
-PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 TOPICS_CONTEXT_SESSIONS_CAP = 6
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 5

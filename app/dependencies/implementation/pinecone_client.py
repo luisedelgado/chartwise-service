@@ -15,11 +15,12 @@ from ...dependencies.api.pinecone_base_class import PineconeBaseClass
 from ...internal.utilities import datetime_handler
 from ...managers.auth_manager import AuthManager
 from ...vectors import data_cleaner
-from ...vectors.chartwise_assistant import ChartWiseAssistant, PRE_EXISTING_HISTORY_PREFIX
+from ...vectors.chartwise_assistant import ChartWiseAssistant
 
 class PineconeClient(PineconeBaseClass):
 
     NUM_INDEXES = 20
+    PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
     async def insert_session_vectors(self,
                                      user_id: str,
@@ -121,8 +122,8 @@ class PineconeClient(PineconeBaseClass):
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
                                                     "-",
-                                                    PRE_EXISTING_HISTORY_PREFIX])
-                doc.id_ = f"{PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
+                                                    self.PRE_EXISTING_HISTORY_PREFIX])
+                doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary, auth_manager=auth_manager)
                 doc.metadata.update({
                     "pre_existing_history_summary": chunk_summary,
@@ -181,7 +182,7 @@ class PineconeClient(PineconeBaseClass):
                                             patient_id=patient_id)
             namespace_with_suffix = "".join([namespace,
                                              "-",
-                                             PRE_EXISTING_HISTORY_PREFIX])
+                                             self.PRE_EXISTING_HISTORY_PREFIX])
 
             ids_to_delete = []
             for list_ids in index.list(namespace=namespace_with_suffix):
@@ -390,7 +391,7 @@ class PineconeClient(PineconeBaseClass):
                                        namespace: str):
         historial_context_namespace = ("".join([namespace,
                                                   "-",
-                                                  PRE_EXISTING_HISTORY_PREFIX]))
+                                                  self.PRE_EXISTING_HISTORY_PREFIX]))
         context_vector_ids = []
         for list_ids in index.list(namespace=historial_context_namespace):
             context_vector_ids = list_ids
