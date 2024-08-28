@@ -60,13 +60,11 @@ class SessionNotesInsert(BaseModel):
     notes_text: str
     session_date: str
     client_timezone_identifier: str
-    source: SessionNotesSource
 
 class SessionNotesUpdate(BaseModel):
     id: str
     session_date: Optional[str] = None
     client_timezone_identifier: Optional[str] = None
-    source: Optional[SessionNotesSource] = None
     diarization: Optional[str] = None
     notes_text: Optional[str] = None
 

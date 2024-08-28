@@ -53,8 +53,7 @@ class AudioProcessingManager:
             session_insert_body = SessionNotesInsert(patient_id=patient_id,
                                                      notes_text=transcription,
                                                      session_date=session_date,
-                                                     client_timezone_identifier=client_timezone_identifier,
-                                                     source=SessionNotesSource.NOTES_RECORDING)
+                                                     client_timezone_identifier=client_timezone_identifier)
 
             return await assistant_manager.process_new_session_data(environment=environment,
                                                                     language_code=language_code,
@@ -63,7 +62,7 @@ class AudioProcessingManager:
                                                                     patient_id=session_insert_body.patient_id,
                                                                     session_date=session_insert_body.session_date,
                                                                     notes_text=session_insert_body.notes_text,
-                                                                    source=session_insert_body.source,
+                                                                    source=SessionNotesSource.NOTES_RECORDING,
                                                                     session_id=session_id,
                                                                     therapist_id=therapist_id,
                                                                     openai_client=openai_client,

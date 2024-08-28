@@ -279,7 +279,6 @@ class AssistantRouter:
                                method=post_api_method,)
 
         try:
-            assert body.source != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
             assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=body.session_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
@@ -293,7 +292,7 @@ class AssistantRouter:
                                                                                       patient_id=body.patient_id,
                                                                                       notes_text=body.notes_text,
                                                                                       session_date=body.session_date,
-                                                                                      source=body.source,
+                                                                                      source=SessionNotesSource.MANUAL_INPUT,
                                                                                       logger_worker=logger,
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
@@ -379,7 +378,6 @@ class AssistantRouter:
             assert 'session_date' not in body or datetime_handler.is_valid_date(date_input=body['session_date'],
                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT,
                                                                                 tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED, '''Invalid parameter 'undefined' for source.'''
 
             self.language_code = (self.language_code if self.language_code is not None
                                   else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
