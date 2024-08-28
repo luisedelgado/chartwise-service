@@ -561,6 +561,7 @@ class AssistantManager:
                                                                                         environment=environment,
                                                                                         auth_manager=auth_manager,
                                                                                         openai_client=openai_client,
+                                                                                        supabase_client=supabase_client,
                                                                                         pinecone_client=pinecone_client,
                                                                                         patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                                         patient_gender=patient_gender)

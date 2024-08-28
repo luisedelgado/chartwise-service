@@ -12,6 +12,7 @@ from ..internal.utilities import datetime_handler
 from ..managers.auth_manager import AuthManager
 
 TOPICS_CONTEXT_SESSIONS_CAP = 6
+QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 6
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 5
 QUERY_ACTON_NAME = "assistant_query"
@@ -241,19 +242,25 @@ class ChartWiseAssistant:
                                           session_id: str,
                                           patient_name: str,
                                           patient_gender: str,
+                                          supabase_client: SupabaseBaseClass,
                                           openai_client: OpenAIBaseClass,
                                           pinecone_client: PineconeBaseClass,
                                           auth_manager: AuthManager) -> str:
         try:
             query_input = f"What are 2 questions about different topics that I could ask about {patient_name}'s session history?"
+
+            session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
+                                                                                patient_id=patient_id,
+                                                                                n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP)
             context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                      openai_client=openai_client,
                                                                      query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      session_id=session_id,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=4)
+                                                                     query_top_k=0,
+                                                                     rerank_top_n=0,
+                                                                     session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
