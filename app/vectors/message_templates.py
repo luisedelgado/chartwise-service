@@ -254,7 +254,7 @@ class PromptCrafter:
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
                     f"This will be their {ordinal_session_number} session together. "
-                    f"The first thing you should do is say hi {therapist_name}, and remind them that they are seeing {patient_name} for the {ordinal_session_number} time."
+                    f"The first thing you should do is say hi {therapist_name}, and remind them that they are going to be seeing {patient_name} for the {ordinal_session_number} time."
                     f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: 'Most Recent Sessions' and 'Historical Themes'. "
                     f"If this is {therapist_name}'s first time meeting with {patient_name}, omit these sections and instead suggest strategies on how to establish a solid foundation. "
                     f"For 'Most Recent Sessions' list the most recent sessions sorted by most recent first. Ensure date precision. "
