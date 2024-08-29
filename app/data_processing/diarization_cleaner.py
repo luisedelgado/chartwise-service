@@ -1,10 +1,6 @@
 import json
 
-from fastapi import BackgroundTasks, status
 from typing import Dict
-
-from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
-from ..internal.logging import Logger
 
 """
 Class meant to be used for cleaning diarization records.
@@ -14,68 +10,49 @@ class DiarizationCleaner:
         self._current_speaker_content = str()
         self._current_speaker: str = None
         self._transcription = []
-        self._entry_start_time = str()
+        self._entry_start_time = None
+        self._entry_end_time = None
 
     """
     Returns a JSON representation of the transcription after having been transformed for easier manipulation.
 
     Arguments:
-    background_tasks – the object to schedule concurrent tasks.
-    therapist_id – the therapist id associated with the operation.
-    input – the diarization input.
-    auth_manager – the auth manager to be leveraged internally.
+    raw_diarization – the object with the diarization content.
     """
-    def clean_transcription(self,
-                            background_tasks: BackgroundTasks,
-                            therapist_id: str,
-                            input: str,
-                            supabase_client_factory: SupabaseFactoryBaseClass) -> str:
-        self._current_speaker = input[0]["alternatives"][0]["speaker"]
-        for obj in input:
-            speaker = obj["alternatives"][0]["speaker"]
-            content = obj["alternatives"][0]["content"]
-            start_time = obj["start_time"]
-            end_time = obj["end_time"]
-            has_end_of_sentence = False
-            has_attaches_to = False
+    def clean_transcription(self, raw_diarization: list) -> str:
+        self._current_speaker = raw_diarization[0]["speaker"]
+        self._entry_start_time = raw_diarization[0]["start"]
+        self._entry_end_time = raw_diarization[0]["end"]
+        for obj in raw_diarization:
+            start_time = obj['start']
+            end_time = obj['end']
+            content = obj['transcript']
+            speaker = obj['speaker']
 
-            if "attaches_to" in obj:
-                has_attaches_to = True
-                attaches_to = obj["attaches_to"]
-                if attaches_to.lower() != "previous":
-                    Logger(supabase_client_factory=supabase_client_factory).log_diarization_event(background_tasks=background_tasks,
-                                                                                                  therapist_id=therapist_id,
-                                                                                                  error_code=status.HTTP_417_EXPECTATION_FAILED,
-                                                                                                  description="Seeing Speechmatics' \'attaches_to\' field with value: {attaches_to}")
+            prepend_space = (speaker == self._current_speaker and
+                             len(self._current_speaker_content or '') > 0)
 
-            if "is_eos" in obj:
-                has_end_of_sentence = True
-                end_of_sentence = obj["is_eos"]
-                
-            if len(self._current_speaker_content or '') == 0:
-                self._entry_start_time = start_time
-                
-            # Determine whether or not the current content is attached to a previous token.
-            skip_space = (len(self._current_speaker_content) == 0) or (has_attaches_to and attaches_to.lower() == "previous")
-            
             if speaker != self._current_speaker:
-                # Update current speaker
-                self._current_speaker = speaker
+                # Register previous speaker's section as a standalone paragraph
+                self._transcription.append(self._get_entry_node())
 
-            # Check if it's an end of a sentence
-            if has_end_of_sentence and end_of_sentence == True:
-                # Register current content as a standalone paragraph
-                self.__append_speaker_content(content,
-                                              prepend_space=(not skip_space))
-                self._transcription.append(self.__get_entry_node(end_time))
+                # Start tracking new speaker's block of information
+                self._current_speaker = speaker
                 self._current_speaker_content = str()
-                self._entry_start_time = str()
+                self._append_speaker_content(content,
+                                             prepend_space=prepend_space)
+                self._entry_start_time = start_time
+                self._entry_end_time = end_time
                 continue
 
             # Append run-on content
-            self.__append_speaker_content(content, prepend_space=(not skip_space))
+            self._entry_end_time = end_time
+            self._append_speaker_content(content, prepend_space=prepend_space)
 
-        return json.dumps(self._transcription)
+        if len(self._current_speaker_content or '') > 0:
+            self._transcription.append(self._get_entry_node())
+
+        return json.dumps(self._transcription, ensure_ascii=False)
 
     """
     Helper method for appending data to the current speaker's run-on content.
@@ -84,7 +61,7 @@ class DiarizationCleaner:
     content – the content to be appended.
     prepend_space – flag determining if we prepend the content with a space character.
     """
-    def __append_speaker_content(self, content: str, prepend_space: bool):
+    def _append_speaker_content(self, content: str, prepend_space: bool):
         content_list = [self._current_speaker_content, content]
         if prepend_space:
             self._current_speaker_content = " ".join(str(item) for item in content_list)
@@ -94,14 +71,11 @@ class DiarizationCleaner:
 
     """
     Helper method for getting a Dict entry containing the current speaker's at-hand content.
-
-    Arguments:
-    entry_end_time – the time at which the speaker's intervention finished.
     """
-    def __get_entry_node(self, entry_end_time: str) -> Dict:
+    def _get_entry_node(self) -> Dict:
         return {
             "content": self._current_speaker_content,
             "current_speaker": self._current_speaker,
             "start_time": self._entry_start_time,
-            "end_time": entry_end_time
+            "end_time": self._entry_end_time
         }

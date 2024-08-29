@@ -26,130 +26,56 @@ DUMMY_WAV_FILE_LOCATION = "app/app_tests/data/maluma.wav"
 AUDIO_WAV_FILETYPE = "audio/wav"
 ENVIRONMENT = "testing"
 FAKE_JOB_ID = "9876"
-FAKE_DIARIZATION_RESULT = {
-    "job": {
-        "id": "m38xavr1g4"
-    },
-    "results": [
-        {
-            "alternatives": [
-                {
-                    "confidence": 0.94,
-                    "content": "Lo",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.24,
-            "start_time": 0.0,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 1.0,
-                    "content": "creo",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.45,
-            "start_time": 0.24,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 1.0,
-                    "content": "que",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.54,
-            "start_time": 0.45,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 0.86,
-                    "content": "es",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.6,
-            "start_time": 0.54,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 1.0,
-                    "content": "lo",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.69,
-            "start_time": 0.6,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 0.95,
-                    "content": "más",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 0.87,
-            "start_time": 0.69,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 1.0,
-                    "content": "reciente",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "end_time": 1.65,
-            "start_time": 0.87,
-            "type": "word"
-        },
-        {
-            "alternatives":
-            [
-                {
-                    "confidence": 1.0,
-                    "content": ".",
-                    "language": "es",
-                    "speaker": "S1"
-                }
-            ],
-            "attaches_to": "previous",
-            "end_time": 1.65,
-            "is_eos": True,
-            "start_time": 1.65,
-            "type": "punctuation"
-        }
-    ],
-    "summary":
+FAKE_DIARIZATION_RESULT = [
     {
-        "content": "Temas clave:\n- Interpretación de personajes\n"
+        "start": 0.08,
+        "end": 1.38,
+        "confidence": 0.8865234,
+        "channel": 0,
+        "transcript": "Lo creo que lo más",
+        "words": [
+        "..."
+        ],
+        "speaker": 0,
+        "id": "d06d3c59-6674-4e55-8895-28ae7be274eb"
+    },
+    {
+        "start": 1.92,
+        "end": 7.7,
+        "confidence": 0.9221734,
+        "channel": 0,
+        "transcript": "reciente, los protectores, los iniciados, ¿no es cierto? Exacto, ahí vamos. Los iniciados que hacés de un periodista.",
+        "words": [
+        "..."
+        ],
+        "speaker": 0,
+        "id": "5eac57fd-f3fc-4f6a-9840-94c09f1c3c18"
+    },
+    {
+        "start": 8.08,
+        "end": 8.58,
+        "confidence": 0.8144531,
+        "channel": 0,
+        "transcript": "Periodista",
+        "words": [
+        "..."
+        ],
+        "speaker": 1,
+        "id": "7c9d3b40-d603-4aa7-a77c-0f66901c72aa"
+    },
+    {
+        "start": 9.76,
+        "end": 15.54,
+        "confidence": 0.77842885,
+        "channel": 0,
+        "transcript": "alcohólico, bipolar y drogadicto. Sí. Delicioso. Sí, así como Adifa suavecito. Suavecito.",
+        "words": [
+        "..."
+        ],
+        "speaker": 1,
+        "id": "17bc28e5-018f-4015-b799-fb0ac96580cf"
     }
-}
+]
 
 class TestingHarnessAudioProcessingRouter:
 
@@ -339,6 +265,7 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 417
 
     def test_invoke_diarization_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -360,79 +287,8 @@ class TestingHarnessAudioProcessingRouter:
                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                })
         assert response.status_code == 200
-        assert "job_id" in response.json()
-
-    def test_diarization_notifications_with_invalid_auth(self):
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-                               headers={
-                               })
-        assert response.status_code == 401
-
-    def test_diarization_notifications_with_valid_auth_but_no_status(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-                               headers={
-                                   "authorization": self.auth_cookie
-                               },
-                               params={
-                               })
-        assert response.status_code == 417
-
-    def test_diarization_notifications_with_valid_auth_and_failed_status(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-                               headers={
-                                   "authorization": self.auth_cookie
-                               },
-                               params={
-                                   "status": "failed"
-                               })
-        assert response.status_code == 417
-
-    def test_diarization_notifications_with_valid_auth_and_success_status_but_no_job_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-                               headers={
-                                   "authorization": self.auth_cookie
-                               },
-                               params={
-                                   "status": "success"
-                               })
-        assert response.status_code == 417
-
-    def test_diarization_notifications_with_valid_auth_and_successful_params(self):
-        self.fake_supabase_admin_client.return_authenticated_session = True
-        self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_admin_client.select_returns_data = True
-
-        assert self.fake_pinecone_client.fake_vectors_insertion is None
-        assert self.fake_supabase_admin_client.fake_text is None
-
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_NOTIFICATION_ENDPOINT,
-                               headers={
-                                   "authorization": self.auth_cookie
-                               },
-                               params={
-                                   "status": "success",
-                                   "id": FAKE_JOB_ID
-                               },
-                               json=FAKE_DIARIZATION_RESULT)
-        assert response.status_code == 200
-
-        fake_diarization_summary = FAKE_DIARIZATION_RESULT['summary']['content']
-        assert self.fake_supabase_admin_client.fake_text == fake_diarization_summary
-        assert self.fake_pinecone_client.fake_vectors_insertion == fake_diarization_summary
+        assert "session_report_id" in response.json()
 
     def test_diarization_cleaner_internal_formatting(self):
-        clean_transcription = DiarizationCleaner().clean_transcription(background_tasks=BackgroundTasks(),
-                                                                       input=FAKE_DIARIZATION_RESULT["results"],
-                                                                       therapist_id=FAKE_THERAPIST_ID,
-                                                                       supabase_client_factory=self.fake_supabase_client_factory)
-        assert clean_transcription == '[{"content": "Lo creo que es lo m\\u00e1s reciente.", "current_speaker": "S1", "start_time": 0.0, "end_time": 1.65}]'
+        clean_transcription = DiarizationCleaner().clean_transcription(raw_diarization=FAKE_DIARIZATION_RESULT)
+        assert clean_transcription == '[{"content": "Lo creo que lo más reciente, los protectores, los iniciados, ¿no es cierto? Exacto, ahí vamos. Los iniciados que hacés de un periodista.", "current_speaker": 0, "start_time": 0.08, "end_time": 7.7}, {"content": "Periodista alcohólico, bipolar y drogadicto. Sí. Delicioso. Sí, así como Adifa suavecito. Suavecito.", "current_speaker": 1, "start_time": 8.08, "end_time": 15.54}]'

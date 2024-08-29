@@ -21,7 +21,6 @@ class ImageProcessingManager:
                                            therapist_id: str,
                                            session_date: str,
                                            template: SessionNotesTemplate,
-                                           background_tasks: BackgroundTasks,
                                            auth_manager: AuthManager,
                                            supabase_client: SupabaseBaseClass,
                                            docupanda_client: DocupandaBaseClass,

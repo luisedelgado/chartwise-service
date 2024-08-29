@@ -165,15 +165,14 @@ class ImageProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
-            job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(background_tasks=background_tasks,
-                                                                                                  patient_id=patient_id,
-                                                                                                  therapist_id=therapist_id,
-                                                                                                  session_date=session_date,
-                                                                                                  supabase_client=supabase_client,
-                                                                                                  auth_manager=self._auth_manager,
-                                                                                                  image=image,
-                                                                                                  template=template,
-                                                                                                  docupanda_client=self._docupanda_client)
+            job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(patient_id=patient_id,
+                                                                                                          therapist_id=therapist_id,
+                                                                                                          session_date=session_date,
+                                                                                                          supabase_client=supabase_client,
+                                                                                                          auth_manager=self._auth_manager,
+                                                                                                          image=image,
+                                                                                                          template=template,
+                                                                                                          docupanda_client=self._docupanda_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,

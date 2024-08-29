@@ -1,7 +1,6 @@
 from enum import Enum
 
 from num2words import num2words
-from pytz import timezone
 
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
 from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT_YYYY_MM_DD
@@ -10,6 +9,7 @@ class PromptScenario(Enum):
     # keep sorted A-Z
     ATTENDANCE_INSIGHTS = "attendance_insights"
     CHUNK_SUMMARY = "chunk_summary"
+    DIARIZATION_SUMMARY = "diarization_summary"
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
@@ -61,10 +61,10 @@ class PromptCrafter:
             patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
             query_input = None if 'query_input' not in kwargs else kwargs['query_input']
             return self._create_recent_topics_user_message(language_code=language_code,
-                                                             context=context,
-                                                             patient_name=patient_name,
-                                                             patient_gender=patient_gender,
-                                                             query_input=query_input)
+                                                           context=context,
+                                                           patient_name=patient_name,
+                                                           patient_gender=patient_gender,
+                                                           query_input=query_input)
         elif scenario == PromptScenario.CHUNK_SUMMARY:
             chunk_text = None if 'chunk_text' not in kwargs else kwargs['chunk_text']
             return self._create_chunk_summary_user_message(chunk_text=chunk_text)
@@ -98,6 +98,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
             patient_session_dates = [] if 'patient_session_dates' not in kwargs else kwargs['patient_session_dates']
             return self._create_attendance_insights_user_message(patient_session_dates=patient_session_dates)
+        elif scenario == PromptScenario.DIARIZATION_SUMMARY:
+            diarization = None if 'diarization' not in kwargs else kwargs['diarization']
+            return self._summarize_diarization_user_message(diarization=diarization)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -153,6 +156,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_attendance_insights_system_message(language_code=language_code)
+        elif scenario == PromptScenario.DIARIZATION_SUMMARY:
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            return self._summarize_diarization_system_message(language_code=language_code)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -568,5 +574,40 @@ class PromptCrafter:
                     "1. Format the output in bullet points.\n"
                     "2. Limit the output to 500 characters.\n"
                     f"3. Ensure the output is generated using language code {language_code}.\n")
+        except Exception as e:
+            raise Exception(e)
+
+    # Summarize Diarization
+
+    def _summarize_diarization_system_message(self, language_code: str) -> str:
+        try:
+            assert len(language_code or '') > 0, "Missing language_code param for building system message"
+            return (
+                "A mental health practitioner just met with a patient, and needs to summarize the content of the session. "
+                f"We have a transcription of the full session in JSON format, and your task is to provide the summary using language code {language_code}. "
+                "The summary should be concise and provide a clear overview of the key topics discussed, the emotions expressed, and any significant moments or changes in the patient's mood or behavior. "
+                "Focus on the most relevant details that will help the therapist recall the session effectively. "
+                "The JSON input consists of an array of objects where each object contains 4 attributes:\n"
+                "1. 'content': A participant's spoken content.\n"
+                "2. 'current_speaker': A unique identifier for the speaker associated with the content.\n"
+                "3. 'start_time': The time at which the speaker's content began to be spoken.\n"
+                "4. 'end_time': The time at which the speaker's content finished being spoken.\n\n"
+                "------------\n\nExample Input:\n\n"
+                r"[{'content': 'Hi, how are you feeling today?', 'current_speaker': 0, 'start_time': 0.0, 'end_time': 8.58}, {'content': 'Not so well.', 'current_speaker': 1, 'start_time': 9.0, 'end_time': 10.58}, {'content': 'Can you tell me more about what's been troubling you?', 'current_speaker': 0, 'start_time': 11.5, 'end_time': 14.58}, {'content': 'I've been feeling really anxious about work. I can't seem to relax, even at home.', 'current_speaker': 1, 'start_time': 15.5, 'end_time': 18.58}]"
+                "\n\n------------\n\nExample Output:\n\n"
+                "The patient expressed anxiety related to work, indicating difficulty in relaxing both at work and at home. "
+                "The session focused on exploring these feelings and potential coping strategies."
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    def _summarize_diarization_user_message(self, diarization: str) -> str:
+        try:
+            assert len(diarization or '') > 0, "Missing diarization param for building user message"
+            return (
+                 "Please provide a concise summary of the following session transcription. "
+                 "The summary should capture the key topics discussed, emotions expressed, and significant moments or changes in the session."
+                 f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
+            )
         except Exception as e:
             raise Exception(e)

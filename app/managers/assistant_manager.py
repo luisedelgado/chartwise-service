@@ -63,10 +63,9 @@ class SessionNotesInsert(BaseModel):
 
 class SessionNotesUpdate(BaseModel):
     id: str
+    notes_text: Optional[str] = None
     session_date: Optional[str] = None
     client_timezone_identifier: Optional[str] = None
-    diarization: Optional[str] = None
-    notes_text: Optional[str] = None
 
 class AssistantManager:
 
@@ -87,7 +86,8 @@ class AssistantManager:
                                        openai_client: OpenAIBaseClass,
                                        supabase_client: SupabaseBaseClass,
                                        pinecone_client: PineconeBaseClass,
-                                       logger_worker: Logger) -> str:
+                                       logger_worker: Logger,
+                                       diarization: str = None) -> str:
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -131,16 +131,21 @@ class AssistantManager:
                                    })
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            insert_payload = {
+                "notes_text": notes_text,
+                "notes_mini_summary": mini_summary,
+                "session_date": session_date,
+                "patient_id": patient_id,
+                "source": source.value,
+                "last_updated": now_timestamp,
+                "therapist_id": therapist_id
+            }
+
+            if len(diarization or '') > 0:
+                insert_payload['diarization'] = diarization
+
             insert_result = supabase_client.insert(table_name="session_reports",
-                                                   payload={
-                                                       "notes_text": notes_text,
-                                                       "notes_mini_summary": mini_summary,
-                                                       "session_date": session_date,
-                                                       "patient_id": patient_id,
-                                                       "source": source.value,
-                                                       "last_updated": now_timestamp,
-                                                       "therapist_id": therapist_id
-                                                   })
+                                                   payload=insert_payload)
             session_notes_id = insert_result.dict()['data'][0]['id']
 
             # Upload vector embeddings
