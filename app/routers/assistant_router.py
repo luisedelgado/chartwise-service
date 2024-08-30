@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import (APIRouter,
                      BackgroundTasks,
+                     Body,
                      Cookie,
                      HTTPException,
                      Request,
@@ -60,15 +61,17 @@ class AssistantRouter:
     """
     def _register_routes(self):
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def insert_new_session(body: SessionNotesInsert,
+        async def insert_new_session(insert_payload: SessionNotesInsert,
                                      request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
+                                     client_timezone_identifier: Annotated[str, Body()] = None,
                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._insert_new_session_internal(body=body,
+            return await self._insert_new_session_internal(body=insert_payload,
+                                                           client_timezone_identifier=client_timezone_identifier,
                                                            background_tasks=background_tasks,
                                                            request=request,
                                                            response=response,
@@ -78,15 +81,17 @@ class AssistantRouter:
                                                            session_id=session_id)
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def update_session(body: SessionNotesUpdate,
+        async def update_session(update_payload: SessionNotesUpdate,
                                  request: Request,
                                  response: Response,
                                  background_tasks: BackgroundTasks,
+                                 client_timezone_identifier: Annotated[str, Body()] = None,
                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._update_session_internal(body=body,
+            return await self._update_session_internal(body=update_payload,
+                                                       client_timezone_identifier=client_timezone_identifier,
                                                        response=response,
                                                        request=request,
                                                        background_tasks=background_tasks,
@@ -234,6 +239,7 @@ class AssistantRouter:
 
     Arguments:
     body – the incoming request json body.
+    client_timezone_identifier – the client's timezone identifier.
     request – the incoming request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
@@ -244,6 +250,7 @@ class AssistantRouter:
     """
     async def _insert_new_session_internal(self,
                                            body: SessionNotesInsert,
+                                           client_timezone_identifier: str,
                                            request: Request,
                                            response: Response,
                                            background_tasks: BackgroundTasks,
@@ -279,19 +286,24 @@ class AssistantRouter:
                                method=post_api_method,)
 
         try:
-            assert general_utilities.is_valid_timezone_identifier(body.client_timezone_identifier), "Invalid timezone identifier parameter"
-            assert datetime_handler.is_valid_date(date_input=body.session_date,
-                                                  incoming_date_format=datetime_handler.DATE_FORMAT,
-                                                  tz_identifier=body.client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            body = body.dict(exclude_unset=True)
+
+            assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+
+            tz_exists = len(client_timezone_identifier or '') > 0
+            date_is_valid = datetime_handler.is_valid_date(date_input=body['session_date'],
+                                                           incoming_date_format=datetime_handler.DATE_FORMAT,
+                                                           tz_identifier=client_timezone_identifier)
+            assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             self.language_code = (self.language_code if self.language_code is not None
                                   else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
             session_notes_id = await self._assistant_manager.process_new_session_data(language_code=self.language_code,
                                                                                       environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
-                                                                                      patient_id=body.patient_id,
-                                                                                      notes_text=body.notes_text,
-                                                                                      session_date=body.session_date,
+                                                                                      patient_id=body['patient_id'],
+                                                                                      notes_text=body['notes_text'],
+                                                                                      session_date=body['session_date'],
                                                                                       source=SessionNotesSource.MANUAL_INPUT,
                                                                                       logger_worker=logger,
                                                                                       background_tasks=background_tasks,
@@ -304,7 +316,7 @@ class AssistantRouter:
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
-                                    patient_id=body.patient_id,
+                                    patient_id=body['patient_id'],
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
@@ -315,7 +327,7 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             patient_id=body.patient_id,
+                             patient_id=body['patient_id'],
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -328,6 +340,7 @@ class AssistantRouter:
 
     Arguments:
     body – the incoming request body.
+    client_timezone_identifier – the client's timezone identifier.
     request – the incoming request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
@@ -338,6 +351,7 @@ class AssistantRouter:
     """
     async def _update_session_internal(self,
                                        body: SessionNotesUpdate,
+                                       client_timezone_identifier: str,
                                        request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
@@ -374,10 +388,13 @@ class AssistantRouter:
         try:
             body = body.dict(exclude_unset=True)
 
-            assert 'client_timezone_identifier' not in body or general_utilities.is_valid_timezone_identifier(body['client_timezone_identifier']), "Invalid timezone identifier parameter"
-            assert 'session_date' not in body or datetime_handler.is_valid_date(date_input=body['session_date'],
-                                                                                incoming_date_format=datetime_handler.DATE_FORMAT,
-                                                                                tz_identifier=body['client_timezone_identifier']), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+            assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+
+            tz_exists = len(client_timezone_identifier or '') > 0
+            date_is_valid = datetime_handler.is_valid_date(date_input=body['session_date'],
+                                                           incoming_date_format=datetime_handler.DATE_FORMAT,
+                                                           tz_identifier=client_timezone_identifier)
+            assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             self.language_code = (self.language_code if self.language_code is not None
                                   else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))

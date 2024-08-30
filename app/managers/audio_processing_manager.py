@@ -8,7 +8,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
-from ..internal.utilities import file_copiers
+from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 
@@ -89,6 +89,11 @@ class AudioProcessingManager:
                                           audio_copy_result,
                                           template,
                                           files_to_clean)
+
+            background_tasks.add_task(self._update_patient_session_count_data,
+                                      patient_id,
+                                      session_date,
+                                      supabase_client)
 
             return session_report_id
         except Exception as e:
@@ -191,3 +196,40 @@ class AudioProcessingManager:
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
+
+    async def _update_patient_session_count_data(self,
+                                                 patient_id: str,
+                                                 session_date: str,
+                                                 supabase_client: SupabaseBaseClass):
+        try:
+            patient_query = supabase_client.select(fields="*",
+                                                filters={
+                                                    'id': patient_id
+                                                },
+                                                table_name="patients")
+            assert (0 != len((patient_query).data)), "Did not find any data for the patient"
+
+            patient_query_data = patient_query.dict()['data']
+            patient_last_session_date = patient_query_data[0]['last_session_date']
+
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
+            if patient_last_session_date is None:
+                patient_last_session_date = session_date
+            else:
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
+                                                                                        first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                        second_date=formatted_date,
+                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
+            supabase_client.update(table_name="patients",
+                                    payload={
+                                        "last_session_date": patient_last_session_date,
+                                        "total_sessions": (1 + (patient_query_data[0]['total_sessions'])),
+                                    },
+                                    filters={
+                                        'id': patient_id
+                                    })
+        except Exception as e:
+            raise Exception(e)

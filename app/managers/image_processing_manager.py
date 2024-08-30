@@ -7,11 +7,11 @@ from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.docupanda_base_class import DocupandaBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
+from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
-                                          SessionNotesSource,
-                                          SessionNotesTemplate)
+                                          SessionNotesSource)
 from ..managers.auth_manager import AuthManager
 
 class ImageProcessingManager:
