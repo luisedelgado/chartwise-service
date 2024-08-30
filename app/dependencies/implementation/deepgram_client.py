@@ -34,8 +34,7 @@ class DeepgramClient(DeepgramBaseClass):
                             openai_client: OpenAIBaseClass,
                             assistant_manager: AssistantManager,
                             template: SessionNotesTemplate) -> Tuple[str, str]:
-        # TODO: Uncomment once Portkey isn't returning a Timeout
-        if not auth_manager.is_monitoring_proxy_reachable():
+        if auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
@@ -60,7 +59,7 @@ class DeepgramClient(DeepgramBaseClass):
                     response = requests.post(endpoint_configuration,
                                              headers=headers,
                                              data=audio_file,
-                                             timeout=(300.0, 10.0))
+                                             timeout=(300.0, 20.0))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -94,7 +93,7 @@ class DeepgramClient(DeepgramBaseClass):
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                               options,
-                                                                              timeout=Timeout(300.0, connect=10.0))
+                                                                              timeout=Timeout(300.0, connect=20.0))
 
                 json_response = json.loads(response.to_json(indent=4))
                 utterances = json_response.get('results').get('utterances')
