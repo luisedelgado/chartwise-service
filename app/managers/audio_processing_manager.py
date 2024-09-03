@@ -90,7 +90,7 @@ class AudioProcessingManager:
                                           template,
                                           files_to_clean)
 
-            background_tasks.add_task(self._update_patient_session_count_data,
+            background_tasks.add_task(self._update_patient_metrics_after_processing_transcription_session,
                                       patient_id,
                                       session_date,
                                       supabase_client)
@@ -137,15 +137,15 @@ class AudioProcessingManager:
             }
 
             await assistant_manager.update_session(language_code=language_code,
-                                                logger_worker=logger_worker,
-                                                environment=environment,
-                                                background_tasks=background_tasks,
-                                                auth_manager=auth_manager,
-                                                filtered_body=update_body,
-                                                session_id=session_id,
-                                                openai_client=openai_client,
-                                                supabase_client=supabase_client,
-                                                pinecone_client=pinecone_client)
+                                                   logger_worker=logger_worker,
+                                                   environment=environment,
+                                                   background_tasks=background_tasks,
+                                                   auth_manager=auth_manager,
+                                                   filtered_body=update_body,
+                                                   session_id=session_id,
+                                                   openai_client=openai_client,
+                                                   supabase_client=supabase_client,
+                                                   pinecone_client=pinecone_client)
         except Exception as e:
             raise Exception(e)
         finally:
@@ -183,25 +183,26 @@ class AudioProcessingManager:
             }
 
             await assistant_manager.update_session(language_code=language_code,
-                                                logger_worker=logger_worker,
-                                                environment=environment,
-                                                background_tasks=background_tasks,
-                                                auth_manager=auth_manager,
-                                                filtered_body=update_body,
-                                                session_id=session_id,
-                                                openai_client=openai_client,
-                                                supabase_client=supabase_client,
-                                                pinecone_client=pinecone_client)
+                                                   logger_worker=logger_worker,
+                                                   environment=environment,
+                                                   background_tasks=background_tasks,
+                                                   auth_manager=auth_manager,
+                                                   filtered_body=update_body,
+                                                   session_id=session_id,
+                                                   openai_client=openai_client,
+                                                   supabase_client=supabase_client,
+                                                   pinecone_client=pinecone_client)
         except Exception as e:
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
 
-    async def _update_patient_session_count_data(self,
-                                                 patient_id: str,
-                                                 session_date: str,
-                                                 supabase_client: SupabaseBaseClass):
+    async def _update_patient_metrics_after_processing_transcription_session(self,
+                                                                             patient_id: str,
+                                                                             session_date: str,
+                                                                             supabase_client: SupabaseBaseClass):
         try:
+            # Fetch last session date
             patient_query = supabase_client.select(fields="*",
                                                 filters={
                                                     'id': patient_id
@@ -211,6 +212,14 @@ class AudioProcessingManager:
 
             patient_query_data = patient_query.dict()['data']
             patient_last_session_date = patient_query_data[0]['last_session_date']
+
+            # Fetch total sessions count
+            session_reports_query = supabase_client.select(fields="id",
+                                                           filters={
+                                                               'patient_id': patient_id
+                                                           },
+                                                           table_name="session_reports")
+            total_sessions_count = len(session_reports_query.dict()['data'])
 
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
@@ -226,7 +235,7 @@ class AudioProcessingManager:
             supabase_client.update(table_name="patients",
                                     payload={
                                         "last_session_date": patient_last_session_date,
-                                        "total_sessions": (1 + (patient_query_data[0]['total_sessions'])),
+                                        "total_sessions": total_sessions_count,
                                     },
                                     filters={
                                         'id': patient_id

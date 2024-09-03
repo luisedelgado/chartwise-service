@@ -654,7 +654,6 @@ class ChartWiseAssistant:
                                                     table_name="session_reports",
                                                     limit=n,
                                                     order_desc_column="session_date")
-            assert (0 != len((dates_response).data))
             dates_response_data = dates_response.dict()['data']
 
             overrides = []

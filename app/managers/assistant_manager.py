@@ -21,6 +21,11 @@ class AssistantQuery(BaseModel):
     patient_id: str
     text: str
 
+class SessionOperation(Enum):
+    INSERT_COMPLETED = "insert_completed"
+    UPDATE_COMPLETED = "update_completed"
+    DELETE_COMPLETED = "delete_completed"
+
 class PatientConsentmentChannel(Enum):
     UNDEFINED = "undefined"
     VERBAL = "verbal"
@@ -86,17 +91,6 @@ class AssistantManager:
                                        logger_worker: Logger,
                                        diarization: str = None) -> str:
         try:
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'id': patient_id,
-                                                       'therapist_id': therapist_id
-                                                   },
-                                                   table_name="patients")
-            patient_query_data = patient_query.dict()['data']
-            patient_therapist_match = (0 != len(patient_query_data))
-            assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query_data[0]
-
             if len(notes_text) > 0:
                 mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                         therapist_id=therapist_id,
@@ -106,29 +100,6 @@ class AssistantManager:
                                                                                         session_id=session_id)
             else:
                 mini_summary = None
-
-            patient_last_session_date = patient_query_data['last_session_date']
-
-            # Determine the updated value for last_session_date depending on if the patient
-            # has met with the therapist before or not.
-            if patient_last_session_date is None:
-                patient_last_session_date = session_date
-            else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
-                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
-                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
-                                                                                       second_date=formatted_date,
-                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
-
-            supabase_client.update(table_name="patients",
-                                   payload={
-                                       "last_session_date": patient_last_session_date,
-                                       "total_sessions": (1 + (patient_query_data['total_sessions'])),
-                                   },
-                                   filters={
-                                       'id': patient_id
-                                   })
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_payload = {
@@ -156,6 +127,18 @@ class AssistantManager:
                                                          openai_client=openai_client,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id)
+
+            # Update patient metrics around last session date, and total session count AFTER
+            # session has already been inserted.
+            background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+                                      supabase_client,
+                                      patient_id,
+                                      therapist_id,
+                                      logger_worker,
+                                      session_id,
+                                      background_tasks,
+                                      SessionOperation.INSERT_COMPLETED,
+                                      session_date)
 
             await self.generate_insights_after_session_data_updates(language_code=language_code,
                                                                     background_tasks=background_tasks,
@@ -222,49 +205,6 @@ class AssistantManager:
                                                                                                                           openai_client=openai_client,
                                                                                                                           session_id=session_id)
 
-            # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
-            # the new session date overwrote the patient's last_session_date value.
-            if session_date_changed:
-                patient_query = supabase_client.select(fields="*",
-                                                       filters={
-                                                           'id': patient_id,
-                                                           'therapist_id': therapist_id
-                                                       },
-                                                       table_name="patients")
-                assert (0 != len((patient_query).data)), "Could not fetch the patient's information"
-                patient_query_data = patient_query.dict()['data']
-                total_sessions = 1 + patient_query_data[0]['total_sessions']
-
-                last_session_date_query = supabase_client.select(fields="*",
-                                                                 table_name="session_reports",
-                                                                 order_desc_column="session_date",
-                                                                 filters={
-                                                                     'patient_id': patient_id
-                                                                 })
-                assert (0 != len((last_session_date_query).data)), "Could not fetch the patient's session reports"
-                last_session_date = last_session_date_query.dict()['data'][0]['session_date']
-
-                if last_session_date is None:
-                    last_session_date = filtered_body['session_date']
-                else:
-                    formatted_last_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=last_session_date,
-                                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                    last_session_date = datetime_handler.retrieve_most_recent_date(first_date=filtered_body['session_date'],
-                                                                                   first_date_format=datetime_handler.DATE_FORMAT,
-                                                                                   second_date=formatted_last_session_date,
-                                                                                   second_date_format=datetime_handler.DATE_FORMAT)
-
-                patient_update_payload = {
-                    "last_session_date": last_session_date,
-                    "total_sessions": total_sessions
-                }
-                patient_update_response = supabase_client.update(table_name="patients",
-                                                                 payload=patient_update_payload,
-                                                                 filters={
-                                                                     'id': patient_id
-                                                                 })
-                assert (0 != len((patient_update_response).data)), "Patient update operation could not be completed"
-
             session_update_response = supabase_client.update(table_name="session_reports",
                                                              payload=session_update_payload,
                                                              filters={
@@ -281,6 +221,19 @@ class AssistantManager:
                                                              new_date=filtered_body.get('session_date', current_session_date_formatted),
                                                              openai_client=openai_client,
                                                              auth_manager=auth_manager)
+
+            # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
+            # the new session date overwrote the patient's last_session_date value.
+            if session_date_changed:
+                background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+                                          supabase_client,
+                                          patient_id,
+                                          therapist_id,
+                                          logger_worker,
+                                          session_id,
+                                          background_tasks,
+                                          SessionOperation.UPDATE_COMPLETED,
+                                          filtered_body['session_date'])
 
             await self.generate_insights_after_session_data_updates(language_code=language_code,
                                                                     background_tasks=background_tasks,
@@ -309,27 +262,6 @@ class AssistantManager:
                              supabase_client: SupabaseBaseClass,
                              pinecone_client: PineconeBaseClass):
         try:
-            # Validate the session report is linked to the therapist id
-            report_query = supabase_client.select(fields="*",
-                                                  table_name="session_reports",
-                                                  filters={
-                                                      'id': session_report_id,
-                                                      'therapist_id': therapist_id
-                                                  })
-            assert (0 != len((report_query).data)), "The incoming therapist_id isn't associated with the session_report_id."
-            patient_id = report_query.dict()['data'][0]['patient_id']
-
-            # Grab the most recent session date to determine if we'll have to update it
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'id': patient_id,
-                                                       'therapist_id': therapist_id
-                                                   },
-                                                   table_name="patients")
-            patient_query_data = patient_query.dict()['data']
-            assert len(patient_query_data) > 0, "No patient data found"
-            patient_last_session_date = patient_query_data[0]['last_session_date']
-
             # Delete the session notes from Supabase
             delete_result = supabase_client.delete(table_name="session_reports",
                                                    filters={
@@ -343,34 +275,24 @@ class AssistantManager:
             patient_id = delete_result_data['patient_id']
             session_date = delete_result_data['session_date']
 
-            # If we deleted the last_session_date we were tracking for the patient, we should update what the new last_session_date is
-            if session_date == patient_last_session_date:
-                patient_session_notes_response = supabase_client.select(fields="*",
-                                                                        table_name="session_reports",
-                                                                        filters={
-                                                                            "patient_id": patient_id
-                                                                        },
-                                                                        order_desc_column="session_date")
-                patient_session_notes_response_dict = patient_session_notes_response.dict()['data']
-                patient_last_session_date = (None if len(patient_session_notes_response_dict) == 0
-                                             else patient_session_notes_response_dict[0]['session_date'])
-
-            # Update total_sessions and last_session_date
-            supabase_client.update(table_name="patients",
-                                   payload={
-                                       "total_sessions": (patient_query_data[0]['total_sessions'] - 1),
-                                       "last_session_date": patient_last_session_date,
-                                   },
-                                   filters={
-                                       'id': patient_id
-                                   })
-
             # Delete vector embeddings
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             pinecone_client.delete_session_vectors(user_id=therapist_id,
                                                    patient_id=patient_id,
                                                    date=session_date_formatted)
+
+            # Update patient metrics around last session date, and total session count AFTER
+            # session has already been deleted.
+            background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+                                      supabase_client,
+                                      patient_id,
+                                      therapist_id,
+                                      logger_worker,
+                                      session_id,
+                                      background_tasks,
+                                      SessionOperation.DELETE_COMPLETED,
+                                      None)
 
             await self.generate_insights_after_session_data_updates(language_code=language_code,
                                                                     background_tasks=background_tasks,
@@ -658,7 +580,8 @@ class AssistantManager:
                                      session_id: str,
                                      pinecone_client: PineconeBaseClass,
                                      openai_client: OpenAIBaseClass,
-                                     supabase_client: SupabaseBaseClass):
+                                     supabase_client: SupabaseBaseClass,
+                                     logger_worker: Logger):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -736,11 +659,11 @@ class AssistantManager:
                                        },
                                        table_name="patient_briefings")
         except Exception as e:
-            Logger().log_error(background_tasks=background_tasks,
-                               description="Updating the presession tray in a background task failed",
-                               session_id=session_id,
-                               therapist_id=therapist_id,
-                               patient_id=patient_id)
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the presession tray in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
             raise Exception(e)
 
     async def update_patient_recent_topics(self,
@@ -959,7 +882,8 @@ class AssistantManager:
                                   session_id,
                                   pinecone_client,
                                   openai_client,
-                                  supabase_client)
+                                  supabase_client,
+                                  logger_worker)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):
@@ -976,3 +900,67 @@ class AssistantManager:
             ]
         else:
             raise Exception("Unsupported language code")
+
+    def _update_patient_metrics_after_session_report_operation(self,
+                                                               supabase_client: SupabaseBaseClass,
+                                                               patient_id: str,
+                                                               therapist_id: str,
+                                                               logger_worker: Logger,
+                                                               session_id: str,
+                                                               background_tasks: BackgroundTasks,
+                                                               operation: SessionOperation,
+                                                               session_date: str = None):
+        try:
+            # Fetch patient last session date and total session count
+            patient_session_notes_response = supabase_client.select(fields="*",
+                                                                    table_name="session_reports",
+                                                                    filters={
+                                                                        "patient_id": patient_id
+                                                                    },
+                                                                    order_desc_column="session_date")
+            patient_session_notes_data = patient_session_notes_response.dict()['data']
+            patient_last_session_date = (None if len(patient_session_notes_data) == 0
+                                         else patient_session_notes_data[0]['session_date'])
+            total_session_count = len(patient_session_notes_data)
+
+            # New value for last_session_date will be the most recent session we already found
+            if operation == SessionOperation.DELETE_COMPLETED:
+                supabase_client.update(table_name="patients",
+                        payload={
+                            "last_session_date": patient_last_session_date,
+                            "total_sessions": total_session_count,
+                        },
+                        filters={
+                            'id': patient_id
+                        })
+                return
+
+            # The operation is either inser or update.
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
+            if patient_last_session_date is None:
+                assert session_date is not None, "Received an invalid session date"
+                patient_last_session_date = session_date
+            else:
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
+                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                       second_date=formatted_date,
+                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
+
+            supabase_client.update(table_name="patients",
+                                   payload={
+                                       "last_session_date": patient_last_session_date,
+                                       "total_sessions": total_session_count,
+                                   },
+                                   filters={
+                                       'id': patient_id
+                                   })
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the patient's \"total session count\" and \"last sesion date\" in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)
