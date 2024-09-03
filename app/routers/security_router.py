@@ -104,13 +104,11 @@ class SecurityRouter:
                          background_tasks: BackgroundTasks,
                          datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
                          datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
-                         authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
                                                datastore_access_token=datastore_access_token,
                                                datastore_refresh_token=datastore_refresh_token,
                                                background_tasks=background_tasks,
-                                               authorization=authorization,
                                                session_id=session_id)
 
         @self.router.post(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -280,7 +278,6 @@ class SecurityRouter:
     background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
     datastore_refresh_token – the datastore refresh token.
-    authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
@@ -288,40 +285,23 @@ class SecurityRouter:
                                background_tasks: BackgroundTasks,
                                datastore_access_token: Annotated[Union[str, None], Cookie()],
                                datastore_refresh_token: Annotated[Union[str, None], Cookie()],
-                               authorization: Annotated[Union[str, None], Cookie()],
                                session_id: Annotated[Union[str, None], Cookie()]):
-        if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
-
-        if datastore_access_token is None or datastore_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
-
+        user_id = None
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                  access_token=datastore_access_token)
-            therapist_id = supabase_client
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            raise HTTPException(status_code=status_code, detail=str(e))
+            user_id = supabase_client.get_current_user_id()
+        except Exception:
+            pass
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               therapist_id=therapist_id,
-                               method=post_api_method,
-                               endpoint_name=self.LOGOUT_ENDPOINT,)
-
-        await self._openai_client.clear_chat_history()
         self._auth_manager.logout(response)
+        background_tasks.add_task(self._openai_client.clear_chat_history)
 
-        logger.log_api_response(background_tasks=background_tasks,
-                                session_id=session_id,
-                                therapist_id=therapist_id,
-                                endpoint_name=self.LOGOUT_ENDPOINT,
-                                http_status_code=status.HTTP_200_OK,
-                                method=post_api_method)
-
+        if user_id is not None:
+            background_tasks.add_task(self._schedule_logout_activity_logging,
+                                      background_tasks,
+                                      user_id,
+                                      session_id)
         return {}
 
     """
@@ -588,3 +568,25 @@ class SecurityRouter:
                              method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+
+    async def _schedule_logout_activity_logging(self,
+                                                background_tasks: BackgroundTasks,
+                                                user_id: str,
+                                                session_id: Annotated[Union[str, None], Cookie()]):
+        try:
+            logger = Logger(supabase_client_factory=self._supabase_client_factory)
+            post_api_method = logger.API_METHOD_POST
+            logger.log_api_request(background_tasks=background_tasks,
+                                session_id=session_id,
+                                therapist_id=user_id,
+                                method=post_api_method,
+                                endpoint_name=self.LOGOUT_ENDPOINT)
+            logger.log_api_response(background_tasks=background_tasks,
+                                    session_id=session_id,
+                                    therapist_id=user_id,
+                                    endpoint_name=self.LOGOUT_ENDPOINT,
+                                    http_status_code=status.HTTP_200_OK,
+                                    method=post_api_method)
+        except Exception:
+            #Fail silently since there's no need to throw
+            pass

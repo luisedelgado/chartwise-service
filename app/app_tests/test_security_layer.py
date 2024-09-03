@@ -395,20 +395,16 @@ class TestingHarnessSecurityRouter:
                             })
         assert response.status_code == 200
 
-    def test_logout_with_invalid_credentials(self):
-        response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT)
-        assert response.status_code == 401
-
     def test_logout_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT,
-                                cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                })
+                                    cookies={
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    })
+
         assert response.status_code == 200
         cookie_header = response.headers.get("set-cookie")
         assert cookie_header is not None
