@@ -68,6 +68,7 @@ class SessionNotesUpdate(BaseModel):
     id: str
     notes_text: Optional[str] = None
     session_date: Optional[str] = None
+    diarization: Optional[str] = None
 
 class AssistantManager:
 
