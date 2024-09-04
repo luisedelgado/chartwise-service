@@ -1,10 +1,8 @@
-from fastapi import BackgroundTasks
 from typing import Tuple
 
 from ..api.deepgram_base_class import DeepgramBaseClass
 from ..api.templates import SessionNotesTemplate
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
-from ...dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ...managers.assistant_manager import AssistantManager
 from ...managers.auth_manager import AuthManager
 

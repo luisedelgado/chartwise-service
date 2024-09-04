@@ -14,7 +14,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..internal.logging import Logger
 from ..internal.schemas import Gender
-from ..internal.utilities import datetime_handler
+from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
 class AssistantQuery(BaseModel):
@@ -363,6 +363,21 @@ class AssistantManager:
                                       logger_worker,
                                       background_tasks,
                                       session_id)
+
+            # Load default pre-session tray in a background thread
+            has_preexisting_history = ('pre_existing_history' in filtered_body)
+            gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
+            background_tasks.add_task(self._load_default_pre_session_tray_for_new_patient,
+                                      language_code,
+                                      patient_id,
+                                      therapist_id,
+                                      logger_worker,
+                                      background_tasks,
+                                      session_id,
+                                      supabase_client,
+                                      has_preexisting_history,
+                                      filtered_body['first_name'],
+                                      gender)
 
             return patient_id
         except Exception as e:
@@ -1019,9 +1034,8 @@ class AssistantManager:
             # Insert default question suggestions for patient without any session data
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
             strings_query = supabase_client.select_either_or_from_column(fields="*",
-                                                                            table_name="user_interface_strings",
-                                                                            column_name="id",
-                                                                            possible_values=default_question_suggestions)
+                                                                         table_name="user_interface_strings",
+                                                                         possible_values=default_question_suggestions)
             assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
@@ -1029,14 +1043,83 @@ class AssistantManager:
                 "questions": default_question_suggestions
             }
 
-            supabase_client.insert(table_name="patient_question_suggestions", payload={
-                "patient_id": patient_id,
-                "therapist_id": therapist_id,
-                "questions": eval(json.dumps(response_dict, ensure_ascii=False))
-            })
+            supabase_client.insert(table_name="patient_question_suggestions",
+                                   payload={
+                                       "patient_id": patient_id,
+                                       "therapist_id": therapist_id,
+                                       "questions": eval(json.dumps(response_dict, ensure_ascii=False))
+                                       })
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
                                     description="Updating the default question suggestions in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)
+
+    def _load_default_pre_session_tray_for_new_patient(self,
+                                                       language_code: str,
+                                                       patient_id: str,
+                                                       therapist_id: str,
+                                                       logger_worker: Logger,
+                                                       background_tasks: BackgroundTasks,
+                                                       session_id: str,
+                                                       supabase_client: SupabaseBaseClass,
+                                                       has_preexisting_history: bool,
+                                                       patient_first_name: str,
+                                                       patient_gender: str = None):
+        try:
+            therapist_data_query = supabase_client.select(table_name="therapists",
+                                                          fields="first_name",
+                                                          filters={
+                                                              "id": therapist_id
+                                                          })
+            assert (0 != len((therapist_data_query).data)), "Did not find any data for the incoming therapist id."
+            therapist_first_name = therapist_data_query.dict()['data'][0]['first_name']
+
+            therapist_language = general_utilities.map_language_code_to_language(language_code)
+            string_query = supabase_client.select(table_name="static_default_briefings",
+                                                  fields="value",
+                                                  filters={
+                                                      "id": therapist_language
+                                                  })
+            assert (0 != len((string_query).data)), "Did not find any strings data for the current scenario."
+
+            response_value = string_query.dict()['data'][0]['value']
+            briefings = response_value['briefings']
+            if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
+                default_briefing = (briefings['existing_patient']['value'] if has_preexisting_history
+                                    else briefings['new_patient']['value'])
+                formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
+                                                                     patient_first_name=patient_first_name)
+                supabase_client.insert(table_name="patient_briefings",
+                                       payload={
+                                           "patient_id": patient_id,
+                                           "therapist_id": therapist_id,
+                                           "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
+                                           })
+                return
+
+            # Select briefing with gender specification for pre-session tray
+            default_briefing = (briefings['existing_patient'] if has_preexisting_history
+                                else briefings['new_patient'])
+
+            if patient_gender is not None and patient_gender == "female":
+                default_briefing = default_briefing['female_pronouns']['value']
+            else:
+                default_briefing = default_briefing['male_pronouns']['value']
+
+            formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
+                                                                 patient_first_name=patient_first_name)
+            supabase_client.insert(table_name="patient_briefings",
+                                   payload={
+                                        "patient_id": patient_id,
+                                        "therapist_id": therapist_id,
+                                        "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
+                                    })
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Loading the default pre-session tray in a background task failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)

@@ -23,6 +23,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     patient_query_returns_preexisting_history = False
     user_authentication_id = None
     invoked_refresh_session: bool = False
+    select_default_briefing_has_different_pronouns: bool = False
 
     def insert(self,
                payload: dict,
@@ -126,12 +127,49 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
+        if table_name == "static_default_briefings":
+            if self.select_default_briefing_has_different_pronouns:
+                return FakeSupabaseResult(data=[{
+                    "value": {
+                        "briefings": {
+                            "has_different_pronouns": "true",
+                            "new_patient": {
+                                "male_pronouns": {
+                                    "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                                },
+                                "female_pronouns": {
+                                    "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                                }
+                            },
+                            "existing_patient": {
+                                "male_pronouns": {
+                                    "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                                },
+                                "female_pronouns": {
+                                    "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                                }
+                            }
+                        }
+                    }
+                }])
+            else:
+                return FakeSupabaseResult(data=[{
+                    "value": {
+                        "briefings": {
+                            "new_patient": {
+                                "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                            },
+                            "existing_patient": {
+                                "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                            }
+                        }
+                    }
+                }])
 
         raise Exception("Untracked table name")
 
     def select_either_or_from_column(self,
                                      fields: str,
-                                     column_name: str,
                                      possible_values: list,
                                      table_name: str,
                                      order_desc_column: str = None):

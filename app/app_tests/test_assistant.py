@@ -694,11 +694,12 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 400
 
-    def test_add_patient_without_pre_existing_history_success(self):
+    def test_add_male_patient_without_pre_existing_history_and_different_gender_pronouns(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie,
@@ -717,11 +718,84 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         assert "patient_id" in response.json()
 
-    def test_add_patient_with_pre_existing_history_success(self):
+    def test_add_male_patient_without_pre_existing_history_and_not_different_gender_pronouns(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "gender": "male",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+
+    def test_add_female_patient_without_pre_existing_history_and_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "gender": "female",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+
+    def test_add_female_patient_without_pre_existing_history_and_not_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "gender": "female",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+
+    def test_add_male_patient_with_pre_existing_history_and_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
@@ -735,6 +809,87 @@ class TestingHarnessAssistantRouter:
                                         "birth_date": "10-24-1991",
                                         "pre_existing_history": "my history",
                                         "gender": "male",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
+
+    def test_add_male_patient_with_pre_existing_history_and_not_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "pre_existing_history": "my history",
+                                        "gender": "male",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
+
+    def test_add_female_patient_with_pre_existing_history_and_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "pre_existing_history": "my history",
+                                        "gender": "female",
+                                        "email": "foo@foo.foo",
+                                        "phone_number": "123",
+                                        "consentment_channel": "verbal",
+                                    })
+        assert response.status_code == 200
+        assert "patient_id" in response.json()
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
+
+    def test_add_female_patient_with_pre_existing_history_and_not_different_gender_pronouns(self):
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
+        assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie,
+                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "first_name": "Pepito",
+                                        "last_name": "Perez",
+                                        "birth_date": "10-24-1991",
+                                        "pre_existing_history": "my history",
+                                        "gender": "female",
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",

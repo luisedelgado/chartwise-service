@@ -48,13 +48,11 @@ class SupabaseBaseClass(ABC):
 
     Arguments:
     fields – the fields to be retrieved from a table.
-    column_name – the column_name.
     possible_values – the list of possible values for which there would be results returned.
     table_name – the table that should be queried.
     order_desc_column – the optional column that should be sorted desc.
     """
     def select_either_or_from_column(fields: str,
-                                     column_name: str,
                                      possible_values: list,
                                      table_name: str,
                                      order_desc_column: str = None):

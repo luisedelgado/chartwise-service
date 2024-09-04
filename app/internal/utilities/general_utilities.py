@@ -52,3 +52,14 @@ def get_user_language_code(user_id: str,
         return therapist_query.dict()['data'][0]["language_preference"]
     except Exception as e:
         raise Exception("Encountered an issue while pulling user's language preference.")
+
+"""
+Maps a language code to a language abbreviation.
+"""
+def map_language_code_to_language(language_code: str):
+    if language_code.startswith("en"):
+        return "en"
+    elif language_code.startswith("es"):
+        return "es"
+    else:
+        raise Exception ("Untracked language code")
