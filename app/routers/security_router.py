@@ -203,13 +203,13 @@ class SecurityRouter:
                                                                                         supabase_client=supabase_client)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
 
-            await self._openai_client.clear_chat_history()
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
                                                                   supabase_client_factory=self._supabase_client_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
+            background_tasks.add_task(self._openai_client.clear_chat_history)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
