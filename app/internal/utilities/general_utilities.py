@@ -1,4 +1,4 @@
-from fastapi import status
+from fastapi import HTTPException, status
 from pytz import timezone
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
@@ -24,6 +24,9 @@ def gender_has_default_pronouns(gender: str) -> bool:
 Attempts to extract a status code for an Exception object whose underlying type we don't know.
 """
 def extract_status_code(exception, fallback: status):
+    if isinstance(exception, HTTPException):
+        return exception.status_code
+
     common_status_attributes = ['status_code', 'code', 'status', 'response_code']
     for attr in common_status_attributes:
         if hasattr(exception, attr):

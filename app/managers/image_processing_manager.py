@@ -1,6 +1,6 @@
 import os
 
-from fastapi import (BackgroundTasks, File, UploadFile)
+from fastapi import (BackgroundTasks, File, HTTPException, UploadFile)
 from typing import Tuple
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
@@ -131,5 +131,7 @@ class ImageProcessingManager:
                                       SessionOperation.UPDATE_COMPLETED,
                                       session_date)
 
+        except HTTPException as e:
+            raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
             raise Exception(e)
