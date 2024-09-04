@@ -553,11 +553,12 @@ class PromptCrafter:
     def _create_attendance_insights_user_message(self,
                                                  patient_session_dates: list[str]):
         try:
-            assert len(patient_session_dates or '') > 0, "Missing patient_session_dates param for building user message"
+            assert len(patient_session_dates or '') >= 0, "Missing patient_session_dates param for building user message"
             return ("Given the following dates of sessions that a patient has had with their therapist, provide an analysis of the patient's attendance pattern. "
                     "Highlight any trends, consistency, or notable gaps in the sessions. "
-                    "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance.\n\n"
-                    f"Here are the dates: {patient_session_dates}")
+                    "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance. "
+                    "If the set of dates is empty, return only a 50-character sentence stating that the patient is yet to start attending sessions.\n\n"
+                    f"Here is the set of dates: {patient_session_dates}")
         except Exception as e:
             raise Exception(e)
 

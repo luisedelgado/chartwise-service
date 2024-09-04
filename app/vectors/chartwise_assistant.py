@@ -477,8 +477,8 @@ class ChartWiseAssistant:
                                            auth_manager: AuthManager) -> str:
         try:
             patient_session_dates = [date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
-                                                                                                                                 patient_id=patient_id,
-                                                                                                                                 n=ATTENDANCE_CONTEXT_SESSIONS_CAP)]
+                                                                                                                              patient_id=patient_id,
+                                                                                                                              n=ATTENDANCE_CONTEXT_SESSIONS_CAP)]
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.ATTENDANCE_INSIGHTS,
                                                                        patient_session_dates=patient_session_dates)

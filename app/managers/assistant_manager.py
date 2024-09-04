@@ -540,8 +540,13 @@ class AssistantManager:
                                                        'id': patient_id
                                                    })
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-
             patient_query_data = patient_query.dict()['data'][0]
+
+            if patient_query_data['total_sessions'] == 0:
+                # Return early since there's no data to generate dynamic questions, and
+                # we already added default, generic default questions when the patient was added.
+                return
+
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
@@ -614,8 +619,13 @@ class AssistantManager:
                                                    },
                                                    table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-
             patient_response_data = patient_query.dict()['data'][0]
+
+            if patient_response_data['total_sessions'] == 0:
+                # Return early since there's no data to generate a presession tray, and
+                # we already added a default, generic presession tray when the patient was added.
+                return
+
             patient_name = patient_response_data['first_name']
             patient_gender = patient_response_data['gender']
             last_session_date = patient_response_data['last_session_date']
@@ -710,8 +720,12 @@ class AssistantManager:
                                                    },
                                                    table_name="patients")
             assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-
             patient_query_data = patient_query.dict()['data'][0]
+
+            if patient_query_data['total_sessions'] == 0:
+                # Return early since there's no data to generate recent topics dynamically.
+                return
+
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
