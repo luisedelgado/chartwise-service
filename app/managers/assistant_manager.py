@@ -310,11 +310,13 @@ class AssistantManager:
             raise Exception(e)
 
     async def add_patient(self,
+                          background_tasks: BackgroundTasks,
                           language_code: str,
                           auth_manager: AuthManager,
                           filtered_body: dict,
                           therapist_id: str,
                           session_id: str,
+                          logger_worker: Logger,
                           openai_client: OpenAIBaseClass,
                           supabase_client: SupabaseBaseClass,
                           pinecone_client: PineconeBaseClass) -> str:
@@ -329,31 +331,23 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                await pinecone_client.insert_preexisting_history_vectors(user_id=therapist_id,
-                                                                         patient_id=patient_id,
-                                                                         text=filtered_body['pre_existing_history'],
-                                                                         auth_manager=auth_manager,
-                                                                         openai_client=openai_client,
-                                                                         session_id=session_id)
+                background_tasks.add_task(pinecone_client.insert_preexisting_history_vectors,
+                                          therapist_id,
+                                          patient_id,
+                                          filtered_body['pre_existing_history'],
+                                          session_id,
+                                          openai_client,
+                                          auth_manager)
 
-            # Insert default question suggestions for patient without any session data
-            default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
-            strings_query = supabase_client.select_either_or_from_column(fields="*",
-                                                                         table_name="user_interface_strings",
-                                                                         column_name="id",
-                                                                         possible_values=default_question_suggestions)
-            assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
-
-            default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
-            response_dict = {
-                "questions": default_question_suggestions
-            }
-
-            supabase_client.insert(table_name="patient_question_suggestions", payload={
-                "patient_id": patient_id,
-                "therapist_id": therapist_id,
-                "questions": eval(json.dumps(response_dict, ensure_ascii=False))
-            })
+            # Load default question suggestions in a background thread
+            background_tasks.add_task(self._load_default_question_suggestions_for_new_patient,
+                                      supabase_client,
+                                      language_code,
+                                      patient_id,
+                                      therapist_id,
+                                      logger_worker,
+                                      background_tasks,
+                                      session_id)
 
             return patient_id
         except Exception as e:
@@ -886,22 +880,6 @@ class AssistantManager:
                                   supabase_client,
                                   logger_worker)
 
-    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
-        if language_code.startswith('es-'):
-            # Spanish
-            return [
-                'question_suggestions_no_data_default_es_1',
-                'question_suggestions_no_data_default_es_2'
-            ]
-        elif language_code.startswith('en-'):
-            # English
-            return [
-                'question_suggestions_no_data_default_en_1',
-                'question_suggestions_no_data_default_en_2'
-            ]
-        else:
-            raise Exception("Unsupported language code")
-
     def update_patient_metrics_after_session_report_operation(self,
                                                               supabase_client: SupabaseBaseClass,
                                                               patient_id: str,
@@ -961,6 +939,59 @@ class AssistantManager:
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
                                     description="Updating the patient's \"total session count\" and \"last sesion date\" in a background task failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)
+
+    # Private
+
+    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
+        if language_code.startswith('es-'):
+            # Spanish
+            return [
+                'question_suggestions_no_data_default_es_1',
+                'question_suggestions_no_data_default_es_2'
+            ]
+        elif language_code.startswith('en-'):
+            # English
+            return [
+                'question_suggestions_no_data_default_en_1',
+                'question_suggestions_no_data_default_en_2'
+            ]
+        else:
+            raise Exception("Unsupported language code")
+
+    def _load_default_question_suggestions_for_new_patient(self,
+                                                           supabase_client: SupabaseBaseClass,
+                                                           language_code: str,
+                                                           patient_id: str,
+                                                           therapist_id: str,
+                                                           logger_worker: Logger,
+                                                           background_tasks: BackgroundTasks,
+                                                           session_id: str):
+        try:
+            # Insert default question suggestions for patient without any session data
+            default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
+            strings_query = supabase_client.select_either_or_from_column(fields="*",
+                                                                            table_name="user_interface_strings",
+                                                                            column_name="id",
+                                                                            possible_values=default_question_suggestions)
+            assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
+
+            default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
+            response_dict = {
+                "questions": default_question_suggestions
+            }
+
+            supabase_client.insert(table_name="patient_question_suggestions", payload={
+                "patient_id": patient_id,
+                "therapist_id": therapist_id,
+                "questions": eval(json.dumps(response_dict, ensure_ascii=False))
+            })
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the default question suggestions in a background task failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)

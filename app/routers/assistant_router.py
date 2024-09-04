@@ -659,8 +659,10 @@ class AssistantRouter:
             self.language_code = (self.language_code if self.language_code is not None
                                   else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
             patient_id = await self._assistant_manager.add_patient(language_code=self.language_code,
+                                                                   background_tasks=background_tasks,
                                                                    auth_manager=self._auth_manager,
                                                                    filtered_body=body,
+                                                                   logger_worker=logger,
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    openai_client=self._openai_client,
