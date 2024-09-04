@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Tuple
 
 from ...managers.auth_manager import AuthManager
 
@@ -18,10 +19,10 @@ class DocupandaBaseClass(ABC):
         pass
 
     """
-    Perform textraction from an incoming document_id, and returns the result.
+    Perform textraction from an incoming document_id, and returns the resulting status code and text.
 
     Arguments:
     document_id – the document id to be textracted.
     """
-    async def retrieve_text_from_document(document_id) -> str:
+    async def retrieve_text_from_document(document_id) -> Tuple[int, str]:
         pass

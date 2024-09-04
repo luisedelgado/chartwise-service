@@ -1,6 +1,6 @@
 import os
 
-from fastapi import (BackgroundTasks, File, HTTPException, UploadFile)
+from fastapi import (BackgroundTasks, File, HTTPException, status, UploadFile)
 from typing import Tuple
 
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
@@ -72,7 +72,9 @@ class ImageProcessingManager:
                                   auth_manager: AuthManager,
                                   assistant_manager: AssistantManager) -> str:
         try:
-            textraction = await docupanda_client.retrieve_text_from_document(document_id)
+            textraction_status_code, textraction = await docupanda_client.retrieve_text_from_document(document_id)
+            if textraction_status_code == status.HTTP_202_ACCEPTED:
+                raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Textraction is still processing")
 
             session_report_query = supabase_client.select(fields="*",
                                                           table_name="session_reports",
@@ -84,7 +86,9 @@ class ImageProcessingManager:
             session_report_data = session_report_data[0]
             therapist_id = session_report_data['therapist_id']
             patient_id = session_report_data['patient_id']
-            session_date = session_report_data['session_date']
+            session_date = (None if 'session_date' not in session_report_data
+                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD))
 
             # If the textraction has already been stored in Supabase we can return early.
             if len(session_report_data['notes_text'] or '') > 0:

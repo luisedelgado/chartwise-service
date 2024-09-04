@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from ..api.docupanda_base_class import DocupandaBaseClass
 from ...managers.auth_manager import AuthManager
 
@@ -11,8 +13,8 @@ class FakeDocupandaClient(DocupandaBaseClass):
                            image_filename: str) -> str:
         return "Fake ID"
 
-    async def retrieve_text_from_document(self, document_id) -> str:
+    async def retrieve_text_from_document(self, document_id) -> Tuple[int, str]:
         if self.retrieving_non_existing_doc_id:
             raise Exception("Non existent")
 
-        return "This is my fake textraction"
+        return 200, "This is my fake textraction"

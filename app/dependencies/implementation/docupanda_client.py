@@ -2,6 +2,7 @@ import base64, json, os, requests
 
 from fastapi import HTTPException, status
 from portkey_ai import Portkey
+from typing import Tuple
 
 from ..api.docupanda_base_class import DocupandaBaseClass
 from ...managers.auth_manager import AuthManager
@@ -48,7 +49,7 @@ class DocupandaClient(DocupandaBaseClass):
 
         return doc_id
 
-    async def retrieve_text_from_document(self, document_id) -> str:
+    async def retrieve_text_from_document(self, document_id) -> Tuple[int, str]:
         try:
             base_url = os.getenv("DOCUPANDA_BASE_URL")
             document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
@@ -62,19 +63,17 @@ class DocupandaClient(DocupandaBaseClass):
             response = requests.get(url, headers=headers)
 
             if response.status_code != status.HTTP_200_OK:
-                raise HTTPException(status_code=response.status_code,
-                                    detail=response.text)
+                return response.status_code, None
 
             json_response = response.json()
 
             if json_response['status'] == 'processing':
-                raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,
-                                    detail="Image textraction is still being processed")
+                return status.HTTP_202_ACCEPTED, None
 
             text_sections = json_response['result']['pages'][0]['sections']
             full_text = ""
             for section in text_sections:
                 full_text = " ".join([full_text, section['text']])
-            return full_text
+            return status.HTTP_200_OK, full_text
         except Exception as e:
             raise Exception(e)
