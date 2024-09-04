@@ -270,7 +270,7 @@ class ImageProcessingRouter:
             assert (0 != len((session_query).data))
             assert session_query.dict()['data'][0]['therapist_id'] == therapist_id
         except Exception as e:
-            description = "Invalid textraction request."
+            description = str(e)
             status_code = status.HTTP_403_FORBIDDEN
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,

@@ -130,7 +130,7 @@ class AssistantManager:
 
             # Update patient metrics around last session date, and total session count AFTER
             # session has already been inserted.
-            background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+            background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
                                       supabase_client,
                                       patient_id,
                                       therapist_id,
@@ -225,7 +225,7 @@ class AssistantManager:
             # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
             # the new session date overwrote the patient's last_session_date value.
             if session_date_changed:
-                background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+                background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
                                           supabase_client,
                                           patient_id,
                                           therapist_id,
@@ -284,7 +284,7 @@ class AssistantManager:
 
             # Update patient metrics around last session date, and total session count AFTER
             # session has already been deleted.
-            background_tasks.add_task(self._update_patient_metrics_after_session_report_operation,
+            background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
                                       supabase_client,
                                       patient_id,
                                       therapist_id,
@@ -901,15 +901,15 @@ class AssistantManager:
         else:
             raise Exception("Unsupported language code")
 
-    def _update_patient_metrics_after_session_report_operation(self,
-                                                               supabase_client: SupabaseBaseClass,
-                                                               patient_id: str,
-                                                               therapist_id: str,
-                                                               logger_worker: Logger,
-                                                               session_id: str,
-                                                               background_tasks: BackgroundTasks,
-                                                               operation: SessionOperation,
-                                                               session_date: str = None):
+    def update_patient_metrics_after_session_report_operation(self,
+                                                              supabase_client: SupabaseBaseClass,
+                                                              patient_id: str,
+                                                              therapist_id: str,
+                                                              logger_worker: Logger,
+                                                              session_id: str,
+                                                              background_tasks: BackgroundTasks,
+                                                              operation: SessionOperation,
+                                                              session_date: str = None):
         try:
             # Fetch patient last session date and total session count
             patient_session_notes_response = supabase_client.select(fields="*",

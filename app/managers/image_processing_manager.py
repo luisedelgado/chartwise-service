@@ -11,7 +11,8 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
-                                          SessionNotesSource)
+                                          SessionNotesSource,
+                                          SessionOperation)
 from ..managers.auth_manager import AuthManager
 
 class ImageProcessingManager:
@@ -81,6 +82,9 @@ class ImageProcessingManager:
             session_report_data = session_report_query.dict()['data']
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
             session_report_data = session_report_data[0]
+            therapist_id = session_report_data['therapist_id']
+            patient_id = session_report_data['patient_id']
+            session_date = session_report_data['session_date']
 
             # If the textraction has already been stored in Supabase we can return early.
             if len(session_report_data['notes_text'] or '') > 0:
@@ -89,20 +93,19 @@ class ImageProcessingManager:
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                                   openai_client=openai_client,
-                                                                                  therapist_id=session_report_data['therapist_id'],
+                                                                                  therapist_id=therapist_id,
                                                                                   session_id=session_id,
                                                                                   session_notes_text=textraction)
 
             formatted_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-
             filtered_body = {
                 "id": session_report_data['id'],
-                "patient_id": session_report_data['patient_id'],
+                "patient_id": patient_id,
                 "notes_text": textraction,
                 "session_date": formatted_session_date,
                 "source": SessionNotesSource.NOTES_IMAGE,
-                "therapist_id": session_report_data['therapist_id']
+                "therapist_id": therapist_id
             }
 
             await assistant_manager.update_session(language_code=language_code,
@@ -115,6 +118,18 @@ class ImageProcessingManager:
                                                    openai_client=openai_client,
                                                    supabase_client=supabase_client,
                                                    pinecone_client=pinecone_client)
+
+            # Update patient metrics around last session date, and total session count AFTER
+            # session has already been updated.
+            background_tasks.add_task(assistant_manager.update_patient_metrics_after_session_report_operation,
+                                      supabase_client,
+                                      patient_id,
+                                      therapist_id,
+                                      logger_worker,
+                                      session_id,
+                                      background_tasks,
+                                      SessionOperation.UPDATE_COMPLETED,
+                                      session_date)
 
         except Exception as e:
             raise Exception(e)
