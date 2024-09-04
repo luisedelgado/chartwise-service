@@ -563,14 +563,7 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            strings_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'id': self._default_streaming_error_message_id(language_code)
-                                                   },
-                                                   table_name="user_interface_strings")
-            assert (0 != len((strings_query).data))
-            default_error_string = strings_query.dict()['data'][0]['value']
-
+            default_error_string = self._default_streaming_error_message(language_code)
             async for part in self._assistant_manager.query_session(language_code=language_code,
                                                                     auth_manager=self._auth_manager,
                                                                     query=query,
@@ -953,12 +946,14 @@ class AssistantRouter:
 
     # Private
 
-    def _default_streaming_error_message_id(self, language_code: str):
+    def _default_streaming_error_message(self, language_code: str):
         if language_code.startswith('es-'):
             # Spanish
-            return 'streaming_qa_error_default_response_es'
+            return ("Parece que hay un problema que me está impidiendo poder responder tu pregunta. "
+                    "Estamos trabajando en ello— ¡Vuelve a intentarlo en un momento!")
         elif language_code.startswith('en-'):
             # English
-            return 'streaming_qa_error_default_response_en'
+            return ("Looks like there’s a minor issue that's preventing me from being able to respond your question. "
+                    "We’re on it— please check back shortly!")
         else:
             raise Exception("Unsupported language code")

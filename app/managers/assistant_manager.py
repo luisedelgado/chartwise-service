@@ -70,7 +70,22 @@ class SessionNotesUpdate(BaseModel):
     session_date: Optional[str] = None
     diarization: Optional[str] = None
 
+class CachedPatientQueryData:
+    def __init__(self,
+                 patient_id: str,
+                 patient_first_name: str,
+                 patient_last_name: str,
+                 patient_gender: Optional[str] = None,
+                 last_session_date: Optional[str] = None):
+        self.patient_id = patient_id
+        self.patient_first_name = patient_first_name
+        self.patient_last_name = patient_last_name
+        self.patient_gender = patient_gender
+        self.last_session_date = last_session_date
+
 class AssistantManager:
+
+    cached_patient_query_data: CachedPatientQueryData = None
 
     def __init__(self):
         self.chartwise_assistant = ChartWiseAssistant()
@@ -451,21 +466,35 @@ class AssistantManager:
                             pinecone_client: PineconeBaseClass,
                             supabase_client: SupabaseBaseClass) -> AsyncIterable[str]:
         try:
-            # Confirm that the incoming patient id is assigned to the incoming therapist id.
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'id': query.patient_id,
-                                                       'therapist_id': therapist_id
-                                                   },
-                                                   table_name="patients")
-            patient_therapist_match = (0 != len((patient_query).data))
-            assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+            # If we don't have cached data about this patient, or if the therapist has
+            # asked a question about a different patient, go fetch data.
+            if (self.cached_patient_query_data is None
+                    or self.cached_patient_query_data.patient_id != query.patient_id):
+                patient_query = supabase_client.select(fields="*",
+                                                    filters={
+                                                        'id': query.patient_id,
+                                                        'therapist_id': therapist_id
+                                                    },
+                                                    table_name="patients")
+                patient_therapist_match = (0 != len((patient_query).data))
+                assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-            patient_query_data = patient_query.dict()['data'][0]
-            patient_first_name = patient_query_data['first_name']
-            patient_last_name = patient_query_data['last_name']
-            patient_gender = patient_query_data['gender']
-            patient_last_session_date = patient_query_data['last_session_date']
+                patient_query_data = patient_query.dict()['data'][0]
+                patient_first_name = patient_query_data['first_name']
+                patient_last_name = patient_query_data['last_name']
+                patient_gender = patient_query_data['gender']
+                patient_last_session_date = patient_query_data['last_session_date']
+                self.cached_patient_query_data = CachedPatientQueryData(patient_id=query.patient_id,
+                                                                        patient_first_name=patient_first_name,
+                                                                        patient_last_name=patient_last_name,
+                                                                        patient_gender=patient_gender,
+                                                                        last_session_date=patient_last_session_date)
+            else:
+                # Read cached data
+                patient_first_name = self.cached_patient_query_data.patient_first_name
+                patient_last_name = self.cached_patient_query_data.patient_last_name
+                patient_gender = self.cached_patient_query_data.patient_gender
+                patient_last_session_date = self.cached_patient_query_data.last_session_date
 
             if len(patient_last_session_date or '') > 0:
                 session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
@@ -822,6 +851,8 @@ class AssistantManager:
                                                            openai_client: OpenAIBaseClass,
                                                            supabase_client: SupabaseBaseClass,
                                                            logger_worker: Logger):
+        # Clean patient query cache
+        self.cached_patient_query_data = None
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
         background_tasks.add_task(openai_client.clear_chat_history)
