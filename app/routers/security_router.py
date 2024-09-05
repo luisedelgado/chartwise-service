@@ -258,7 +258,8 @@ class SecurityRouter:
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   request=request,
                                                                   response=response,
-                                                                  supabase_client_factory=self._supabase_client_factory)
+                                                                  supabase_client_factory=self._supabase_client_factory,
+                                                                  only_refresh_auth_token=True)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
