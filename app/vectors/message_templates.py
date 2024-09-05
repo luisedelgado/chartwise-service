@@ -185,7 +185,7 @@ class PromptCrafter:
 
         if chat_history_included:
             chat_history_instruction = (
-                "9. For coherence, consider the provided chat history to understand what the conversation has been so far. "
+                "10. For coherence, consider the provided chat history to understand what the conversation has been so far. "
                 "The `chunk_summary` fields still take precedence when you're looking for information with which to answer the user question.\n"
             )
         else:
@@ -206,6 +206,7 @@ class PromptCrafter:
             "6. If no relevant session information is found, do not mention any dates.\n"
             "7. If the question is about future sessions or planning, and no relevant session notes exist, freely provide guidance to assist the practitioner.\n"
             "8. For questions directly related to the patient's session history, if the question cannot be answered based on the session notes, state that the information is not available in the session notes.\n"
+            "9. For casual or non-informative inputs from the user (e.g.: 'Got it', 'Ok'), offer a simple acknowledgment or a brief, polite response that does not reference session context unless directly relevant.\n"
             f"{chat_history_instruction}"
             f"{last_session_date_context}"
         )
@@ -222,7 +223,7 @@ class PromptCrafter:
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"\nIt is very important that you craft your response using language code {language_code}.\n"
-                f"\nGiven this information, please answer the question: {query_input}\n"
+                f"\nGiven this information, please respond the user's input: {query_input}\n"
             )
         except Exception as e:
             raise Exception(e)
@@ -489,8 +490,9 @@ class PromptCrafter:
 
     def _create_reformulate_query_system_message(self):
         return (
-            "Given the chat history and the latest user question, which may reference previous context, reformulate the question into a standalone query "
-            "that can be understood without relying on the chat history. Do NOT provide an answer; only reformulate the question if necessary, otherwise return it unchanged. "
+            "Given the chat history and the latest user input, which may reference previous context, reformulate the input into a standalone entry "
+            "that can be understood without relying on the chat history. If the input is a question, do NOT provide an answer; only reformulate it if necessary, otherwise return it unchanged. "
+            "For casual or non-informative inputs from the user (e.g.: 'Got it', 'Ok'), it's ok to return them unchanged. "
             "The output should be generated using the same language in which the user question is written."
         )
 
@@ -500,13 +502,14 @@ class PromptCrafter:
             assert len(query_input or '') > 0, "Error while building user message: query_input should be bigger than 0"
 
             return (
-                "Please review the following chat history and the most recent user question. "
-                "The user question might reference information from the chat history. "
-                "Your task is to reformulate the user question into a standalone query that can be understood without the chat history. "
-                "Do NOT provide an answer; simply reformulate the question if necessary, otherwise return it as is."
+                "Please review the following chat history and the most recent user input. "
+                "The user input might reference information from the chat history. "
+                "Your task is to reformulate the user input into a standalone entry that can be understood without the chat history. "
+                "If the input is a question, do NOT provide an answer; simply reformulate it if necessary, otherwise return it as is."
+                "For casual or non-informative inputs from the user (e.g.: 'Got it', 'Ok'), it's ok to return them unchanged. "
                 "The output should be generated using the same language in which the latest user question is written."
                 f"\n---------------------\nChat History:\n{chat_history}\n---------------------\n"
-                f"Latest User Question:\n{query_input}\n---------------------\n"
+                f"Latest User Input:\n{query_input}\n---------------------\n"
             )
         except Exception as e:
             raise Exception(e)
