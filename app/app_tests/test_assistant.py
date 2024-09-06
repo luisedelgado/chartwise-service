@@ -7,6 +7,7 @@ from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..internal.router_dependencies import RouterDependencies
+from ..internal.schemas import SessionUploadStatus
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
@@ -198,6 +199,7 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 200
         assert self.fake_supabase_user_client.fake_text == insert_text
+        assert self.fake_supabase_user_client.session_upload_processing_status == SessionUploadStatus.SUCCESS.value
 
     def test_update_session_with_missing_auth_token(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
