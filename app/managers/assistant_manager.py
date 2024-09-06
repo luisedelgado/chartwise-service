@@ -388,18 +388,16 @@ class AssistantManager:
             # Load default pre-session tray in a background thread
             has_preexisting_history = ('pre_existing_history' in filtered_body)
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
-            background_tasks.add_task(self._load_default_pre_session_tray_for_new_patient,
-                                      language_code,
-                                      patient_id,
-                                      therapist_id,
-                                      logger_worker,
-                                      background_tasks,
-                                      session_id,
-                                      supabase_client,
-                                      has_preexisting_history,
-                                      filtered_body['first_name'],
-                                      gender)
-
+            self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
+                                                                patient_id=patient_id,
+                                                                therapist_id=therapist_id,
+                                                                logger_worker=logger_worker,
+                                                                background_tasks=background_tasks,
+                                                                session_id=session_id,
+                                                                supabase_client=supabase_client,
+                                                                has_preexisting_history=has_preexisting_history,
+                                                                patient_first_name=filtered_body['first_name'],
+                                                                patient_gender=gender)
             return patient_id
         except Exception as e:
             raise Exception(e)
