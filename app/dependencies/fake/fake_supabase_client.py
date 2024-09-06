@@ -20,6 +20,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
     fake_refresh_token: str = None
     fake_text: str = None
     select_returns_data: bool = False
+    session_notes_return_empty_notes_text = False
+    session_notes_return_soap_notes = False
     patient_query_returns_preexisting_history = False
     user_authentication_id = None
     invoked_refresh_session: bool = False
@@ -94,11 +96,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                 "id": self.FAKE_SESSION_NOTES_ID,
                 "notes_mini_summary":"My fake mini summary",
-                "notes_text": "My fake notes text",
+                "notes_text": "My fake notes text" if not self.session_notes_return_empty_notes_text else "",
                 "session_date": "2023-01-01",
                 "patient_id": self.FAKE_PATIENT_ID,
                 "therapist_id": self.FAKE_THERAPIST_ID,
-                "template": "free_form",
+                "template": "free_form" if not self.session_notes_return_soap_notes else "soap",
             }])
         if table_name == "diarization_logs":
             return FakeSupabaseResult(data=[{

@@ -40,6 +40,8 @@ class FakeOpenAIChat:
 
 class FakeAsyncOpenAI(OpenAIBaseClass):
 
+    throws_exception = False
+
     def __init__(self):
         self._chat = FakeOpenAIChat(completions_return_data=True)
 
@@ -50,6 +52,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                             expects_json_response: bool,
                                             auth_manager: AuthManager,
                                             cache_configuration: dict = None):
+        if self.throws_exception:
+            raise Exception("Fake exception")
+
         return {
             "summary": "my fake summary",
             "questions": ["question"],
