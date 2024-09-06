@@ -5,7 +5,6 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
-from ..dependencies.fake.fake_speechmatics_client import FakeSpeechmaticsClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..internal.router_dependencies import RouterDependencies
@@ -88,7 +87,6 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_admin_client = FakeSupabaseClient()
         self.fake_supabase_user_client = FakeSupabaseClient()
         self.fake_pinecone_client = FakePineconeClient()
-        self.fake_speechmatics_client = FakeSpeechmaticsClient()
         self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
                                                                       fake_supabase_user_client=self.fake_supabase_user_client)
         self.auth_cookie, _ = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
@@ -100,7 +98,6 @@ class TestingHarnessAudioProcessingRouter:
                                                                                 router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
                                                                                                                        deepgram_client=self.fake_deepgram_client,
                                                                                                                        pinecone_client=self.fake_pinecone_client,
-                                                                                                                       speechmatics_client=self.fake_speechmatics_client,
                                                                                                                        supabase_client_factory=self.fake_supabase_client_factory)).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
