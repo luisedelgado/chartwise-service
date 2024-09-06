@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
@@ -132,9 +130,10 @@ class TestingHarnessImageProcessingRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                     })
         assert response.status_code == 200
-        assert "document_id" in response.json()
+        assert "job_id" in response.json()
+        assert "session_report_id" in response.json()
 
-    def test_invoke_png_image_upload_soap_format_success(self):
+    def test_invoke_png_image_upload_free_format_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -157,6 +156,7 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
+        assert "job_id" in response.json()
 
     def test_invoke_pdf_image_upload_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -181,6 +181,7 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
+        assert "job_id" in response.json()
 
     def test_invoke_textraction_with_no_auth(self):
         response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
@@ -236,6 +237,24 @@ class TestingHarnessImageProcessingRouter:
                                     "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                 },)
         assert response.status_code == 400
+
+    def test_invoke_textraction_still_processing(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_user_client.select_returns_data = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_docupanda_client.return_processing_status_code = True
+        response = self.client.get(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+                                   params={
+                                       "document_id": "12345"
+                                   },
+                                   cookies={
+                                       "authorization": self.auth_cookie,
+                                       "datastore_access_token": FAKE_ACCESS_TOKEN,
+                                       "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   })
+        assert response.status_code == 202
 
     def test_invoke_textraction_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True

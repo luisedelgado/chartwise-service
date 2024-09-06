@@ -13,7 +13,7 @@ from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessi
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..internal.logging import Logger
-from ..internal.schemas import Gender
+from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -21,7 +21,7 @@ class AssistantQuery(BaseModel):
     patient_id: str
     text: str
 
-class SessionOperation(Enum):
+class SessionCrudOperation(Enum):
     INSERT_COMPLETED = "insert_completed"
     UPDATE_COMPLETED = "update_completed"
     DELETE_COMPLETED = "delete_completed"
@@ -107,6 +107,7 @@ class AssistantManager:
                                        logger_worker: Logger,
                                        diarization: str = None) -> str:
         try:
+            assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_payload = {
                 "notes_text": notes_text,
@@ -115,7 +116,8 @@ class AssistantManager:
                 "patient_id": patient_id,
                 "source": source.value,
                 "last_updated": now_timestamp,
-                "therapist_id": therapist_id
+                "therapist_id": therapist_id,
+                "status": SessionUploadStatus.SUCCESS.value
             }
 
             if len(diarization or '') > 0:
@@ -160,7 +162,7 @@ class AssistantManager:
                                       logger_worker,
                                       session_id,
                                       background_tasks,
-                                      SessionOperation.INSERT_COMPLETED,
+                                      SessionCrudOperation.INSERT_COMPLETED,
                                       session_date)
 
             background_tasks.add_task(self.generate_insights_after_session_data_updates,
@@ -253,7 +255,7 @@ class AssistantManager:
                                           logger_worker,
                                           session_id,
                                           background_tasks,
-                                          SessionOperation.UPDATE_COMPLETED,
+                                          SessionCrudOperation.UPDATE_COMPLETED,
                                           filtered_body['session_date'])
 
             # Update the session vectors if needed
@@ -268,18 +270,18 @@ class AssistantManager:
                                           openai_client,
                                           auth_manager)
 
-            background_tasks.add_task(self.generate_insights_after_session_data_updates,
-                                      language_code,
-                                      background_tasks,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
-                                      environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
-                                      supabase_client,
-                                      logger_worker)
+                background_tasks.add_task(self.generate_insights_after_session_data_updates,
+                                        language_code,
+                                        background_tasks,
+                                        therapist_id,
+                                        patient_id,
+                                        auth_manager,
+                                        environment,
+                                        session_id,
+                                        pinecone_client,
+                                        openai_client,
+                                        supabase_client,
+                                        logger_worker)
         except Exception as e:
             raise Exception(e)
 
@@ -325,7 +327,7 @@ class AssistantManager:
                                       logger_worker,
                                       session_id,
                                       background_tasks,
-                                      SessionOperation.DELETE_COMPLETED,
+                                      SessionCrudOperation.DELETE_COMPLETED,
                                       None)
 
             background_tasks.add_task(self.generate_insights_after_session_data_updates,
@@ -966,7 +968,7 @@ class AssistantManager:
                                                               logger_worker: Logger,
                                                               session_id: str,
                                                               background_tasks: BackgroundTasks,
-                                                              operation: SessionOperation,
+                                                              operation: SessionCrudOperation,
                                                               session_date: str = None):
         try:
             # Fetch patient last session date and total session count
@@ -982,7 +984,7 @@ class AssistantManager:
             total_session_count = len(patient_session_notes_data)
 
             # New value for last_session_date will be the most recent session we already found
-            if operation == SessionOperation.DELETE_COMPLETED:
+            if operation == SessionCrudOperation.DELETE_COMPLETED:
                 supabase_client.update(table_name="patients",
                         payload={
                             "last_session_date": patient_last_session_date,

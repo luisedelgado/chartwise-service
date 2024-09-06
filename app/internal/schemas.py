@@ -6,3 +6,8 @@ class Gender(Enum):
     FEMALE = "female"
     OTHER = "other"
     RATHER_NOT_SAY = "rather_not_say"
+
+class SessionUploadStatus(Enum):
+    PROCESSING = "processing"
+    SUCCESS = "success"
+    FAILED = "failed"

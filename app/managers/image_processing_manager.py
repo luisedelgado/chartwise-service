@@ -9,10 +9,11 @@ from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
+from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource,
-                                          SessionOperation)
+                                          SessionCrudOperation)
 from ..managers.auth_manager import AuthManager
 
 class ImageProcessingManager:
@@ -47,6 +48,7 @@ class ImageProcessingManager:
                                                        "session_date": session_date,
                                                        "therapist_id": therapist_id,
                                                        "patient_id": patient_id,
+                                                       "status": SessionUploadStatus.PROCESSING.value,
                                                        "source": SessionNotesSource.NOTES_IMAGE.value,
                                                    })
             session_notes_id = insert_result.dict()['data'][0]['id']
@@ -72,6 +74,7 @@ class ImageProcessingManager:
                                   auth_manager: AuthManager,
                                   assistant_manager: AssistantManager) -> str:
         try:
+            session_notes_id = None
             textraction_status_code, textraction = await docupanda_client.retrieve_text_from_document(document_id)
             if textraction_status_code == status.HTTP_202_ACCEPTED:
                 raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Textraction is still processing")
@@ -86,13 +89,14 @@ class ImageProcessingManager:
             session_report_data = session_report_data[0]
             therapist_id = session_report_data['therapist_id']
             patient_id = session_report_data['patient_id']
+            session_notes_id = session_report_data['id']
             session_date = (None if 'session_date' not in session_report_data
                             else datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD))
 
             # If the textraction has already been stored in Supabase we can return early.
             if len(session_report_data['notes_text'] or '') > 0:
-                return session_report_data['id']
+                return session_notes_id
 
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
@@ -104,7 +108,7 @@ class ImageProcessingManager:
             formatted_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             filtered_body = {
-                "id": session_report_data['id'],
+                "id": session_notes_id,
                 "patient_id": patient_id,
                 "notes_text": textraction,
                 "session_date": formatted_session_date,
@@ -123,6 +127,20 @@ class ImageProcessingManager:
                                                    supabase_client=supabase_client,
                                                    pinecone_client=pinecone_client)
 
+            background_tasks.add_task(self._update_session_processing_status,
+                                      assistant_manager,
+                                      language_code,
+                                      logger_worker,
+                                      environment,
+                                      background_tasks,
+                                      auth_manager,
+                                      session_id,
+                                      openai_client,
+                                      supabase_client,
+                                      pinecone_client,
+                                      SessionUploadStatus.SUCCESS.value,
+                                      session_notes_id)
+
             # Update patient metrics around last session date, and total session count AFTER
             # session has already been updated.
             background_tasks.add_task(assistant_manager.update_patient_metrics_after_session_report_operation,
@@ -132,10 +150,67 @@ class ImageProcessingManager:
                                       logger_worker,
                                       session_id,
                                       background_tasks,
-                                      SessionOperation.UPDATE_COMPLETED,
+                                      SessionCrudOperation.UPDATE_COMPLETED,
                                       session_date)
 
         except HTTPException as e:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            if session_notes_id is not None:
+                self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                    language_code=language_code,
+                                                    logger_worker=logger_worker,
+                                                    environment=environment,
+                                                    background_tasks=background_tasks,
+                                                    auth_manager=auth_manager,
+                                                    session_id=session_id,
+                                                    openai_client=openai_client,
+                                                    supabase_client=supabase_client,
+                                                    pinecone_client=pinecone_client,
+                                                    session_upload_status=SessionUploadStatus.FAILED.value,
+                                                    session_notes_id=session_notes_id)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            if session_notes_id is not None:
+                await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                            language_code=language_code,
+                                                            logger_worker=logger_worker,
+                                                            environment=environment,
+                                                            background_tasks=background_tasks,
+                                                            auth_manager=auth_manager,
+                                                            session_id=session_id,
+                                                            openai_client=openai_client,
+                                                            supabase_client=supabase_client,
+                                                            pinecone_client=pinecone_client,
+                                                            session_upload_status=SessionUploadStatus.FAILED.value,
+                                                            session_notes_id=session_notes_id)
             raise Exception(e)
+
+    async def _update_session_processing_status(self,
+                                                assistant_manager: AssistantManager,
+                                                language_code: str,
+                                                logger_worker: Logger,
+                                                environment: str,
+                                                background_tasks: BackgroundTasks,
+                                                auth_manager: AuthManager,
+                                                session_id: str,
+                                                openai_client: OpenAIBaseClass,
+                                                supabase_client: SupabaseBaseClass,
+                                                pinecone_client: PineconeBaseClass,
+                                                session_upload_status: str,
+                                                session_notes_id: str):
+        await assistant_manager.update_session(language_code=language_code,
+                                               logger_worker=logger_worker,
+                                               environment=environment,
+                                               background_tasks=background_tasks,
+                                               auth_manager=auth_manager,
+                                               filtered_body={
+                                                   "id": session_notes_id,
+                                                   "status": session_upload_status
+                                               },
+                                               session_id=session_id,
+                                               openai_client=openai_client,
+                                               supabase_client=supabase_client,
+                                               pinecone_client=pinecone_client)

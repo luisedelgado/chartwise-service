@@ -24,12 +24,14 @@ class FakeSupabaseClient(SupabaseBaseClass):
     user_authentication_id = None
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
+    session_upload_processing_status: str = None
 
     def insert(self,
                payload: dict,
                table_name: str):
         if table_name == "session_reports":
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
+            self.session_upload_processing_status = self.session_upload_processing_status if "status" not in payload else payload["status"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
@@ -46,6 +48,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                table_name: str):
         if table_name == "session_reports":
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
+            self.session_upload_processing_status = self.session_upload_processing_status if "status" not in payload else payload["status"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])

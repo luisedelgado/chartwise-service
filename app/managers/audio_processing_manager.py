@@ -8,6 +8,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
+from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
@@ -33,6 +34,7 @@ class AudioProcessingManager:
                                     diarize: bool = False,
                                     audio_file: UploadFile = File(...)) -> str:
         try:
+            session_report_id = None
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
             files_to_clean = audio_copy_result.file_copies
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
@@ -48,6 +50,7 @@ class AudioProcessingManager:
                                                                           "therapist_id": therapist_id,
                                                                           "patient_id": patient_id,
                                                                           "source": source,
+                                                                          "status": SessionUploadStatus.PROCESSING.value
                                                                       })
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
@@ -97,6 +100,21 @@ class AudioProcessingManager:
 
             return session_report_id
         except Exception as e:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            if session_report_id is not None:
+                await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                            language_code=language_code,
+                                                            logger_worker=logger_worker,
+                                                            environment=environment,
+                                                            background_tasks=background_tasks,
+                                                            auth_manager=auth_manager,
+                                                            session_id=session_id,
+                                                            openai_client=openai_client,
+                                                            supabase_client=supabase_client,
+                                                            pinecone_client=pinecone_client,
+                                                            session_upload_status=SessionUploadStatus.FAILED.value,
+                                                            session_notes_id=session_report_id)
             raise Exception(e)
 
     # Private
@@ -146,7 +164,35 @@ class AudioProcessingManager:
                                                    openai_client=openai_client,
                                                    supabase_client=supabase_client,
                                                    pinecone_client=pinecone_client)
+
+            background_tasks.add_task(self._update_session_processing_status,
+                                      assistant_manager,
+                                      language_code,
+                                      logger_worker,
+                                      environment,
+                                      background_tasks,
+                                      auth_manager,
+                                      session_id,
+                                      openai_client,
+                                      supabase_client,
+                                      pinecone_client,
+                                      SessionUploadStatus.SUCCESS.value,
+                                      session_report_id)
         except Exception as e:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                         language_code=language_code,
+                                                         logger_worker=logger_worker,
+                                                         environment=environment,
+                                                         background_tasks=background_tasks,
+                                                         auth_manager=auth_manager,
+                                                         session_id=session_id,
+                                                         openai_client=openai_client,
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=pinecone_client,
+                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_notes_id=session_report_id)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
@@ -170,12 +216,12 @@ class AudioProcessingManager:
                                          files_to_clean: list):
         try:
             transcription = await deepgram_client.transcribe_audio(auth_manager=auth_manager,
-                                                                therapist_id=therapist_id,
-                                                                session_id=session_id,
-                                                                file_full_path=audio_copy_result.file_copy_full_path,
-                                                                openai_client=openai_client,
-                                                                assistant_manager=assistant_manager,
-                                                                template=template)
+                                                                   therapist_id=therapist_id,
+                                                                   session_id=session_id,
+                                                                   file_full_path=audio_copy_result.file_copy_full_path,
+                                                                   openai_client=openai_client,
+                                                                   assistant_manager=assistant_manager,
+                                                                   template=template)
 
             update_body = {
                 "id": session_report_id,
@@ -192,7 +238,35 @@ class AudioProcessingManager:
                                                    openai_client=openai_client,
                                                    supabase_client=supabase_client,
                                                    pinecone_client=pinecone_client)
+
+            background_tasks.add_task(self._update_session_processing_status,
+                                      assistant_manager,
+                                      language_code,
+                                      logger_worker,
+                                      environment,
+                                      background_tasks,
+                                      auth_manager,
+                                      session_id,
+                                      openai_client,
+                                      supabase_client,
+                                      pinecone_client,
+                                      SessionUploadStatus.SUCCESS.value,
+                                      session_report_id)
         except Exception as e:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                         language_code=language_code,
+                                                         logger_worker=logger_worker,
+                                                         environment=environment,
+                                                         background_tasks=background_tasks,
+                                                         auth_manager=auth_manager,
+                                                         session_id=session_id,
+                                                         openai_client=openai_client,
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=pinecone_client,
+                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_notes_id=session_report_id)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
@@ -242,3 +316,30 @@ class AudioProcessingManager:
                                     })
         except Exception as e:
             raise Exception(e)
+
+    async def _update_session_processing_status(self,
+                                                assistant_manager: AssistantManager,
+                                                language_code: str,
+                                                logger_worker: Logger,
+                                                environment: str,
+                                                background_tasks: BackgroundTasks,
+                                                auth_manager: AuthManager,
+                                                session_id: str,
+                                                openai_client: OpenAIBaseClass,
+                                                supabase_client: SupabaseBaseClass,
+                                                pinecone_client: PineconeBaseClass,
+                                                session_upload_status: str,
+                                                session_notes_id: str):
+        await assistant_manager.update_session(language_code=language_code,
+                                               logger_worker=logger_worker,
+                                               environment=environment,
+                                               background_tasks=background_tasks,
+                                               auth_manager=auth_manager,
+                                               filtered_body={
+                                                   "id": session_notes_id,
+                                                   "status": session_upload_status
+                                               },
+                                               session_id=session_id,
+                                               openai_client=openai_client,
+                                               supabase_client=supabase_client,
+                                               pinecone_client=pinecone_client)
