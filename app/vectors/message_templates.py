@@ -412,17 +412,17 @@ class PromptCrafter:
 
     def _create_soap_template_system_message(self) -> str:
         return (
-            "A mental health practitioner has uploaded session notes into our platform. "
-            "Your task is to convert these notes into the SOAP format, which includes the following sections:\n\n"
-            "Subjective: Describes what brought the patient to the practitioner, including their history and reasons for the visit.\n"
-            "Objective: Contains objective information gathered during the patient encounter.\n"
-            "Assessment: The practitioner's professional opinion based on the subjective and objective information.\n"
-            "Plan: The actions proposed by the practitioner or the patient to address the issues discussed.\n\n"
-            "Break down the session notes into these sections. Paraphrase information if it improves readability. "
-            "Leave any section blank if there is insufficient information but do not discard any original content. "
-            "If some information doesn't fit into the SOAP categories, place it at the end, outside the SOAP breakdown.\n\n"
-            "Return the SOAP session notes formatted as a string, with double line breaks between sections (Subjective, Objective, Assessment, and Plan), and single line breaks between the category header and its content. "
-            "Ensure category headers are written in English, while the content is written in the same language as the original notes."
+            "A mental health practitioner has uploaded session notes to our platform. "
+            "Your task is to convert these notes into the SOAP format, which consists of the following sections:\n\n"
+            "Subjective: What brought the patient to the practitioner, including their history and reasons for the visit.\n"
+            "Objective: Factual information collected during the session.\n"
+            "Assessment: The practitioner's professional analysis based on subjective and objective data."
+            "Plan: The recommended actions or next steps from the practitioner or patient."
+            "Organize the session notes under these headings. Paraphrase content if it enhances clarity or readability. "
+            "If any section lacks sufficient detail, leave it blank, but ensure no original information is omitted. "
+            "For any content that doesn’t fit within the SOAP structure, include it at the end, after the SOAP sections.\n\n"
+            "Return the SOAP-formatted notes as a string with double line breaks between sections and single line breaks between each header and its content. "
+            "Write the section headers in English, bolded with appropriate mark-up, while keeping the content in the same language as the original notes."
         )
 
     def _create_soap_template_user_message(self, session_notes: str) -> str:
