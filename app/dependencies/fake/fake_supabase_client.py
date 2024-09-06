@@ -29,7 +29,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                payload: dict,
                table_name: str):
         if table_name == "session_reports":
-            self.fake_text = None if "notes_text" not in payload else payload["notes_text"]
+            self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
@@ -45,7 +45,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                filters: dict,
                table_name: str):
         if table_name == "session_reports":
-            self.fake_text = None if "notes_text" not in payload else payload["notes_text"]
+            self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
