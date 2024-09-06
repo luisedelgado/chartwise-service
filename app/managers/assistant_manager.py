@@ -107,20 +107,10 @@ class AssistantManager:
                                        logger_worker: Logger,
                                        diarization: str = None) -> str:
         try:
-            if len(notes_text) > 0:
-                mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
-                                                                                        therapist_id=therapist_id,
-                                                                                        language_code=language_code,
-                                                                                        auth_manager=auth_manager,
-                                                                                        openai_client=openai_client,
-                                                                                        session_id=session_id)
-            else:
-                mini_summary = None
-
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             insert_payload = {
                 "notes_text": notes_text,
-                "notes_mini_summary": mini_summary,
+                "notes_mini_summary": "-",
                 "session_date": session_date,
                 "patient_id": patient_id,
                 "source": source.value,
@@ -135,14 +125,31 @@ class AssistantManager:
                                                    payload=insert_payload)
             session_notes_id = insert_result.dict()['data'][0]['id']
 
+            # Update session notes entry with minisummary
+            if len(notes_text) > 0:
+                background_tasks.add_task(self._update_session_notes_with_mini_summary,
+                                          session_notes_id,
+                                          notes_text,
+                                          therapist_id,
+                                          language_code,
+                                          auth_manager,
+                                          openai_client,
+                                          session_id,
+                                          environment,
+                                          background_tasks,
+                                          logger_worker,
+                                          supabase_client,
+                                          pinecone_client)
+
             # Upload vector embeddings
-            await pinecone_client.insert_session_vectors(user_id=therapist_id,
-                                                         patient_id=patient_id,
-                                                         text=notes_text,
-                                                         therapy_session_date=session_date,
-                                                         openai_client=openai_client,
-                                                         auth_manager=auth_manager,
-                                                         session_id=session_id)
+            background_tasks.add_task(pinecone_client.insert_session_vectors,
+                                      therapist_id,
+                                      patient_id,
+                                      notes_text,
+                                      session_id,
+                                      auth_manager,
+                                      openai_client,
+                                      session_date)
 
             # Update patient metrics around last session date, and total session count AFTER
             # session has already been inserted.
@@ -156,17 +163,18 @@ class AssistantManager:
                                       SessionOperation.INSERT_COMPLETED,
                                       session_date)
 
-            await self.generate_insights_after_session_data_updates(language_code=language_code,
-                                                                    background_tasks=background_tasks,
-                                                                    therapist_id=therapist_id,
-                                                                    patient_id=patient_id,
-                                                                    auth_manager=auth_manager,
-                                                                    environment=environment,
-                                                                    session_id=session_id,
-                                                                    pinecone_client=pinecone_client,
-                                                                    supabase_client=supabase_client,
-                                                                    openai_client=openai_client,
-                                                                    logger_worker=logger_worker)
+            background_tasks.add_task(self.generate_insights_after_session_data_updates,
+                                      language_code,
+                                      background_tasks,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client,
+                                      logger_worker)
 
             return session_notes_id
         except Exception as e:
@@ -212,15 +220,6 @@ class AssistantManager:
                     value = value.value
                 session_update_payload[key] = value
 
-            # We only have to generate a new mini_summary if the session text changed.
-            if session_text_changed and len(filtered_body['notes_text']) > 0:
-                session_update_payload['notes_mini_summary'] = await self.chartwise_assistant.create_session_mini_summary(session_notes=filtered_body['notes_text'],
-                                                                                                                          therapist_id=therapist_id,
-                                                                                                                          language_code=language_code,
-                                                                                                                          auth_manager=auth_manager,
-                                                                                                                          openai_client=openai_client,
-                                                                                                                          session_id=session_id)
-
             session_update_response = supabase_client.update(table_name="session_reports",
                                                              payload=session_update_payload,
                                                              filters={
@@ -228,15 +227,21 @@ class AssistantManager:
                                                              })
             assert (0 != len((session_update_response).data)), "Update operation could not be completed"
 
-            if session_date_changed or session_text_changed:
-                await pinecone_client.update_session_vectors(user_id=therapist_id,
-                                                             patient_id=patient_id,
-                                                             text=filtered_body.get('notes_text', current_session_text),
-                                                             session_id=session_id,
-                                                             old_date=current_session_date_formatted,
-                                                             new_date=filtered_body.get('session_date', current_session_date_formatted),
-                                                             openai_client=openai_client,
-                                                             auth_manager=auth_manager)
+            # We only have to generate a new mini_summary if the session text changed.
+            if session_text_changed and len(filtered_body['notes_text']) > 0:
+                background_tasks.add_task(self._update_session_notes_with_mini_summary,
+                                          filtered_body['id'],
+                                          filtered_body['notes_text'],
+                                          therapist_id,
+                                          language_code,
+                                          auth_manager,
+                                          openai_client,
+                                          session_id,
+                                          environment,
+                                          background_tasks,
+                                          logger_worker,
+                                          supabase_client,
+                                          pinecone_client)
 
             # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
             # the new session date overwrote the patient's last_session_date value.
@@ -251,17 +256,30 @@ class AssistantManager:
                                           SessionOperation.UPDATE_COMPLETED,
                                           filtered_body['session_date'])
 
-            await self.generate_insights_after_session_data_updates(language_code=language_code,
-                                                                    background_tasks=background_tasks,
-                                                                    therapist_id=therapist_id,
-                                                                    patient_id=patient_id,
-                                                                    auth_manager=auth_manager,
-                                                                    environment=environment,
-                                                                    session_id=session_id,
-                                                                    pinecone_client=pinecone_client,
-                                                                    supabase_client=supabase_client,
-                                                                    openai_client=openai_client,
-                                                                    logger_worker=logger_worker)
+            # Update the session vectors if needed
+            if session_date_changed or session_text_changed:
+                background_tasks.add_task(pinecone_client.update_session_vectors,
+                                          therapist_id,
+                                          patient_id,
+                                          filtered_body.get('notes_text', current_session_text),
+                                          current_session_date_formatted,
+                                          filtered_body.get('session_date', current_session_date_formatted),
+                                          session_id,
+                                          openai_client,
+                                          auth_manager)
+
+            background_tasks.add_task(self.generate_insights_after_session_data_updates,
+                                      language_code,
+                                      background_tasks,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client,
+                                      logger_worker)
         except Exception as e:
             raise Exception(e)
 
@@ -310,17 +328,18 @@ class AssistantManager:
                                       SessionOperation.DELETE_COMPLETED,
                                       None)
 
-            await self.generate_insights_after_session_data_updates(language_code=language_code,
-                                                                    background_tasks=background_tasks,
-                                                                    therapist_id=therapist_id,
-                                                                    patient_id=patient_id,
-                                                                    auth_manager=auth_manager,
-                                                                    environment=environment,
-                                                                    session_id=session_id,
-                                                                    logger_worker=logger_worker,
-                                                                    pinecone_client=pinecone_client,
-                                                                    supabase_client=supabase_client,
-                                                                    openai_client=openai_client)
+            background_tasks.add_task(self.generate_insights_after_session_data_updates,
+                                      language_code,
+                                      background_tasks,
+                                      therapist_id,
+                                      patient_id,
+                                      auth_manager,
+                                      environment,
+                                      session_id,
+                                      pinecone_client,
+                                      openai_client,
+                                      supabase_client,
+                                      logger_worker)
         except Exception as e:
             raise Exception(e)
 
@@ -609,7 +628,7 @@ class AssistantManager:
                                        table_name="patient_question_suggestions")
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the question suggestions in a background task failed",
+                                    description="Updating the question suggestions failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -709,7 +728,7 @@ class AssistantManager:
                                        table_name="patient_briefings")
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the presession tray in a background task failed",
+                                    description="Updating the presession tray failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -804,7 +823,7 @@ class AssistantManager:
                                        table_name="patient_topics")
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the recent topics in a background task failed",
+                                    description="Updating the recent topics failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -862,7 +881,7 @@ class AssistantManager:
 
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the attendance insights in a background task failed",
+                                    description="Updating the attendance insights failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -998,7 +1017,7 @@ class AssistantManager:
                                    })
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the patient's \"total session count\" and \"last sesion date\" in a background task failed",
+                                    description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -1051,7 +1070,7 @@ class AssistantManager:
                                        })
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the default question suggestions in a background task failed",
+                                    description="Updating the default question suggestions failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
@@ -1119,8 +1138,48 @@ class AssistantManager:
                                     })
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Loading the default pre-session tray in a background task failed",
+                                    description="Loading the default pre-session tray failed",
                                     session_id=session_id,
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
+            raise Exception(e)
+
+    async def _update_session_notes_with_mini_summary(self,
+                                                      session_notes_id: str,
+                                                      notes_text: str,
+                                                      therapist_id: str,
+                                                      language_code: str,
+                                                      auth_manager: str,
+                                                      openai_client: str,
+                                                      session_id: str,
+                                                      environment: str,
+                                                      background_tasks: BackgroundTasks,
+                                                      logger_worker: Logger,
+                                                      supabase_client: SupabaseBaseClass,
+                                                      pinecone_client: PineconeBaseClass):
+        try:
+            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
+                                                                                      therapist_id=therapist_id,
+                                                                                      language_code=language_code,
+                                                                                      auth_manager=auth_manager,
+                                                                                      openai_client=openai_client,
+                                                                                      session_id=session_id)
+            await self.update_session(language_code=language_code,
+                                      logger_worker=logger_worker,
+                                      environment=environment,
+                                      background_tasks=background_tasks,
+                                      auth_manager=auth_manager,
+                                      filtered_body={
+                                          "id": session_notes_id,
+                                          "notes_mini_summary": mini_summary
+                                      },
+                                      session_id=session_id,
+                                      openai_client=openai_client,
+                                      supabase_client=supabase_client,
+                                      pinecone_client=pinecone_client)
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description=f"Updating session report {session_notes_id} with a mini summary failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id)
             raise Exception(e)

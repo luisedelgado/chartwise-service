@@ -137,8 +137,9 @@ class TestingHarnessSecurityRouter:
                                         "datastore_refresh_token": FAKE_REFRESH_TOKEN
                                     })
         assert response.status_code == 200
-        assert response.cookies.get("datastore_access_token") == None
-        assert response.cookies.get("datastore_refresh_token") == None
+        assert self.fake_supabase_user_client.invoked_refresh_session == True
+        assert response.cookies.get("datastore_access_token") != None
+        assert response.cookies.get("datastore_refresh_token") != None
         assert response.cookies.get("authorization") != None
 
     def test_add_therapist_with_invalid_credentials(self):

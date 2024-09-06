@@ -70,7 +70,6 @@ class AuthManager:
                               request: Request,
                               response: Response,
                               supabase_client_factory: SupabaseFactoryBaseClass,
-                              only_refresh_auth_token: bool = False,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
@@ -81,11 +80,6 @@ class AuthManager:
                                 httponly=True,
                                 secure=True,
                                 samesite="none")
-
-            if only_refresh_auth_token:
-                return Token(access_token=access_token,
-                             token_type="bearer",
-                             expiration_timestamp=expiration_timestamp)
 
             # We are being sent new datastore tokens. Let's update cookies.
             if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
