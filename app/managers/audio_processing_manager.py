@@ -50,7 +50,7 @@ class AudioProcessingManager:
                                                                           "therapist_id": therapist_id,
                                                                           "patient_id": patient_id,
                                                                           "source": source,
-                                                                          "status": SessionUploadStatus.PROCESSING.value
+                                                                          "processing_status": SessionUploadStatus.PROCESSING.value
                                                                       })
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
@@ -337,7 +337,7 @@ class AudioProcessingManager:
                                                auth_manager=auth_manager,
                                                filtered_body={
                                                    "id": session_notes_id,
-                                                   "status": session_upload_status
+                                                   "processing_status": session_upload_status
                                                },
                                                session_id=session_id,
                                                openai_client=openai_client,

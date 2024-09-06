@@ -33,7 +33,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                table_name: str):
         if table_name == "session_reports":
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
-            self.session_upload_processing_status = self.session_upload_processing_status if "status" not in payload else payload["status"]
+            self.session_upload_processing_status = self.session_upload_processing_status if "processing_status" not in payload else payload["processing_status"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
@@ -50,7 +50,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                table_name: str):
         if table_name == "session_reports":
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
-            self.session_upload_processing_status = self.session_upload_processing_status if "status" not in payload else payload["status"]
+            self.session_upload_processing_status = self.session_upload_processing_status if "processing_status" not in payload else payload["processing_status"]
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])

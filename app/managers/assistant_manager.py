@@ -117,7 +117,7 @@ class AssistantManager:
                 "source": source.value,
                 "last_updated": now_timestamp,
                 "therapist_id": therapist_id,
-                "status": SessionUploadStatus.SUCCESS.value
+                "processing_status": SessionUploadStatus.SUCCESS.value
             }
 
             if len(diarization or '') > 0:

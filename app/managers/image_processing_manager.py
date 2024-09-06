@@ -48,7 +48,7 @@ class ImageProcessingManager:
                                                        "session_date": session_date,
                                                        "therapist_id": therapist_id,
                                                        "patient_id": patient_id,
-                                                       "status": SessionUploadStatus.PROCESSING.value,
+                                                       "processing_status": SessionUploadStatus.PROCESSING.value,
                                                        "source": SessionNotesSource.NOTES_IMAGE.value,
                                                    })
             session_notes_id = insert_result.dict()['data'][0]['id']
@@ -208,7 +208,7 @@ class ImageProcessingManager:
                                                auth_manager=auth_manager,
                                                filtered_body={
                                                    "id": session_notes_id,
-                                                   "status": session_upload_status
+                                                   "processing_status": session_upload_status
                                                },
                                                session_id=session_id,
                                                openai_client=openai_client,
