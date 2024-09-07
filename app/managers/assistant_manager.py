@@ -903,61 +903,57 @@ class AssistantManager:
         self.cached_patient_query_data = None
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
-        background_tasks.add_task(openai_client.clear_chat_history)
+        await openai_client.clear_chat_history()
 
         # Update this patient's recent topics for future fetches.
-        background_tasks.add_task(self.update_patient_recent_topics,
-                                  language_code,
-                                  therapist_id,
-                                  patient_id,
-                                  auth_manager,
-                                  environment,
-                                  session_id,
-                                  background_tasks,
-                                  openai_client,
-                                  pinecone_client,
-                                  supabase_client,
-                                  logger_worker)
+        await self.update_patient_recent_topics(language_code=language_code,
+                                                therapist_id=therapist_id,
+                                                patient_id=patient_id,
+                                                auth_manager=auth_manager,
+                                                environment=environment,
+                                                session_id=session_id,
+                                                background_tasks=background_tasks,
+                                                openai_client=openai_client,
+                                                pinecone_client=pinecone_client,
+                                                supabase_client=supabase_client,
+                                                logger_worker=logger_worker)
 
         # Update this patient's question suggestions for future fetches.
-        background_tasks.add_task(self.update_question_suggestions,
-                                  language_code,
-                                  therapist_id,
-                                  patient_id,
-                                  background_tasks,
-                                  auth_manager,
-                                  environment,
-                                  session_id,
-                                  logger_worker,
-                                  openai_client,
-                                  pinecone_client,
-                                  supabase_client)
+        await self.update_question_suggestions(language_code=language_code,
+                                               therapist_id=therapist_id,
+                                               patient_id=patient_id,
+                                               background_tasks=background_tasks,
+                                               auth_manager=auth_manager,
+                                               environment=environment,
+                                               session_id=session_id,
+                                               logger_worker=logger_worker,
+                                               openai_client=openai_client,
+                                               pinecone_client=pinecone_client,
+                                               supabase_client=supabase_client)
 
         # Update attendance insights
-        background_tasks.add_task(self.generate_attendance_insights,
-                                  language_code,
-                                  background_tasks,
-                                  therapist_id,
-                                  patient_id,
-                                  session_id,
-                                  environment,
-                                  auth_manager,
-                                  openai_client,
-                                  supabase_client,
-                                  logger_worker)
+        await self.generate_attendance_insights(language_code=language_code,
+                                                background_tasks=background_tasks,
+                                                therapist_id=therapist_id,
+                                                patient_id=patient_id,
+                                                session_id=session_id,
+                                                environment=environment,
+                                                auth_manager=auth_manager,
+                                                openai_client=openai_client,
+                                                supabase_client=supabase_client,
+                                                logger_worker=logger_worker)
 
         # Update this patient's presession tray for future fetches.
-        background_tasks.add_task(self.update_presession_tray,
-                                  background_tasks,
-                                  therapist_id,
-                                  patient_id,
-                                  auth_manager,
-                                  environment,
-                                  session_id,
-                                  pinecone_client,
-                                  openai_client,
-                                  supabase_client,
-                                  logger_worker)
+        await self.update_presession_tray(background_tasks=background_tasks,
+                                          therapist_id=therapist_id,
+                                          patient_id=patient_id,
+                                          auth_manager=auth_manager,
+                                          environment=environment,
+                                          session_id=session_id,
+                                          pinecone_client=pinecone_client,
+                                          openai_client=openai_client,
+                                          supabase_client=supabase_client,
+                                          logger_worker=logger_worker)
 
     def update_patient_metrics_after_session_report_operation(self,
                                                               supabase_client: SupabaseBaseClass,
