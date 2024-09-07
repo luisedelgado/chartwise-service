@@ -264,6 +264,7 @@ class PromptCrafter:
                     f"The first thing you should do is say hi {therapist_name}, and remind them that they are going to be seeing {patient_name} for the {ordinal_session_number} time."
                     f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: 'Most Recent Sessions' and 'Historical Themes'. "
                     f"If this is {therapist_name}'s first time meeting with {patient_name}, omit these sections and instead suggest strategies on how to establish a solid foundation. "
+                    "The summary should be based only on the data in the `chunk_summary` fields and should not include any interpretation, rephrasing, or additional insights beyond what is explicitly available. "
                     f"For 'Most Recent Sessions' list the most recent sessions sorted by most recent first. Ensure date precision. "
                     f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with suggestions for discussion topics for their session that's about to start. "
@@ -301,7 +302,8 @@ class PromptCrafter:
             return (
                 "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
                 "They can ask you about the patient's session history. "
-                "Your task is to generate two specific questions that the practitioner might ask, for which you have detailed answers based on the provided context documents. "
+                "Your task is to generate two specific questions that the practitioner might ask, based solely on the information in the provided context documents. "
+                "Ensure that the questions reflect the available data exactly as presented, without any interpretation or assumptions beyond what is explicitly stated. "
                 "Each question should be under 60 characters in length and be focused on specific aspects of the patient's history. "
                 "Avoid broad or vague questions like 'What happened during the session of Apr 10, 2022?' "
                 "Instead, consider narrow-focused questions such as 'What have we discussed about the patient's childhood?'\n\n"
@@ -351,6 +353,8 @@ class PromptCrafter:
                 "1. Three frequent topics, each with its frequency percentage.\n"
                 "2. Ensure the percentages sum to exactly 100%. Double-check the math.\n"
                 "3. Each topic should be under 25 characters.\n\n"
+                "The topics must be extracted directly from the content in the session notes, exactly as they are presented, without any form of interpretation, rephrasing, or additional analysis. "
+                "Do not infer or generate new topics beyond what is explicitly mentioned in the notes."
                 "Return a JSON object with one key: `topics`, written in English. The value should be an array of up to three objects, each with:\n"
                 f"* `topic`: Distinct topic written using language code {language_code}.\n"
                 f"* `percentage`: Frequency percentage.\n\n"
@@ -395,8 +399,9 @@ class PromptCrafter:
             "We use a Retrieval Augmented Generation system that involves chunking these notes. "
             "Each chunk will be converted into embeddings and stored in a vector database. "
             "Your task is to create a brief, informative summary of the chunk that will be provided. "
-            "This summary should encapsulate the key information from the chunk, enabling quick retrieval when searching. "
-            "Make sure the summary accurately reflects the content and context of the chunk. "
+            "This summary must be directly based on the content in the chunk, without any interpretation, rephrasing, or additional analysis. "
+            "It should only encapsulate the key information from the chunk for quick retrieval during searches. "
+            "Ensure the summary accurately reflects the content and context of the chunk, exactly as presented in the original notes. "
             "Regardless of the original language, generate the summary in English."
         )
 
@@ -439,7 +444,8 @@ class PromptCrafter:
                 "After a session with a patient, a mental health practitioner uploads their notes to our platform. "
                 "Each session entry in the Sessions table includes a 'mini summary' of no more than 50 characters. "
                 "Your task is to create this mini summary. "
-                "It should clearly convey the essence of the session notes so that practitioners can quickly understand the content of each entry. "
+                "It should be directly extracted from the content in the session notes, without any interpretation, rephrasing, or additional analysis. "
+                "Ensure the summary conveys the core content of the session notes as clearly as possible."
                 f"It is very important that your output is generated using language code {language_code}. "
             )
         except Exception as e:
@@ -521,7 +527,8 @@ class PromptCrafter:
         return (
             "You are a mental health assistant helping practitioners analyze their patients' session data. "
             "You will receive an array of topics, each with a corresponding frequency percentage, indicating how often the patient has spoken about these topics in their most recent sessions. "
-            "Your task is to briefly analyze this information and generate a concise paragraph that highlights any patterns, underlying themes, or notable insights. "
+            "Your task is to briefly analyze this information, strictly based on the provided data, and generate a concise paragraph that highlights any patterns, recurring themes, or notable insights. "
+            "Ensure that the analysis is objective, avoiding interpretation or assumptions that are not explicitly supported by the data. "
             "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state.\n"
             "\nIt is very important that the output meets the following criteria:\n"
             "1. Format the output in bullet points.\n"
@@ -589,7 +596,8 @@ class PromptCrafter:
             return (
                 "A mental health practitioner just met with a patient, and needs to summarize the content of the session. "
                 f"We have a transcription of the full session in JSON format, and your task is to provide the summary using language code {language_code}. "
-                "The summary should be concise and provide a clear overview of the key topics discussed, the emotions expressed, and any significant moments or changes in the patient's mood or behavior. "
+                "The summary must be based strictly on the content in the transcription and should not include any interpretation, rephrasing, or inferred insights beyond what is explicitly stated. "
+                "The summary should concisely convey the key topics discussed, the emotions expressed, and any significant moments or changes in the patient's mood or behavior, exactly as presented in the transcription. "
                 "Focus on the most relevant details that will help the therapist recall the session effectively. "
                 "The JSON input consists of an array of objects where each object contains 4 attributes:\n"
                 "1. 'content': A participant's spoken content.\n"
