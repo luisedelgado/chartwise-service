@@ -551,7 +551,7 @@ class SecurityRouter:
             logger.log_account_deletion(background_tasks=background_tasks,
                                         therapist_id=user_id)
             logger.log_api_response(background_tasks=background_tasks,
-                                    therapist_id=user_id,
+                                    description=f"user_id: {user_id}",
                                     session_id=session_id,
                                     endpoint_name=self.ACCOUNT_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,

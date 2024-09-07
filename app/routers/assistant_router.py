@@ -481,7 +481,6 @@ class AssistantRouter:
 
         try:
             assert len(session_report_id or '') > 0, "Received invalid session_report_id"
-            uuid.UUID(str(session_report_id))
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
@@ -515,7 +514,7 @@ class AssistantRouter:
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     therapist_id=therapist_id,
-                                    session_report_id=session_report_id,
+                                    description=f"session_report_id: {session_report_id}",
                                     endpoint_name=self.SESSIONS_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
                                     method=delete_api_method)
@@ -526,7 +525,6 @@ class AssistantRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
-                             session_report_id=session_report_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
                              description=description,
@@ -847,7 +845,7 @@ class AssistantRouter:
                                     method=delete_api_method,
                                     endpoint_name=self.PATIENTS_ENDPOINT,
                                     therapist_id=therapist_id,
-                                    patient_id=patient_id,
+                                    description=f"patient_id: {patient_id}",
                                     http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
@@ -858,7 +856,6 @@ class AssistantRouter:
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              therapist_id=therapist_id,
-                             patient_id=patient_id,
                              description=description,
                              method=delete_api_method)
             raise HTTPException(status_code=status_code,
