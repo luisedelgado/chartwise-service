@@ -605,6 +605,7 @@ class ChartWiseAssistant:
     auth_manager – the auth manager to be leveraged internally.
     openai_client – the openai client to be leveraged internally.
     session_id – the session id.
+    patient_id – the patient id.
     """
     async def create_session_mini_summary(self,
                                           session_notes: str,
@@ -612,7 +613,8 @@ class ChartWiseAssistant:
                                           language_code: str,
                                           auth_manager: AuthManager,
                                           openai_client: OpenAIBaseClass,
-                                          session_id: str) -> str:
+                                          session_id: str,
+                                          patient_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_MINI_SUMMARY,
@@ -623,6 +625,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
+                "patient_id": patient_id,
                 "user_id": therapist_id,
                 "session_id": str(session_id),
                 "language_code": language_code,

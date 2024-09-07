@@ -141,7 +141,8 @@ class AssistantManager:
                                           background_tasks,
                                           logger_worker,
                                           supabase_client,
-                                          pinecone_client)
+                                          pinecone_client,
+                                          patient_id)
 
             # Upload vector embeddings
             background_tasks.add_task(pinecone_client.insert_session_vectors,
@@ -243,7 +244,8 @@ class AssistantManager:
                                           background_tasks,
                                           logger_worker,
                                           supabase_client,
-                                          pinecone_client)
+                                          pinecone_client,
+                                          patient_id)
 
             # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
             # the new session date overwrote the patient's last_session_date value.
@@ -1152,14 +1154,16 @@ class AssistantManager:
                                                       background_tasks: BackgroundTasks,
                                                       logger_worker: Logger,
                                                       supabase_client: SupabaseBaseClass,
-                                                      pinecone_client: PineconeBaseClass):
+                                                      pinecone_client: PineconeBaseClass,
+                                                      patient_id: str):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
                                                                                       auth_manager=auth_manager,
                                                                                       openai_client=openai_client,
-                                                                                      session_id=session_id)
+                                                                                      session_id=session_id,
+                                                                                      patient_id=patient_id)
             await self.update_session(language_code=language_code,
                                       logger_worker=logger_worker,
                                       environment=environment,
