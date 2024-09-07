@@ -226,7 +226,7 @@ class OpenAIClient(OpenAIBaseClass):
                 "session_id": str(session_id),
                 "query_top_k": len(documents),
                 "rerank_top_n": top_n,
-                "user": user_id
+                "user_id": user_id
             }
 
             response = await self.trigger_async_chat_completion(metadata=metadata,
