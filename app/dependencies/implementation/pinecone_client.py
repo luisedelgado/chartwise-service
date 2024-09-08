@@ -256,6 +256,7 @@ class PineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
+                                       include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
@@ -268,15 +269,19 @@ class PineconeClient(PineconeBaseClass):
         namespace = self._get_namespace(user_id=user_id,
                                         patient_id=patient_id)
 
-        # Fetch patient's historical context
-        found_historical_context, historical_context = await self.fetch_historical_context(index=index, namespace=namespace)
+        if include_preexisting_history:
+            # Fetch patient's historical context
+            found_historical_context, historical_context = await self.fetch_historical_context(index=index, namespace=namespace)
 
-        if found_historical_context:
-            historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
-            missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
-                                          "They may have not gone through their first session since the practitioner added them to the platform. ")
+            if found_historical_context:
+                historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
+                missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
+                                            "They may have not gone through their first session since the practitioner added them to the platform. ")
+            else:
+                historical_context = ""
         else:
             historical_context = ""
+            found_historical_context = False
 
         # Check if caller wants us to fetch any vectors
         if query_top_k > 0:

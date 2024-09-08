@@ -127,6 +127,7 @@ class PineconeBaseClass(ABC):
     query_top_k – the top k results that should be retrieved from the vector store.
     rerank_top_n – the top n results that should be returned after reranking vectors.
     session_id – the session id.
+    include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
     session_date_override – the optional override for including session-date-specific vectors.
     """
     async def get_vector_store_context(auth_manager: AuthManager,
@@ -137,6 +138,7 @@ class PineconeBaseClass(ABC):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
+                                       include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         pass
 

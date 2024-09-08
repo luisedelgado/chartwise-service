@@ -342,6 +342,7 @@ class ChartWiseAssistant:
                                                                      session_id=session_id,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -426,6 +427,7 @@ class ChartWiseAssistant:
                                                                      session_id=session_id,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
