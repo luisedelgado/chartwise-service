@@ -41,7 +41,6 @@ class AudioProcessingRouter:
             self._supabase_client_factory = router_dependencies.supabase_client_factory
             self._openai_client = router_dependencies.openai_client
             self.router = APIRouter()
-            self.language_code = None
             self._register_routes()
 
     """
@@ -163,8 +162,7 @@ class AudioProcessingRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
                                                                                            openai_client=self._openai_client,
@@ -180,7 +178,7 @@ class AudioProcessingRouter:
                                                                                            session_date=session_date,
                                                                                            patient_id=patient_id,
                                                                                            environment=self._environment,
-                                                                                           language_code=self.language_code)
+                                                                                           language_code=language_code)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -264,8 +262,7 @@ class AudioProcessingRouter:
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
                                                   tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
                                                                                            auth_manager=self._auth_manager,
@@ -281,7 +278,7 @@ class AudioProcessingRouter:
                                                                                            audio_file=audio_file,
                                                                                            logger_worker=logger,
                                                                                            environment=self._environment,
-                                                                                           language_code=self.language_code,
+                                                                                           language_code=language_code,
                                                                                            diarize=True)
 
             logger.log_api_response(background_tasks=background_tasks,

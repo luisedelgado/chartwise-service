@@ -31,7 +31,6 @@ class ImageProcessingRouter:
                  auth_manager: AuthManager,
                  image_processing_manager: ImageProcessingManager,
                  router_dependencies: RouterDependencies):
-        self.language_code = None
         self._environment = environment
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager
@@ -282,13 +281,12 @@ class ImageProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             await self._image_processing_manager.process_textraction(document_id=document_id,
                                                                      docupanda_client=self._docupanda_client,
                                                                      session_id=session_id,
                                                                      environment=self._environment,
-                                                                     language_code=self.language_code,
+                                                                     language_code=language_code,
                                                                      logger_worker=logger,
                                                                      background_tasks=background_tasks,
                                                                      openai_client=self._openai_client,

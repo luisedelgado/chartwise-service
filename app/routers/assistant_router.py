@@ -52,7 +52,6 @@ class AssistantRouter:
         self._openai_client = router_dependencies.openai_client
         self._pinecone_client = router_dependencies.pinecone_client
         self._supabase_client_factory = router_dependencies.supabase_client_factory
-        self.language_code: str = None
         self.router = APIRouter()
         self._register_routes()
 
@@ -149,13 +148,12 @@ class AssistantRouter:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                self.language_code = (self.language_code if self.language_code is not None
-                                      else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
+                language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 background_tasks=background_tasks,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
-                                                                                language_code=self.language_code,
+                                                                                language_code=language_code,
                                                                                 session_id=session_id),
                                          media_type="text/event-stream")
             except Exception as e:
@@ -296,9 +294,8 @@ class AssistantRouter:
                                                            tz_identifier=client_timezone_identifier)
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
-            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=self.language_code,
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
+            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
                                                                                       environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
                                                                                       patient_id=body['patient_id'],
@@ -396,9 +393,8 @@ class AssistantRouter:
                                                            tz_identifier=client_timezone_identifier)
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
-            await self._assistant_manager.update_session(language_code=self.language_code,
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
+            await self._assistant_manager.update_session(language_code=language_code,
                                                          environment=self._environment,
                                                          background_tasks=background_tasks,
                                                          logger_worker=logger,
@@ -496,10 +492,8 @@ class AssistantRouter:
                                 detail=description)
 
         try:
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
-
-            await self._assistant_manager.delete_session(language_code=self.language_code,
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
+            await self._assistant_manager.delete_session(language_code=language_code,
                                                          auth_manager=self._auth_manager,
                                                          environment=self._environment,
                                                          session_id=session_id,
@@ -647,9 +641,8 @@ class AssistantRouter:
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            self.language_code = (self.language_code if self.language_code is not None
-                                  else general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client))
-            patient_id = await self._assistant_manager.add_patient(language_code=self.language_code,
+            language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
+            patient_id = await self._assistant_manager.add_patient(language_code=language_code,
                                                                    background_tasks=background_tasks,
                                                                    auth_manager=self._auth_manager,
                                                                    filtered_body=body,
