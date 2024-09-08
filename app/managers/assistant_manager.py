@@ -679,21 +679,21 @@ class AssistantManager:
                                                                                     patient_gender=patient_gender)
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
-            if not generate_insights:
-                return
-
-            topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
-                                                                                             user_id=therapist_id,
-                                                                                             patient_id=patient_id,
-                                                                                             environment=environment,
-                                                                                             language_code=language_code,
-                                                                                             session_id=session_id,
-                                                                                             patient_name=patient_full_name,
-                                                                                             patient_gender=patient_gender,
-                                                                                             supabase_client=supabase_client,
-                                                                                             openai_client=openai_client,
-                                                                                             pinecone_client=pinecone_client,
-                                                                                             auth_manager=auth_manager)
+            if generate_insights:
+                topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
+                                                                                                user_id=therapist_id,
+                                                                                                patient_id=patient_id,
+                                                                                                environment=environment,
+                                                                                                language_code=language_code,
+                                                                                                session_id=session_id,
+                                                                                                patient_name=patient_full_name,
+                                                                                                patient_gender=patient_gender,
+                                                                                                supabase_client=supabase_client,
+                                                                                                openai_client=openai_client,
+                                                                                                pinecone_client=pinecone_client,
+                                                                                                auth_manager=auth_manager)
+            else:
+                topics_insights = None
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
