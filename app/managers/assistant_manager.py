@@ -127,58 +127,22 @@ class AssistantManager:
                                                    payload=insert_payload)
             session_notes_id = insert_result.dict()['data'][0]['id']
 
-            # Update session notes entry with minisummary
-            if len(notes_text) > 0:
-                background_tasks.add_task(self._update_session_notes_with_mini_summary,
-                                          session_notes_id,
-                                          notes_text,
-                                          therapist_id,
-                                          language_code,
-                                          auth_manager,
-                                          openai_client,
-                                          session_id,
-                                          environment,
-                                          background_tasks,
-                                          logger_worker,
-                                          supabase_client,
-                                          pinecone_client,
-                                          patient_id)
-
-            # Upload vector embeddings
-            background_tasks.add_task(pinecone_client.insert_session_vectors,
+            # Upload vector embeddings and generate insights
+            background_tasks.add_task(self._insert_vectors_and_generate_insights,
+                                      session_notes_id,
                                       therapist_id,
                                       patient_id,
                                       notes_text,
+                                      session_date,
                                       session_id,
-                                      auth_manager,
-                                      openai_client,
-                                      session_date)
-
-            # Update patient metrics around last session date, and total session count AFTER
-            # session has already been inserted.
-            background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
-                                      supabase_client,
-                                      patient_id,
-                                      therapist_id,
-                                      logger_worker,
-                                      session_id,
-                                      background_tasks,
-                                      SessionCrudOperation.INSERT_COMPLETED,
-                                      session_date)
-
-            background_tasks.add_task(self.generate_insights_after_session_data_updates,
                                       language_code,
-                                      background_tasks,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
                                       environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
+                                      logger_worker,
+                                      background_tasks,
+                                      auth_manager,
                                       supabase_client,
-                                      logger_worker)
-
+                                      openai_client,
+                                      pinecone_client)
             return session_notes_id
         except Exception as e:
             raise Exception(e)
@@ -195,10 +159,11 @@ class AssistantManager:
                              supabase_client: SupabaseBaseClass,
                              pinecone_client: PineconeBaseClass):
         try:
+            session_notes_id = filtered_body['id']
             report_query = supabase_client.select(fields="*",
                                                   table_name="session_reports",
                                                   filters={
-                                                      'id': filtered_body['id']
+                                                      'id': session_notes_id
                                                   })
             assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
             report_query_data = report_query.dict()['data'][0]
@@ -226,64 +191,28 @@ class AssistantManager:
             session_update_response = supabase_client.update(table_name="session_reports",
                                                              payload=session_update_payload,
                                                              filters={
-                                                                 'id': filtered_body['id']
+                                                                 'id': session_notes_id
                                                              })
             assert (0 != len((session_update_response).data)), "Update operation could not be completed"
 
-            # We only have to generate a new mini_summary if the session text changed.
-            if session_text_changed and len(filtered_body['notes_text']) > 0:
-                background_tasks.add_task(self._update_session_notes_with_mini_summary,
-                                          filtered_body['id'],
-                                          filtered_body['notes_text'],
-                                          therapist_id,
-                                          language_code,
-                                          auth_manager,
-                                          openai_client,
-                                          session_id,
-                                          environment,
-                                          background_tasks,
-                                          logger_worker,
-                                          supabase_client,
-                                          pinecone_client,
-                                          patient_id)
-
-            # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
-            # the new session date overwrote the patient's last_session_date value.
-            if session_date_changed:
-                background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
-                                          supabase_client,
-                                          patient_id,
-                                          therapist_id,
-                                          logger_worker,
-                                          session_id,
-                                          background_tasks,
-                                          SessionCrudOperation.UPDATE_COMPLETED,
-                                          filtered_body['session_date'])
-
             # Update the session vectors if needed
             if session_date_changed or session_text_changed:
-                background_tasks.add_task(pinecone_client.update_session_vectors,
+                background_tasks.add_task(self._update_vectors_and_generate_insights,
+                                          session_notes_id,
                                           therapist_id,
                                           patient_id,
                                           filtered_body.get('notes_text', current_session_text),
                                           current_session_date_formatted,
                                           filtered_body.get('session_date', current_session_date_formatted),
                                           session_id,
+                                          language_code,
+                                          environment,
+                                          logger_worker,
+                                          background_tasks,
+                                          auth_manager,
+                                          supabase_client,
                                           openai_client,
-                                          auth_manager)
-
-                background_tasks.add_task(self.generate_insights_after_session_data_updates,
-                                        language_code,
-                                        background_tasks,
-                                        therapist_id,
-                                        patient_id,
-                                        auth_manager,
-                                        environment,
-                                        session_id,
-                                        pinecone_client,
-                                        openai_client,
-                                        supabase_client,
-                                        logger_worker)
+                                          pinecone_client)
         except Exception as e:
             raise Exception(e)
 
@@ -316,34 +245,19 @@ class AssistantManager:
             # Delete vector embeddings
             session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            pinecone_client.delete_session_vectors(user_id=therapist_id,
-                                                   patient_id=patient_id,
-                                                   date=session_date_formatted)
-
-            # Update patient metrics around last session date, and total session count AFTER
-            # session has already been deleted.
-            background_tasks.add_task(self.update_patient_metrics_after_session_report_operation,
-                                      supabase_client,
-                                      patient_id,
+            background_tasks.add_task(self._delete_vectors_and_generate_insights,
                                       therapist_id,
-                                      logger_worker,
+                                      patient_id,
+                                      session_date_formatted,
                                       session_id,
-                                      background_tasks,
-                                      SessionCrudOperation.DELETE_COMPLETED,
-                                      None)
-
-            background_tasks.add_task(self.generate_insights_after_session_data_updates,
                                       language_code,
-                                      background_tasks,
-                                      therapist_id,
-                                      patient_id,
-                                      auth_manager,
                                       environment,
-                                      session_id,
-                                      pinecone_client,
-                                      openai_client,
+                                      logger_worker,
+                                      background_tasks,
+                                      auth_manager,
                                       supabase_client,
-                                      logger_worker)
+                                      openai_client,
+                                      pinecone_client)
         except Exception as e:
             raise Exception(e)
 
@@ -378,16 +292,15 @@ class AssistantManager:
                                           auth_manager)
 
             # Load default question suggestions in a background thread
-            background_tasks.add_task(self._load_default_question_suggestions_for_new_patient,
-                                      supabase_client,
-                                      language_code,
-                                      patient_id,
-                                      therapist_id,
-                                      logger_worker,
-                                      background_tasks,
-                                      session_id)
+            self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
+                                                                    language_code=language_code,
+                                                                    patient_id=patient_id,
+                                                                    therapist_id=therapist_id,
+                                                                    logger_worker=logger_worker,
+                                                                    background_tasks=background_tasks,
+                                                                    session_id=session_id)
 
-            # Load default pre-session tray in a background thread
+            # Load default pre-session tray
             has_preexisting_history = ('pre_existing_history' in filtered_body)
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
             self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
@@ -408,6 +321,7 @@ class AssistantManager:
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
+                             background_tasks: BackgroundTasks,
                              openai_client: OpenAIBaseClass,
                              supabase_client: SupabaseBaseClass,
                              pinecone_client: PineconeBaseClass):
@@ -440,12 +354,13 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        await pinecone_client.update_preexisting_history_vectors(user_id=therapist_id,
-                                                                 patient_id=filtered_body['id'],
-                                                                 text=filtered_body['pre_existing_history'],
-                                                                 session_id=session_id,
-                                                                 openai_client=openai_client,
-                                                                 auth_manager=auth_manager)
+        background_tasks.add_task(pinecone_client.update_preexisting_history_vectors,
+                                  therapist_id,
+                                  filtered_body['id'],
+                                  filtered_body['pre_existing_history'],
+                                  session_id,
+                                  openai_client,
+                                  auth_manager)
 
         # New pre-existing history content means we should clear any existing conversation.
         await openai_client.clear_chat_history()
@@ -872,18 +787,247 @@ class AssistantManager:
                                     patient_id=patient_id)
             raise Exception(e)
 
-    async def generate_insights_after_session_data_updates(self,
-                                                           language_code: str,
-                                                           background_tasks: BackgroundTasks,
-                                                           therapist_id: str,
-                                                           patient_id: str,
-                                                           auth_manager: AuthManager,
-                                                           environment: str,
-                                                           session_id: str,
-                                                           pinecone_client: PineconeBaseClass,
-                                                           openai_client: OpenAIBaseClass,
-                                                           supabase_client: SupabaseBaseClass,
-                                                           logger_worker: Logger):
+    async def update_patient_metrics_after_session_report_operation(self,
+                                                                    supabase_client: SupabaseBaseClass,
+                                                                    patient_id: str,
+                                                                    therapist_id: str,
+                                                                    logger_worker: Logger,
+                                                                    session_id: str,
+                                                                    background_tasks: BackgroundTasks,
+                                                                    operation: SessionCrudOperation,
+                                                                    session_date: str = None):
+        try:
+            # Fetch patient last session date and total session count
+            patient_session_notes_response = supabase_client.select(fields="*",
+                                                                    table_name="session_reports",
+                                                                    filters={
+                                                                        "patient_id": patient_id
+                                                                    },
+                                                                    order_desc_column="session_date")
+            patient_session_notes_data = patient_session_notes_response.dict()['data']
+            patient_last_session_date = (None if len(patient_session_notes_data) == 0
+                                         else patient_session_notes_data[0]['session_date'])
+            total_session_count = len(patient_session_notes_data)
+
+            # New value for last_session_date will be the most recent session we already found
+            if operation == SessionCrudOperation.DELETE_COMPLETED:
+                supabase_client.update(table_name="patients",
+                        payload={
+                            "last_session_date": patient_last_session_date,
+                            "total_sessions": total_session_count,
+                        },
+                        filters={
+                            'id': patient_id
+                        })
+                return
+
+            # The operation is either insert or update.
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
+            if patient_last_session_date is None:
+                assert session_date is not None, "Received an invalid session date"
+                patient_last_session_date = session_date
+            else:
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
+                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                       second_date=formatted_date,
+                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
+
+            supabase_client.update(table_name="patients",
+                                   payload={
+                                       "last_session_date": patient_last_session_date,
+                                       "total_sessions": total_session_count,
+                                   },
+                                   filters={
+                                       'id': patient_id
+                                   })
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)
+
+    # Private
+
+    async def _insert_vectors_and_generate_insights(self,
+                                                    session_notes_id: str,
+                                                    therapist_id: str,
+                                                    patient_id: str,
+                                                    notes_text: str,
+                                                    session_date: str,
+                                                    session_id: str,
+                                                    language_code: str,
+                                                    environment: str,
+                                                    logger_worker: Logger,
+                                                    background_tasks: BackgroundTasks,
+                                                    auth_manager: AuthManager,
+                                                    supabase_client: SupabaseBaseClass,
+                                                    openai_client: OpenAIBaseClass,
+                                                    pinecone_client: PineconeBaseClass):
+        # Update session notes entry with minisummary if needed
+        if len(notes_text) > 0:
+            await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
+                                                               notes_text=notes_text,
+                                                               therapist_id=therapist_id,
+                                                               language_code=language_code,
+                                                               auth_manager=auth_manager,
+                                                               openai_client=openai_client,
+                                                               session_id=session_id,
+                                                               environment=environment,
+                                                               background_tasks=background_tasks,
+                                                               logger_worker=logger_worker,
+                                                               supabase_client=supabase_client,
+                                                               pinecone_client=pinecone_client,
+                                                               patient_id=patient_id)
+
+        # Update patient metrics around last session date, and total session count AFTER
+        # session has already been inserted.
+        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
+                                                                         patient_id=patient_id,
+                                                                         therapist_id=therapist_id,
+                                                                         logger_worker=logger_worker,
+                                                                         session_id=session_id,
+                                                                         background_tasks=background_tasks,
+                                                                         operation=SessionCrudOperation.INSERT_COMPLETED,
+                                                                         session_date=session_date)
+
+        await pinecone_client.insert_session_vectors(user_id=therapist_id,
+                                                     patient_id=patient_id,
+                                                     text=notes_text,
+                                                     session_id=session_id,
+                                                     auth_manager=auth_manager,
+                                                     openai_client=openai_client,
+                                                     therapy_session_date=session_date)
+        await self._generate_metrics_and_insights(language_code=language_code,
+                                                  background_tasks=background_tasks,
+                                                  therapist_id=therapist_id,
+                                                  patient_id=patient_id,
+                                                  auth_manager=auth_manager,
+                                                  environment=environment,
+                                                  session_id=session_id,
+                                                  pinecone_client=pinecone_client,
+                                                  openai_client=openai_client,
+                                                  supabase_client=supabase_client,
+                                                  logger_worker=logger_worker)
+
+    async def _update_vectors_and_generate_insights(self,
+                                                    session_notes_id: str,
+                                                    therapist_id: str,
+                                                    patient_id: str,
+                                                    notes_text: str,
+                                                    old_session_date: str,
+                                                    new_session_date: str,
+                                                    session_id: str,
+                                                    language_code: str,
+                                                    environment: str,
+                                                    logger_worker: Logger,
+                                                    background_tasks: BackgroundTasks,
+                                                    auth_manager: AuthManager,
+                                                    supabase_client: SupabaseBaseClass,
+                                                    openai_client: OpenAIBaseClass,
+                                                    pinecone_client: PineconeBaseClass):
+        # We only have to generate a new mini_summary if the session text changed.
+        if len(notes_text) > 0:
+            await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
+                                                               notes_text=notes_text,
+                                                               therapist_id=therapist_id,
+                                                               language_code=language_code,
+                                                               auth_manager=auth_manager,
+                                                               openai_client=openai_client,
+                                                               session_id=session_id,
+                                                               environment=environment,
+                                                               background_tasks=background_tasks,
+                                                               logger_worker=logger_worker,
+                                                               supabase_client=supabase_client,
+                                                               pinecone_client=pinecone_client,
+                                                               patient_id=patient_id)
+
+        # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
+        # the new session date overwrote the patient's last_session_date value.
+        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
+                                                                         patient_id=patient_id,
+                                                                         therapist_id=therapist_id,
+                                                                         logger_worker=logger_worker,
+                                                                         session_id=session_id,
+                                                                         background_tasks=background_tasks,
+                                                                         operation=SessionCrudOperation.UPDATE_COMPLETED,
+                                                                         session_date=new_session_date)
+
+        await pinecone_client.update_session_vectors(user_id=therapist_id,
+                                                     patient_id=patient_id,
+                                                     text=notes_text,
+                                                     old_date=old_session_date,
+                                                     new_date=new_session_date,
+                                                     session_id=session_id,
+                                                     openai_client=openai_client,
+                                                     auth_manager=auth_manager)
+        await self._generate_metrics_and_insights(language_code=language_code,
+                                                  background_tasks=background_tasks,
+                                                  therapist_id=therapist_id,
+                                                  patient_id=patient_id,
+                                                  auth_manager=auth_manager,
+                                                  environment=environment,
+                                                  session_id=session_id,
+                                                  pinecone_client=pinecone_client,
+                                                  openai_client=openai_client,
+                                                  supabase_client=supabase_client,
+                                                  logger_worker=logger_worker)
+
+    async def _delete_vectors_and_generate_insights(self,
+                                                    therapist_id: str,
+                                                    patient_id: str,
+                                                    session_date: str,
+                                                    session_id: str,
+                                                    language_code: str,
+                                                    environment: str,
+                                                    logger_worker: Logger,
+                                                    background_tasks: BackgroundTasks,
+                                                    auth_manager: AuthManager,
+                                                    supabase_client: SupabaseBaseClass,
+                                                    openai_client: OpenAIBaseClass,
+                                                    pinecone_client: PineconeBaseClass):
+        # Update patient metrics around last session date, and total session count AFTER
+        # session has already been deleted.
+        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
+                                                                         patient_id=patient_id,
+                                                                         therapist_id=therapist_id,
+                                                                         logger_worker=logger_worker,
+                                                                         session_id=session_id,
+                                                                         background_tasks=background_tasks,
+                                                                         operation=SessionCrudOperation.DELETE_COMPLETED,
+                                                                         session_date=None)
+
+        pinecone_client.delete_session_vectors(user_id=therapist_id,
+                                               patient_id=patient_id,
+                                               date=session_date)
+        await self._generate_metrics_and_insights(language_code=language_code,
+                                                  background_tasks=background_tasks,
+                                                  therapist_id=therapist_id,
+                                                  patient_id=patient_id,
+                                                  auth_manager=auth_manager,
+                                                  environment=environment,
+                                                  session_id=session_id,
+                                                  pinecone_client=pinecone_client,
+                                                  openai_client=openai_client,
+                                                  supabase_client=supabase_client,
+                                                  logger_worker=logger_worker)
+
+    async def _generate_metrics_and_insights(self,
+                                             language_code: str,
+                                             background_tasks: BackgroundTasks,
+                                             therapist_id: str,
+                                             patient_id: str,
+                                             auth_manager: AuthManager,
+                                             environment: str,
+                                             session_id: str,
+                                             pinecone_client: PineconeBaseClass,
+                                             openai_client: OpenAIBaseClass,
+                                             supabase_client: SupabaseBaseClass,
+                                             logger_worker: Logger):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
@@ -939,72 +1083,6 @@ class AssistantManager:
                                           openai_client=openai_client,
                                           supabase_client=supabase_client,
                                           logger_worker=logger_worker)
-
-    def update_patient_metrics_after_session_report_operation(self,
-                                                              supabase_client: SupabaseBaseClass,
-                                                              patient_id: str,
-                                                              therapist_id: str,
-                                                              logger_worker: Logger,
-                                                              session_id: str,
-                                                              background_tasks: BackgroundTasks,
-                                                              operation: SessionCrudOperation,
-                                                              session_date: str = None):
-        try:
-            # Fetch patient last session date and total session count
-            patient_session_notes_response = supabase_client.select(fields="*",
-                                                                    table_name="session_reports",
-                                                                    filters={
-                                                                        "patient_id": patient_id
-                                                                    },
-                                                                    order_desc_column="session_date")
-            patient_session_notes_data = patient_session_notes_response.dict()['data']
-            patient_last_session_date = (None if len(patient_session_notes_data) == 0
-                                         else patient_session_notes_data[0]['session_date'])
-            total_session_count = len(patient_session_notes_data)
-
-            # New value for last_session_date will be the most recent session we already found
-            if operation == SessionCrudOperation.DELETE_COMPLETED:
-                supabase_client.update(table_name="patients",
-                        payload={
-                            "last_session_date": patient_last_session_date,
-                            "total_sessions": total_session_count,
-                        },
-                        filters={
-                            'id': patient_id
-                        })
-                return
-
-            # The operation is either inser or update.
-            # Determine the updated value for last_session_date depending on if the patient
-            # has met with the therapist before or not.
-            if patient_last_session_date is None:
-                assert session_date is not None, "Received an invalid session date"
-                patient_last_session_date = session_date
-            else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
-                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
-                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
-                                                                                       second_date=formatted_date,
-                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
-
-            supabase_client.update(table_name="patients",
-                                   payload={
-                                       "last_session_date": patient_last_session_date,
-                                       "total_sessions": total_session_count,
-                                   },
-                                   filters={
-                                       'id': patient_id
-                                   })
-        except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
-            raise Exception(e)
-
-    # Private
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):

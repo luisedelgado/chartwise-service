@@ -743,6 +743,7 @@ class AssistantRouter:
             await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
+                                                         background_tasks=background_tasks,
                                                          openai_client=self._openai_client,
                                                          supabase_client=supabase_client,
                                                          pinecone_client=self._pinecone_client)
