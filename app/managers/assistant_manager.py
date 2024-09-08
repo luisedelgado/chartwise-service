@@ -999,8 +999,8 @@ class AssistantManager:
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
         pinecone_client.delete_session_vectors(user_id=therapist_id,
-                                        patient_id=patient_id,
-                                        date=session_date)
+                                               patient_id=patient_id,
+                                               date=session_date)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been deleted.

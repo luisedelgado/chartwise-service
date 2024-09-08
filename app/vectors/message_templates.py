@@ -262,9 +262,9 @@ class PromptCrafter:
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
                     f"This will be their {ordinal_session_number} session together. "
                     f"The first thing you should do is say hi to {therapist_name}, and remind them that they are going to be seeing {patient_name} for the {ordinal_session_number} time."
-                    f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: **'Most Recent Sessions'** and **'Historical Themes'**.\n\n"
-                    "• **'Most Recent Sessions'**: Base the summary strictly on the `chunk_summary` data. If no `chunk_summary` data is available, omit this section entirely without making up any details beyond what is explicitly available.\n"
-                    "• **'Historical Themes'**: Use the `pre_existing_history_summary` data. If no `pre_existing_history_summary` is available, attempt to identify historical themes from the available `chunk_summary` values. "
+                    f"\n\nOnce you've said hi to {therapist_name}, provide a summary of {patient_name}'s session history in two sections: **Most Recent Sessions** and **Historical Themes**.\n\n"
+                    "• **Most Recent Sessions**: Base the summary strictly on the `chunk_summary` values you see as context. If you don't see any `chunk_summary` values, omit this section entirely without making up any details beyond what is explicitly available.\n"
+                    "• **Historical Themes**: Use the `pre_existing_history_summary` values. If no `pre_existing_history_summary` value is available, attempt to identify historical themes from the available `chunk_summary` values. "
                     "However, if neither `pre_existing_history_summary` nor relevant `chunk_summary` values are available, omit this section entirely without adding or filling in any details beyond what's explicitly provided.\n\n"
                     "There are two specific scenarios to consider:\n\n"
                     f"1. **If both sections are omitted** due to lack of data, shift the focus to providing generic recommendations on how to approach the upcoming session with {patient_name}. "
@@ -274,7 +274,7 @@ class PromptCrafter:
                     f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with **'Suggestions for Next Session'**, offering discussion topics for their session that's about to start. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
-                    f"Ensure the headers for 'Most Recent Sessions,' 'Historical Themes,' and 'Suggestions for Next Session' are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
+                    f"Ensure the headers for Most Recent Sessions, Historical Themes, and Suggestions for Next Session are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
             )
         except Exception as e:
             raise Exception(e)
