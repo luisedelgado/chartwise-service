@@ -156,8 +156,7 @@ class ChartWiseAssistant:
                               auth_manager: AuthManager,
                               openai_client: OpenAIBaseClass,
                               supabase_client: SupabaseBaseClass,
-                              pinecone_client: PineconeBaseClass,
-                              session_date_override: PineconeQuerySessionDateOverride = None) -> str:
+                              pinecone_client: PineconeBaseClass) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What's most valuable for me to remember, and what would be good avenues to explore in our upcoming session?")
@@ -181,15 +180,13 @@ class ChartWiseAssistant:
                                                                        query_input=query_input,
                                                                        context=context)
 
-            last_session_date = None if session_date_override is None else session_date_override.session_date
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                            language_code=language_code,
                                                                            therapist_name=therapist_name,
                                                                            therapist_gender=therapist_gender,
                                                                            patient_name=patient_name,
                                                                            patient_gender=patient_gender,
-                                                                           session_number=session_number,
-                                                                           last_session_date=last_session_date)
+                                                                           session_number=session_number)
             prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 

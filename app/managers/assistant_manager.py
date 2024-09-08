@@ -567,7 +567,6 @@ class AssistantManager:
             patient_response_data = patient_query.dict()['data'][0]
             patient_name = patient_response_data['first_name']
             patient_gender = patient_response_data['gender']
-            last_session_date = patient_response_data['last_session_date']
             session_number = 1 + patient_response_data['total_sessions']
 
             therapist_query = supabase_client.select(fields="*",
@@ -579,13 +578,6 @@ class AssistantManager:
             therapist_name = therapist_response_data['first_name']
             language_code = therapist_response_data['language_preference']
             therapist_gender = therapist_response_data['gender']
-
-            if len(last_session_date or '') > 0:
-                session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
-                                                                         output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                                                                         session_date=last_session_date)
-            else:
-                session_date_override = None
 
             briefing = await self.chartwise_assistant.create_briefing(user_id=therapist_id,
                                                                       patient_id=patient_id,
@@ -600,8 +592,7 @@ class AssistantManager:
                                                                       auth_manager=auth_manager,
                                                                       openai_client=openai_client,
                                                                       supabase_client=supabase_client,
-                                                                      pinecone_client=pinecone_client,
-                                                                      session_date_override=session_date_override)
+                                                                      pinecone_client=pinecone_client)
 
             briefing_query = supabase_client.select(fields="*",
                                                     filters={

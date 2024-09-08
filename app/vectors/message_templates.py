@@ -124,14 +124,12 @@ class PromptCrafter:
             therapist_name = None if 'therapist_name' not in kwargs else kwargs['therapist_name']
             therapist_gender = None if 'therapist_gender' not in kwargs else kwargs['therapist_gender']
             session_number = None if 'session_number' not in kwargs else kwargs['session_number']
-            last_session_date = None if 'last_session_date' not in kwargs else kwargs['last_session_date']
             return self._create_briefing_system_message(language_code=language_code,
                                                         therapist_name=therapist_name,
                                                         therapist_gender=therapist_gender,
                                                         patient_name=patient_name,
                                                         patient_gender=patient_gender,
-                                                        session_number=session_number,
-                                                        last_session_date=last_session_date)
+                                                        session_number=session_number)
         elif scenario == PromptScenario.QUESTION_SUGGESTIONS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_question_suggestions_system_message(language_code=language_code)
@@ -236,8 +234,7 @@ class PromptCrafter:
                                         therapist_gender: str,
                                         patient_name: str,
                                         patient_gender: str,
-                                        session_number: int,
-                                        last_session_date: str = None) -> str | None:
+                                        session_number: int) -> str | None:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
@@ -249,13 +246,6 @@ class PromptCrafter:
             patient_gender = ("" if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
                               else f" ({patient_gender})")
             ordinal_session_number = num2words(session_number, to='ordinal_num')
-
-            if len(last_session_date or '') == 0:
-                last_session_date_context = ""
-            else:
-                date_spell_out_month = convert_to_date_format_spell_out_month(session_date=last_session_date,
-                                                                              incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
-                last_session_date_context = f"Note that {patient_name}'s last session with the practitioner was on {date_spell_out_month}. "
 
             return (
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
@@ -271,7 +261,6 @@ class PromptCrafter:
                     "Offer strategies for guiding the conversation or establishing continuity from their previous meeting.\n\n"
                     f"2. **If this is {therapist_name}'s first time meeting with {patient_name}**, omit both sections, and instead suggest strategies on how to establish a solid foundation for their relationship.\n\n"
                     f"For **'Most Recent Sessions'** list the most recent sessions sorted by the most recent first. Ensure date precision. "
-                    f"{last_session_date_context}"
                     f"If {therapist_name} has previously met with {patient_name}, conclude with **'Suggestions for Next Session'**, offering discussion topics for their session that's about to start. "
                     f"It is very important that the summary doesn't go beyond 1600 characters, and that it's written using language code {language_code}. "
                     f"Ensure the headers for Most Recent Sessions, Historical Themes, and Suggestions for Next Session are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
