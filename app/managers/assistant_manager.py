@@ -872,6 +872,14 @@ class AssistantManager:
                                                     supabase_client: SupabaseBaseClass,
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
+        await pinecone_client.insert_session_vectors(user_id=therapist_id,
+                                                patient_id=patient_id,
+                                                text=notes_text,
+                                                session_id=session_id,
+                                                auth_manager=auth_manager,
+                                                openai_client=openai_client,
+                                                therapy_session_date=session_date)
+
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -899,13 +907,6 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.INSERT_COMPLETED,
                                                                          session_date=session_date)
 
-        await pinecone_client.insert_session_vectors(user_id=therapist_id,
-                                                     patient_id=patient_id,
-                                                     text=notes_text,
-                                                     session_id=session_id,
-                                                     auth_manager=auth_manager,
-                                                     openai_client=openai_client,
-                                                     therapy_session_date=session_date)
         await self._generate_metrics_and_insights(language_code=language_code,
                                                   background_tasks=background_tasks,
                                                   therapist_id=therapist_id,
@@ -934,6 +935,15 @@ class AssistantManager:
                                                     supabase_client: SupabaseBaseClass,
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
+        await pinecone_client.update_session_vectors(user_id=therapist_id,
+                                                patient_id=patient_id,
+                                                text=notes_text,
+                                                old_date=old_session_date,
+                                                new_date=new_session_date,
+                                                session_id=session_id,
+                                                openai_client=openai_client,
+                                                auth_manager=auth_manager)
+
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -961,14 +971,6 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
                                                                          session_date=new_session_date)
 
-        await pinecone_client.update_session_vectors(user_id=therapist_id,
-                                                     patient_id=patient_id,
-                                                     text=notes_text,
-                                                     old_date=old_session_date,
-                                                     new_date=new_session_date,
-                                                     session_id=session_id,
-                                                     openai_client=openai_client,
-                                                     auth_manager=auth_manager)
         await self._generate_metrics_and_insights(language_code=language_code,
                                                   background_tasks=background_tasks,
                                                   therapist_id=therapist_id,
@@ -994,6 +996,10 @@ class AssistantManager:
                                                     supabase_client: SupabaseBaseClass,
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
+        pinecone_client.delete_session_vectors(user_id=therapist_id,
+                                        patient_id=patient_id,
+                                        date=session_date)
+
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been deleted.
         await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
@@ -1005,9 +1011,6 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
                                                                          session_date=None)
 
-        pinecone_client.delete_session_vectors(user_id=therapist_id,
-                                               patient_id=patient_id,
-                                               date=session_date)
         await self._generate_metrics_and_insights(language_code=language_code,
                                                   background_tasks=background_tasks,
                                                   therapist_id=therapist_id,
