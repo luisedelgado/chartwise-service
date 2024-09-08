@@ -268,7 +268,7 @@ class PromptCrafter:
                     "However, if neither `pre_existing_history_summary` nor relevant `chunk_summary` values are available, omit this section entirely without adding or filling in any details beyond what's explicitly provided.\n\n"
                     "There are two specific scenarios to consider:\n\n"
                     f"1. **If both sections are omitted** due to lack of data, shift the focus to providing generic recommendations on how to approach the upcoming session with {patient_name}. "
-                    "Offer strategies for guiding the conversation or establishing continuity from their previous meeting."
+                    "Offer strategies for guiding the conversation or establishing continuity from their previous meeting.\n\n"
                     f"2. **If this is {therapist_name}'s first time meeting with {patient_name}**, omit both sections, and instead suggest strategies on how to establish a solid foundation for their relationship.\n\n"
                     f"For **'Most Recent Sessions'** list the most recent sessions sorted by the most recent first. Ensure date precision. "
                     f"{last_session_date_context}"
