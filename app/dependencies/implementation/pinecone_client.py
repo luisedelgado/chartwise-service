@@ -8,6 +8,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, Pinecone, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
+from starlette.concurrency import run_in_threadpool
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -74,7 +75,7 @@ class PineconeClient(PineconeBaseClass):
                                                                       auth_manager=auth_manager)
                 vectors.append(doc)
 
-            vector_store.add(vectors)
+            await run_in_threadpool(vector_store.add, vectors)
 
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
@@ -131,7 +132,7 @@ class PineconeClient(PineconeBaseClass):
                 })
                 vectors.append(doc)
 
-            vector_store.add(vectors)
+            await run_in_threadpool(vector_store.add, vectors)
 
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
