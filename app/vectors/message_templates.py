@@ -310,8 +310,8 @@ class PromptCrafter:
                 "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
                 f"Ensure that the questions are written in language code {language_code}. "
                 "This is what the format should look like: {\"questions\": [..., ...]}\n"
-                "Example output using language code es-419:\n"
-                r"{'questions': ['¿Cuándo fue la última vez que hablamos del divorcio?', '¿Qué fue lo último que revisamos en sesión?']}"
+                "Example output:\n"
+                r"{'questions': ['When did we last talk about the divorce?', 'What was the last thing we discussed in session?']}"
             )
         except Exception as e:
             raise Exception(e)
@@ -349,8 +349,9 @@ class PromptCrafter:
 
             return (
                 "A mental health practitioner is viewing a patient’s dashboard on our Practice Management Platform. "
-                "They need to see the top three topics the patient has discussed most frequently during sessions. Provide the following:\n\n"
-                "1. Three frequent topics, each with its frequency percentage.\n"
+                "They need to know what topics the patient has been discussing the most during the most recent sessions. "
+                "Provide the following:\n\n"
+                "1. A set of recent topics, each with its density percentage. There should not be more than 3 topics.\n"
                 "2. Ensure the percentages sum to exactly 100%. Double-check the math.\n"
                 "3. Each topic should be under 25 characters.\n\n"
                 "The topics must be extracted directly from the content in the session notes, exactly as they are presented, without any form of interpretation, rephrasing, or additional analysis. "
@@ -359,8 +360,9 @@ class PromptCrafter:
                 f"* `topic`: Distinct topic written using language code {language_code}.\n"
                 f"* `percentage`: Frequency percentage.\n\n"
                 "This is what the format should look like: {\"topics\": [{\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}, {\"topic\": \"...\", \"percentage\": \"...\"}]}\n"
-                "If no context data is available, the array should be empty. "
-                "\n\nExample response for language code es-419 where the patient spoke half of the time about a given topic, and the remaining time was split between two other topics:\n"
+                "If there are no `chunk_summary` values available, the array should be empty. "
+                "Otherwise if there's at least one `chunk_summary`, the array should contain at least one topic, but up to three if possible. "
+                "\n\nExample response where the patient spoke half of the time about a given topic, and the remaining time was split between two other topics:\n"
                 r"{'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
             )
         except Exception as e:

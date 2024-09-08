@@ -650,7 +650,8 @@ class AssistantManager:
                                            openai_client: OpenAIBaseClass,
                                            pinecone_client: PineconeBaseClass,
                                            supabase_client: SupabaseBaseClass,
-                                           logger_worker: Logger):
+                                           logger_worker: Logger,
+                                           generate_insights: bool):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -677,6 +678,9 @@ class AssistantManager:
                                                                                     patient_name=patient_full_name,
                                                                                     patient_gender=patient_gender)
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
+
+            if not generate_insights:
+                return
 
             topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
                                                                                              user_id=therapist_id,
@@ -1045,7 +1049,20 @@ class AssistantManager:
                                                 openai_client=openai_client,
                                                 pinecone_client=pinecone_client,
                                                 supabase_client=supabase_client,
-                                                logger_worker=logger_worker)
+                                                logger_worker=logger_worker,
+                                                generate_insights=False)
+
+        # Update this patient's presession tray for future fetches.
+        await self.update_presession_tray(background_tasks=background_tasks,
+                                          therapist_id=therapist_id,
+                                          patient_id=patient_id,
+                                          auth_manager=auth_manager,
+                                          environment=environment,
+                                          session_id=session_id,
+                                          pinecone_client=pinecone_client,
+                                          openai_client=openai_client,
+                                          supabase_client=supabase_client,
+                                          logger_worker=logger_worker)
 
         # Update this patient's question suggestions for future fetches.
         await self.update_question_suggestions(language_code=language_code,
@@ -1060,29 +1077,18 @@ class AssistantManager:
                                                pinecone_client=pinecone_client,
                                                supabase_client=supabase_client)
 
-        # Update attendance insights
-        await self.generate_attendance_insights(language_code=language_code,
-                                                background_tasks=background_tasks,
-                                                therapist_id=therapist_id,
-                                                patient_id=patient_id,
-                                                session_id=session_id,
-                                                environment=environment,
-                                                auth_manager=auth_manager,
-                                                openai_client=openai_client,
-                                                supabase_client=supabase_client,
-                                                logger_worker=logger_worker)
-
-        # Update this patient's presession tray for future fetches.
-        await self.update_presession_tray(background_tasks=background_tasks,
-                                          therapist_id=therapist_id,
-                                          patient_id=patient_id,
-                                          auth_manager=auth_manager,
-                                          environment=environment,
-                                          session_id=session_id,
-                                          pinecone_client=pinecone_client,
-                                          openai_client=openai_client,
-                                          supabase_client=supabase_client,
-                                          logger_worker=logger_worker)
+        # TODO: Uncomment once we're rendering attendance insights
+        # # Update attendance insights
+        # await self.generate_attendance_insights(language_code=language_code,
+        #                                         background_tasks=background_tasks,
+        #                                         therapist_id=therapist_id,
+        #                                         patient_id=patient_id,
+        #                                         session_id=session_id,
+        #                                         environment=environment,
+        #                                         auth_manager=auth_manager,
+        #                                         openai_client=openai_client,
+        #                                         supabase_client=supabase_client,
+        #                                         logger_worker=logger_worker)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):
