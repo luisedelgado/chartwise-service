@@ -907,17 +907,18 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.INSERT_COMPLETED,
                                                                          session_date=session_date)
 
-        await self._generate_metrics_and_insights(language_code=language_code,
-                                                  background_tasks=background_tasks,
-                                                  therapist_id=therapist_id,
-                                                  patient_id=patient_id,
-                                                  auth_manager=auth_manager,
-                                                  environment=environment,
-                                                  session_id=session_id,
-                                                  pinecone_client=pinecone_client,
-                                                  openai_client=openai_client,
-                                                  supabase_client=supabase_client,
-                                                  logger_worker=logger_worker)
+        background_tasks.add_task(self._generate_metrics_and_insights,
+                                  language_code,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  pinecone_client,
+                                  openai_client,
+                                  supabase_client,
+                                  logger_worker)
 
     async def _update_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
@@ -971,17 +972,18 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
                                                                          session_date=new_session_date)
 
-        await self._generate_metrics_and_insights(language_code=language_code,
-                                                  background_tasks=background_tasks,
-                                                  therapist_id=therapist_id,
-                                                  patient_id=patient_id,
-                                                  auth_manager=auth_manager,
-                                                  environment=environment,
-                                                  session_id=session_id,
-                                                  pinecone_client=pinecone_client,
-                                                  openai_client=openai_client,
-                                                  supabase_client=supabase_client,
-                                                  logger_worker=logger_worker)
+        background_tasks.add_task(self._generate_metrics_and_insights,
+                                  language_code,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  pinecone_client,
+                                  openai_client,
+                                  supabase_client,
+                                  logger_worker)
 
     async def _delete_vectors_and_generate_insights(self,
                                                     therapist_id: str,
@@ -1011,17 +1013,18 @@ class AssistantManager:
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
                                                                          session_date=None)
 
-        await self._generate_metrics_and_insights(language_code=language_code,
-                                                  background_tasks=background_tasks,
-                                                  therapist_id=therapist_id,
-                                                  patient_id=patient_id,
-                                                  auth_manager=auth_manager,
-                                                  environment=environment,
-                                                  session_id=session_id,
-                                                  pinecone_client=pinecone_client,
-                                                  openai_client=openai_client,
-                                                  supabase_client=supabase_client,
-                                                  logger_worker=logger_worker)
+        background_tasks.add_task(self._generate_metrics_and_insights,
+                                  language_code,
+                                  background_tasks,
+                                  therapist_id,
+                                  patient_id,
+                                  auth_manager,
+                                  environment,
+                                  session_id,
+                                  pinecone_client,
+                                  openai_client,
+                                  supabase_client,
+                                  logger_worker)
 
     async def _generate_metrics_and_insights(self,
                                              language_code: str,
