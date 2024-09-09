@@ -20,7 +20,6 @@ class PineconeBaseClass(ABC):
     session_id – the session_id that the current user is running.
     auth_manager – the auth manager to be leveraged internally.
     openai_client – the openai client to be leveraged internally.
-    wait_for_availability – flag for determining whether the method should wait for vectors to become available for further processing.
     therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
     """
     async def insert_session_vectors(user_id: str,
@@ -30,7 +29,6 @@ class PineconeBaseClass(ABC):
                                      session_id: str,
                                      auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
-                                     wait_for_availability: bool = False,
                                      therapy_session_date: str = None):
         pass
 
@@ -90,7 +88,6 @@ class PineconeBaseClass(ABC):
     session_report_id – the session report id.
     openai_client – the openai client to be leveraged internally.
     auth_manager – the auth manager to be leveraged internally.
-    wait_for_availability – flag for determining whether the method should wait for vectors to become available for further processing.
     """
     async def update_session_vectors(user_id: str,
                                      patient_id: str,
@@ -100,8 +97,7 @@ class PineconeBaseClass(ABC):
                                      session_id: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager,
-                                     wait_for_availability: bool = False):
+                                     auth_manager: AuthManager):
         pass
 
     """

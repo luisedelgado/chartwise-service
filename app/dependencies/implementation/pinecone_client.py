@@ -35,7 +35,6 @@ class PineconeClient(PineconeBaseClass):
                                      session_id: str,
                                      auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
-                                     wait_for_availability: bool = False,
                                      therapy_session_date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -82,12 +81,6 @@ class PineconeClient(PineconeBaseClass):
                 vectors.append(doc)
 
             await run_in_threadpool(vector_store.add, vectors)
-
-            if wait_for_availability:
-                await self._confirm_vector_availability(vector_ids=vector_ids,
-                                                        index=index,
-                                                        namespace=namespace,
-                                                        user_id=user_id)
 
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
@@ -207,8 +200,7 @@ class PineconeClient(PineconeBaseClass):
                                      session_id: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager,
-                                     wait_for_availability: bool = False):
+                                     auth_manager: AuthManager):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -223,8 +215,7 @@ class PineconeClient(PineconeBaseClass):
                                               session_id=session_id,
                                               session_report_id=session_report_id,
                                               openai_client=openai_client,
-                                              auth_manager=auth_manager,
-                                              wait_for_availability=wait_for_availability)
+                                              auth_manager=auth_manager)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
@@ -427,22 +418,6 @@ class PineconeClient(PineconeBaseClass):
         if len(context_docs) > 0:
             return (True, "\n".join([doc['text'] for doc in context_docs]))
         return (False, None)
-
-    async def _confirm_vector_availability(self,
-                                           vector_ids: list[str],
-                                           namespace: str,
-                                           index: GRPCIndex,
-                                           user_id: str,
-                                           retries: int = 5):
-        if len(vector_ids or '') == 0:
-            return
-
-        for _ in range(retries):
-            vectors = index.list(prefix=vector_ids[0], namespace=namespace)
-            if vectors:
-                return  # Vectors are available, proceed
-            await asyncio.sleep(.5)  # Wait before retrying
-        raise Exception("Vectors not available after multiple retries")
 
     # Private
 

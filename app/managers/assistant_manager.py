@@ -1,4 +1,4 @@
-import json
+import asyncio, json
 
 from datetime import datetime
 from enum import Enum
@@ -886,7 +886,6 @@ class AssistantManager:
                                                      session_report_id=session_notes_id,
                                                      auth_manager=auth_manager,
                                                      openai_client=openai_client,
-                                                     wait_for_availability=True,
                                                      therapy_session_date=session_date)
 
         # Update patient metrics around last session date, and total session count AFTER
@@ -953,8 +952,7 @@ class AssistantManager:
                                                      session_report_id=session_notes_id,
                                                      session_id=session_id,
                                                      openai_client=openai_client,
-                                                     auth_manager=auth_manager,
-                                                     wait_for_availability=True)
+                                                     auth_manager=auth_manager)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.
@@ -1038,6 +1036,11 @@ class AssistantManager:
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
         await openai_client.clear_chat_history()
+
+        # Pinecone is an eventually-consistent architecture so we need to wait a few minutes before
+        # Reading vectors to maximize chance of data freshness
+        if environment != "testing":
+            await asyncio.sleep(60)
 
         # Update this patient's recent topics for future fetches.
         await self.update_patient_recent_topics(language_code=language_code,
