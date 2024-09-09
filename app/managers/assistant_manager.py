@@ -864,12 +864,12 @@ class AssistantManager:
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
         await pinecone_client.insert_session_vectors(user_id=therapist_id,
-                                                patient_id=patient_id,
-                                                text=notes_text,
-                                                session_id=session_id,
-                                                auth_manager=auth_manager,
-                                                openai_client=openai_client,
-                                                therapy_session_date=session_date)
+                                                     patient_id=patient_id,
+                                                     text=notes_text,
+                                                     session_id=session_id,
+                                                     auth_manager=auth_manager,
+                                                     openai_client=openai_client,
+                                                     therapy_session_date=session_date)
 
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
