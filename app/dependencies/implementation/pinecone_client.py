@@ -1,13 +1,13 @@
-import hashlib, os, uuid
+import asyncio, hashlib, os, uuid
 import tiktoken
 
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from pinecone import Index, Pinecone, PineconeApiException
+from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
-from pinecone.grpc import PineconeGRPC
+from pinecone.grpc import GRPCIndex, PineconeGRPC
 from starlette.concurrency import run_in_threadpool
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
@@ -23,21 +23,25 @@ class PineconeClient(PineconeBaseClass):
     NUM_INDEXES = 20
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
+    def __init__(self):
+        self.pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        self.chartwise_assistant = ChartWiseAssistant()
+
     async def insert_session_vectors(self,
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
+                                     session_report_id: str,
                                      session_id: str,
                                      auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
+                                     wait_for_availability: bool = False,
                                      therapy_session_date: str = None):
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             bucket_index = self._get_bucket_for_user(user_id)
-
-            assert pc.describe_index(bucket_index).status['ready']
-            index = pc.Index(bucket_index)
+            index = self.pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
+            namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
 
             enc = tiktoken.get_encoding("cl100k_base")
             splitter = RecursiveCharacterTextSplitter(
@@ -48,7 +52,7 @@ class PineconeClient(PineconeBaseClass):
             )
             chunks = splitter.split_text(text)
 
-            chartwise_assistant = ChartWiseAssistant()
+            vector_ids = []
             vectors = []
             for chunk_index, chunk in enumerate(chunks):
                 doc = Document()
@@ -56,19 +60,21 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
-                                                                          therapist_id=user_id,
-                                                                          auth_manager=auth_manager,
-                                                                          openai_client=openai_client,
-                                                                          session_id=session_id)
+                chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                                                                               therapist_id=user_id,
+                                                                               auth_manager=auth_manager,
+                                                                               openai_client=openai_client,
+                                                                               session_id=session_id)
 
-                vector_store.namespace = self._get_namespace(user_id=user_id,
-                                                             patient_id=patient_id)
-                doc.id_ = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
+                vector_store.namespace = namespace
+                doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
+                vector_ids.append(doc_id)
+                doc.id_ = doc_id
                 doc.metadata.update({
                     "session_date": therapy_session_date,
                     "chunk_summary": chunk_summary,
-                    "chunk_text": chunk_text
+                    "chunk_text": chunk_text,
+                    "session_report_id": session_report_id
                 })
 
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
@@ -76,6 +82,12 @@ class PineconeClient(PineconeBaseClass):
                 vectors.append(doc)
 
             await run_in_threadpool(vector_store.add, vectors)
+
+            if wait_for_availability:
+                await self._confirm_vector_availability(vector_ids=vector_ids,
+                                                        index=index,
+                                                        namespace=namespace,
+                                                        user_id=user_id)
 
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
@@ -90,11 +102,8 @@ class PineconeClient(PineconeBaseClass):
                                                  openai_client: OpenAIBaseClass,
                                                  auth_manager: AuthManager):
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             bucket_index = self._get_bucket_for_user(user_id)
-
-            assert pc.describe_index(bucket_index).status['ready']
-            index = pc.Index(bucket_index)
+            index = self.pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
 
             enc = tiktoken.get_encoding("cl100k_base")
@@ -106,7 +115,6 @@ class PineconeClient(PineconeBaseClass):
             )
             chunks = splitter.split_text(text)
 
-            chartwise_assistant = ChartWiseAssistant()
             vectors = []
             for chunk in chunks:
                 doc = Document()
@@ -114,11 +122,11 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
-                                                                          therapist_id=user_id,
-                                                                          auth_manager=auth_manager,
-                                                                          openai_client=openai_client,
-                                                                          session_id=session_id)
+                chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                                                                               therapist_id=user_id,
+                                                                               auth_manager=auth_manager,
+                                                                               openai_client=openai_client,
+                                                                               session_id=session_id)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -144,11 +152,8 @@ class PineconeClient(PineconeBaseClass):
                                patient_id: str,
                                date: str = None):
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             bucket_index = self._get_bucket_for_user(user_id)
-
-            assert pc.describe_index(bucket_index).status['ready']
-            index = pc.Index(bucket_index)
+            index = self.pc.Index(bucket_index)
 
             namespace = self._get_namespace(user_id=user_id,
                                             patient_id=patient_id)
@@ -173,11 +178,8 @@ class PineconeClient(PineconeBaseClass):
                                            user_id: str,
                                            patient_id: str):
         try:
-            pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
             bucket_index = self._get_bucket_for_user(user_id)
-
-            assert pc.describe_index(bucket_index).status['ready']
-            index = pc.Index(bucket_index)
+            index = self.pc.Index(bucket_index)
 
             namespace = self._get_namespace(user_id=user_id,
                                             patient_id=patient_id)
@@ -203,8 +205,10 @@ class PineconeClient(PineconeBaseClass):
                                      old_date: str,
                                      new_date: str,
                                      session_id: str,
+                                     session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager):
+                                     auth_manager: AuthManager,
+                                     wait_for_availability: bool = False):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -217,8 +221,10 @@ class PineconeClient(PineconeBaseClass):
                                               text=text,
                                               therapy_session_date=new_date,
                                               session_id=session_id,
+                                              session_report_id=session_report_id,
                                               openai_client=openai_client,
-                                              auth_manager=auth_manager)
+                                              auth_manager=auth_manager,
+                                              wait_for_availability=wait_for_availability)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
@@ -259,14 +265,11 @@ class PineconeClient(PineconeBaseClass):
                                        session_id: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
-        pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
-
         missing_session_data_error = ("There's no data from patient sessions. "
                                       "They may have not gone through their first session since the practitioner added them to the platform. ")
 
         bucket_index = self._get_bucket_for_user(user_id)
-        assert pc.describe_index(bucket_index).status['ready'], "Failed to fetch vector data"
-        index = pc.Index(bucket_index)
+        index = self.pc.Index(bucket_index)
         namespace = self._get_namespace(user_id=user_id,
                                         patient_id=patient_id)
 
@@ -424,6 +427,22 @@ class PineconeClient(PineconeBaseClass):
         if len(context_docs) > 0:
             return (True, "\n".join([doc['text'] for doc in context_docs]))
         return (False, None)
+
+    async def _confirm_vector_availability(self,
+                                           vector_ids: list[str],
+                                           namespace: str,
+                                           index: GRPCIndex,
+                                           user_id: str,
+                                           retries: int = 5):
+        if len(vector_ids or '') == 0:
+            return
+
+        for _ in range(retries):
+            vectors = index.list(prefix=vector_ids[0], namespace=namespace)
+            if vectors:
+                return  # Vectors are available, proceed
+            await asyncio.sleep(.5)  # Wait before retrying
+        raise Exception("Vectors not available after multiple retries")
 
     # Private
 

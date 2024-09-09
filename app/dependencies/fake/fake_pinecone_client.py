@@ -17,9 +17,11 @@ class FakePineconeClient(PineconeBaseClass):
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
+                                     session_report_id: str,
                                      session_id: str,
                                      auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
+                                     wait_for_availability: bool = False,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
 
@@ -50,8 +52,10 @@ class FakePineconeClient(PineconeBaseClass):
                                      old_date: str,
                                      new_date: str,
                                      session_id: str,
+                                     session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager):
+                                     auth_manager: AuthManager,
+                                     wait_for_availability: bool = False):
         pass
 
     async def update_preexisting_history_vectors(self,

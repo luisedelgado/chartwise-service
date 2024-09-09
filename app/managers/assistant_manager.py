@@ -863,14 +863,6 @@ class AssistantManager:
                                                     supabase_client: SupabaseBaseClass,
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
-        await pinecone_client.insert_session_vectors(user_id=therapist_id,
-                                                     patient_id=patient_id,
-                                                     text=notes_text,
-                                                     session_id=session_id,
-                                                     auth_manager=auth_manager,
-                                                     openai_client=openai_client,
-                                                     therapy_session_date=session_date)
-
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -886,6 +878,16 @@ class AssistantManager:
                                                                supabase_client=supabase_client,
                                                                pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
+
+        await pinecone_client.insert_session_vectors(user_id=therapist_id,
+                                                     patient_id=patient_id,
+                                                     text=notes_text,
+                                                     session_id=session_id,
+                                                     session_report_id=session_notes_id,
+                                                     auth_manager=auth_manager,
+                                                     openai_client=openai_client,
+                                                     wait_for_availability=True,
+                                                     therapy_session_date=session_date)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
@@ -927,15 +929,6 @@ class AssistantManager:
                                                     supabase_client: SupabaseBaseClass,
                                                     openai_client: OpenAIBaseClass,
                                                     pinecone_client: PineconeBaseClass):
-        await pinecone_client.update_session_vectors(user_id=therapist_id,
-                                                patient_id=patient_id,
-                                                text=notes_text,
-                                                old_date=old_session_date,
-                                                new_date=new_session_date,
-                                                session_id=session_id,
-                                                openai_client=openai_client,
-                                                auth_manager=auth_manager)
-
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -951,6 +944,17 @@ class AssistantManager:
                                                                supabase_client=supabase_client,
                                                                pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
+
+        await pinecone_client.update_session_vectors(user_id=therapist_id,
+                                                     patient_id=patient_id,
+                                                     text=notes_text,
+                                                     old_date=old_session_date,
+                                                     new_date=new_session_date,
+                                                     session_report_id=session_notes_id,
+                                                     session_id=session_id,
+                                                     openai_client=openai_client,
+                                                     auth_manager=auth_manager,
+                                                     wait_for_availability=True)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.
