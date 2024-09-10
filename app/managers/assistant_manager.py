@@ -1040,7 +1040,7 @@ class AssistantManager:
         # Pinecone is an eventually-consistent architecture so we need to wait a few minutes before
         # Reading vectors to maximize chance of data freshness
         if environment != "testing":
-            await asyncio.sleep(60)
+            await asyncio.sleep(30)
 
         # Update this patient's recent topics for future fetches.
         await self.update_patient_recent_topics(language_code=language_code,
