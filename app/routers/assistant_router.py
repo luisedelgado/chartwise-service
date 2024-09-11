@@ -148,12 +148,10 @@ class AssistantRouter:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 background_tasks=background_tasks,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
-                                                                                language_code=language_code,
                                                                                 session_id=session_id),
                                          media_type="text/event-stream")
             except Exception as e:
@@ -565,7 +563,6 @@ class AssistantRouter:
                                                 query: AssistantQuery,
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
-                                                language_code: str,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
@@ -577,9 +574,7 @@ class AssistantRouter:
                                method=post_api_method)
 
         try:
-            default_error_string = self._default_streaming_error_message(language_code)
-            async for part in self._assistant_manager.query_session(language_code=language_code,
-                                                                    auth_manager=self._auth_manager,
+            async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
                                                                     query=query,
                                                                     session_id=session_id,
                                                                     api_method=post_api_method,
@@ -598,7 +593,7 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
         except Exception as e:
-            yield ("\n" + default_error_string)
+            yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id))
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              patient_id=query.patient_id,
@@ -982,17 +977,3 @@ class AssistantRouter:
                              method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-
-    # Private
-
-    def _default_streaming_error_message(self, language_code: str):
-        if language_code.startswith('es-'):
-            # Spanish
-            return ("Parece que hay un problema que me está impidiendo poder responder tu pregunta. "
-                    "Estamos trabajando en ello— ¡Vuelve a intentarlo en un momento!")
-        elif language_code.startswith('en-'):
-            # English
-            return ("Looks like there’s a minor issue that's preventing me from being able to respond your question. "
-                    "We’re on it— please check back shortly!")
-        else:
-            raise Exception("Unsupported language code")

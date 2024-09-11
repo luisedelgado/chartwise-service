@@ -75,6 +75,7 @@ class CachedPatientQueryData:
                  patient_id: str,
                  patient_first_name: str,
                  patient_last_name: str,
+                 response_language_code: str,
                  patient_gender: Optional[str] = None,
                  last_session_date: Optional[str] = None):
         self.patient_id = patient_id
@@ -82,6 +83,7 @@ class CachedPatientQueryData:
         self.patient_last_name = patient_last_name
         self.patient_gender = patient_gender
         self.last_session_date = last_session_date
+        self.response_language_code = response_language_code
 
 class AssistantManager:
 
@@ -406,7 +408,6 @@ class AssistantManager:
             raise Exception(e)
 
     async def query_session(self,
-                            language_code: str,
                             auth_manager: AuthManager,
                             query: AssistantQuery,
                             therapist_id: str,
@@ -421,6 +422,7 @@ class AssistantManager:
             # asked a question about a different patient, go fetch data.
             if (self.cached_patient_query_data is None
                     or self.cached_patient_query_data.patient_id != query.patient_id):
+                language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
                 patient_query = supabase_client.select(fields="*",
                                                     filters={
                                                         'id': query.patient_id,
@@ -439,13 +441,15 @@ class AssistantManager:
                                                                         patient_first_name=patient_first_name,
                                                                         patient_last_name=patient_last_name,
                                                                         patient_gender=patient_gender,
-                                                                        last_session_date=patient_last_session_date)
+                                                                        last_session_date=patient_last_session_date,
+                                                                        response_language_code=language_code)
             else:
                 # Read cached data
                 patient_first_name = self.cached_patient_query_data.patient_first_name
                 patient_last_name = self.cached_patient_query_data.patient_last_name
                 patient_gender = self.cached_patient_query_data.patient_gender
                 patient_last_session_date = self.cached_patient_query_data.last_session_date
+                language_code = self.cached_patient_query_data.response_language_code
 
             if len(patient_last_session_date or '') > 0:
                 session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
@@ -845,6 +849,23 @@ class AssistantManager:
                                     therapist_id=therapist_id,
                                     patient_id=patient_id)
             raise Exception(e)
+
+    def default_streaming_error_message(self, user_id: str):
+        if self.cached_patient_query_data is None:
+            language_code = general_utilities.get_user_language_code(user_id=user_id, supabase_client=supabase_client)
+        else:
+            language_code = self.cached_patient_query_data.response_language_code
+
+        if language_code.startswith('es-'):
+            # Spanish
+            return ("Parece que hay un problema que me está impidiendo poder responder tu pregunta. "
+                    "Estamos trabajando en ello— ¡Vuelve a intentarlo en un momento!")
+        elif language_code.startswith('en-'):
+            # English
+            return ("Looks like there’s a minor issue that's preventing me from being able to respond your question. "
+                    "We’re on it— please check back shortly!")
+        else:
+            raise Exception("Unsupported language code")
 
     # Private
 
