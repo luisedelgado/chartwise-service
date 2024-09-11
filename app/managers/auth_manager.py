@@ -17,7 +17,7 @@ class AuthManager:
                          else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES = 65
+    ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
     def __init__(self):
         self._pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
