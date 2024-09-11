@@ -126,6 +126,14 @@ class ImageProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=post_api_method,
+                               patient_id=patient_id,
+                               endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -136,15 +144,15 @@ class ImageProcessingRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               therapist_id=therapist_id,
-                               endpoint_name=self.IMAGE_UPLOAD_ENDPOINT)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.IMAGE_UPLOAD_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             patient_id=patient_id,
+                             method=post_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
         try:
             assert len(patient_id or '') > 0, "Didn't receive a valid document id."
@@ -226,6 +234,15 @@ class ImageProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        get_api_method = logger.API_METHOD_GET
+        log_description = f"document_id={document_id}"
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=get_api_method,
+                               description=log_description,
+                               endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -236,15 +253,14 @@ class ImageProcessingRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        get_api_method = logger.API_METHOD_GET
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=get_api_method,
-                               therapist_id=therapist_id,
-                               endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=get_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
         try:
             assert len(document_id or '') > 0, "Didn't receive a valid document id."

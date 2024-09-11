@@ -135,6 +135,14 @@ class AudioProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=post_api_method,
+                               patient_id=patient_id,
+                               endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -145,15 +153,15 @@ class AudioProcessingRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               therapist_id=therapist_id,
-                               endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method,
+                             patient_id=patient_id)
+            raise HTTPException(status_code=status_code, detail=description)
 
         try:
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"
@@ -235,6 +243,14 @@ class AudioProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=post_api_method,
+                               patient_id=patient_id,
+                               endpoint_name=self.DIARIZATION_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -245,15 +261,14 @@ class AudioProcessingRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               therapist_id=therapist_id,
-                               endpoint_name=self.DIARIZATION_ENDPOINT)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.DIARIZATION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
         try:
             assert len(patient_id or '') > 0, "Invalid patient_id payload value"

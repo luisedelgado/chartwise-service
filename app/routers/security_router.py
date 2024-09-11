@@ -219,7 +219,14 @@ class SecurityRouter:
             return auth_token
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(detail=str(e), status_code=status_code)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.TOKEN_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
+            raise HTTPException(detail=description, status_code=status_code)
 
     """
     Refreshes an existing authorization token that may or may have not expired.
@@ -240,21 +247,28 @@ class SecurityRouter:
                                                     authorization: Annotated[Union[str, None], Cookie()],
                                                     session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         try:
+            logger = Logger(supabase_client_factory=self._supabase_client_factory)
+            put_api_method = logger.API_METHOD_PUT
+            logger.log_api_request(background_tasks=background_tasks,
+                                   method=put_api_method,
+                                   session_id=session_id,
+                                   endpoint_name=self.TOKEN_ENDPOINT,
+                                   therapist_id=user_id)
             assert len(authorization or '') > 0, "There isn't an existing authorization token to be refreshed."
             assert len(user_id or '') > 0, "user_id param is missing"
         except Exception as e:
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=user_id,
+                             endpoint_name=self.TOKEN_ENDPOINT,
+                             error_code=status.HTTP_400_BAD_REQUEST,
+                             description=description,
+                             method=put_api_method)
             raise HTTPException(detail=str(e),
                                 status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
-            logger = Logger(supabase_client_factory=self._supabase_client_factory)
-            put_api_method = logger.API_METHOD_PUT
-            logger.log_api_request(background_tasks=background_tasks,
-                                   session_id=session_id,
-                                   method=put_api_method,
-                                   endpoint_name=self.TOKEN_ENDPOINT,
-                                   therapist_id=user_id)
-
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   request=request,
                                                                   response=response,
@@ -268,7 +282,15 @@ class SecurityRouter:
             return auth_token
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(detail=str(e), status_code=status_code)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=user_id,
+                             endpoint_name=self.TOKEN_ENDPOINT,
+                             error_code=status.HTTP_400_BAD_REQUEST,
+                             description=description,
+                             method=put_api_method)
+            raise HTTPException(detail=description, status_code=status_code)
 
     """
     Logs out the user.
@@ -332,6 +354,13 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        post_api_method = logger.API_METHOD_POST
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=post_api_method,
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                  access_token=datastore_access_token)
@@ -342,15 +371,14 @@ class SecurityRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
-
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               therapist_id=user_id,
-                               endpoint_name=self.ACCOUNT_ENDPOINT)
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
         try:
             body = body.dict(exclude_unset=True)
@@ -417,6 +445,13 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        put_api_method = logger.API_METHOD_PUT
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=put_api_method,
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -427,15 +462,15 @@ class SecurityRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=put_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        put_api_method = logger.API_METHOD_PUT
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               therapist_id=user_id,
-                               method=put_api_method,
-                               endpoint_name=self.ACCOUNT_ENDPOINT)
         try:
             body = body.dict(exclude_unset=True)
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
@@ -501,6 +536,13 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
+        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        delete_api_method = logger.API_METHOD_DELETE
+        logger.log_api_request(background_tasks=background_tasks,
+                               session_id=session_id,
+                               method=delete_api_method,
+                               endpoint_name=self.ACCOUNT_ENDPOINT)
+
         try:
             supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
                                                                                  refresh_token=datastore_refresh_token)
@@ -511,15 +553,15 @@ class SecurityRouter:
                                                      supabase_client_factory=self._supabase_client_factory)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            raise HTTPException(status_code=status_code, detail=str(e))
+            description = str(e)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.ACCOUNT_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=delete_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
-        delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               therapist_id=user_id,
-                               method=delete_api_method,
-                               endpoint_name=self.ACCOUNT_ENDPOINT)
         try:
             patients_response = supabase_client.select(fields="id",
                                                        filters={
