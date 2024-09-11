@@ -44,10 +44,10 @@ def get_user_language_code(user_id: str,
                            supabase_client: SupabaseBaseClass):
     try:
         therapist_query = supabase_client.select(fields="*",
-                                                    filters={
-                                                        'id': user_id
-                                                    },
-                                                    table_name="therapists")
+                                                 filters={
+                                                   'id': user_id
+                                                 },
+                                                 table_name="therapists")
         assert (0 != len((therapist_query).data))
         return therapist_query.dict()['data'][0]["language_preference"]
     except Exception as e:
