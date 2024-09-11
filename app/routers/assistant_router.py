@@ -632,9 +632,18 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
+        description = "".join([
+            "birthdate=\"",
+            f"{body.birth_date or ''}\";",
+            "gender=\"",
+            f"{body.gender or ''}\";",
+            "consentment_channel=\"",
+            f"{body.consentment_channel}\""
+        ])
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=post_api_method,
+                               description = description,
                                endpoint_name=self.PATIENTS_ENDPOINT)
 
         try:
@@ -728,8 +737,17 @@ class AssistantRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
+        description = "".join([
+            "birthdate=\"",
+            f"{body.birth_date or ''}\";",
+            "gender=\"",
+            f"{body.gender or ''}\";",
+            "consentment_channel=\"",
+            f"{body.consentment_channel}\""
+        ])
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
+                               description=description,
                                method=put_api_method,
                                endpoint_name=self.PATIENTS_ENDPOINT,
                                patient_id=body.id)

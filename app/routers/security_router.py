@@ -356,8 +356,19 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
+        description = "".join([
+            "birthdate=\"",
+            f"{body.birth_date or ''}\";",
+            "login_mechanism=\"",
+            f"{body.login_mechanism or ''}\";",
+            "language_preference=\"",
+            f"{body.language_preference or ''}\";",
+            "gender=\"",
+            f"{body.gender or ''}\""
+        ])
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
+                               description=description,
                                method=post_api_method,
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
@@ -447,9 +458,18 @@ class SecurityRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
+        description = "".join([
+            "birthdate=\"",
+            f"{body.birth_date or ''}\";",
+            "language_preference=\"",
+            f"{body.language_preference or ''}\";",
+            "gender=\"",
+            f"{body.gender or ''}\""
+        ])
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=put_api_method,
+                               description=description,
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:

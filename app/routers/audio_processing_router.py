@@ -137,9 +137,18 @@ class AudioProcessingRouter:
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
         post_api_method = logger.API_METHOD_POST
+        description = "".join([
+            "template=\"",
+            f"{template.value or ''}\";",
+            "session_date=\"",
+            f"{session_date or ''}\";",
+            "client_timezone=\"",
+            f"{client_timezone_identifier or ''}\""
+        ])
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=post_api_method,
+                               description=description,
                                patient_id=patient_id,
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
@@ -244,10 +253,19 @@ class AudioProcessingRouter:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        description = "".join([
+            "template=\"",
+            f"{template.value or ''}\";",
+            "session_date=\"",
+            f"{session_date or ''}\";",
+            "client_timezone=\"",
+            f"{client_timezone_identifier or ''}\""
+        ])
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
                                method=post_api_method,
+                               description=description,
                                patient_id=patient_id,
                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
