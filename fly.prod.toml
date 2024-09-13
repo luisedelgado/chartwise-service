@@ -21,6 +21,13 @@ primary_region = 'mia'
     hard_limit = 50
 
 [[vm]]
-  memory = '4gb'
+  memory = '2gb'
   cpu_kind = 'performance'
-  cpus = 2
+  cpus = 4
+
+[processes]
+  # This is your FastAPI process
+  app = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
+
+  # Celery worker process for background tasks
+  worker = "celery -A app.celery:celery_app worker --loglevel=info"

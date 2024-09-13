@@ -4,4 +4,6 @@
 .venv-current/
 __pycache__/
 .DS_Store
+app/dump.rdb
+dump.rdb
 storage/index_store.json
