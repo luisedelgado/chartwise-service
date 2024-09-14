@@ -145,19 +145,18 @@ class ImageProcessingManager:
                                                    supabase_client=supabase_client,
                                                    pinecone_client=pinecone_client)
 
-            background_tasks.add_task(self._update_session_processing_status,
-                                      assistant_manager,
-                                      language_code,
-                                      logger_worker,
-                                      environment,
-                                      background_tasks,
-                                      auth_manager,
-                                      session_id,
-                                      openai_client,
-                                      supabase_client,
-                                      pinecone_client,
-                                      SessionUploadStatus.SUCCESS.value,
-                                      session_notes_id)
+            await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                         language_code=language_code,
+                                                         logger_worker=logger_worker,
+                                                         environment=environment,
+                                                         background_tasks=background_tasks,
+                                                         auth_manager=auth_manager,
+                                                         session_id=session_id,
+                                                         openai_client=openai_client,
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=pinecone_client,
+                                                         session_upload_status=SessionUploadStatus.SUCCESS.value,
+                                                         session_notes_id=session_notes_id)
 
             # Update patient metrics around last session date, and total session count AFTER
             # session has already been updated.
@@ -175,18 +174,18 @@ class ImageProcessingManager:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.
             if session_notes_id is not None:
-                self._update_session_processing_status(assistant_manager=assistant_manager,
-                                                    language_code=language_code,
-                                                    logger_worker=logger_worker,
-                                                    environment=environment,
-                                                    background_tasks=background_tasks,
-                                                    auth_manager=auth_manager,
-                                                    session_id=session_id,
-                                                    openai_client=openai_client,
-                                                    supabase_client=supabase_client,
-                                                    pinecone_client=pinecone_client,
-                                                    session_upload_status=SessionUploadStatus.FAILED.value,
-                                                    session_notes_id=session_notes_id)
+                await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                             language_code=language_code,
+                                                             logger_worker=logger_worker,
+                                                             environment=environment,
+                                                             background_tasks=background_tasks,
+                                                             auth_manager=auth_manager,
+                                                             session_id=session_id,
+                                                             openai_client=openai_client,
+                                                             supabase_client=supabase_client,
+                                                             pinecone_client=pinecone_client,
+                                                             session_upload_status=SessionUploadStatus.FAILED.value,
+                                                             session_notes_id=session_notes_id)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
