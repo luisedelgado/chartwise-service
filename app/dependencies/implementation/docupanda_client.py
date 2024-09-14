@@ -1,6 +1,6 @@
 import base64, json, os, requests
 
-from fastapi import HTTPException, status
+from fastapi import status
 from portkey_ai import Portkey
 from typing import Tuple
 

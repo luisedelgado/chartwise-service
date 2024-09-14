@@ -1,4 +1,4 @@
-import os
+import asyncio, os
 
 from fastapi import (BackgroundTasks, File, HTTPException, status, UploadFile)
 from typing import Tuple
@@ -15,6 +15,9 @@ from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource,
                                           SessionCrudOperation)
 from ..managers.auth_manager import AuthManager
+
+MAX_RETRIES = 5
+RETRY_DELAY = 3  # Delay in seconds
 
 class ImageProcessingManager:
 
@@ -75,9 +78,24 @@ class ImageProcessingManager:
                                   assistant_manager: AssistantManager) -> str:
         try:
             session_notes_id = None
-            textraction_status_code, textraction = await docupanda_client.retrieve_text_from_document(document_id)
-            if textraction_status_code == status.HTTP_202_ACCEPTED:
-                raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Textraction is still processing")
+
+            for attempt in range(MAX_RETRIES):
+                textraction_status_code, textraction = await docupanda_client.retrieve_text_from_document(document_id)
+
+                if textraction_status_code == status.HTTP_202_ACCEPTED:
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(RETRY_DELAY)
+                    else:
+                        logger_worker.log_textraction_event(background_tasks=background_tasks,
+                                                            therapist_id=therapist_id,
+                                                            session_id=session_id,
+                                                            job_id=document_id,
+                                                            error_code=status.HTTP_408_REQUEST_TIMEOUT,
+                                                            description=f"Textraction with job id {document_id} is still processing after maximum retries")
+                        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Textraction is still processing after maximum retries")
+                else:
+                    # Got successful response
+                    break
 
             session_report_query = supabase_client.select(fields="*",
                                                           table_name="session_reports",
