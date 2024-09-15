@@ -31,13 +31,13 @@ primary_region = 'mia'
 [machines.app]
   count = 4  # 4 machines for FastAPI
 
-# Celery Worker process (Shared-CPU, 2 machines)
+# Celery Worker process
 [[services]]
   processes = ["worker"]
   [services.vm]
     memory = "2gb"
     cpu_kind = "shared"
-    cpus = 1
+    cpus = 2
 
 [machines.worker]
   count = 2  # 2 machines for Celery workers
