@@ -1,5 +1,6 @@
 import os
 
+import tiktoken
 from fastapi import (BackgroundTasks, File, UploadFile)
 
 from ..dependencies.api.deepgram_base_class import DeepgramBaseClass
@@ -13,7 +14,11 @@ from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 
+from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
+
 class AudioProcessingManager:
+
+    DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
 
     async def transcribe_audio_file(self,
                                     background_tasks: BackgroundTasks,
@@ -138,20 +143,75 @@ class AudioProcessingManager:
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            notes_text, diarization = await deepgram_client.diarize_audio(auth_manager=auth_manager,
-                                                                        therapist_id=therapist_id,
-                                                                        patient_id=patient_id,
-                                                                        language_code=language_code,
-                                                                        session_id=session_id,
-                                                                        file_full_path=audio_copy_result.file_copy_full_path,
-                                                                        openai_client=openai_client,
-                                                                        assistant_manager=assistant_manager,
-                                                                        template=template)
-
+            diarization = await deepgram_client.diarize_audio(auth_manager=auth_manager,
+                                                              file_full_path=audio_copy_result.file_copy_full_path)
             update_body = {
                 "id": session_report_id,
-                "notes_text": notes_text,
                 "diarization": diarization,
+            }
+            await assistant_manager.update_session(language_code=language_code,
+                                                   logger_worker=logger_worker,
+                                                   environment=environment,
+                                                   background_tasks=background_tasks,
+                                                   auth_manager=auth_manager,
+                                                   filtered_body=update_body,
+                                                   session_id=session_id,
+                                                   openai_client=openai_client,
+                                                   supabase_client=supabase_client,
+                                                   pinecone_client=pinecone_client)
+        except:
+            # We want to synchronously log the failed processing status to avoid execution
+            # stoppage when the exception is raised.
+            await self._update_session_processing_status(assistant_manager=assistant_manager,
+                                                         language_code=language_code,
+                                                         logger_worker=logger_worker,
+                                                         environment=environment,
+                                                         background_tasks=background_tasks,
+                                                         auth_manager=auth_manager,
+                                                         session_id=session_id,
+                                                         openai_client=openai_client,
+                                                         supabase_client=supabase_client,
+                                                         pinecone_client=pinecone_client,
+                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_notes_id=session_report_id)
+            raise Exception(e)
+
+        # Generate summary for diarization
+        try:
+            metadata = {
+                "user_id": therapist_id,
+                "patient_id": patient_id,
+                "session_id": str(session_id),
+                "action": self.DIARIZATION_SUMMARY_ACTION_NAME
+            }
+
+            prompt_crafter = PromptCrafter()
+            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
+                                                                    diarization=diarization)
+            system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
+                                                                        language_code=language_code)
+            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+
+            session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                                max_tokens=max_tokens,
+                                                                                messages=[
+                                                                                    {"role": "system", "content": system_prompt},
+                                                                                    {"role": "user", "content": user_prompt},
+                                                                                ],
+                                                                                expects_json_response=False,
+                                                                                auth_manager=auth_manager)
+
+            if template == SessionNotesTemplate.SOAP:
+                session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                                    openai_client=openai_client,
+                                                                                    therapist_id=therapist_id,
+                                                                                    session_notes_text=session_summary,
+                                                                                    session_id=session_id)
+
+            update_summary_body = {
+                "id": session_report_id,
+                "notes_text": session_summary,
             }
 
             await assistant_manager.update_session(language_code=language_code,
@@ -159,7 +219,7 @@ class AudioProcessingManager:
                                                    environment=environment,
                                                    background_tasks=background_tasks,
                                                    auth_manager=auth_manager,
-                                                   filtered_body=update_body,
+                                                   filtered_body=update_summary_body,
                                                    session_id=session_id,
                                                    openai_client=openai_client,
                                                    supabase_client=supabase_client,

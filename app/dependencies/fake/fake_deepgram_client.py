@@ -21,12 +21,5 @@ class FakeDeepgramClient(DeepgramBaseClass):
 
     async def diarize_audio(self,
                             auth_manager: AuthManager,
-                            therapist_id: str,
-                            patient_id: str,
-                            language_code: str,
-                            session_id: str,
-                            file_full_path: str,
-                            openai_client: OpenAIBaseClass,
-                            assistant_manager: AssistantManager,
-                            template: SessionNotesTemplate) -> Tuple[str, str]:
-        return ("fake summary", "fake diarization")
+                            file_full_path: str) -> str:
+        return "fake diarization"

@@ -38,23 +38,8 @@ class DeepgramBaseClass(ABC):
 
     Arguments:
     auth_manager – the auth manager to be leveraged internally.
-    therapist_id – the therapist id associated with the operation.
-    patient_id – the patient id associated with the operation.
-    language_code – the language_code to be used for the diarization summary.
-    session_id – the session id.
     file_full_path – the audio file's full path.
-    openai_client – the openai client to be used internally.
-    assistant_manager – the assistant manager to be leveraged internally.
-    template – the template to be applied to the output.
     """
-    async def diarize_audio(self,
-                            auth_manager: AuthManager,
-                            therapist_id: str,
-                            patient_id: str,
-                            language_code: str,
-                            session_id: str,
-                            file_full_path: str,
-                            openai_client: OpenAIBaseClass,
-                            assistant_manager: AssistantManager,
-                            template: SessionNotesTemplate) -> Tuple[str, str]:
+    async def diarize_audio(auth_manager: AuthManager,
+                            file_full_path: str):
         pass

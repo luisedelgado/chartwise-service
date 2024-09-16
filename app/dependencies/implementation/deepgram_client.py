@@ -1,5 +1,4 @@
 import json, os, requests
-import tiktoken
 
 from deepgram import (
     DeepgramClient as DeepgramSDKClient,
@@ -8,9 +7,7 @@ from deepgram import (
 )
 from fastapi import HTTPException, status
 from httpx import Timeout
-from typing import Tuple
 
-from ...vectors.chartwise_assistant import PromptCrafter, PromptScenario
 from ..api.deepgram_base_class import DeepgramBaseClass
 from ..api.templates import SessionNotesTemplate
 from ...data_processing.diarization_cleaner import DiarizationCleaner
@@ -21,19 +18,11 @@ from ...managers.auth_manager import AuthManager
 
 class DeepgramClient(DeepgramBaseClass):
 
-    DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
     async def diarize_audio(self,
                             auth_manager: AuthManager,
-                            therapist_id: str,
-                            patient_id: str,
-                            language_code: str,
-                            session_id: str,
-                            file_full_path: str,
-                            openai_client: OpenAIBaseClass,
-                            assistant_manager: AssistantManager,
-                            template: SessionNotesTemplate) -> Tuple[str, str]:
+                            file_full_path: str) -> str:
         if auth_manager.is_monitoring_proxy_reachable():
             try:
                 custom_host_url = os.environ.get("DG_URL")
@@ -103,37 +92,7 @@ class DeepgramClient(DeepgramBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
 
-        metadata = {
-            "user_id": therapist_id,
-            "patient_id": patient_id,
-            "session_id": str(session_id),
-            "action": self.DIARIZATION_SUMMARY_ACTION_NAME
-        }
-
-        prompt_crafter = PromptCrafter()
-        user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
-                                                                   diarization=diarization)
-        system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
-                                                                       language_code=language_code)
-        prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
-        max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-
-        session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                            max_tokens=max_tokens,
-                                                                            messages=[
-                                                                                {"role": "system", "content": system_prompt},
-                                                                                {"role": "user", "content": user_prompt},
-                                                                            ],
-                                                                            expects_json_response=False,
-                                                                            auth_manager=auth_manager)
-
-        if template == SessionNotesTemplate.SOAP:
-            session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                  openai_client=openai_client,
-                                                                                  therapist_id=therapist_id,
-                                                                                  session_notes_text=session_summary,
-                                                                                  session_id=session_id)
-        return (session_summary, diarization)
+        return diarization
 
     async def transcribe_audio(self,
                                auth_manager: AuthManager,
