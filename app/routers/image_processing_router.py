@@ -14,7 +14,7 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.router_dependencies import RouterDependencies
+from ..internal.router_dependencies import DependencyContainer
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
@@ -30,7 +30,7 @@ class ImageProcessingRouter:
                  assistant_manager: AssistantManager,
                  auth_manager: AuthManager,
                  image_processing_manager: ImageProcessingManager,
-                 router_dependencies: RouterDependencies):
+                 router_dependencies: DependencyContainer):
         self._environment = environment
         self._assistant_manager = assistant_manager
         self._auth_manager = auth_manager

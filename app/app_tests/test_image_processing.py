@@ -5,7 +5,7 @@ from ..dependencies.fake.fake_docupanda_client import FakeDocupandaClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..internal.router_dependencies import RouterDependencies
+from ..internal.router_dependencies import DependencyContainer
 from ..internal.schemas import SessionUploadStatus
 from ..managers.assistant_manager import AssistantManager
 from ..managers.image_processing_manager import ImageProcessingManager
@@ -44,7 +44,7 @@ class TestingHarnessImageProcessingRouter:
                                                                                 auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,
                                                                                 image_processing_manager=self.image_processing_manager,
-                                                                                router_dependencies=RouterDependencies(supabase_client_factory=self.fake_supabase_client_factory,
+                                                                                router_dependencies=DependencyContainer(supabase_client_factory=self.fake_supabase_client_factory,
                                                                                                                        openai_client=self.fake_openai_client,
                                                                                                                        pinecone_client=self.fake_pinecone_client,
                                                                                                                        docupanda_client=self.fake_docupanda_client)).router],

@@ -60,7 +60,7 @@ class SecurityRouter:
     def __init__(self,
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
-                 router_dependencies: router_dependencies.RouterDependencies):
+                 router_dependencies: router_dependencies.DependencyContainer):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory

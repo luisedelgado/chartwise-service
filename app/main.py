@@ -5,7 +5,7 @@ from .dependencies.implementation.docupanda_client import DocupandaClient
 from .dependencies.implementation.openai_client import OpenAIClient
 from .dependencies.implementation.pinecone_client import PineconeClient
 from .dependencies.implementation.supabase_client_factory import SupabaseClientFactory
-from .internal.router_dependencies import RouterDependencies
+from .internal.router_dependencies import DependencyContainer
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
@@ -31,27 +31,27 @@ app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment,
                                                     auth_manager=auth_manager,
                                                     assistant_manager=assistant_manager,
-                                                    router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                    router_dependencies=DependencyContainer(openai_client=openai_client,
                                                                                            pinecone_client=pinecone_client,
                                                                                            supabase_client_factory=supabase_client_factory)).router,
                                     AudioProcessingRouter(environment=environment,
                                                           auth_manager=auth_manager,
                                                           assistant_manager=assistant_manager,
                                                           audio_processing_manager=audio_processing_manager,
-                                                          router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                          router_dependencies=DependencyContainer(openai_client=openai_client,
                                                                                                  deepgram_client=deepgram_client,
                                                                                                  pinecone_client=pinecone_client,
                                                                                                  supabase_client_factory=supabase_client_factory)).router,
                                     SecurityRouter(auth_manager=auth_manager,
                                                    assistant_manager=assistant_manager,
-                                                   router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                   router_dependencies=DependencyContainer(openai_client=openai_client,
                                                                                           supabase_client_factory=supabase_client_factory,
                                                                                           pinecone_client=pinecone_client)).router,
                                     ImageProcessingRouter(environment=environment,
                                                           assistant_manager=assistant_manager,
                                                           auth_manager=auth_manager,
                                                           image_processing_manager=image_processing_manager,
-                                                          router_dependencies=RouterDependencies(openai_client=openai_client,
+                                                          router_dependencies=DependencyContainer(openai_client=openai_client,
                                                                                                  pinecone_client=pinecone_client,
                                                                                                  supabase_client_factory=supabase_client_factory,
                                                                                                  docupanda_client=docupanda_client)).router,

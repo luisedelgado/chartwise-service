@@ -4,7 +4,7 @@ from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 
-class RouterDependencies:
+class DependencyContainer:
     def __init__(self,
                  openai_client: OpenAIBaseClass = None,
                  pinecone_client: PineconeBaseClass = None,

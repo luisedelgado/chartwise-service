@@ -7,7 +7,7 @@ from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..internal.router_dependencies import RouterDependencies
+from ..internal.router_dependencies import DependencyContainer
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
@@ -95,7 +95,7 @@ class TestingHarnessAudioProcessingRouter:
                                                                                 auth_manager=self.auth_manager,
                                                                                 assistant_manager=self.assistant_manager,
                                                                                 audio_processing_manager=self.audio_processing_manager,
-                                                                                router_dependencies=RouterDependencies(openai_client=self.fake_openai_client,
+                                                                                router_dependencies=DependencyContainer(openai_client=self.fake_openai_client,
                                                                                                                        deepgram_client=self.fake_deepgram_client,
                                                                                                                        pinecone_client=self.fake_pinecone_client,
                                                                                                                        supabase_client_factory=self.fake_supabase_client_factory)).router],

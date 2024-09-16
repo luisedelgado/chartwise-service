@@ -13,7 +13,7 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.router_dependencies import RouterDependencies
+from ..internal.router_dependencies import DependencyContainer
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
@@ -31,7 +31,7 @@ class AudioProcessingRouter:
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
                  audio_processing_manager: AudioProcessingManager,
-                 router_dependencies: RouterDependencies):
+                 router_dependencies: DependencyContainer):
             self._environment = environment
             self._auth_manager = auth_manager
             self._assistant_manager = assistant_manager
