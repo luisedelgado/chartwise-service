@@ -115,7 +115,7 @@ class DeepgramClient(DeepgramBaseClass):
                                                                    diarization=diarization)
         system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
                                                                        language_code=language_code)
-        prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+        prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
         max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
         session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,

@@ -42,7 +42,7 @@ class PineconeClient(PineconeBaseClass):
             vector_store = PineconeVectorStore(pinecone_index=index)
             namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
 
-            enc = tiktoken.get_encoding("cl100k_base")
+            enc = tiktoken.get_encoding("o200k_base")
             splitter = RecursiveCharacterTextSplitter(
                 separators=["\n\n", "\n", " ", ""],
                 chunk_size=256,
@@ -99,7 +99,7 @@ class PineconeClient(PineconeBaseClass):
             index = self.pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
 
-            enc = tiktoken.get_encoding("cl100k_base")
+            enc = tiktoken.get_encoding("o200k_base")
             splitter = RecursiveCharacterTextSplitter(
                 separators=["\n\n", "\n", " ", ""],
                 chunk_size=256,

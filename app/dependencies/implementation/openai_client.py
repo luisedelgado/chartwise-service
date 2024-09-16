@@ -103,7 +103,7 @@ class OpenAIClient(OpenAIBaseClass):
             input_window_content = "\n".join([system_prompt,
                                               (await self.flatten_chat_history()),
                                               user_prompt])
-            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{input_window_content}"))
+            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{input_window_content}"))
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             callback = AsyncIteratorCallbackHandler()
@@ -218,7 +218,7 @@ class OpenAIClient(OpenAIBaseClass):
                                                                        context=context)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.RERANKING,
                                                                            top_n=top_n)
-            prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
