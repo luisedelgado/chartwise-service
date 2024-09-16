@@ -1,4 +1,4 @@
-import asyncio, hashlib, os, uuid
+import hashlib, os, uuid
 import tiktoken
 
 from fastapi import HTTPException
@@ -7,7 +7,7 @@ from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
-from pinecone.grpc import GRPCIndex, PineconeGRPC
+from pinecone.grpc import PineconeGRPC
 from starlette.concurrency import run_in_threadpool
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass

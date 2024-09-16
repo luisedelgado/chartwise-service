@@ -10,6 +10,7 @@ class PromptScenario(Enum):
     ATTENDANCE_INSIGHTS = "attendance_insights"
     CHUNK_SUMMARY = "chunk_summary"
     DIARIZATION_SUMMARY = "diarization_summary"
+    DIARIZATION_CHUNKS_GRAND_SUMMARY = "diarization_chunks_grand_summary"
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
@@ -101,6 +102,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.DIARIZATION_SUMMARY:
             diarization = None if 'diarization' not in kwargs else kwargs['diarization']
             return self._summarize_diarization_user_message(diarization=diarization)
+        elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
+            diarization = None if 'diarization' not in kwargs else kwargs['diarization']
+            return self._summarize_diarization_chunks_user_message(diarization=diarization)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -157,6 +161,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.DIARIZATION_SUMMARY:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._summarize_diarization_system_message(language_code=language_code)
+        elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
+            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            return self._summarize_diarization_chunks_system_message(language_code=language_code)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -620,6 +627,31 @@ class PromptCrafter:
             return (
                  "Please provide a concise summary of the following session transcription. "
                  "The summary should capture the key topics discussed, emotions expressed, and significant moments or changes in the session."
+                 f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    # Grand Summary of Diarization Chunks
+
+    def _summarize_diarization_chunks_system_message(self, language_code: str) -> str:
+        try:
+            assert len(language_code or '') > 0, "Missing language_code param for building system message"
+            return (
+                "A mental health practitioner just met with a patient, and used our Practice Management Platform to listen to the session and generate a summary. "
+                "Due to the session's lengthy duration, we have chunked its transcription, summarized each chunk independently, and merged all chunks together. "
+                "The problem is that this merged version is bloated and has a lot of redundancy. "
+                "Your task is to reword this grand summary to avoid redundancy, and make it cleaner and pleasant to read. "
+                f"It is very important that this grand summary is written using language code {language_code}."
+            )
+        except Exception as e:
+            raise Exception(e)
+
+    def _summarize_diarization_chunks_user_message(self, diarization: str) -> str:
+        try:
+            assert len(diarization or '') > 0, "Missing diarization param for building user message"
+            return (
+                 "Please clean up the following summary, which consists of a merged set of independent chunk summaries. "
                  f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
             )
         except Exception as e:

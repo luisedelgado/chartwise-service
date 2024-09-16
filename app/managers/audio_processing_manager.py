@@ -1,8 +1,10 @@
 import os
 
-import tiktoken
 from fastapi import (BackgroundTasks, File, UploadFile)
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from tiktoken import Encoding, get_encoding
 
+from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.deepgram_base_class import DeepgramBaseClass
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
@@ -13,12 +15,14 @@ from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
+from ..vectors import data_cleaner
 
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
 class AudioProcessingManager:
 
     DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
+    DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME = "diarization_chunks_grand_summary"
 
     async def transcribe_audio_file(self,
                                     background_tasks: BackgroundTasks,
@@ -187,20 +191,37 @@ class AudioProcessingManager:
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
-                                                                    diarization=diarization)
+                                                                       diarization=diarization)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
-                                                                        language_code=language_code)
-            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
+                                                                           language_code=language_code)
+            encoding = get_encoding("o200k_base")
+            prompt_tokens = len(encoding.encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                                max_tokens=max_tokens,
-                                                                                messages=[
-                                                                                    {"role": "system", "content": system_prompt},
-                                                                                    {"role": "user", "content": user_prompt},
-                                                                                ],
-                                                                                expects_json_response=False,
-                                                                                auth_manager=auth_manager)
+            if max_tokens < 0:
+                # Need to chunk diarization and generate summary of the union of all chunks.
+                session_summary = await self._chunk_diarization_and_summarize(encoding=encoding,
+                                                                              diarization=diarization,
+                                                                              openai_client=openai_client,
+                                                                              metadata=metadata,
+                                                                              prompt_crafter=prompt_crafter,
+                                                                              summarize_chunk_system_prompt=system_prompt,
+                                                                              auth_manager=auth_manager,
+                                                                              language_code=language_code,
+                                                                              logger_worker=logger_worker,
+                                                                              background_tasks=background_tasks,
+                                                                              patient_id=patient_id,
+                                                                              therapist_id=therapist_id,
+                                                                              session_id=session_id)
+            else:
+                session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                                    max_tokens=max_tokens,
+                                                                                    messages=[
+                                                                                        {"role": "system", "content": system_prompt},
+                                                                                        {"role": "user", "content": user_prompt},
+                                                                                    ],
+                                                                                    expects_json_response=False,
+                                                                                    auth_manager=auth_manager)
 
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
@@ -401,3 +422,75 @@ class AudioProcessingManager:
                                                openai_client=openai_client,
                                                supabase_client=supabase_client,
                                                pinecone_client=pinecone_client)
+
+    async def _chunk_diarization_and_summarize(self,
+                                               encoding: Encoding,
+                                               diarization: list,
+                                               openai_client: OpenAIBaseClass,
+                                               metadata: dict,
+                                               prompt_crafter: PromptCrafter,
+                                               summarize_chunk_system_prompt: str,
+                                               auth_manager: AuthManager,
+                                               language_code: str,
+                                               logger_worker: Logger,
+                                               background_tasks: BackgroundTasks,
+                                               patient_id: str,
+                                               therapist_id: str,
+                                               session_id: str):
+        try:
+            splitter = RecursiveCharacterTextSplitter(
+                separators=["\n\n", "\n", " ", ""],
+                chunk_size=256,
+                chunk_overlap=25,
+                length_function=lambda text: len(encoding.encode(text)),
+            )
+
+            chunk_summaries = []
+            flattened_diarization = DiarizationCleaner.flatten_diarization(diarization)
+            chunks = splitter.split_text(flattened_diarization)
+            for chunk in chunks:
+                current_chunk_text = data_cleaner.clean_up_text(chunk)
+                user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.DIARIZATION_SUMMARY,
+                                                                           diarization=current_chunk_text)
+
+                prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
+                max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+                current_chunk_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                                max_tokens=max_tokens,
+                                                                                messages=[
+                                                                                    {"role": "system", "content": summarize_chunk_system_prompt},
+                                                                                    {"role": "user", "content": user_prompt},
+                                                                                ],
+                                                                                expects_json_response=False,
+                                                                                auth_manager=auth_manager)
+                chunk_summaries.append(current_chunk_summary)
+
+            assert len(chunk_summaries or '') > 0, "No chunked summaries available to create a grand summary for incoming (large) diarization"
+            grand_summary_raw = " ".join([chunk_summary for chunk_summary in chunk_summaries])
+            grand_summary_system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY,
+                                                                                         language_code=language_code)
+            grand_summary_user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY,
+                                                                                     diarization=grand_summary_raw)
+            prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
+            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            grand_summary = await openai_client.trigger_async_chat_completion(metadata={
+                                                                                "user_id": therapist_id,
+                                                                                "patient_id": patient_id,
+                                                                                "session_id": str(session_id),
+                                                                                "action": self.DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
+                                                                              },
+                                                                              max_tokens=max_tokens,
+                                                                              messages=[
+                                                                                  {"role": "system", "content": grand_summary_system_prompt},
+                                                                                  {"role": "user", "content": grand_summary_user_prompt},
+                                                                              ],
+                                                                              expects_json_response=False,
+                                                                              auth_manager=auth_manager)
+            return grand_summary
+        except Exception as e:
+            logger_worker.log_error(background_tasks=background_tasks,
+                                    description=str(e),
+                                    session_id=session_id,
+                                    therapist_id=therapist_id,
+                                    patient_id=patient_id)
+            raise Exception(e)

@@ -591,7 +591,8 @@ class AssistantRouter:
                                     http_status_code=status.HTTP_200_OK,
                                     method=post_api_method)
         except Exception as e:
-            yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id))
+            yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id,
+                                                                                  supabase_client=supabase_client))
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              patient_id=query.patient_id,

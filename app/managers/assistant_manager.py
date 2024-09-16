@@ -850,7 +850,9 @@ class AssistantManager:
                                     patient_id=patient_id)
             raise Exception(e)
 
-    def default_streaming_error_message(self, user_id: str):
+    def default_streaming_error_message(self,
+                                        user_id: str,
+                                        supabase_client: SupabaseBaseClass):
         if self.cached_patient_query_data is None:
             language_code = general_utilities.get_user_language_code(user_id=user_id, supabase_client=supabase_client)
         else:
@@ -862,8 +864,8 @@ class AssistantManager:
                     "Estamos trabajando en ello— ¡Vuelve a intentarlo en un momento!")
         elif language_code.startswith('en-'):
             # English
-            return ("Looks like there’s a minor issue that's preventing me from being able to respond your question. "
-                    "We’re on it— please check back shortly!")
+            return ("Looks like there's a minor issue that's preventing me from being able to respond your question. "
+                    "We're on it— please check back shortly!")
         else:
             raise Exception("Unsupported language code")
 

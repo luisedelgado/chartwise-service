@@ -79,3 +79,27 @@ class DiarizationCleaner:
             "start_time": self._entry_start_time,
             "end_time": self._entry_end_time
         }
+
+    """
+    Flattens diarization result into a single string object.
+    """
+    @staticmethod
+    def flatten_diarization(diarization: list):
+        formatted_objects = []
+        for obj in diarization:
+            content = obj.get('content', '')
+            current_speaker = obj.get('current_speaker', '')
+            start_time = obj.get('start_time', '')
+            end_time = obj.get('end_time', '')
+
+            # Format entries properly, ensuring values are enclosed in quotes
+            entry = "{{'content': '{}', 'current_speaker': '{}', 'start_time': '{}', 'end_time': '{}'}}".format(
+                content.replace("'", "\\'"),
+                current_speaker,
+                start_time,
+                end_time
+            )
+            formatted_objects.append(entry)
+
+        flattened_diarization = "[" + ", ".join(formatted_objects) + "]"
+        return flattened_diarization
