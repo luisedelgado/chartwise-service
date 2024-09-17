@@ -13,6 +13,7 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
+from ..internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 from ..vectors import data_cleaner
@@ -215,8 +216,8 @@ class AudioProcessingManager:
                                                                               therapist_id=therapist_id,
                                                                               session_id=session_id)
             else:
-                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                                        llm_model=openai_client.LLM_MODEL)
+                monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
+                                                                           llm_model=openai_client.LLM_MODEL)
                 session_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                                     messages=[
                                                                                         {"role": "system", "content": system_prompt},
@@ -461,8 +462,8 @@ class AudioProcessingManager:
 
                 prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                                        llm_model=openai_client.LLM_MODEL)
+                monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
+                                                                           llm_model=openai_client.LLM_MODEL)
                 current_chunk_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                                           messages=[
                                                                                               {"role": "system", "content": summarize_chunk_system_prompt},
@@ -489,8 +490,8 @@ class AudioProcessingManager:
                 "session_id": str(session_id),
                 "action": self.DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
             }
-            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                                    llm_model=openai_client.LLM_MODEL)
+            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
+                                                                       llm_model=openai_client.LLM_MODEL)
             grand_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                               messages=[
                                                                                   {"role": "system", "content": grand_summary_system_prompt},

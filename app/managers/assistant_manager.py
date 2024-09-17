@@ -15,6 +15,7 @@ from ..managers.auth_manager import AuthManager
 from ..internal.logging import Logger
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ..vectors.chartwise_assistant import ChartWiseAssistant, SUMMARIZE_CHUNK_ACTION_NAME
 
 class AssistantQuery(BaseModel):
@@ -285,12 +286,12 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata={
-                                                                                            "user_id": therapist_id,
-                                                                                            "session_id": str(session_id),
-                                                                                            "action": SUMMARIZE_CHUNK_ACTION_NAME
-                                                                                        },
-                                                                                        llm_model=openai_client.LLM_MODEL)
+                monitoring_proxy_headers = create_monitoring_proxy_headers(metadata={
+                                                                               "user_id": therapist_id,
+                                                                               "session_id": str(session_id),
+                                                                               "action": SUMMARIZE_CHUNK_ACTION_NAME
+                                                                           },
+                                                                           llm_model=openai_client.LLM_MODEL)
                 background_tasks.add_task(pinecone_client.insert_preexisting_history_vectors,
                                           therapist_id,
                                           patient_id,
@@ -363,12 +364,12 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata={
-                                                                                    "user_id": therapist_id,
-                                                                                    "session_id": str(session_id),
-                                                                                    "action": SUMMARIZE_CHUNK_ACTION_NAME
-                                                                                },
-                                                                                llm_model=openai_client.LLM_MODEL)
+        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata={
+                                                                       "user_id": therapist_id,
+                                                                       "session_id": str(session_id),
+                                                                       "action": SUMMARIZE_CHUNK_ACTION_NAME
+                                                                   },
+                                                                   llm_model=openai_client.LLM_MODEL)
 
         background_tasks.add_task(pinecone_client.update_preexisting_history_vectors,
                                   therapist_id,
@@ -922,8 +923,8 @@ class AssistantManager:
             "session_id": str(session_id),
             "action": SUMMARIZE_CHUNK_ACTION_NAME
         }
-        monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=monitoring_metadata,
-                                                                                llm_model=openai_client.LLM_MODEL)
+        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=monitoring_metadata,
+                                                                   llm_model=openai_client.LLM_MODEL)
         await pinecone_client.insert_session_vectors(user_id=therapist_id,
                                                      patient_id=patient_id,
                                                      text=notes_text,
@@ -995,8 +996,8 @@ class AssistantManager:
             "session_id": str(session_id),
             "action": SUMMARIZE_CHUNK_ACTION_NAME
         }
-        monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=monitoring_metadata,
-                                                                                llm_model=openai_client.LLM_MODEL)
+        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=monitoring_metadata,
+                                                                   llm_model=openai_client.LLM_MODEL)
         await pinecone_client.update_session_vectors(user_id=therapist_id,
                                                      patient_id=patient_id,
                                                      text=notes_text,

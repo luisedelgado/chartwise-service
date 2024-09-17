@@ -1,6 +1,7 @@
-import os
+import os, uuid
 
 from fastapi import HTTPException, status
+from portkey_ai import createHeaders
 from pytz import timezone
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
@@ -87,3 +88,27 @@ def create_monitoring_proxy_config(llm_model, cache_max_age = None):
                 "max_age": cache_max_age,
             }
         return config
+
+"""
+Creates proxy headers for the monitoring layer.
+"""
+def create_monitoring_proxy_headers(**kwargs):
+    caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
+    cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
+    llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
+    metadata = None if "metadata" not in kwargs else kwargs["metadata"]
+
+    if cache_max_age is not None and caching_shard_key is not None:
+        monitoring_proxy_config = create_monitoring_proxy_config(cache_max_age=cache_max_age,
+                                                                 llm_model=llm_model)
+        return createHeaders(trace_id=uuid.uuid4(),
+                             api_key=os.environ.get("PORTKEY_API_KEY"),
+                             config=monitoring_proxy_config,
+                             cache_namespace=caching_shard_key,
+                             metadata=metadata)
+
+    monitoring_proxy_config = create_monitoring_proxy_config(llm_model=llm_model)
+    return createHeaders(trace_id=uuid.uuid4(),
+                         api_key=os.environ.get("PORTKEY_API_KEY"),
+                         config=monitoring_proxy_config,
+                         metadata=metadata)

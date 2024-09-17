@@ -1,16 +1,15 @@
-import jwt, logging, os, requests, uuid
+import jwt, logging, os, requests
 
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Request, Response
 from passlib.context import CryptContext
-from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
+from portkey_ai import PORTKEY_GATEWAY_URL
 from typing import Tuple
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.security import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
-from ..internal.utilities.general_utilities import create_monitoring_proxy_config
 
 class AuthManager:
 
@@ -143,24 +142,3 @@ class AuthManager:
             return requests.get(self.get_monitoring_proxy_url()).status_code < status.HTTP_500_INTERNAL_SERVER_ERROR
         except:
             return False
-
-    def create_monitoring_proxy_headers(self, **kwargs):
-        caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
-        cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
-        llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
-        metadata = None if "metadata" not in kwargs else kwargs["metadata"]
-
-        if cache_max_age is not None and caching_shard_key is not None:
-            monitoring_proxy_config = create_monitoring_proxy_config(cache_max_age=cache_max_age,
-                                                                     llm_model=llm_model)
-            return createHeaders(trace_id=uuid.uuid4(),
-                                 api_key=os.environ.get("PORTKEY_API_KEY"),
-                                 config=monitoring_proxy_config,
-                                 cache_namespace=caching_shard_key,
-                                 metadata=metadata)
-
-        monitoring_proxy_config = create_monitoring_proxy_config(llm_model=llm_model)
-        return createHeaders(trace_id=uuid.uuid4(),
-                             api_key=os.environ.get("PORTKEY_API_KEY"),
-                             config=monitoring_proxy_config,
-                             metadata=metadata)
