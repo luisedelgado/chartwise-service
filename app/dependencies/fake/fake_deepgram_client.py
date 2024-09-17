@@ -1,6 +1,4 @@
 from ..api.deepgram_base_class import DeepgramBaseClass
-from ..api.templates import SessionNotesTemplate
-from ...dependencies.api.openai_base_class import OpenAIBaseClass
 
 class FakeDeepgramClient(DeepgramBaseClass):
 

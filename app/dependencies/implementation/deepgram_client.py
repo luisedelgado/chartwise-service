@@ -9,9 +9,7 @@ from fastapi import HTTPException, status
 from httpx import Timeout
 
 from ..api.deepgram_base_class import DeepgramBaseClass
-from ..api.templates import SessionNotesTemplate
 from ...data_processing.diarization_cleaner import DiarizationCleaner
-from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...internal.utilities import general_utilities
 
 class DeepgramClient(DeepgramBaseClass):

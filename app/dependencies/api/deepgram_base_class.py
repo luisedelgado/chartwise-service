@@ -1,8 +1,5 @@
 from abc import ABC
 
-from .templates import SessionNotesTemplate
-from ...dependencies.api.openai_base_class import OpenAIBaseClass
-
 class DeepgramBaseClass(ABC):
 
     """
