@@ -91,14 +91,18 @@ class ChartWiseAssistant:
                 reformulate_question_system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.REFORMULATE_QUERY)
                 prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{reformulate_question_system_prompt}\n{reformulate_question_user_prompt}"))
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-                query_input = await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                                max_tokens=max_tokens,
+
+                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                       llm_model=openai_client.LLM_MODEL)
+                query_input = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                                 messages=[
                                                                                     {"role": "system", "content": reformulate_question_system_prompt},
                                                                                     {"role": "user", "content": reformulate_question_user_prompt},
                                                                                 ],
-                                                                                auth_manager=auth_manager,
-                                                                                expects_json_response=False)
+                                                                                expects_json_response=False,
+                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
             context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
                                                                      query_input=query_input,
@@ -111,14 +115,18 @@ class ChartWiseAssistant:
                                                                      session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
+
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
             async for part in openai_client.stream_chat_completion(vector_context=context,
                                                                    language_code=response_language_code,
                                                                    query_input=query_input,
                                                                    is_first_message_in_conversation=is_first_message_in_conversation,
                                                                    patient_name=patient_name,
                                                                    patient_gender=patient_gender,
-                                                                   metadata=metadata,
-                                                                   auth_manager=auth_manager,
+                                                                   use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                   monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                   monitoring_proxy_headers=monitoring_proxy_headers,
                                                                    last_session_date=last_session_date):
                 yield part
 
@@ -201,18 +209,19 @@ class ChartWiseAssistant:
                 "action": BRIEFING_ACTON_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL,
+                                                                                    cache_max_age=86400, # 24 hours
+                                                                                    caching_shard_key=caching_shard_key)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -282,18 +291,19 @@ class ChartWiseAssistant:
                 "action": QUESTION_SUGGESTIONS_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL,
+                                                                                    cache_max_age=86400, # 24 hours
+                                                                                    caching_shard_key=caching_shard_key)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=True,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -365,18 +375,19 @@ class ChartWiseAssistant:
                 "action": TOPICS_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL,
+                                                                                    cache_max_age=86400, # 24 hours
+                                                                                    caching_shard_key=caching_shard_key)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=True,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -450,18 +461,19 @@ class ChartWiseAssistant:
                 "action": TOPICS_INSIGHTS_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL,
+                                                                                    cache_max_age=86400, # 24 hours
+                                                                                    caching_shard_key=caching_shard_key)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -497,18 +509,19 @@ class ChartWiseAssistant:
                 "action": ATTENDANCE_INSIGHTS_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
-                                                                     cache_configuration={
-                                                                         'cache_max_age': 86400, # 24 hours
-                                                                         'caching_shard_key': caching_shard_key,
-                                                                     },
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL,
+                                                                                    cache_max_age=86400, # 24 hours
+                                                                                    caching_shard_key=caching_shard_key)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -542,14 +555,17 @@ class ChartWiseAssistant:
                 "action": SOAP_REPORT_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -583,14 +599,17 @@ class ChartWiseAssistant:
                 "action": SUMMARIZE_CHUNK_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 
@@ -631,14 +650,17 @@ class ChartWiseAssistant:
                 "action": MINI_SUMMARY_ACTION_NAME
             }
 
-            return await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                     max_tokens=max_tokens,
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     auth_manager=auth_manager)
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
 

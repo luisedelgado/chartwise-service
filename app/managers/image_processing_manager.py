@@ -40,9 +40,9 @@ class ImageProcessingManager:
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            doc_id = await docupanda_client.upload_image(auth_manager=auth_manager,
-                                                         image_filepath=image_copy_path,
-                                                         image_filename=image.filename)
+            doc_id = await docupanda_client.upload_image(image_filepath=image_copy_path,
+                                                         image_filename=image.filename,
+                                                         use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
 
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={

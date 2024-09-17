@@ -1,21 +1,19 @@
 from abc import ABC
 from typing import Tuple
 
-from ...managers.auth_manager import AuthManager
-
 class DocupandaBaseClass(ABC):
 
     """
     Uploads an image for future textraction. Returns the job id.
 
     Arguments:
-    auth_manager – the auth manager to be leveraged internally.
     image_filepath – the local filepath for the image that will be uploaded.
     image_filename – the file name of the image that will be uploaded.
+    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
     """
-    async def upload_image(auth_manager: AuthManager,
-                           image_filepath: str,
-                           image_filename: str) -> str:
+    async def upload_image(image_filepath: str,
+                           image_filename: str,
+                           use_monitoring_proxy: bool) -> str:
         pass
 
     """

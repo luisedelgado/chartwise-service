@@ -5,14 +5,13 @@ from portkey_ai import Portkey
 from typing import Tuple
 
 from ..api.docupanda_base_class import DocupandaBaseClass
-from ...managers.auth_manager import AuthManager
 
 class DocupandaClient(DocupandaBaseClass):
 
     async def upload_image(self,
-                           auth_manager: AuthManager,
                            image_filepath: str,
-                           image_filename: str) -> str:
+                           image_filename: str,
+                           use_monitoring_proxy: bool) -> str:
         base_url = os.getenv("DOCUPANDA_BASE_URL")
         document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
         pdf_extension = "pdf"
@@ -23,7 +22,7 @@ class DocupandaClient(DocupandaBaseClass):
             "filename": file_name + pdf_extension
         }}
 
-        if auth_manager.is_monitoring_proxy_reachable():
+        if use_monitoring_proxy:
             portkey = Portkey(
                 api_key=os.environ.get("PORTKEY_API_KEY"),
                 virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),

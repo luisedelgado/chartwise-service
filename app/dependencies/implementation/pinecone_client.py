@@ -77,7 +77,7 @@ class PineconeClient(PineconeBaseClass):
                 })
 
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
-                                                                      auth_manager=auth_manager)
+                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
                 vectors.append(doc)
 
             await run_in_threadpool(vector_store.add, vectors)
@@ -126,7 +126,8 @@ class PineconeClient(PineconeBaseClass):
                                                     "-",
                                                     self.PRE_EXISTING_HISTORY_PREFIX])
                 doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
-                doc.embedding = await openai_client.create_embeddings(text=chunk_summary, auth_manager=auth_manager)
+                doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
+                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
                 doc.metadata.update({
                     "pre_existing_history_summary": chunk_summary,
                     "pre_existing_history_text": chunk_text
@@ -280,8 +281,8 @@ class PineconeClient(PineconeBaseClass):
 
         # Check if caller wants us to fetch any vectors
         if query_top_k > 0:
-            embeddings = await openai_client.create_embeddings(auth_manager=auth_manager,
-                                                               text=query_input)
+            embeddings = await openai_client.create_embeddings(text=query_input,
+                                                               use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
             query_result = index.query(vector=embeddings,
                                        top_k=query_top_k,
                                        namespace=namespace,
@@ -304,12 +305,21 @@ class PineconeClient(PineconeBaseClass):
 
         # Check if caller wants us to rerank any vectors
         if rerank_top_n > 0:
-            reranked_response_results = await openai_client.rerank_documents(auth_manager=auth_manager,
-                                                                             documents=retrieved_docs,
+            metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "query_top_k": len(retrieved_docs),
+                "rerank_top_n": rerank_top_n,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            reranked_response_results = await openai_client.rerank_documents(documents=retrieved_docs,
                                                                              top_n=rerank_top_n,
                                                                              query_input=query_input,
-                                                                             session_id=session_id,
-                                                                             user_id=user_id)
+                                                                             use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                             monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                             monitoring_proxy_headers=monitoring_proxy_headers)
             reranked_context = ""
             reranked_documents = reranked_response_results['reranked_documents']
             dates_contained = []

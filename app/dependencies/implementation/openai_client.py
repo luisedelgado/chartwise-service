@@ -2,7 +2,7 @@ import asyncio
 import os
 import tiktoken
 
-from typing import AsyncIterable, Awaitable
+from typing import AsyncIterable, Awaitable, Mapping
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage, SystemMessage
@@ -13,33 +13,21 @@ from openai.types import Completion
 from portkey_ai import Portkey
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
-from ...managers.auth_manager import AuthManager
 from ...vectors.message_templates import PromptCrafter, PromptScenario
 
 class OpenAIClient(OpenAIBaseClass):
 
-    LLM_MODEL = "gpt-4o-mini"
-    EMBEDDING_MODEL = "text-embedding-3-small"
-    RERANK_ACTION_NAME = "rerank_vectors"
-
     async def trigger_async_chat_completion(self,
-                                            metadata: dict,
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
-                                            auth_manager: AuthManager,
-                                            cache_configuration: dict = None):
+                                            use_monitoring_proxy: bool,
+                                            monitoring_proxy_headers: Mapping = None,
+                                            monitoring_proxy_url: str = None):
         try:
-            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
-
-            if is_monitoring_proxy_reachable:
-                api_base = auth_manager.get_monitoring_proxy_url()
-                cache_max_age = None if (cache_configuration is None or 'cache_max_age' not in cache_configuration) else cache_configuration['cache_max_age']
-                caching_shard_key = None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration) else cache_configuration['caching_shard_key']
-                proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                             caching_shard_key=caching_shard_key,
-                                                                             cache_max_age=cache_max_age,
-                                                                             llm_model=self.LLM_MODEL)
+            if use_monitoring_proxy:
+                api_base = monitoring_proxy_url
+                proxy_headers = monitoring_proxy_headers
             else:
                 api_base = None
                 proxy_headers = None
@@ -74,16 +62,16 @@ class OpenAIClient(OpenAIBaseClass):
                                      is_first_message_in_conversation: bool,
                                      patient_name: str,
                                      patient_gender: str,
-                                     metadata: dict,
-                                     auth_manager: AuthManager,
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_headers: Mapping = None,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         try:
-            is_monitoring_proxy_reachable = auth_manager.is_monitoring_proxy_reachable()
+            if use_monitoring_proxy:
+                assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url"
 
-            if is_monitoring_proxy_reachable:
-                api_base = auth_manager.get_monitoring_proxy_url()
-                proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                             llm_model=self.LLM_MODEL)
+                api_base = monitoring_proxy_url
+                proxy_headers = monitoring_proxy_headers
             else:
                 api_base = None
                 proxy_headers = None
@@ -173,9 +161,9 @@ class OpenAIClient(OpenAIBaseClass):
         return flattened_chat_history
 
     async def create_embeddings(self,
-                                auth_manager: AuthManager,
-                                text: str):
-        if auth_manager.is_monitoring_proxy_reachable():
+                                text: str,
+                                use_monitoring_proxy: bool):
+        if use_monitoring_proxy:
             portkey = Portkey(
                 api_key=os.environ.get("PORTKEY_API_KEY"),
                 virtual_key=os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
@@ -200,12 +188,12 @@ class OpenAIClient(OpenAIBaseClass):
             return embeddings
 
     async def rerank_documents(self,
-                               auth_manager: AuthManager,
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str,
-                               user_id: str):
+                               use_monitoring_proxy: bool,
+                               monitoring_proxy_url: str = None,
+                               monitoring_proxy_headers: Mapping = None):
         try:
             context = ""
             for document in documents:
@@ -220,23 +208,15 @@ class OpenAIClient(OpenAIBaseClass):
                                                                            top_n=top_n)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-
-            metadata = {
-                "action": self.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "query_top_k": len(documents),
-                "rerank_top_n": top_n,
-                "user_id": user_id
-            }
-
-            response = await self.trigger_async_chat_completion(metadata=metadata,
-                                                                max_tokens=max_tokens,
+            response = await self.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                 messages=[
                                                                     {"role": "system", "content": system_prompt},
                                                                     {"role": "user", "content": user_prompt},
                                                                 ],
                                                                 expects_json_response=True,
-                                                                auth_manager=auth_manager)
+                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                monitoring_proxy_url=monitoring_proxy_url)
             assert "reranked_documents" in response
             return response
         except Exception as e:

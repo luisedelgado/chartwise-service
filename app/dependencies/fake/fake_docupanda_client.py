@@ -1,7 +1,6 @@
 from typing import Tuple
 
 from ..api.docupanda_base_class import DocupandaBaseClass
-from ...managers.auth_manager import AuthManager
 
 class FakeDocupandaClient(DocupandaBaseClass):
 
@@ -9,9 +8,9 @@ class FakeDocupandaClient(DocupandaBaseClass):
     return_processing_status_code = False
 
     async def upload_image(self,
-                           auth_manager: AuthManager,
                            image_filepath: str,
-                           image_filename: str) -> str:
+                           image_filename: str,
+                           use_monitoring_proxy: bool) -> str:
         return "Fake ID"
 
     async def retrieve_text_from_document(self, document_id) -> Tuple[int, str]:

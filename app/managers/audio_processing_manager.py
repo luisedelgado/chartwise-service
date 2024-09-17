@@ -215,14 +215,17 @@ class AudioProcessingManager:
                                                                               therapist_id=therapist_id,
                                                                               session_id=session_id)
             else:
-                session_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                                    max_tokens=max_tokens,
+                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                        llm_model=openai_client.LLM_MODEL)
+                session_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                                     messages=[
                                                                                         {"role": "system", "content": system_prompt},
                                                                                         {"role": "user", "content": user_prompt},
                                                                                     ],
                                                                                     expects_json_response=False,
-                                                                                    auth_manager=auth_manager)
+                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                    monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
@@ -458,14 +461,17 @@ class AudioProcessingManager:
 
                 prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-                current_chunk_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
-                                                                                max_tokens=max_tokens,
-                                                                                messages=[
-                                                                                    {"role": "system", "content": summarize_chunk_system_prompt},
-                                                                                    {"role": "user", "content": user_prompt},
-                                                                                ],
-                                                                                expects_json_response=False,
-                                                                                auth_manager=auth_manager)
+                monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                        llm_model=openai_client.LLM_MODEL)
+                current_chunk_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+                                                                                          messages=[
+                                                                                              {"role": "system", "content": summarize_chunk_system_prompt},
+                                                                                              {"role": "user", "content": user_prompt},
+                                                                                          ],
+                                                                                          expects_json_response=False,
+                                                                                          use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                          monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                                          monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
                 chunk_summaries.append(current_chunk_summary)
 
             assert len(chunk_summaries or '') > 0, "No chunked summaries available to create a grand summary for incoming (large) diarization"
@@ -476,19 +482,24 @@ class AudioProcessingManager:
                                                                                      diarization=grand_summary_raw)
             prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
-            grand_summary = await openai_client.trigger_async_chat_completion(metadata={
-                                                                                "user_id": therapist_id,
-                                                                                "patient_id": patient_id,
-                                                                                "session_id": str(session_id),
-                                                                                "action": self.DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
-                                                                              },
-                                                                              max_tokens=max_tokens,
+
+            metadata = {
+                "user_id": therapist_id,
+                "patient_id": patient_id,
+                "session_id": str(session_id),
+                "action": self.DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            grand_summary = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                               messages=[
                                                                                   {"role": "system", "content": grand_summary_system_prompt},
                                                                                   {"role": "user", "content": grand_summary_user_prompt},
                                                                               ],
                                                                               expects_json_response=False,
-                                                                              auth_manager=auth_manager)
+                                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                              monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             return grand_summary
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,

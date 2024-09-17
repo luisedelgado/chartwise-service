@@ -1,9 +1,9 @@
 import asyncio
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
-from langchain.schema import HumanMessage, SystemMessage
+from langchain.schema import HumanMessage
 from langchain_core.messages.ai import AIMessage
-from typing import AsyncIterable, Awaitable
+from typing import AsyncIterable, Awaitable, Mapping
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ...managers.auth_manager import AuthManager
@@ -46,12 +46,12 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self._chat = FakeOpenAIChat(completions_return_data=True)
 
     async def trigger_async_chat_completion(self,
-                                            metadata: dict,
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
-                                            auth_manager: AuthManager,
-                                            cache_configuration: dict = None):
+                                            use_monitoring_proxy: bool,
+                                            monitoring_proxy_headers: Mapping = None,
+                                            monitoring_proxy_url: str = None):
         if self.throws_exception:
             raise Exception("Fake exception")
 
@@ -68,8 +68,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                      is_first_message_in_conversation: bool,
                                      patient_name: str,
                                      patient_gender: str,
-                                     metadata: dict,
-                                     auth_manager: AuthManager,
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_headers: Mapping = None,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
                 try:
@@ -105,17 +106,17 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         pass
 
     async def create_embeddings(self,
-                                auth_manager: AuthManager,
-                                text: str):
+                                text: str,
+                                use_monitoring_proxy: bool):
         return [""]
 
     async def rerank_documents(self,
-                               auth_manager: AuthManager,
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               session_id: str,
-                               user_id: str):
+                               use_monitoring_proxy: bool,
+                               monitoring_proxy_url: str = None,
+                               monitoring_proxy_headers: Mapping = None):
         pass
 
     @property
