@@ -9,12 +9,12 @@ from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 from starlette.concurrency import run_in_threadpool
+from typing import Mapping
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
 from ...internal.utilities import datetime_handler
-from ...managers.auth_manager import AuthManager
 from ...vectors import data_cleaner
 from ...vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -32,9 +32,10 @@ class PineconeClient(PineconeBaseClass):
                                      patient_id: str,
                                      text: str,
                                      session_report_id: str,
-                                     session_id: str,
-                                     auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_headers: Mapping = None,
+                                     monitoring_proxy_url: str = None,
                                      therapy_session_date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -60,10 +61,10 @@ class PineconeClient(PineconeBaseClass):
                 doc.set_content(chunk_text)
 
                 chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
-                                                                               therapist_id=user_id,
-                                                                               auth_manager=auth_manager,
                                                                                openai_client=openai_client,
-                                                                               session_id=session_id)
+                                                                               use_monitoring_proxy=use_monitoring_proxy,
+                                                                               monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                               monitoring_proxy_url=monitoring_proxy_url)
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -77,7 +78,7 @@ class PineconeClient(PineconeBaseClass):
                 })
 
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
-                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
+                                                                      use_monitoring_proxy=use_monitoring_proxy)
                 vectors.append(doc)
 
             await run_in_threadpool(vector_store.add, vectors)
@@ -91,9 +92,10 @@ class PineconeClient(PineconeBaseClass):
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
-                                                 session_id: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 auth_manager: AuthManager):
+                                                 use_monitoring_proxy: bool,
+                                                 monitoring_proxy_url: str = None,
+                                                 monitoring_proxy_headers: Mapping = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self.pc.Index(bucket_index)
@@ -116,10 +118,10 @@ class PineconeClient(PineconeBaseClass):
                 doc.set_content(chunk_text)
 
                 chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
-                                                                               therapist_id=user_id,
-                                                                               auth_manager=auth_manager,
                                                                                openai_client=openai_client,
-                                                                               session_id=session_id)
+                                                                               use_monitoring_proxy=use_monitoring_proxy,
+                                                                               monitoring_proxy_headers=monitoring_proxy_headers,
+                                                                               monitoring_proxy_url=monitoring_proxy_url)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -127,7 +129,7 @@ class PineconeClient(PineconeBaseClass):
                                                     self.PRE_EXISTING_HISTORY_PREFIX])
                 doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
-                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
+                                                                      use_monitoring_proxy=use_monitoring_proxy)
                 doc.metadata.update({
                     "pre_existing_history_summary": chunk_summary,
                     "pre_existing_history_text": chunk_text
@@ -198,10 +200,11 @@ class PineconeClient(PineconeBaseClass):
                                      text: str,
                                      old_date: str,
                                      new_date: str,
-                                     session_id: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager):
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_headers: Mapping = None):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -210,13 +213,14 @@ class PineconeClient(PineconeBaseClass):
 
             # Insert the fresh data
             await self.insert_session_vectors(user_id=user_id,
-                                              patient_id=patient_id,
-                                              text=text,
-                                              therapy_session_date=new_date,
-                                              session_id=session_id,
-                                              session_report_id=session_report_id,
-                                              openai_client=openai_client,
-                                              auth_manager=auth_manager)
+                                            patient_id=patient_id,
+                                            text=text,
+                                            session_report_id=session_report_id,
+                                            openai_client=openai_client,
+                                            use_monitoring_proxy=use_monitoring_proxy,
+                                            monitoring_proxy_headers=monitoring_proxy_headers,
+                                            monitoring_proxy_url=monitoring_proxy_url,
+                                            therapy_session_date=new_date)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
@@ -226,9 +230,10 @@ class PineconeClient(PineconeBaseClass):
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
-                                                 session_id: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 auth_manager: AuthManager):
+                                                 use_monitoring_proxy: bool,
+                                                 monitoring_proxy_url: str = None,
+                                                 monitoring_proxy_headers: Mapping = None):
         try:
             # Delete the outdated data
             self.delete_preexisting_history_vectors(user_id=user_id,
@@ -238,23 +243,25 @@ class PineconeClient(PineconeBaseClass):
             await self.insert_preexisting_history_vectors(user_id=user_id,
                                                           patient_id=patient_id,
                                                           text=text,
-                                                          session_id=session_id,
                                                           openai_client=openai_client,
-                                                          auth_manager=auth_manager)
+                                                          use_monitoring_proxy=use_monitoring_proxy,
+                                                          monitoring_proxy_url=monitoring_proxy_url,
+                                                          monitoring_proxy_headers=monitoring_proxy_headers)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
             raise Exception(str(e))
 
     async def get_vector_store_context(self,
-                                       auth_manager: AuthManager,
                                        openai_client: OpenAIBaseClass,
                                        query_input: str,
                                        user_id: str,
                                        patient_id: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
-                                       session_id: str,
+                                       use_monitoring_proxy: bool,
+                                       monitoring_proxy_url: str = None,
+                                       monitoring_proxy_headers: Mapping = None,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         missing_session_data_error = ("There's no data from patient sessions. "
@@ -282,7 +289,7 @@ class PineconeClient(PineconeBaseClass):
         # Check if caller wants us to fetch any vectors
         if query_top_k > 0:
             embeddings = await openai_client.create_embeddings(text=query_input,
-                                                               use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
+                                                               use_monitoring_proxy=use_monitoring_proxy)
             query_result = index.query(vector=embeddings,
                                        top_k=query_top_k,
                                        namespace=namespace,
@@ -305,20 +312,11 @@ class PineconeClient(PineconeBaseClass):
 
         # Check if caller wants us to rerank any vectors
         if rerank_top_n > 0:
-            metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "query_top_k": len(retrieved_docs),
-                "rerank_top_n": rerank_top_n,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                                    llm_model=openai_client.LLM_MODEL)
             reranked_response_results = await openai_client.rerank_documents(documents=retrieved_docs,
                                                                              top_n=rerank_top_n,
                                                                              query_input=query_input,
-                                                                             use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                             monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                             use_monitoring_proxy=use_monitoring_proxy,
+                                                                             monitoring_proxy_url=monitoring_proxy_url,
                                                                              monitoring_proxy_headers=monitoring_proxy_headers)
             reranked_context = ""
             reranked_documents = reranked_response_results['reranked_documents']

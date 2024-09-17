@@ -1,9 +1,9 @@
 from pinecone import Index
+from typing import Mapping
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ..api.pinecone_base_class import PineconeBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
-from ...managers.auth_manager import AuthManager
 
 class FakePineconeClient(PineconeBaseClass):
 
@@ -18,9 +18,10 @@ class FakePineconeClient(PineconeBaseClass):
                                      patient_id: str,
                                      text: str,
                                      session_report_id: str,
-                                     session_id: str,
-                                     auth_manager: AuthManager,
                                      openai_client: OpenAIBaseClass,
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_headers: Mapping = None,
+                                     monitoring_proxy_url: str = None,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
 
@@ -28,9 +29,10 @@ class FakePineconeClient(PineconeBaseClass):
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
-                                                 session_id: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 auth_manager: AuthManager):
+                                                 use_monitoring_proxy: bool,
+                                                 monitoring_proxy_url: str = None,
+                                                 monitoring_proxy_headers: Mapping = None):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
     def delete_session_vectors(self,
@@ -50,30 +52,33 @@ class FakePineconeClient(PineconeBaseClass):
                                      text: str,
                                      old_date: str,
                                      new_date: str,
-                                     session_id: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     auth_manager: AuthManager):
+                                     use_monitoring_proxy: bool,
+                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_headers: Mapping = None):
         pass
 
     async def update_preexisting_history_vectors(self,
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
-                                                 session_id: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 auth_manager: AuthManager):
+                                                 use_monitoring_proxy: bool,
+                                                 monitoring_proxy_url: str = None,
+                                                 monitoring_proxy_headers: Mapping = None):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
     async def get_vector_store_context(self,
-                                       auth_manager: AuthManager,
                                        openai_client: OpenAIBaseClass,
                                        query_input: str,
                                        user_id: str,
                                        patient_id: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
-                                       session_id: str,
+                                       use_monitoring_proxy: bool,
+                                       monitoring_proxy_url: str = None,
+                                       monitoring_proxy_headers: Mapping = None,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         if not self.vector_store_context_returns_data:

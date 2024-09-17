@@ -1,7 +1,7 @@
 import tiktoken
 
 from datetime import datetime
-from typing import AsyncIterable
+from typing import AsyncIterable, Mapping
 
 from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
@@ -104,14 +104,24 @@ class ChartWiseAssistant:
                                                                                 monitoring_proxy_headers=monitoring_proxy_headers,
                                                                                 monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     query_input=query_input,
+            query_store_rerank_top_n = 3
+            metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "rerank_top_n": query_store_rerank_top_n,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=10,
-                                                                     rerank_top_n=3,
-                                                                     session_id=session_id,
+                                                                     rerank_top_n=query_store_rerank_top_n,
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
@@ -172,15 +182,26 @@ class ChartWiseAssistant:
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                 patient_id=patient_id,
                                                                                 n=BRIEFING_CONTEXT_SESSIONS_CAP)
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     openai_client=openai_client,
-                                                                     query_input=query_input,
+
+            reranking_metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "rerank_top_n": 0,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=reranking_metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
+                                                                     openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
-                                                                     session_id=session_id,
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=session_dates_override)
+
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
                                                                        language_code=language_code,
@@ -199,7 +220,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (patient_id + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            metadata = {
+            completion_metadata = {
                 "environment": environment,
                 "user_id": user_id,
                 "patient_id": patient_id,
@@ -209,7 +230,7 @@ class ChartWiseAssistant:
                 "action": BRIEFING_ACTON_NAME
             }
 
-            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=completion_metadata,
                                                                                     llm_model=openai_client.LLM_MODEL,
                                                                                     cache_max_age=86400, # 24 hours
                                                                                     caching_shard_key=caching_shard_key)
@@ -258,14 +279,24 @@ class ChartWiseAssistant:
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                 patient_id=patient_id,
                                                                                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP)
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     openai_client=openai_client,
-                                                                     query_input=query_input,
+
+            reranking_metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "rerank_top_n": 0,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=reranking_metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
-                                                                     session_id=session_id,
+                                                                     openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -281,7 +312,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (patient_id + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            metadata = {
+            completion_metadata = {
                 "environment": environment,
                 "user_id": user_id,
                 "patient_id": patient_id,
@@ -291,7 +322,7 @@ class ChartWiseAssistant:
                 "action": QUESTION_SUGGESTIONS_ACTION_NAME
             }
 
-            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=completion_metadata,
                                                                                     llm_model=openai_client.LLM_MODEL,
                                                                                     cache_max_age=86400, # 24 hours
                                                                                     caching_shard_key=caching_shard_key)
@@ -341,14 +372,24 @@ class ChartWiseAssistant:
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     query_input=query_input,
-                                                                     openai_client=openai_client,
+
+            reranking_metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "rerank_top_n": 0,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=reranking_metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
-                                                                     session_id=session_id,
+                                                                     openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
@@ -427,14 +468,24 @@ class ChartWiseAssistant:
             session_dates_override = self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
-            context = await pinecone_client.get_vector_store_context(auth_manager=auth_manager,
-                                                                     query_input=query_input,
-                                                                     openai_client=openai_client,
+
+            reranking_metadata = {
+                "action": openai_client.RERANK_ACTION_NAME,
+                "session_id": str(session_id),
+                "rerank_top_n": 0,
+                "user_id": user_id
+            }
+            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=reranking_metadata,
+                                                                                    llm_model=openai_client.LLM_MODEL)
+            context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
-                                                                     session_id=session_id,
+                                                                     openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
@@ -574,17 +625,17 @@ class ChartWiseAssistant:
 
     Arguments:
     chunk_text – the text associated with the incoming chunk.
-    therapist_id – the therapist_id.
-    auth_manager – the auth manager to be leveraged internally.
     openai_client – the openai client to be leveraged internally.
-    session_id – the session id.
+    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
+    monitoring_proxy_headers – the optional monitoring proxy headers.
+    monitoring_proxy_url – the optional url for the monitoring proxy.
     """
     async def summarize_chunk(self,
                               chunk_text: str,
-                              therapist_id: str,
-                              auth_manager: AuthManager,
                               openai_client: OpenAIBaseClass,
-                              session_id: str) -> str:
+                              use_monitoring_proxy: bool,
+                              monitoring_proxy_headers: Mapping = None,
+                              monitoring_proxy_url: str = None) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.CHUNK_SUMMARY,
@@ -593,23 +644,15 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            metadata = {
-                "user_id": therapist_id,
-                "session_id": str(session_id),
-                "action": SUMMARIZE_CHUNK_ACTION_NAME
-            }
-
-            monitoring_proxy_headers = auth_manager.create_monitoring_proxy_headers(metadata=metadata,
-                                                                                    llm_model=openai_client.LLM_MODEL)
             return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
-                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                     use_monitoring_proxy=use_monitoring_proxy,
                                                                      monitoring_proxy_headers=monitoring_proxy_headers,
-                                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                     monitoring_proxy_url=monitoring_proxy_url)
         except Exception as e:
             raise Exception(e)
 
