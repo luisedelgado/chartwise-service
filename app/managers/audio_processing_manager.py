@@ -147,8 +147,9 @@ class AudioProcessingManager:
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            diarization = await deepgram_client.diarize_audio(auth_manager=auth_manager,
-                                                              file_full_path=audio_copy_result.file_copy_full_path)
+            diarization = await deepgram_client.diarize_audio(file_full_path=audio_copy_result.file_copy_full_path,
+                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             update_body = {
                 "id": session_report_id,
                 "diarization": diarization,
@@ -295,13 +296,15 @@ class AudioProcessingManager:
                                          template: SessionNotesTemplate,
                                          files_to_clean: list):
         try:
-            transcription = await deepgram_client.transcribe_audio(auth_manager=auth_manager,
-                                                                   therapist_id=therapist_id,
-                                                                   session_id=session_id,
-                                                                   file_full_path=audio_copy_result.file_copy_full_path,
-                                                                   openai_client=openai_client,
-                                                                   assistant_manager=assistant_manager,
-                                                                   template=template)
+            transcription = await deepgram_client.transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path,
+                                                                   use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                   monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+            if template == SessionNotesTemplate.SOAP:
+                transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
+                                                                                    openai_client=openai_client,
+                                                                                    therapist_id=therapist_id,
+                                                                                    session_notes_text=transcription,
+                                                                                    session_id=session_id)
 
             update_body = {
                 "id": session_report_id,

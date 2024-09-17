@@ -5,7 +5,7 @@ from .dependencies.implementation.docupanda_client import DocupandaClient
 from .dependencies.implementation.openai_client import OpenAIClient
 from .dependencies.implementation.pinecone_client import PineconeClient
 from .dependencies.implementation.supabase_client_factory import SupabaseClientFactory
-from .internal.router_dependencies import DependencyContainer
+from .internal.dependency_container import DependencyContainer
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter

@@ -14,7 +14,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.router_dependencies import DependencyContainer
+from ..internal.dependency_container import DependencyContainer
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,

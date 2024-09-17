@@ -12,7 +12,7 @@ from langcodes import Language
 from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
-from ..internal import router_dependencies, security
+from ..internal import dependency_container, security
 from ..internal.logging import Logger
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
@@ -60,7 +60,7 @@ class SecurityRouter:
     def __init__(self,
                  auth_manager: AuthManager,
                  assistant_manager: AssistantManager,
-                 router_dependencies: router_dependencies.DependencyContainer):
+                 router_dependencies: dependency_container.DependencyContainer):
         self._auth_manager = auth_manager
         self._assistant_manager = assistant_manager
         self._supabase_client_factory = router_dependencies.supabase_client_factory

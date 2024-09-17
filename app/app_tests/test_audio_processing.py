@@ -7,7 +7,7 @@ from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..internal.router_dependencies import DependencyContainer
+from ..internal.dependency_container import DependencyContainer
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager

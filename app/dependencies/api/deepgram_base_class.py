@@ -1,12 +1,7 @@
 from abc import ABC
-from fastapi import BackgroundTasks
-from typing import Tuple
 
 from .templates import SessionNotesTemplate
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
-from ...dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
-from ...managers.assistant_manager import AssistantManager
-from ...managers.auth_manager import AuthManager
 
 class DeepgramBaseClass(ABC):
 
@@ -14,32 +9,24 @@ class DeepgramBaseClass(ABC):
     Transcribes an audio file, and returns the text.
 
     Arguments:
-    auth_manager – the auth manager to be leveraged internally.
-    therapist_id – the therapist id associated with the operation.
-    session_id – the session id.
-    file_full_path – the local file copy's full path.
-    openai_client – the openai client to be used internally.
-    assistant_manager – the assistant manager to be leveraged internally.
-    template – the template to be applied to the output.
-    diarize – flag indicating whether the audio should be diarized or not.
+    file_full_path – the audio file's full path.
+    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
+    monitoring_proxy_url – the optional url for the monitoring proxy.
     """
-    async def transcribe_audio(auth_manager: AuthManager,
-                               therapist_id: str,
-                               session_id: str,
-                               file_full_path: str,
-                               openai_client: OpenAIBaseClass,
-                               assistant_manager: AssistantManager,
-                               template: SessionNotesTemplate,
-                               diarize: bool = False) -> str:
+    async def transcribe_audio(file_full_path: str,
+                               use_monitoring_proxy: bool,
+                               monitoring_proxy_url: str = None) -> str:
         pass
 
     """
     Diarizes an audio file based on the incoming data.
 
     Arguments:
-    auth_manager – the auth manager to be leveraged internally.
     file_full_path – the audio file's full path.
+    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
+    monitoring_proxy_url – the optional url for the monitoring proxy.
     """
-    async def diarize_audio(auth_manager: AuthManager,
-                            file_full_path: str):
+    async def diarize_audio(file_full_path: str,
+                            use_monitoring_proxy: bool,
+                            monitoring_proxy_url: str = None):
         pass

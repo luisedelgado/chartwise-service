@@ -13,21 +13,22 @@ from ..api.templates import SessionNotesTemplate
 from ...data_processing.diarization_cleaner import DiarizationCleaner
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...internal.utilities import general_utilities
-from ...managers.assistant_manager import AssistantManager
-from ...managers.auth_manager import AuthManager
 
 class DeepgramClient(DeepgramBaseClass):
 
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
     async def diarize_audio(self,
-                            auth_manager: AuthManager,
-                            file_full_path: str) -> str:
-        if auth_manager.is_monitoring_proxy_reachable():
+                            file_full_path: str,
+                            use_monitoring_proxy: bool,
+                            monitoring_proxy_url: str = None) -> str:
+        if use_monitoring_proxy:
             try:
+                assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
+
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
-                portkey_gateway_url = auth_manager.get_monitoring_proxy_url()
+                portkey_gateway_url = monitoring_proxy_url
 
                 headers = {
                     "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
@@ -95,18 +96,16 @@ class DeepgramClient(DeepgramBaseClass):
         return diarization
 
     async def transcribe_audio(self,
-                               auth_manager: AuthManager,
-                               therapist_id: str,
-                               session_id: str,
                                file_full_path: str,
-                               openai_client: OpenAIBaseClass,
-                               assistant_manager: AssistantManager,
-                               template: SessionNotesTemplate) -> str:
-        if auth_manager.is_monitoring_proxy_reachable():
+                               use_monitoring_proxy: bool,
+                               monitoring_proxy_url: str = None) -> str:
+        if use_monitoring_proxy:
             try:
+                assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
+
                 custom_host_url = os.environ.get("DG_URL")
                 listen_endpoint = os.environ.get("DG_LISTEN_ENDPOINT")
-                portkey_gateway_url = auth_manager.get_monitoring_proxy_url()
+                portkey_gateway_url = monitoring_proxy_url
 
                 headers = {
                     "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
@@ -166,12 +165,4 @@ class DeepgramClient(DeepgramBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
 
-        if template == SessionNotesTemplate.FREE_FORM:
-            return transcript
-
-        assert template == SessionNotesTemplate.SOAP, f"Unexpected template: {template}"
-        return await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                   openai_client=openai_client,
-                                                                   therapist_id=therapist_id,
-                                                                   session_notes_text=transcript,
-                                                                   session_id=session_id)
+        return transcript
