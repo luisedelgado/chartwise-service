@@ -10,6 +10,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
 from ..internal.security import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
+from ..internal.utilities.general_utilities import create_monitoring_proxy_config
 
 class AuthManager:
 
@@ -143,25 +144,6 @@ class AuthManager:
         except:
             return False
 
-    def create_monitoring_proxy_config(self, llm_model, cache_max_age = None):
-        config = {
-            "provider": "openai",
-            "virtual_key": os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
-            "retry": {
-                "attempts": 2,
-            },
-            "override_params": {
-                "model": llm_model,
-                "temperature": 0,
-            }
-        }
-        if cache_max_age is not None:
-            config["cache"] = {
-                "mode": "semantic",
-                "max_age": cache_max_age,
-            }
-        return config
-
     def create_monitoring_proxy_headers(self, **kwargs):
         caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
         cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
@@ -169,15 +151,15 @@ class AuthManager:
         metadata = None if "metadata" not in kwargs else kwargs["metadata"]
 
         if cache_max_age is not None and caching_shard_key is not None:
-            monitoring_proxy_config = self.create_monitoring_proxy_config(cache_max_age=cache_max_age,
-                                                                          llm_model=llm_model)
+            monitoring_proxy_config = create_monitoring_proxy_config(cache_max_age=cache_max_age,
+                                                                     llm_model=llm_model)
             return createHeaders(trace_id=uuid.uuid4(),
                                  api_key=os.environ.get("PORTKEY_API_KEY"),
                                  config=monitoring_proxy_config,
                                  cache_namespace=caching_shard_key,
                                  metadata=metadata)
 
-        monitoring_proxy_config = self.create_monitoring_proxy_config(llm_model=llm_model)
+        monitoring_proxy_config = create_monitoring_proxy_config(llm_model=llm_model)
         return createHeaders(trace_id=uuid.uuid4(),
                              api_key=os.environ.get("PORTKEY_API_KEY"),
                              config=monitoring_proxy_config,

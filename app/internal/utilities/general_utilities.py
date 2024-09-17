@@ -1,3 +1,5 @@
+import os
+
 from fastapi import HTTPException, status
 from pytz import timezone
 
@@ -63,3 +65,25 @@ def map_language_code_to_language(language_code: str):
         return "es"
     else:
         raise Exception ("Untracked language code")
+
+"""
+Creates a proxy config for the monitoring layer.
+"""
+def create_monitoring_proxy_config(llm_model, cache_max_age = None):
+        config = {
+            "provider": "openai",
+            "virtual_key": os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
+            "retry": {
+                "attempts": 2,
+            },
+            "override_params": {
+                "model": llm_model,
+                "temperature": 0,
+            }
+        }
+        if cache_max_age is not None:
+            config["cache"] = {
+                "mode": "semantic",
+                "max_age": cache_max_age,
+            }
+        return config
