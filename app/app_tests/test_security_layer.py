@@ -25,6 +25,7 @@ class TestingHarnessSecurityRouter:
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
         dependency_container._supabase_client_factory = None
+        dependency_container._testing_environment = "testing"
 
         self.fake_supabase_admin_client:FakeSupabaseClient = dependency_container.get_supabase_client_factory().supabase_admin_client()
         self.fake_openai_client:FakeAsyncOpenAI = dependency_container.get_openai_client()

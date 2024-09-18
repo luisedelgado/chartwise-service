@@ -24,6 +24,7 @@ class TestingHarnessAssistantRouter:
         dependency_container._docupanda_client = None
         dependency_container._deepgram_client = None
         dependency_container._supabase_client_factory = None
+        dependency_container._testing_environment = "testing"
 
         self.fake_openai_client = dependency_container.get_openai_client()
         self.fake_supabase_admin_client = dependency_container.get_supabase_client_factory().supabase_admin_client()

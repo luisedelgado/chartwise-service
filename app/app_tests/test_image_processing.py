@@ -28,6 +28,7 @@ class TestingHarnessImageProcessingRouter:
         dependency_container._pinecone_client = None
         dependency_container._docupanda_client = None
         dependency_container._supabase_client_factory = None
+        dependency_container._testing_environment = "testing"
 
         self.fake_openai_client = dependency_container.get_openai_client()
         self.fake_docupanda_client = dependency_container.get_docupanda_client()
