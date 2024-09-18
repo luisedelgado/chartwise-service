@@ -378,9 +378,10 @@ class AssistantManager:
         try:
             soap_report = await self.chartwise_assistant.create_soap_report(text=session_notes_text,
                                                                             therapist_id=therapist_id,
-                                                                            auth_manager=auth_manager,
                                                                             openai_client=openai_client,
-                                                                            session_id=session_id)
+                                                                            session_id=session_id,
+                                                                            use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                            monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -469,9 +470,10 @@ class AssistantManager:
                                                                    session_id=session_id,
                                                                    method=api_method,
                                                                    environment=environment,
-                                                                   auth_manager=auth_manager,
                                                                    openai_client=openai_client,
                                                                    pinecone_client=pinecone_client,
+                                                                   use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                   monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                                    session_date_override=session_date_override):
                 yield part
         except Exception as e:
@@ -507,12 +509,13 @@ class AssistantManager:
                                                                                         user_id=therapist_id,
                                                                                         patient_id=patient_id,
                                                                                         environment=environment,
-                                                                                        auth_manager=auth_manager,
                                                                                         openai_client=openai_client,
                                                                                         supabase_client=supabase_client,
                                                                                         pinecone_client=pinecone_client,
                                                                                         patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                                        patient_gender=patient_gender)
+                                                                                        patient_gender=patient_gender,
+                                                                                        use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                        monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             question_suggestions_query = supabase_client.select(fields="*",
@@ -595,10 +598,11 @@ class AssistantManager:
                                                                       therapist_name=therapist_name,
                                                                       therapist_gender=therapist_gender,
                                                                       session_number=session_number,
-                                                                      auth_manager=auth_manager,
                                                                       openai_client=openai_client,
                                                                       supabase_client=supabase_client,
-                                                                      pinecone_client=pinecone_client)
+                                                                      pinecone_client=pinecone_client,
+                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
             briefing_query = supabase_client.select(fields="*",
                                                     filters={
@@ -671,9 +675,10 @@ class AssistantManager:
                                                                                     pinecone_client=pinecone_client,
                                                                                     supabase_client=supabase_client,
                                                                                     openai_client=openai_client,
-                                                                                    auth_manager=auth_manager,
                                                                                     patient_name=patient_full_name,
-                                                                                    patient_gender=patient_gender)
+                                                                                    patient_gender=patient_gender,
+                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
             if generate_insights:
@@ -688,7 +693,9 @@ class AssistantManager:
                                                                                                 supabase_client=supabase_client,
                                                                                                 openai_client=openai_client,
                                                                                                 pinecone_client=pinecone_client,
-                                                                                                auth_manager=auth_manager)
+                                                                                                auth_manager=auth_manager,
+                                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             else:
                 topics_insights = None
 
@@ -1245,7 +1252,7 @@ class AssistantManager:
                                                       notes_text: str,
                                                       therapist_id: str,
                                                       language_code: str,
-                                                      auth_manager: str,
+                                                      auth_manager: AuthManager,
                                                       openai_client: str,
                                                       session_id: str,
                                                       environment: str,
@@ -1258,10 +1265,11 @@ class AssistantManager:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
-                                                                                      auth_manager=auth_manager,
                                                                                       openai_client=openai_client,
                                                                                       session_id=session_id,
-                                                                                      patient_id=patient_id)
+                                                                                      patient_id=patient_id,
+                                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             await self.update_session(language_code=language_code,
                                       logger_worker=logger_worker,
                                       environment=environment,
