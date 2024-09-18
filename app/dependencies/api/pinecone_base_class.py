@@ -30,7 +30,7 @@ class PineconeBaseClass(ABC):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      therapy_session_date: str = None):
         pass
 
@@ -53,7 +53,7 @@ class PineconeBaseClass(ABC):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         pass
 
     """
@@ -103,7 +103,7 @@ class PineconeBaseClass(ABC):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None):
+                                     monitoring_proxy_url: str):
         pass
 
     """
@@ -124,7 +124,7 @@ class PineconeBaseClass(ABC):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         pass
 
     """
@@ -151,7 +151,7 @@ class PineconeBaseClass(ABC):
                                        rerank_top_n: int,
                                        session_id: str,
                                        use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str = None,
+                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         pass

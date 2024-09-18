@@ -25,7 +25,7 @@ class OpenAIClient(OpenAIBaseClass):
                                             expects_json_response: bool,
                                             use_monitoring_proxy: bool,
                                             cache_configuration: dict = None,
-                                            monitoring_proxy_url: str = None):
+                                            monitoring_proxy_url: str):
         try:
             if use_monitoring_proxy:
                 api_base = monitoring_proxy_url
@@ -73,7 +73,7 @@ class OpenAIClient(OpenAIBaseClass):
                                      patient_gender: str,
                                      use_monitoring_proxy: bool,
                                      metadata: dict,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         try:
             if use_monitoring_proxy:
@@ -204,7 +204,7 @@ class OpenAIClient(OpenAIBaseClass):
                                use_monitoring_proxy: bool,
                                session_id: str,
                                user_id: str,
-                               monitoring_proxy_url: str = None):
+                               monitoring_proxy_url: str):
         try:
             context = ""
             for document in documents:

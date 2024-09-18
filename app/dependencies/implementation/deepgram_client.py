@@ -19,7 +19,7 @@ class DeepgramClient(DeepgramBaseClass):
     async def diarize_audio(self,
                             file_full_path: str,
                             use_monitoring_proxy: bool,
-                            monitoring_proxy_url: str = None) -> str:
+                            monitoring_proxy_url: str) -> str:
         if use_monitoring_proxy:
             try:
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
@@ -96,7 +96,7 @@ class DeepgramClient(DeepgramBaseClass):
     async def transcribe_audio(self,
                                file_full_path: str,
                                use_monitoring_proxy: bool,
-                               monitoring_proxy_url: str = None) -> str:
+                               monitoring_proxy_url: str) -> str:
         if use_monitoring_proxy:
             try:
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"

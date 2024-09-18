@@ -12,7 +12,7 @@ class DeepgramBaseClass(ABC):
     """
     async def transcribe_audio(file_full_path: str,
                                use_monitoring_proxy: bool,
-                               monitoring_proxy_url: str = None) -> str:
+                               monitoring_proxy_url: str) -> str:
         pass
 
     """
@@ -25,5 +25,5 @@ class DeepgramBaseClass(ABC):
     """
     async def diarize_audio(file_full_path: str,
                             use_monitoring_proxy: bool,
-                            monitoring_proxy_url: str = None):
+                            monitoring_proxy_url: str):
         pass

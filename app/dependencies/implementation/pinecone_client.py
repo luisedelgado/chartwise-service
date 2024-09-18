@@ -35,7 +35,7 @@ class PineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      therapy_session_date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -96,7 +96,7 @@ class PineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self.pc.Index(bucket_index)
@@ -206,7 +206,7 @@ class PineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None):
+                                     monitoring_proxy_url: str):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -235,7 +235,7 @@ class PineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         try:
             # Delete the outdated data
             self.delete_preexisting_history_vectors(user_id=user_id,
@@ -263,7 +263,7 @@ class PineconeClient(PineconeBaseClass):
                                        rerank_top_n: int,
                                        session_id: str,
                                        use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str = None,
+                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         missing_session_data_error = ("There's no data from patient sessions. "

@@ -21,7 +21,7 @@ class FakePineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
 
@@ -32,7 +32,7 @@ class FakePineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
     def delete_session_vectors(self,
@@ -56,7 +56,7 @@ class FakePineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None):
+                                     monitoring_proxy_url: str):
         pass
 
     async def update_preexisting_history_vectors(self,
@@ -66,7 +66,7 @@ class FakePineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None):
+                                                 monitoring_proxy_url: str):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
     async def get_vector_store_context(self,
@@ -78,7 +78,7 @@ class FakePineconeClient(PineconeBaseClass):
                                        rerank_top_n: int,
                                        session_id: str,
                                        use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str = None,
+                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         if not self.vector_store_context_returns_data:

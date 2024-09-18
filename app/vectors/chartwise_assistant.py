@@ -62,7 +62,7 @@ class ChartWiseAssistant:
                           openai_client: OpenAIBaseClass,
                           pinecone_client: PineconeBaseClass,
                           use_monitoring_proxy: bool,
-                          monitoring_proxy_url: str = None,
+                          monitoring_proxy_url: str,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
             metadata = {
@@ -163,7 +163,7 @@ class ChartWiseAssistant:
                               supabase_client: SupabaseBaseClass,
                               pinecone_client: PineconeBaseClass,
                               use_monitoring_proxy: bool,
-                              monitoring_proxy_url: str = None) -> str:
+                              monitoring_proxy_url: str) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What's most valuable for me to remember, and what would be good avenues to explore in our upcoming session?")
@@ -255,7 +255,7 @@ class ChartWiseAssistant:
                                           openai_client: OpenAIBaseClass,
                                           pinecone_client: PineconeBaseClass,
                                           use_monitoring_proxy: bool,
-                                          monitoring_proxy_url: str = None) -> str:
+                                          monitoring_proxy_url: str) -> str:
         try:
             query_input = f"What are 2 questions about different topics that I could ask about {patient_name}'s session history?"
 
@@ -342,7 +342,7 @@ class ChartWiseAssistant:
                                   openai_client: OpenAIBaseClass,
                                   pinecone_client: PineconeBaseClass,
                                   use_monitoring_proxy: bool,
-                                  monitoring_proxy_url: str = None) -> str:
+                                  monitoring_proxy_url: str) -> str:
         try:
             query_input = f"What are the topics that have come up the most in {patient_name}'s most recent sessions?"
 
@@ -432,7 +432,7 @@ class ChartWiseAssistant:
                                               openai_client: OpenAIBaseClass,
                                               pinecone_client: PineconeBaseClass,
                                               use_monitoring_proxy: bool,
-                                              monitoring_proxy_url: str = None) -> str:
+                                              monitoring_proxy_url: str) -> str:
         try:
             query_input = f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
 
@@ -500,7 +500,7 @@ class ChartWiseAssistant:
                                            supabase_client: SupabaseBaseClass,
                                            openai_client: OpenAIBaseClass,
                                            use_monitoring_proxy: bool,
-                                           monitoring_proxy_url: str = None) -> str:
+                                           monitoring_proxy_url: str) -> str:
         try:
             patient_session_dates = [date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                                                               patient_id=patient_id,
@@ -557,7 +557,7 @@ class ChartWiseAssistant:
                                  openai_client: OpenAIBaseClass,
                                  session_id: str,
                                  use_monitoring_proxy: bool,
-                                 monitoring_proxy_url: str = None) -> str:
+                                 monitoring_proxy_url: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE,
@@ -601,7 +601,7 @@ class ChartWiseAssistant:
                               chunk_text: str,
                               openai_client: OpenAIBaseClass,
                               use_monitoring_proxy: bool,
-                              monitoring_proxy_url: str = None) -> str:
+                              monitoring_proxy_url: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.CHUNK_SUMMARY,
@@ -648,7 +648,7 @@ class ChartWiseAssistant:
                                           session_id: str,
                                           patient_id: str,
                                           use_monitoring_proxy: bool,
-                                          monitoring_proxy_url: str = None) -> str:
+                                          monitoring_proxy_url: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_MINI_SUMMARY,

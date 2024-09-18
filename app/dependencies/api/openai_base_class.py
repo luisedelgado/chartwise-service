@@ -21,16 +21,16 @@ class OpenAIBaseClass(ABC):
     messages – the set of message prompts.
     expects_json_response – a flag representing whether or not the response is expected to be in json format.
     use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
-    cache_configuration – the optional cache configuration.
     monitoring_proxy_url – the optional url for the monitoring proxy.
+    cache_configuration – the optional cache configuration.
     """
     async def trigger_async_chat_completion(metadata: dict,
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
                                             use_monitoring_proxy: bool,
-                                            cache_configuration: dict = None,
-                                            monitoring_proxy_url: str = None):
+                                            monitoring_proxy_url: str,
+                                            cache_configuration: dict = None):
         pass
 
     """
@@ -56,7 +56,7 @@ class OpenAIBaseClass(ABC):
                                      patient_gender: str,
                                      metadata: dict,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         pass
 
@@ -101,5 +101,5 @@ class OpenAIBaseClass(ABC):
                                use_monitoring_proxy: bool,
                                session_id: str,
                                user_id: str,
-                               monitoring_proxy_url: str = None):
+                               monitoring_proxy_url: str):
         pass

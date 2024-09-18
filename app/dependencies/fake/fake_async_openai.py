@@ -51,8 +51,8 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                             messages: list,
                                             expects_json_response: bool,
                                             use_monitoring_proxy: bool,
-                                            cache_configuration: dict = None,
-                                            monitoring_proxy_url: str = None):
+                                            monitoring_proxy_url: str,
+                                            cache_configuration: dict = None):
         if self.throws_exception:
             raise Exception("Fake exception")
 
@@ -71,7 +71,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                      patient_gender: str,
                                      metadata: dict,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
+                                     monitoring_proxy_url: str,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
                 try:
@@ -118,7 +118,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                use_monitoring_proxy: bool,
                                session_id: str,
                                user_id: str,
-                               monitoring_proxy_url: str = None):
+                               monitoring_proxy_url: str):
         pass
 
     @property
