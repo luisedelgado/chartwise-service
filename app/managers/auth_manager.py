@@ -7,7 +7,7 @@ from portkey_ai import PORTKEY_GATEWAY_URL
 from typing import Tuple
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..internal.dependency_container import dependency_container
 from ..internal.security import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
@@ -69,7 +69,6 @@ class AuthManager:
                               user_id: str,
                               request: Request,
                               response: Response,
-                              supabase_client_factory: SupabaseFactoryBaseClass,
                               datastore_access_token: str = None,
                               datastore_refresh_token: str = None) -> Token:
         try:
@@ -97,6 +96,7 @@ class AuthManager:
                                     samesite="none")
             # If we have datastore tokens in cookies, let's refresh them.
             elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
+                supabase_client_factory = dependency_container.get_supabase_client_factory()
                 supabase_client: SupabaseBaseClass = supabase_client_factory.supabase_user_client(access_token=request.cookies['datastore_access_token'],
                                                                                                   refresh_token=request.cookies['datastore_refresh_token'])
                 refresh_session_response = supabase_client.refresh_session().dict()

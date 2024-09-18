@@ -3,11 +3,9 @@ import asyncio, os
 from fastapi import (BackgroundTasks, File, HTTPException, status, UploadFile)
 from typing import Tuple
 
-from ..dependencies.api.openai_base_class import OpenAIBaseClass
-from ..dependencies.api.docupanda_base_class import DocupandaBaseClass
-from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
+from ..internal.dependency_container import dependency_container
 from ..internal.logging import Logger
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
@@ -28,7 +26,6 @@ class ImageProcessingManager:
                                            template: SessionNotesTemplate,
                                            auth_manager: AuthManager,
                                            supabase_client: SupabaseBaseClass,
-                                           docupanda_client: DocupandaBaseClass,
                                            image: UploadFile = File(...)) -> Tuple[str, str]:
         files_to_clean = None
         try:
@@ -40,9 +37,9 @@ class ImageProcessingManager:
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            doc_id = await docupanda_client.upload_image(image_filepath=image_copy_path,
-                                                         image_filename=image.filename,
-                                                         use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
+            doc_id = await dependency_container.get_docupanda_client().upload_image(image_filepath=image_copy_path,
+                                                                                    image_filename=image.filename,
+                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
 
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={
@@ -64,23 +61,20 @@ class ImageProcessingManager:
             raise Exception(str(e))
 
     async def process_textraction(self,
-                                  docupanda_client: DocupandaBaseClass,
                                   document_id: str,
                                   session_id: str,
                                   environment: str,
                                   language_code: str,
                                   logger_worker: Logger,
                                   background_tasks: BackgroundTasks,
-                                  openai_client: OpenAIBaseClass,
                                   supabase_client: SupabaseBaseClass,
-                                  pinecone_client: PineconeBaseClass,
                                   auth_manager: AuthManager,
                                   assistant_manager: AssistantManager) -> str:
         try:
             session_notes_id = None
 
             for attempt in range(MAX_RETRIES):
-                textraction_status_code, textraction = await docupanda_client.retrieve_text_from_document(document_id)
+                textraction_status_code, textraction = await dependency_container.get_docupanda_client().retrieve_text_from_document(document_id)
 
                 if textraction_status_code == status.HTTP_202_ACCEPTED:
                     if attempt < MAX_RETRIES - 1:
@@ -118,7 +112,6 @@ class ImageProcessingManager:
 
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                  openai_client=openai_client,
                                                                                   therapist_id=therapist_id,
                                                                                   session_id=session_id,
                                                                                   session_notes_text=textraction)
@@ -141,9 +134,7 @@ class ImageProcessingManager:
                                                    auth_manager=auth_manager,
                                                    filtered_body=filtered_body,
                                                    session_id=session_id,
-                                                   openai_client=openai_client,
-                                                   supabase_client=supabase_client,
-                                                   pinecone_client=pinecone_client)
+                                                   supabase_client=supabase_client)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -152,9 +143,7 @@ class ImageProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_notes_id)
 
@@ -181,9 +170,7 @@ class ImageProcessingManager:
                                                              background_tasks=background_tasks,
                                                              auth_manager=auth_manager,
                                                              session_id=session_id,
-                                                             openai_client=openai_client,
                                                              supabase_client=supabase_client,
-                                                             pinecone_client=pinecone_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
                                                              session_notes_id=session_notes_id)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -198,9 +185,7 @@ class ImageProcessingManager:
                                                             background_tasks=background_tasks,
                                                             auth_manager=auth_manager,
                                                             session_id=session_id,
-                                                            openai_client=openai_client,
                                                             supabase_client=supabase_client,
-                                                            pinecone_client=pinecone_client,
                                                             session_upload_status=SessionUploadStatus.FAILED.value,
                                                             session_notes_id=session_notes_id)
             raise Exception(e)
@@ -213,9 +198,7 @@ class ImageProcessingManager:
                                                 background_tasks: BackgroundTasks,
                                                 auth_manager: AuthManager,
                                                 session_id: str,
-                                                openai_client: OpenAIBaseClass,
                                                 supabase_client: SupabaseBaseClass,
-                                                pinecone_client: PineconeBaseClass,
                                                 session_upload_status: str,
                                                 session_notes_id: str):
         await assistant_manager.update_session(language_code=language_code,
@@ -228,6 +211,4 @@ class ImageProcessingManager:
                                                    "processing_status": session_upload_status
                                                },
                                                session_id=session_id,
-                                               openai_client=openai_client,
-                                               supabase_client=supabase_client,
-                                               pinecone_client=pinecone_client)
+                                               supabase_client=supabase_client)

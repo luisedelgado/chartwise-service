@@ -1,5 +1,5 @@
 from pinecone import Index
-from typing import Mapping
+from typing import Callable
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ..api.pinecone_base_class import PineconeBaseClass
@@ -22,6 +22,7 @@ class FakePineconeClient(PineconeBaseClass):
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
                                      monitoring_proxy_url: str,
+                                     summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
 
@@ -32,7 +33,8 @@ class FakePineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
     def delete_session_vectors(self,
@@ -56,7 +58,8 @@ class FakePineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str):
+                                     monitoring_proxy_url: str,
+                                     summarize_chunk: Callable):
         pass
 
     async def update_preexisting_history_vectors(self,
@@ -66,7 +69,8 @@ class FakePineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
     async def get_vector_store_context(self,

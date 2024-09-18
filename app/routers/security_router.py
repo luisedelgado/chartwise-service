@@ -12,7 +12,8 @@ from langcodes import Language
 from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
-from ..internal import dependency_container, security
+from ..internal import security
+from ..internal.dependency_container import dependency_container
 from ..internal.logging import Logger
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
@@ -57,15 +58,9 @@ class SecurityRouter:
     TOKEN_ENDPOINT = "/token"
     ACCOUNT_ENDPOINT = "/v1/account"
 
-    def __init__(self,
-                 auth_manager: AuthManager,
-                 assistant_manager: AssistantManager,
-                 router_dependencies: dependency_container.DependencyContainer):
-        self._auth_manager = auth_manager
-        self._assistant_manager = assistant_manager
-        self._supabase_client_factory = router_dependencies.supabase_client_factory
-        self._pinecone_client = router_dependencies.pinecone_client
-        self._openai_client = router_dependencies.openai_client
+    def __init__(self):
+        self._auth_manager = AuthManager()
+        self._assistant_manager = AssistantManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -179,6 +174,7 @@ class SecurityRouter:
                                                  request: Request,
                                                  response: Response,
                                                  session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+        logger = Logger()
         try:
             if session_id is None:
                 session_id = uuid.uuid1()
@@ -189,7 +185,6 @@ class SecurityRouter:
                                     secure=True,
                                     samesite="none")
 
-            logger = Logger(supabase_client_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
             logger.log_api_request(background_tasks=background_tasks,
                                    session_id=session_id,
@@ -197,8 +192,8 @@ class SecurityRouter:
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=body.datastore_access_token,
-                                                                                 refresh_token=body.datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=body.datastore_access_token,
+                                                                                                      refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
                                                                                         supabase_client=supabase_client)
             assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
@@ -206,10 +201,9 @@ class SecurityRouter:
             auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
                                                                   request=request,
                                                                   response=response,
-                                                                  supabase_client_factory=self._supabase_client_factory,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
-            background_tasks.add_task(self._openai_client.clear_chat_history)
+            background_tasks.add_task(dependency_container.get_openai_client().clear_chat_history)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
@@ -246,8 +240,8 @@ class SecurityRouter:
                                                     response: Response,
                                                     authorization: Annotated[Union[str, None], Cookie()],
                                                     session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+        logger = Logger()
         try:
-            logger = Logger(supabase_client_factory=self._supabase_client_factory)
             put_api_method = logger.API_METHOD_PUT
             logger.log_api_request(background_tasks=background_tasks,
                                    method=put_api_method,
@@ -271,8 +265,7 @@ class SecurityRouter:
         try:
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   request=request,
-                                                                  response=response,
-                                                                  supabase_client_factory=self._supabase_client_factory)
+                                                                  response=response)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
@@ -310,14 +303,14 @@ class SecurityRouter:
                                session_id: Annotated[Union[str, None], Cookie()]):
         user_id = None
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
-                                                                                 access_token=datastore_access_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(refresh_token=datastore_refresh_token,
+                                                                                                      access_token=datastore_access_token)
             user_id = supabase_client.get_current_user_id()
         except Exception:
             pass
 
         self._auth_manager.logout(response)
-        background_tasks.add_task(self._openai_client.clear_chat_history)
+        background_tasks.add_task(dependency_container.get_openai_client().clear_chat_history)
 
         if user_id is not None:
             background_tasks.add_task(self._schedule_logout_activity_logging,
@@ -354,7 +347,7 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         description = "".join([
             "birthdate=\"",
@@ -373,13 +366,12 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(refresh_token=datastore_refresh_token,
-                                                                                 access_token=datastore_access_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -450,13 +442,14 @@ class SecurityRouter:
                                             datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                             authorization: Annotated[Union[str, None], Cookie()],
                                             session_id: Annotated[Union[str, None], Cookie()]):
+        logger = Logger()
+
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
         put_api_method = logger.API_METHOD_PUT
         description = "".join([
             "birthdate=\"",
@@ -473,13 +466,12 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -556,7 +548,7 @@ class SecurityRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -564,13 +556,12 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
-                                                     response=response,
                                                      request=request,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -604,8 +595,7 @@ class SecurityRouter:
 
             # Delete vectors associated with therapist's patients
             self._assistant_manager.delete_all_sessions_for_therapist(user_id=user_id,
-                                                                      patient_ids=patient_ids,
-                                                                      pinecone_client=self._pinecone_client)
+                                                                      patient_ids=patient_ids)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
@@ -635,8 +625,9 @@ class SecurityRouter:
                                                 background_tasks: BackgroundTasks,
                                                 user_id: str,
                                                 session_id: Annotated[Union[str, None], Cookie()]):
+        logger = Logger()
+
         try:
-            logger = Logger(supabase_client_factory=self._supabase_client_factory)
             post_api_method = logger.API_METHOD_POST
             logger.log_api_request(background_tasks=background_tasks,
                                 session_id=session_id,

@@ -12,8 +12,8 @@ from typing import Annotated, Union
 
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
+from ..internal.dependency_container import dependency_container
 from ..internal.logging import Logger
-from ..internal.dependency_container import DependencyContainer
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
@@ -26,20 +26,11 @@ class AudioProcessingRouter:
     NOTES_TRANSCRIPTION_ENDPOINT = "/v1/transcriptions"
     ROUTER_TAG = "audio-files"
 
-    def __init__(self,
-                 environment: str,
-                 auth_manager: AuthManager,
-                 assistant_manager: AssistantManager,
-                 audio_processing_manager: AudioProcessingManager,
-                 router_dependencies: DependencyContainer):
+    def __init__(self, environment: str):
             self._environment = environment
-            self._auth_manager = auth_manager
-            self._assistant_manager = assistant_manager
-            self._audio_processing_manager = audio_processing_manager
-            self._deepgram_client = router_dependencies.deepgram_client
-            self._pinecone_client = router_dependencies.pinecone_client
-            self._supabase_client_factory = router_dependencies.supabase_client_factory
-            self._openai_client = router_dependencies.openai_client
+            self._auth_manager = AuthManager()
+            self._assistant_manager = AssistantManager()
+            self._audio_processing_manager = AudioProcessingManager()
             self.router = APIRouter()
             self._register_routes()
 
@@ -135,7 +126,7 @@ class AudioProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         description = "".join([
             "template=\"",
@@ -153,13 +144,12 @@ class AudioProcessingRouter:
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -182,10 +172,7 @@ class AudioProcessingRouter:
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
-                                                                                           openai_client=self._openai_client,
-                                                                                           deepgram_client=self._deepgram_client,
                                                                                            supabase_client=supabase_client,
-                                                                                           pinecone_client=self._pinecone_client,
                                                                                            auth_manager=self._auth_manager,
                                                                                            template=template,
                                                                                            therapist_id=therapist_id,
@@ -252,7 +239,7 @@ class AudioProcessingRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         description = "".join([
             "template=\"",
             f"{template.value or ''}\";",
@@ -270,13 +257,12 @@ class AudioProcessingRouter:
                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -299,10 +285,7 @@ class AudioProcessingRouter:
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
                                                                                            auth_manager=self._auth_manager,
-                                                                                           openai_client=self._openai_client,
-                                                                                           deepgram_client=self._deepgram_client,
                                                                                            supabase_client=supabase_client,
-                                                                                           pinecone_client=self._pinecone_client,
                                                                                            template=template,
                                                                                            therapist_id=therapist_id,
                                                                                            session_date=session_date,

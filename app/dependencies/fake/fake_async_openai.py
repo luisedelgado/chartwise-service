@@ -3,10 +3,9 @@ import asyncio
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage
 from langchain_core.messages.ai import AIMessage
-from typing import AsyncIterable, Awaitable, Mapping
+from typing import AsyncIterable, Awaitable
 
 from ..api.openai_base_class import OpenAIBaseClass
-from ...managers.auth_manager import AuthManager
 
 FAKE_ASSISTANT_RESPONSE = "This is my fake response"
 

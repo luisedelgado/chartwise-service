@@ -2,7 +2,7 @@ import os
 
 from fastapi import BackgroundTasks
 
-from ..dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ..internal.dependency_container import dependency_container
 
 class Logger:
 
@@ -11,8 +11,8 @@ class Logger:
     API_METHOD_GET = "GET"
     API_METHOD_DELETE = "DELETE"
 
-    def __init__(self, supabase_client_factory: SupabaseFactoryBaseClass):
-        self.supabase_client = supabase_client_factory.supabase_admin_client()
+    def __init__(self):
+        self.supabase_client = dependency_container.get_supabase_client_factory().supabase_admin_client()
 
     """
     Logs data about an API request.

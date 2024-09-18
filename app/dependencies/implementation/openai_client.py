@@ -2,7 +2,7 @@ import asyncio
 import os
 import tiktoken
 
-from typing import AsyncIterable, Awaitable, Mapping
+from typing import AsyncIterable, Awaitable
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage, SystemMessage

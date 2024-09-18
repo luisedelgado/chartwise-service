@@ -1,15 +1,7 @@
-from datetime import timedelta
-
 from fastapi.testclient import TestClient
 
-from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
-from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
-from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
-from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..internal.dependency_container import DependencyContainer
+from ..internal.dependency_container import dependency_container
 from ..internal.schemas import SessionUploadStatus
-from ..managers.assistant_manager import AssistantManager
-from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -26,23 +18,22 @@ ENVIRONMENT = "testing"
 class TestingHarnessAssistantRouter:
 
     def setup_method(self):
-        self.auth_manager = AuthManager()
-        self.assistant_manager = AssistantManager()
-        self.audio_processing_manager = AudioProcessingManager()
-        self.fake_openai_client = FakeAsyncOpenAI()
-        self.fake_supabase_admin_client = FakeSupabaseClient()
-        self.fake_supabase_user_client = FakeSupabaseClient()
-        self.fake_pinecone_client = FakePineconeClient()
-        self.fake_supabase_client_factory = FakeSupabaseClientFactory(fake_supabase_admin_client=self.fake_supabase_admin_client,
-                                                                      fake_supabase_user_client=self.fake_supabase_user_client)
-        self.auth_cookie, _ = self.auth_manager.create_access_token(user_id=FAKE_THERAPIST_ID)
+        # Clear out any old state between tests
+        dependency_container._openai_client = None
+        dependency_container._pinecone_client = None
+        dependency_container._docupanda_client = None
+        dependency_container._deepgram_client = None
+        dependency_container._supabase_client_factory = None
 
-        coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT,
-                                                                          auth_manager=self.auth_manager,
-                                                                          assistant_manager=self.assistant_manager,
-                                                                          router_dependencies=DependencyContainer(openai_client=self.fake_openai_client,
-                                                                                                                 pinecone_client=self.fake_pinecone_client,
-                                                                                                                 supabase_client_factory=self.fake_supabase_client_factory)).router],
+        self.fake_openai_client = dependency_container.get_openai_client()
+        self.fake_supabase_admin_client = dependency_container.get_supabase_client_factory().supabase_admin_client()
+        self.fake_supabase_user_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=FAKE_ACCESS_TOKEN,
+                                                                                                                 refresh_token=FAKE_REFRESH_TOKEN)
+        self.fake_pinecone_client = dependency_container.get_pinecone_client()
+        self.fake_supabase_client_factory = dependency_container.get_supabase_client_factory()
+        self.auth_cookie, _ = AuthManager().create_access_token(user_id=FAKE_THERAPIST_ID)
+
+        coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 

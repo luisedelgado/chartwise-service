@@ -1,11 +1,11 @@
 import tiktoken
 
 from datetime import datetime
-from typing import AsyncIterable, Mapping
+from typing import AsyncIterable
 
+from ..internal.dependency_container import dependency_container
 from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
-from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..internal.utilities import datetime_handler
@@ -43,8 +43,6 @@ class ChartWiseAssistant:
     session_id – the session id.
     method – the API method that was invoked.
     environment – the current running environment.
-    openai_client – the openai client to be leveraged internally.
-    pinecone_client – the pinecone client to be leveraged internally.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
     session_date_override – the optional override for including date-specific vectors.
@@ -59,12 +57,11 @@ class ChartWiseAssistant:
                           session_id: str,
                           method: str,
                           environment: str,
-                          openai_client: OpenAIBaseClass,
-                          pinecone_client: PineconeBaseClass,
                           use_monitoring_proxy: bool,
                           monitoring_proxy_url: str,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
+            openai_client = dependency_container.get_openai_client()
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -103,16 +100,16 @@ class ChartWiseAssistant:
                                                                                 use_monitoring_proxy=use_monitoring_proxy,
                                                                                 monitoring_proxy_url=monitoring_proxy_url)
 
-            context = await pinecone_client.get_vector_store_context(query_input=query_input,
-                                                                     user_id=user_id,
-                                                                     patient_id=patient_id,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=10,
-                                                                     rerank_top_n=3,
-                                                                     session_id=session_id,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url,
-                                                                     session_dates_override=[session_date_override])
+            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+                                                                                                user_id=user_id,
+                                                                                                patient_id=patient_id,
+                                                                                                openai_client=openai_client,
+                                                                                                query_top_k=10,
+                                                                                                rerank_top_n=3,
+                                                                                                session_id=session_id,
+                                                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                                                monitoring_proxy_url=monitoring_proxy_url,
+                                                                                                session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
 
@@ -143,8 +140,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be referred to.
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
-    openai_client – the openai client to be leveraged internally.
-    pinecone_client – the pinecone client to be leveraged internally.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
     """
@@ -159,9 +154,7 @@ class ChartWiseAssistant:
                               therapist_name: str,
                               therapist_gender: str,
                               session_number: int,
-                              openai_client: OpenAIBaseClass,
                               supabase_client: SupabaseBaseClass,
-                              pinecone_client: PineconeBaseClass,
                               use_monitoring_proxy: bool,
                               monitoring_proxy_url: str) -> str:
         try:
@@ -172,16 +165,17 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=BRIEFING_CONTEXT_SESSIONS_CAP)
 
-            context = await pinecone_client.get_vector_store_context(query_input=query_input,
-                                                                     user_id=user_id,
-                                                                     patient_id=patient_id,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=0,
-                                                                     rerank_top_n=0,
-                                                                     session_id=session_id,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url,
-                                                                     session_dates_override=session_dates_override)
+            openai_client = dependency_container.get_openai_client()
+            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+                                                                                                user_id=user_id,
+                                                                                                patient_id=patient_id,
+                                                                                                openai_client=openai_client,
+                                                                                                query_top_k=0,
+                                                                                                rerank_top_n=0,
+                                                                                                session_id=session_id,
+                                                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                                                monitoring_proxy_url=monitoring_proxy_url,
+                                                                                                session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
@@ -238,8 +232,6 @@ class ChartWiseAssistant:
     session_id – the session id.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
-    openai_client – the openai client to be leveraged internally.
-    pinecone_client – the pinecone client to be leveraged internally.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
     """
@@ -252,8 +244,6 @@ class ChartWiseAssistant:
                                           patient_name: str,
                                           patient_gender: str,
                                           supabase_client: SupabaseBaseClass,
-                                          openai_client: OpenAIBaseClass,
-                                          pinecone_client: PineconeBaseClass,
                                           use_monitoring_proxy: bool,
                                           monitoring_proxy_url: str) -> str:
         try:
@@ -263,16 +253,17 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP)
 
-            context = await pinecone_client.get_vector_store_context(query_input=query_input,
-                                                                     user_id=user_id,
-                                                                     patient_id=patient_id,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=0,
-                                                                     rerank_top_n=0,
-                                                                     session_id=session_id,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url,
-                                                                     session_dates_override=session_dates_override)
+            openai_client = dependency_container.get_openai_client()
+            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+                                                                                                user_id=user_id,
+                                                                                                patient_id=patient_id,
+                                                                                                openai_client=openai_client,
+                                                                                                query_top_k=0,
+                                                                                                rerank_top_n=0,
+                                                                                                session_id=session_id,
+                                                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                                                monitoring_proxy_url=monitoring_proxy_url,
+                                                                                                session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -325,8 +316,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     supabase_client – the supabase client to be leveraged internally.
-    openai_client – the openai client to be leveraged internally.
-    pinecone_client – the pinecone client to be leveraged internally.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
     """
@@ -339,8 +328,6 @@ class ChartWiseAssistant:
                                   patient_name: str,
                                   patient_gender: str,
                                   supabase_client: SupabaseBaseClass,
-                                  openai_client: OpenAIBaseClass,
-                                  pinecone_client: PineconeBaseClass,
                                   use_monitoring_proxy: bool,
                                   monitoring_proxy_url: str) -> str:
         try:
@@ -350,17 +337,18 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            context = await pinecone_client.get_vector_store_context(query_input=query_input,
-                                                                     user_id=user_id,
-                                                                     patient_id=patient_id,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=0,
-                                                                     rerank_top_n=0,
-                                                                     session_id=session_id,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url,
-                                                                     include_preexisting_history=False,
-                                                                     session_dates_override=session_dates_override)
+            openai_client = dependency_container.get_openai_client()
+            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+                                                                                                user_id=user_id,
+                                                                                                patient_id=patient_id,
+                                                                                                openai_client=openai_client,
+                                                                                                query_top_k=0,
+                                                                                                rerank_top_n=0,
+                                                                                                session_id=session_id,
+                                                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                                                monitoring_proxy_url=monitoring_proxy_url,
+                                                                                                include_preexisting_history=False,
+                                                                                                session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -414,8 +402,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     supabase_client – the supabase client to be leveraged internally.
-    openai_client – the openai client to be leveraged internally.
-    pinecone_client – the pinecone client to be leveraged internally.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
     """
@@ -429,8 +415,6 @@ class ChartWiseAssistant:
                                               patient_name: str,
                                               patient_gender: str,
                                               supabase_client: SupabaseBaseClass,
-                                              openai_client: OpenAIBaseClass,
-                                              pinecone_client: PineconeBaseClass,
                                               use_monitoring_proxy: bool,
                                               monitoring_proxy_url: str) -> str:
         try:
@@ -440,17 +424,18 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            context = await pinecone_client.get_vector_store_context(query_input=query_input,
-                                                                     user_id=user_id,
-                                                                     patient_id=patient_id,
-                                                                     openai_client=openai_client,
-                                                                     query_top_k=0,
-                                                                     rerank_top_n=0,
-                                                                     session_id=session_id,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url,
-                                                                     include_preexisting_history=False,
-                                                                     session_dates_override=session_dates_override)
+            openai_client = dependency_container.get_openai_client()
+            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+                                                                                                user_id=user_id,
+                                                                                                patient_id=patient_id,
+                                                                                                openai_client=openai_client,
+                                                                                                query_top_k=0,
+                                                                                                rerank_top_n=0,
+                                                                                                session_id=session_id,
+                                                                                                use_monitoring_proxy=use_monitoring_proxy,
+                                                                                                monitoring_proxy_url=monitoring_proxy_url,
+                                                                                                include_preexisting_history=False,
+                                                                                                session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,
@@ -546,7 +531,6 @@ class ChartWiseAssistant:
     Arguments:
     text – the text to be adapted to a SOAP format.
     therapist_id – the therapist_id.
-    openai_client – the openai client to be leveraged internally.
     session_id – the session id.
     use_monitoring_proxy – flag representing whether to use the monitoring proxy.
     monitoring_proxy_url – the monitoring proxy url.
@@ -554,7 +538,6 @@ class ChartWiseAssistant:
     async def create_soap_report(self,
                                  text: str,
                                  therapist_id: str,
-                                 openai_client: OpenAIBaseClass,
                                  session_id: str,
                                  use_monitoring_proxy: bool,
                                  monitoring_proxy_url: str) -> str:
@@ -564,6 +547,8 @@ class ChartWiseAssistant:
                                                                        session_notes=text)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
+
+            openai_client = dependency_container.get_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
@@ -634,7 +619,6 @@ class ChartWiseAssistant:
     session_notes – the text associated with the session notes.
     therapist_id – the therapist_id.
     language_code – the language_code to be used for generating the response.
-    openai_client – the openai client to be leveraged internally.
     session_id – the session id.
     patient_id – the patient id.
     use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
@@ -644,7 +628,6 @@ class ChartWiseAssistant:
                                           session_notes: str,
                                           therapist_id: str,
                                           language_code: str,
-                                          openai_client: OpenAIBaseClass,
                                           session_id: str,
                                           patient_id: str,
                                           use_monitoring_proxy: bool,
@@ -656,6 +639,8 @@ class ChartWiseAssistant:
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SESSION_MINI_SUMMARY,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
+
+            openai_client = dependency_container.get_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {

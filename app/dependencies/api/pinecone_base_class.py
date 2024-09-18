@@ -1,7 +1,7 @@
 from abc import ABC
 
 from pinecone import Index
-from typing import Mapping
+from typing import Callable
 
 from .pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..api.openai_base_class import OpenAIBaseClass
@@ -21,6 +21,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
     monitoring_proxy_url – the optional monitoring proxy url.
+    summarize_chunk – a callable method used to summarize chunks.
     therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
     """
     async def insert_session_vectors(session_id: str,
@@ -31,6 +32,7 @@ class PineconeBaseClass(ABC):
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
                                      monitoring_proxy_url: str,
+                                     summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         pass
 
@@ -46,6 +48,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
     monitoring_proxy_url – the optional monitoring proxy url.
+    summarize_chunk – a callable method used to summarize chunks.
     """
     async def insert_preexisting_history_vectors(session_id: str,
                                                  user_id: str,
@@ -53,7 +56,8 @@ class PineconeBaseClass(ABC):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         pass
 
     """
@@ -93,6 +97,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
     monitoring_proxy_url – the optional monitoring proxy url.
+    summarize_chunk – a callable method used to summarize chunks.
     """
     async def update_session_vectors(session_id: str,
                                      user_id: str,
@@ -103,7 +108,8 @@ class PineconeBaseClass(ABC):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str):
+                                     monitoring_proxy_url: str,
+                                     summarize_chunk: Callable):
         pass
 
     """
@@ -117,6 +123,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
     monitoring_proxy_url – the optional monitoring proxy url.
+    summarize_chunk – a callable method used to summarize chunks.
     """
     async def update_preexisting_history_vectors(session_id: str,
                                                  user_id: str,
@@ -124,7 +131,8 @@ class PineconeBaseClass(ABC):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         pass
 
     """

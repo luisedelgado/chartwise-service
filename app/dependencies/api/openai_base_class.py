@@ -1,8 +1,6 @@
 from abc import ABC
 from langchain.schema import BaseMessage
-from typing import AsyncIterable, Mapping
-
-from ...managers.auth_manager import AuthManager
+from typing import AsyncIterable
 
 class OpenAIBaseClass(ABC):
 

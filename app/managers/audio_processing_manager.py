@@ -5,11 +5,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..dependencies.api.deepgram_base_class import DeepgramBaseClass
-from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
+from ..internal.dependency_container import dependency_container
 from ..internal.logging import Logger
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
@@ -28,10 +26,7 @@ class AudioProcessingManager:
                                     background_tasks: BackgroundTasks,
                                     auth_manager: AuthManager,
                                     assistant_manager: AssistantManager,
-                                    openai_client: OpenAIBaseClass,
-                                    deepgram_client: DeepgramBaseClass,
                                     supabase_client: SupabaseBaseClass,
-                                    pinecone_client: PineconeBaseClass,
                                     template: SessionNotesTemplate,
                                     therapist_id: str,
                                     session_id: str,
@@ -70,9 +65,6 @@ class AudioProcessingManager:
                                           logger_worker,
                                           environment,
                                           background_tasks,
-                                          pinecone_client,
-                                          deepgram_client,
-                                          openai_client,
                                           supabase_client,
                                           auth_manager,
                                           assistant_manager,
@@ -89,9 +81,6 @@ class AudioProcessingManager:
                                           logger_worker,
                                           environment,
                                           background_tasks,
-                                          pinecone_client,
-                                          deepgram_client,
-                                          openai_client,
                                           supabase_client,
                                           auth_manager,
                                           assistant_manager,
@@ -119,9 +108,7 @@ class AudioProcessingManager:
                                                             background_tasks=background_tasks,
                                                             auth_manager=auth_manager,
                                                             session_id=session_id,
-                                                            openai_client=openai_client,
                                                             supabase_client=supabase_client,
-                                                            pinecone_client=pinecone_client,
                                                             session_upload_status=SessionUploadStatus.FAILED.value,
                                                             session_notes_id=session_report_id)
             raise Exception(e)
@@ -133,9 +120,6 @@ class AudioProcessingManager:
                                       logger_worker: Logger,
                                       environment: str,
                                       background_tasks: BackgroundTasks,
-                                      pinecone_client: PineconeBaseClass,
-                                      deepgram_client: DeepgramBaseClass,
-                                      openai_client: OpenAIBaseClass,
                                       supabase_client: SupabaseBaseClass,
                                       auth_manager: AuthManager,
                                       assistant_manager: AssistantManager,
@@ -147,9 +131,9 @@ class AudioProcessingManager:
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            diarization = await deepgram_client.diarize_audio(file_full_path=audio_copy_result.file_copy_full_path,
-                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+            diarization = await dependency_container.get_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path,
+                                                                                         use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                         monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             update_body = {
                 "id": session_report_id,
                 "diarization": diarization,
@@ -161,9 +145,7 @@ class AudioProcessingManager:
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_body,
                                                    session_id=session_id,
-                                                   openai_client=openai_client,
-                                                   supabase_client=supabase_client,
-                                                   pinecone_client=pinecone_client)
+                                                   supabase_client=supabase_client)
         except:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.
@@ -174,9 +156,7 @@ class AudioProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id)
             raise Exception(e)
@@ -197,13 +177,14 @@ class AudioProcessingManager:
                                                                            language_code=language_code)
             encoding = get_encoding("o200k_base")
             prompt_tokens = len(encoding.encode(f"{system_prompt}\n{user_prompt}"))
+
+            openai_client = dependency_container.get_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             if max_tokens < 0:
                 # Need to chunk diarization and generate summary of the union of all chunks.
                 session_summary = await self._chunk_diarization_and_summarize(encoding=encoding,
                                                                               diarization=diarization,
-                                                                              openai_client=openai_client,
                                                                               metadata=metadata,
                                                                               prompt_crafter=prompt_crafter,
                                                                               summarize_chunk_system_prompt=system_prompt,
@@ -227,10 +208,9 @@ class AudioProcessingManager:
 
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                    openai_client=openai_client,
-                                                                                    therapist_id=therapist_id,
-                                                                                    session_notes_text=session_summary,
-                                                                                    session_id=session_id)
+                                                                                      therapist_id=therapist_id,
+                                                                                      session_notes_text=session_summary,
+                                                                                      session_id=session_id)
 
             update_summary_body = {
                 "id": session_report_id,
@@ -244,9 +224,7 @@ class AudioProcessingManager:
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_summary_body,
                                                    session_id=session_id,
-                                                   openai_client=openai_client,
-                                                   supabase_client=supabase_client,
-                                                   pinecone_client=pinecone_client)
+                                                   supabase_client=supabase_client)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -255,9 +233,7 @@ class AudioProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id)
         except Exception as e:
@@ -270,9 +246,7 @@ class AudioProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id)
             raise Exception(e)
@@ -284,9 +258,6 @@ class AudioProcessingManager:
                                          logger_worker: Logger,
                                          environment: str,
                                          background_tasks: BackgroundTasks,
-                                         pinecone_client: PineconeBaseClass,
-                                         deepgram_client: DeepgramBaseClass,
-                                         openai_client: OpenAIBaseClass,
                                          supabase_client: SupabaseBaseClass,
                                          auth_manager: AuthManager,
                                          assistant_manager: AssistantManager,
@@ -297,12 +268,11 @@ class AudioProcessingManager:
                                          template: SessionNotesTemplate,
                                          files_to_clean: list):
         try:
-            transcription = await deepgram_client.transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path,
-                                                                   use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                   monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+            transcription = await dependency_container.get_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path,
+                                                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
             if template == SessionNotesTemplate.SOAP:
                 transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                    openai_client=openai_client,
                                                                                     therapist_id=therapist_id,
                                                                                     session_notes_text=transcription,
                                                                                     session_id=session_id)
@@ -319,9 +289,7 @@ class AudioProcessingManager:
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_body,
                                                    session_id=session_id,
-                                                   openai_client=openai_client,
-                                                   supabase_client=supabase_client,
-                                                   pinecone_client=pinecone_client)
+                                                   supabase_client=supabase_client)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -330,9 +298,7 @@ class AudioProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id)
         except Exception as e:
@@ -345,9 +311,7 @@ class AudioProcessingManager:
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
-                                                         openai_client=openai_client,
                                                          supabase_client=supabase_client,
-                                                         pinecone_client=pinecone_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id)
             raise Exception(e)
@@ -408,9 +372,7 @@ class AudioProcessingManager:
                                                 background_tasks: BackgroundTasks,
                                                 auth_manager: AuthManager,
                                                 session_id: str,
-                                                openai_client: OpenAIBaseClass,
                                                 supabase_client: SupabaseBaseClass,
-                                                pinecone_client: PineconeBaseClass,
                                                 session_upload_status: str,
                                                 session_notes_id: str):
         await assistant_manager.update_session(language_code=language_code,
@@ -423,14 +385,11 @@ class AudioProcessingManager:
                                                    "processing_status": session_upload_status
                                                },
                                                session_id=session_id,
-                                               openai_client=openai_client,
-                                               supabase_client=supabase_client,
-                                               pinecone_client=pinecone_client)
+                                               supabase_client=supabase_client)
 
     async def _chunk_diarization_and_summarize(self,
                                                encoding: Encoding,
                                                diarization: list,
-                                               openai_client: OpenAIBaseClass,
                                                metadata: dict,
                                                prompt_crafter: PromptCrafter,
                                                summarize_chunk_system_prompt: str,
@@ -458,6 +417,8 @@ class AudioProcessingManager:
                                                                            diarization=current_chunk_text)
 
                 prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
+
+                openai_client = dependency_container.get_openai_client()
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
                 current_chunk_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
                                                                                           max_tokens=max_tokens,

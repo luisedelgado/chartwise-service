@@ -9,14 +9,13 @@ from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
 from starlette.concurrency import run_in_threadpool
-from typing import Mapping
+from typing import Callable
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
 from ...internal.utilities import datetime_handler
 from ...vectors import data_cleaner
-from ...vectors.chartwise_assistant import ChartWiseAssistant
 
 class PineconeClient(PineconeBaseClass):
 
@@ -25,7 +24,6 @@ class PineconeClient(PineconeBaseClass):
 
     def __init__(self):
         self.pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-        self.chartwise_assistant = ChartWiseAssistant()
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -36,6 +34,7 @@ class PineconeClient(PineconeBaseClass):
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
                                      monitoring_proxy_url: str,
+                                     summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -60,12 +59,12 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await self.chartwise_assistant.summarize_chunk(user_id=user_id,
-                                                                               session_id=session_id,
-                                                                               chunk_text=chunk_text,
-                                                                               openai_client=openai_client,
-                                                                               use_monitoring_proxy=use_monitoring_proxy,
-                                                                               monitoring_proxy_url=monitoring_proxy_url)
+                chunk_summary = await summarize_chunk(user_id=user_id,
+                                                      session_id=session_id,
+                                                      chunk_text=chunk_text,
+                                                      openai_client=openai_client,
+                                                      use_monitoring_proxy=use_monitoring_proxy,
+                                                      monitoring_proxy_url=monitoring_proxy_url)
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -96,7 +95,8 @@ class PineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self.pc.Index(bucket_index)
@@ -118,12 +118,12 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await self.chartwise_assistant.summarize_chunk(user_id=user_id,
-                                                                               session_id=session_id,
-                                                                               chunk_text=chunk_text,
-                                                                               openai_client=openai_client,
-                                                                               use_monitoring_proxy=use_monitoring_proxy,
-                                                                               monitoring_proxy_url=monitoring_proxy_url)
+                chunk_summary = await summarize_chunk(user_id=user_id,
+                                                      session_id=session_id,
+                                                      chunk_text=chunk_text,
+                                                      openai_client=openai_client,
+                                                      use_monitoring_proxy=use_monitoring_proxy,
+                                                      monitoring_proxy_url=monitoring_proxy_url)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -206,7 +206,8 @@ class PineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str):
+                                     monitoring_proxy_url: str,
+                                     summarize_chunk: Callable):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -222,7 +223,8 @@ class PineconeClient(PineconeBaseClass):
                                               openai_client=openai_client,
                                               use_monitoring_proxy=use_monitoring_proxy,
                                               monitoring_proxy_url=monitoring_proxy_url,
-                                              therapy_session_date=new_date)
+                                              therapy_session_date=new_date,
+                                              summarize_chunk=summarize_chunk)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
@@ -235,7 +237,8 @@ class PineconeClient(PineconeBaseClass):
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str):
+                                                 monitoring_proxy_url: str,
+                                                 summarize_chunk: Callable):
         try:
             # Delete the outdated data
             self.delete_preexisting_history_vectors(user_id=user_id,
@@ -248,7 +251,8 @@ class PineconeClient(PineconeBaseClass):
                                                           text=text,
                                                           openai_client=openai_client,
                                                           use_monitoring_proxy=use_monitoring_proxy,
-                                                          monitoring_proxy_url=monitoring_proxy_url)
+                                                          monitoring_proxy_url=monitoring_proxy_url,
+                                                          summarize_chunk=summarize_chunk)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:

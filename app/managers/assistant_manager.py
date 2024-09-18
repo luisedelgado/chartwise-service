@@ -7,15 +7,15 @@ from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from typing import AsyncIterable, Optional
 
+from ..internal.dependency_container import dependency_container
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
-from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..internal.logging import Logger
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
-from ..vectors.chartwise_assistant import ChartWiseAssistant, SUMMARIZE_CHUNK_ACTION_NAME
+from ..vectors.chartwise_assistant import ChartWiseAssistant
 
 class AssistantQuery(BaseModel):
     patient_id: str
@@ -103,9 +103,7 @@ class AssistantManager:
                                        source: SessionNotesSource,
                                        session_id: str,
                                        therapist_id: str,
-                                       openai_client: OpenAIBaseClass,
                                        supabase_client: SupabaseBaseClass,
-                                       pinecone_client: PineconeBaseClass,
                                        logger_worker: Logger,
                                        diarization: str = None) -> str:
         try:
@@ -142,9 +140,7 @@ class AssistantManager:
                                       logger_worker,
                                       background_tasks,
                                       auth_manager,
-                                      supabase_client,
-                                      openai_client,
-                                      pinecone_client)
+                                      supabase_client)
             return session_notes_id
         except Exception as e:
             raise Exception(e)
@@ -157,9 +153,7 @@ class AssistantManager:
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
-                             openai_client: OpenAIBaseClass,
-                             supabase_client: SupabaseBaseClass,
-                             pinecone_client: PineconeBaseClass):
+                             supabase_client: SupabaseBaseClass):
         try:
             session_notes_id = filtered_body['id']
             report_query = supabase_client.select(fields="*",
@@ -212,9 +206,7 @@ class AssistantManager:
                                           logger_worker,
                                           background_tasks,
                                           auth_manager,
-                                          supabase_client,
-                                          openai_client,
-                                          pinecone_client)
+                                          supabase_client)
         except Exception as e:
             raise Exception(e)
 
@@ -224,12 +216,10 @@ class AssistantManager:
                              environment: str,
                              session_id: str,
                              background_tasks: BackgroundTasks,
-                             openai_client: OpenAIBaseClass,
                              therapist_id: str,
                              session_report_id: str,
                              logger_worker: Logger,
-                             supabase_client: SupabaseBaseClass,
-                             pinecone_client: PineconeBaseClass):
+                             supabase_client: SupabaseBaseClass):
         try:
             # Delete the session notes from Supabase
             delete_result = supabase_client.delete(table_name="session_reports",
@@ -257,9 +247,7 @@ class AssistantManager:
                                       logger_worker,
                                       background_tasks,
                                       auth_manager,
-                                      supabase_client,
-                                      openai_client,
-                                      pinecone_client)
+                                      supabase_client)
         except Exception as e:
             raise Exception(e)
 
@@ -271,9 +259,7 @@ class AssistantManager:
                           therapist_id: str,
                           session_id: str,
                           logger_worker: Logger,
-                          openai_client: OpenAIBaseClass,
-                          supabase_client: SupabaseBaseClass,
-                          pinecone_client: PineconeBaseClass) -> str:
+                          supabase_client: SupabaseBaseClass) -> str:
         try:
             payload = {"therapist_id": therapist_id}
             for key, value in filtered_body.items():
@@ -285,14 +271,15 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                background_tasks.add_task(pinecone_client.insert_preexisting_history_vectors,
+                background_tasks.add_task(dependency_container.get_pinecone_client().insert_preexisting_history_vectors,
                                           session_id,
                                           therapist_id,
                                           patient_id,
                                           filtered_body['pre_existing_history'],
-                                          openai_client,
+                                          dependency_container.get_openai_client(),
                                           auth_manager.is_monitoring_proxy_reachable(),
-                                          auth_manager.get_monitoring_proxy_url())
+                                          auth_manager.get_monitoring_proxy_url(),
+                                          self.chartwise_assistant.summarize_chunk)
 
             # Load default question suggestions in a background thread
             self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
@@ -325,9 +312,7 @@ class AssistantManager:
                              filtered_body: dict,
                              session_id: str,
                              background_tasks: BackgroundTasks,
-                             openai_client: OpenAIBaseClass,
-                             supabase_client: SupabaseBaseClass,
-                             pinecone_client: PineconeBaseClass):
+                             supabase_client: SupabaseBaseClass):
         patient_query = supabase_client.select(fields="*",
                                                filters={
                                                    'id': filtered_body['id'],
@@ -357,28 +342,28 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        background_tasks.add_task(pinecone_client.update_preexisting_history_vectors,
+        openai_client = dependency_container.get_openai_client()
+        background_tasks.add_task(dependency_container.get_pinecone_client().update_preexisting_history_vectors,
                                   session_id,
                                   therapist_id,
                                   filtered_body['id'],
                                   filtered_body['pre_existing_history'],
                                   openai_client,
                                   auth_manager.is_monitoring_proxy_reachable(),
-                                  auth_manager.get_monitoring_proxy_url())
+                                  auth_manager.get_monitoring_proxy_url(),
+                                  self.chartwise_assistant.summarize_chunk)
 
         # New pre-existing history content means we should clear any existing conversation.
         await openai_client.clear_chat_history()
 
     async def adapt_session_notes_to_soap(self,
                                           auth_manager: AuthManager,
-                                          openai_client: OpenAIBaseClass,
                                           therapist_id: str,
                                           session_notes_text: str,
                                           session_id: str) -> str:
         try:
             soap_report = await self.chartwise_assistant.create_soap_report(text=session_notes_text,
                                                                             therapist_id=therapist_id,
-                                                                            openai_client=openai_client,
                                                                             session_id=session_id,
                                                                             use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                             monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
@@ -387,10 +372,10 @@ class AssistantManager:
             raise Exception(e)
 
     def delete_all_data_for_patient(self,
-                                    pinecone_client: PineconeBaseClass,
                                     therapist_id: str,
                                     patient_id: str):
         try:
+            pinecone_client = dependency_container.get_pinecone_client()
             pinecone_client.delete_session_vectors(user_id=therapist_id, patient_id=patient_id)
             pinecone_client.delete_preexisting_history_vectors(user_id=therapist_id,
                                                                patient_id=patient_id)
@@ -401,9 +386,9 @@ class AssistantManager:
 
     def delete_all_sessions_for_therapist(self,
                                           user_id: str,
-                                          patient_ids: list[str],
-                                          pinecone_client: PineconeBaseClass):
+                                          patient_ids: list[str]):
         try:
+            pinecone_client = dependency_container.get_pinecone_client()
             for patient_id in patient_ids:
                 pinecone_client.delete_session_vectors(user_id=user_id,
                                                        patient_id=patient_id)
@@ -417,8 +402,6 @@ class AssistantManager:
                             session_id: str,
                             api_method: str,
                             environment: str,
-                            openai_client: OpenAIBaseClass,
-                            pinecone_client: PineconeBaseClass,
                             supabase_client: SupabaseBaseClass) -> AsyncIterable[str]:
         try:
             # If we don't have cached data about this patient, or if the therapist has
@@ -470,8 +453,6 @@ class AssistantManager:
                                                                    session_id=session_id,
                                                                    method=api_method,
                                                                    environment=environment,
-                                                                   openai_client=openai_client,
-                                                                   pinecone_client=pinecone_client,
                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                                    session_date_override=session_date_override):
@@ -488,8 +469,6 @@ class AssistantManager:
                                           environment: str,
                                           session_id: str,
                                           logger_worker: Logger,
-                                          openai_client: OpenAIBaseClass,
-                                          pinecone_client: PineconeBaseClass,
                                           supabase_client: SupabaseBaseClass):
         try:
             patient_query = supabase_client.select(fields="*",
@@ -509,9 +488,7 @@ class AssistantManager:
                                                                                         user_id=therapist_id,
                                                                                         patient_id=patient_id,
                                                                                         environment=environment,
-                                                                                        openai_client=openai_client,
                                                                                         supabase_client=supabase_client,
-                                                                                        pinecone_client=pinecone_client,
                                                                                         patient_name=(" ".join([patient_first_name, patient_last_name])),
                                                                                         patient_gender=patient_gender,
                                                                                         use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
@@ -561,8 +538,6 @@ class AssistantManager:
                                      auth_manager: AuthManager,
                                      environment: str,
                                      session_id: str,
-                                     pinecone_client: PineconeBaseClass,
-                                     openai_client: OpenAIBaseClass,
                                      supabase_client: SupabaseBaseClass,
                                      logger_worker: Logger):
         try:
@@ -598,9 +573,7 @@ class AssistantManager:
                                                                       therapist_name=therapist_name,
                                                                       therapist_gender=therapist_gender,
                                                                       session_number=session_number,
-                                                                      openai_client=openai_client,
                                                                       supabase_client=supabase_client,
-                                                                      pinecone_client=pinecone_client,
                                                                       use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                       monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
@@ -648,8 +621,6 @@ class AssistantManager:
                                            environment: str,
                                            session_id: str,
                                            background_tasks: BackgroundTasks,
-                                           openai_client: OpenAIBaseClass,
-                                           pinecone_client: PineconeBaseClass,
                                            supabase_client: SupabaseBaseClass,
                                            logger_worker: Logger,
                                            generate_insights: bool):
@@ -672,9 +643,7 @@ class AssistantManager:
                                                                                     user_id=therapist_id,
                                                                                     patient_id=patient_id,
                                                                                     environment=environment,
-                                                                                    pinecone_client=pinecone_client,
                                                                                     supabase_client=supabase_client,
-                                                                                    openai_client=openai_client,
                                                                                     patient_name=patient_full_name,
                                                                                     patient_gender=patient_gender,
                                                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
@@ -691,8 +660,6 @@ class AssistantManager:
                                                                                                 patient_name=patient_full_name,
                                                                                                 patient_gender=patient_gender,
                                                                                                 supabase_client=supabase_client,
-                                                                                                openai_client=openai_client,
-                                                                                                pinecone_client=pinecone_client,
                                                                                                 auth_manager=auth_manager,
                                                                                                 use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                                                 monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
@@ -892,9 +859,7 @@ class AssistantManager:
                                                     logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass,
-                                                    openai_client: OpenAIBaseClass,
-                                                    pinecone_client: PineconeBaseClass):
+                                                    supabase_client: SupabaseBaseClass):
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -902,24 +867,23 @@ class AssistantManager:
                                                                therapist_id=therapist_id,
                                                                language_code=language_code,
                                                                auth_manager=auth_manager,
-                                                               openai_client=openai_client,
                                                                session_id=session_id,
                                                                environment=environment,
                                                                background_tasks=background_tasks,
                                                                logger_worker=logger_worker,
                                                                supabase_client=supabase_client,
-                                                               pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
 
-        await pinecone_client.insert_session_vectors(session_id=session_id,
-                                                     user_id=therapist_id,
-                                                     patient_id=patient_id,
-                                                     text=notes_text,
-                                                     session_report_id=session_notes_id,
-                                                     openai_client=openai_client,
-                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                     therapy_session_date=session_date)
+        await dependency_container.get_pinecone_client().insert_session_vectors(session_id=session_id,
+                                                                                user_id=therapist_id,
+                                                                                patient_id=patient_id,
+                                                                                text=notes_text,
+                                                                                session_report_id=session_notes_id,
+                                                                                openai_client=dependency_container.get_openai_client(),
+                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                                therapy_session_date=session_date,
+                                                                                summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
@@ -940,8 +904,6 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  pinecone_client,
-                                  openai_client,
                                   supabase_client,
                                   logger_worker)
 
@@ -958,9 +920,7 @@ class AssistantManager:
                                                     logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass,
-                                                    openai_client: OpenAIBaseClass,
-                                                    pinecone_client: PineconeBaseClass):
+                                                    supabase_client: SupabaseBaseClass):
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -968,25 +928,24 @@ class AssistantManager:
                                                                therapist_id=therapist_id,
                                                                language_code=language_code,
                                                                auth_manager=auth_manager,
-                                                               openai_client=openai_client,
                                                                session_id=session_id,
                                                                environment=environment,
                                                                background_tasks=background_tasks,
                                                                logger_worker=logger_worker,
                                                                supabase_client=supabase_client,
-                                                               pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
 
-        await pinecone_client.update_session_vectors(session_id=session_id,
-                                                     user_id=therapist_id,
-                                                     patient_id=patient_id,
-                                                     text=notes_text,
-                                                     old_date=old_session_date,
-                                                     new_date=new_session_date,
-                                                     session_report_id=session_notes_id,
-                                                     openai_client=openai_client,
-                                                     use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+        await dependency_container.get_pinecone_client().update_session_vectors(session_id=session_id,
+                                                                                user_id=therapist_id,
+                                                                                patient_id=patient_id,
+                                                                                text=notes_text,
+                                                                                old_date=old_session_date,
+                                                                                new_date=new_session_date,
+                                                                                session_report_id=session_notes_id,
+                                                                                openai_client=dependency_container.get_openai_client(),
+                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
+                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
+                                                                                summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.
@@ -1007,8 +966,6 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  pinecone_client,
-                                  openai_client,
                                   supabase_client,
                                   logger_worker)
 
@@ -1022,12 +979,10 @@ class AssistantManager:
                                                     logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass,
-                                                    openai_client: OpenAIBaseClass,
-                                                    pinecone_client: PineconeBaseClass):
-        pinecone_client.delete_session_vectors(user_id=therapist_id,
-                                               patient_id=patient_id,
-                                               date=session_date)
+                                                    supabase_client: SupabaseBaseClass):
+        dependency_container.get_pinecone_client().delete_session_vectors(user_id=therapist_id,
+                                                                          patient_id=patient_id,
+                                                                          date=session_date)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been deleted.
@@ -1048,8 +1003,6 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  pinecone_client,
-                                  openai_client,
                                   supabase_client,
                                   logger_worker)
 
@@ -1061,17 +1014,15 @@ class AssistantManager:
                                              auth_manager: AuthManager,
                                              environment: str,
                                              session_id: str,
-                                             pinecone_client: PineconeBaseClass,
-                                             openai_client: OpenAIBaseClass,
                                              supabase_client: SupabaseBaseClass,
                                              logger_worker: Logger):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
-        await openai_client.clear_chat_history()
+        await dependency_container.get_openai_client().clear_chat_history()
 
-        # Pinecone is an eventually-consistent architecture so we need to wait a few minutes before
+        # Pinecone uses an eventually-consistent architecture so we need to wait a few minutes before
         # Reading vectors to maximize chance of data freshness
         if environment != "testing":
             await asyncio.sleep(30)
@@ -1084,8 +1035,6 @@ class AssistantManager:
                                                 environment=environment,
                                                 session_id=session_id,
                                                 background_tasks=background_tasks,
-                                                openai_client=openai_client,
-                                                pinecone_client=pinecone_client,
                                                 supabase_client=supabase_client,
                                                 logger_worker=logger_worker,
                                                 generate_insights=False)
@@ -1097,8 +1046,6 @@ class AssistantManager:
                                           auth_manager=auth_manager,
                                           environment=environment,
                                           session_id=session_id,
-                                          pinecone_client=pinecone_client,
-                                          openai_client=openai_client,
                                           supabase_client=supabase_client,
                                           logger_worker=logger_worker)
 
@@ -1111,8 +1058,6 @@ class AssistantManager:
                                                environment=environment,
                                                session_id=session_id,
                                                logger_worker=logger_worker,
-                                               openai_client=openai_client,
-                                               pinecone_client=pinecone_client,
                                                supabase_client=supabase_client)
 
         # TODO: Uncomment once we're rendering attendance insights
@@ -1253,19 +1198,16 @@ class AssistantManager:
                                                       therapist_id: str,
                                                       language_code: str,
                                                       auth_manager: AuthManager,
-                                                      openai_client: str,
                                                       session_id: str,
                                                       environment: str,
                                                       background_tasks: BackgroundTasks,
                                                       logger_worker: Logger,
                                                       supabase_client: SupabaseBaseClass,
-                                                      pinecone_client: PineconeBaseClass,
                                                       patient_id: str):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
-                                                                                      openai_client=openai_client,
                                                                                       session_id=session_id,
                                                                                       patient_id=patient_id,
                                                                                       use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
@@ -1280,9 +1222,7 @@ class AssistantManager:
                                           "notes_mini_summary": mini_summary
                                       },
                                       session_id=session_id,
-                                      openai_client=openai_client,
-                                      supabase_client=supabase_client,
-                                      pinecone_client=pinecone_client)
+                                      supabase_client=supabase_client)
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,
                                     description=f"Updating session report {session_notes_id} with a mini summary failed",

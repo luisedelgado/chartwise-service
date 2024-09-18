@@ -10,11 +10,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Annotated, AsyncIterable, Union
 
+from ..internal.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.logging import Logger
-from ..internal.dependency_container import DependencyContainer
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
@@ -39,17 +39,10 @@ class AssistantRouter:
     TEMPLATES_ENDPOINT = "/v1/templates"
     ROUTER_TAG = "assistant"
 
-    def __init__(self,
-                 environment: str,
-                 auth_manager: AuthManager,
-                 assistant_manager: AssistantManager,
-                 router_dependencies: DependencyContainer):
+    def __init__(self, environment: str):
         self._environment = environment
-        self._auth_manager = auth_manager
-        self._assistant_manager = assistant_manager
-        self._openai_client = router_dependencies.openai_client
-        self._pinecone_client = router_dependencies.pinecone_client
-        self._supabase_client_factory = router_dependencies.supabase_client_factory
+        self._auth_manager = AuthManager()
+        self._assistant_manager = AssistantManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -131,13 +124,12 @@ class AssistantRouter:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
 
             try:
-                supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                     refresh_token=datastore_refresh_token)
+                supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                          refresh_token=datastore_refresh_token)
                 therapist_id = supabase_client.get_current_user_id()
                 await self._auth_manager.refresh_session(user_id=therapist_id,
                                                          request=request,
-                                                         response=response,
-                                                         supabase_client_factory=self._supabase_client_factory)
+                                                         response=response)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
                 raise HTTPException(status_code=status_code)
@@ -258,7 +250,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -267,13 +259,12 @@ class AssistantRouter:
                                method=post_api_method,)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -309,9 +300,7 @@ class AssistantRouter:
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
                                                                                       therapist_id=therapist_id,
-                                                                                      openai_client=self._openai_client,
-                                                                                      supabase_client=supabase_client,
-                                                                                      pinecone_client=self._pinecone_client)
+                                                                                      supabase_client=supabase_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -365,7 +354,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         put_api_method = logger.API_METHOD_PUT
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -374,13 +363,12 @@ class AssistantRouter:
                                method=put_api_method)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -412,9 +400,7 @@ class AssistantRouter:
                                                          auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
-                                                         openai_client=self._openai_client,
-                                                         supabase_client=supabase_client,
-                                                         pinecone_client=self._pinecone_client)
+                                                         supabase_client=supabase_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -465,7 +451,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -474,13 +460,12 @@ class AssistantRouter:
                                method=delete_api_method)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -516,12 +501,10 @@ class AssistantRouter:
                                                          environment=self._environment,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
-                                                         openai_client=self._openai_client,
                                                          logger_worker=logger,
                                                          therapist_id=therapist_id,
                                                          session_report_id=session_report_id,
-                                                         supabase_client=supabase_client,
-                                                         pinecone_client=self._pinecone_client)
+                                                         supabase_client=supabase_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -562,7 +545,7 @@ class AssistantRouter:
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -578,8 +561,6 @@ class AssistantRouter:
                                                                     api_method=post_api_method,
                                                                     therapist_id=therapist_id,
                                                                     environment=self._environment,
-                                                                    pinecone_client=self._pinecone_client,
-                                                                    openai_client=self._openai_client,
                                                                     supabase_client=supabase_client):
                 yield part
 
@@ -629,7 +610,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         description = "".join([
             "birthdate=\"",
@@ -646,13 +627,12 @@ class AssistantRouter:
                                endpoint_name=self.PATIENTS_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -680,9 +660,7 @@ class AssistantRouter:
                                                                    logger_worker=logger,
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
-                                                                   openai_client=self._openai_client,
-                                                                   supabase_client=supabase_client,
-                                                                   pinecone_client=self._pinecone_client)
+                                                                   supabase_client=supabase_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -734,7 +712,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         put_api_method = logger.API_METHOD_PUT
         description = "".join([
             "birthdate=\"",
@@ -752,13 +730,12 @@ class AssistantRouter:
                                patient_id=body.id)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response,
                                                      request=request,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -784,9 +761,7 @@ class AssistantRouter:
                                                          filtered_body=body,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
-                                                         openai_client=self._openai_client,
-                                                         supabase_client=supabase_client,
-                                                         pinecone_client=self._pinecone_client)
+                                                         supabase_client=supabase_client)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -837,7 +812,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         delete_api_method = logger.API_METHOD_DELETE
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -846,13 +821,12 @@ class AssistantRouter:
                                patient_id=patient_id,)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response,
                                                      request=request,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -885,8 +859,7 @@ class AssistantRouter:
             assert len(delete_result.dict()['data']) > 0, "No patient found with the incoming patient_id"
 
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
-                                                                patient_id=patient_id,
-                                                                pinecone_client=self._pinecone_client)
+                                                                patient_id=patient_id)
 
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
@@ -939,7 +912,7 @@ class AssistantRouter:
         if datastore_access_token is None or datastore_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
-        logger = Logger(supabase_client_factory=self._supabase_client_factory)
+        logger = Logger()
         post_api_method = logger.API_METHOD_POST
         logger.log_api_request(background_tasks=background_tasks,
                                session_id=session_id,
@@ -947,13 +920,12 @@ class AssistantRouter:
                                endpoint_name=self.TEMPLATES_ENDPOINT)
 
         try:
-            supabase_client = self._supabase_client_factory.supabase_user_client(access_token=datastore_access_token,
-                                                                                 refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                                                                                                      refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      request=request,
-                                                     response=response,
-                                                     supabase_client_factory=self._supabase_client_factory)
+                                                     response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             description = str(e)
@@ -971,7 +943,6 @@ class AssistantRouter:
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
             soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                   openai_client=self._openai_client,
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)
