@@ -24,8 +24,8 @@ class OpenAIClient(OpenAIBaseClass):
                                             messages: list,
                                             expects_json_response: bool,
                                             use_monitoring_proxy: bool,
-                                            cache_configuration: dict = None,
-                                            monitoring_proxy_url: str):
+                                            monitoring_proxy_url: str,
+                                            cache_configuration: dict = None):
         try:
             if use_monitoring_proxy:
                 api_base = monitoring_proxy_url
