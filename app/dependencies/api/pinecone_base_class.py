@@ -84,6 +84,7 @@ class PineconeBaseClass(ABC):
     Updates a session record leveraging the incoming data.
 
     Arguments:
+    session_id – the current session id.
     user_id – the user id associated with the operation.
     patient_id – the patient id associated with the operation.
     old_date – the date associated with the old version of the record.
@@ -92,9 +93,9 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
     monitoring_proxy_url – the optional monitoring proxy url.
-    monitoring_proxy_headers – the optional monitoring proxy headers.
     """
-    async def update_session_vectors(user_id: str,
+    async def update_session_vectors(session_id: str,
+                                     user_id: str,
                                      patient_id: str,
                                      text: str,
                                      old_date: str,
@@ -102,8 +103,7 @@ class PineconeBaseClass(ABC):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
-                                     monitoring_proxy_headers: Mapping = None):
+                                     monitoring_proxy_url: str = None):
         pass
 
     """

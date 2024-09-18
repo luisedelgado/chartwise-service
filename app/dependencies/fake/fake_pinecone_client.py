@@ -47,6 +47,7 @@ class FakePineconeClient(PineconeBaseClass):
         pass
 
     async def update_session_vectors(self,
+                                     session_id: str,
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
@@ -55,8 +56,7 @@ class FakePineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
-                                     monitoring_proxy_headers: Mapping = None):
+                                     monitoring_proxy_url: str = None):
         pass
 
     async def update_preexisting_history_vectors(self,

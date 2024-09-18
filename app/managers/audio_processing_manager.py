@@ -13,7 +13,6 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.logging import Logger
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
-from ..internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 from ..vectors import data_cleaner

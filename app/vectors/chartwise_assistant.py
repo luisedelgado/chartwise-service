@@ -9,7 +9,6 @@ from ..dependencies.api.pinecone_base_class import PineconeBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..internal.utilities import datetime_handler
-from ..internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ..managers.auth_manager import AuthManager
 
 TOPICS_CONTEXT_SESSIONS_CAP = 6

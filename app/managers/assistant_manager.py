@@ -15,7 +15,6 @@ from ..managers.auth_manager import AuthManager
 from ..internal.logging import Logger
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
-from ..internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ..vectors.chartwise_assistant import ChartWiseAssistant, SUMMARIZE_CHUNK_ACTION_NAME
 
 class AssistantQuery(BaseModel):
@@ -971,14 +970,8 @@ class AssistantManager:
                                                                pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
 
-        monitoring_metadata = {
-            "user_id": therapist_id,
-            "session_id": str(session_id),
-            "action": SUMMARIZE_CHUNK_ACTION_NAME
-        }
-        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=monitoring_metadata,
-                                                                   llm_model=openai_client.LLM_MODEL)
-        await pinecone_client.update_session_vectors(user_id=therapist_id,
+        await pinecone_client.update_session_vectors(session_id=session_id,
+                                                     user_id=therapist_id,
                                                      patient_id=patient_id,
                                                      text=notes_text,
                                                      old_date=old_session_date,
@@ -986,8 +979,7 @@ class AssistantManager:
                                                      session_report_id=session_notes_id,
                                                      openai_client=openai_client,
                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                     monitoring_proxy_headers=monitoring_proxy_headers)
+                                                     monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.

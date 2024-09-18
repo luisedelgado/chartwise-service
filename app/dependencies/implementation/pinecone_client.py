@@ -197,6 +197,7 @@ class PineconeClient(PineconeBaseClass):
             raise Exception(str(e))
 
     async def update_session_vectors(self,
+                                     session_id: str,
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
@@ -205,8 +206,7 @@ class PineconeClient(PineconeBaseClass):
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str = None,
-                                     monitoring_proxy_headers: Mapping = None):
+                                     monitoring_proxy_url: str = None):
         try:
             # Delete the outdated data
             self.delete_session_vectors(user_id=user_id,
@@ -214,15 +214,15 @@ class PineconeClient(PineconeBaseClass):
                                         date=old_date)
 
             # Insert the fresh data
-            await self.insert_session_vectors(user_id=user_id,
-                                            patient_id=patient_id,
-                                            text=text,
-                                            session_report_id=session_report_id,
-                                            openai_client=openai_client,
-                                            use_monitoring_proxy=use_monitoring_proxy,
-                                            monitoring_proxy_headers=monitoring_proxy_headers,
-                                            monitoring_proxy_url=monitoring_proxy_url,
-                                            therapy_session_date=new_date)
+            await self.insert_session_vectors(session_id=session_id,
+                                              user_id=user_id,
+                                              patient_id=patient_id,
+                                              text=text,
+                                              session_report_id=session_report_id,
+                                              openai_client=openai_client,
+                                              use_monitoring_proxy=use_monitoring_proxy,
+                                              monitoring_proxy_url=monitoring_proxy_url,
+                                              therapy_session_date=new_date)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
