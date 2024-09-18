@@ -14,25 +14,25 @@ class FakePineconeClient(PineconeBaseClass):
         self.fake_vectors_insertion = None
 
     async def insert_session_vectors(self,
+                                     session_id: str,
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_headers: Mapping = None,
                                      monitoring_proxy_url: str = None,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
 
     async def insert_preexisting_history_vectors(self,
+                                                 session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None,
-                                                 monitoring_proxy_headers: Mapping = None):
+                                                 monitoring_proxy_url: str = None):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
     def delete_session_vectors(self,
@@ -60,13 +60,13 @@ class FakePineconeClient(PineconeBaseClass):
         pass
 
     async def update_preexisting_history_vectors(self,
+                                                 session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None,
-                                                 monitoring_proxy_headers: Mapping = None):
+                                                 monitoring_proxy_url: str = None):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
     async def get_vector_store_context(self,
@@ -76,9 +76,9 @@ class FakePineconeClient(PineconeBaseClass):
                                        patient_id: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
+                                       session_id: str,
                                        use_monitoring_proxy: bool,
                                        monitoring_proxy_url: str = None,
-                                       monitoring_proxy_headers: Mapping = None,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         if not self.vector_store_context_returns_data:

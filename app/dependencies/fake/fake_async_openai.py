@@ -46,11 +46,12 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self._chat = FakeOpenAIChat(completions_return_data=True)
 
     async def trigger_async_chat_completion(self,
+                                            metadata: dict,
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
                                             use_monitoring_proxy: bool,
-                                            monitoring_proxy_headers: Mapping = None,
+                                            cache_configuration: dict = None,
                                             monitoring_proxy_url: str = None):
         if self.throws_exception:
             raise Exception("Fake exception")
@@ -68,9 +69,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                      is_first_message_in_conversation: bool,
                                      patient_name: str,
                                      patient_gender: str,
+                                     metadata: dict,
                                      use_monitoring_proxy: bool,
                                      monitoring_proxy_url: str = None,
-                                     monitoring_proxy_headers: Mapping = None,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
                 try:
@@ -115,8 +116,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                top_n: int,
                                query_input: str,
                                use_monitoring_proxy: bool,
-                               monitoring_proxy_url: str = None,
-                               monitoring_proxy_headers: Mapping = None):
+                               session_id: str,
+                               user_id: str,
+                               monitoring_proxy_url: str = None):
         pass
 
     @property

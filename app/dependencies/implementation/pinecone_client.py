@@ -28,13 +28,13 @@ class PineconeClient(PineconeBaseClass):
         self.chartwise_assistant = ChartWiseAssistant()
 
     async def insert_session_vectors(self,
+                                     session_id: str,
                                      user_id: str,
                                      patient_id: str,
                                      text: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
                                      use_monitoring_proxy: bool,
-                                     monitoring_proxy_headers: Mapping = None,
                                      monitoring_proxy_url: str = None,
                                      therapy_session_date: str = None):
         try:
@@ -60,10 +60,11 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                chunk_summary = await self.chartwise_assistant.summarize_chunk(user_id=user_id,
+                                                                               session_id=session_id,
+                                                                               chunk_text=chunk_text,
                                                                                openai_client=openai_client,
                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                               monitoring_proxy_headers=monitoring_proxy_headers,
                                                                                monitoring_proxy_url=monitoring_proxy_url)
 
                 vector_store.namespace = namespace
@@ -89,13 +90,13 @@ class PineconeClient(PineconeBaseClass):
             raise Exception(str(e))
 
     async def insert_preexisting_history_vectors(self,
+                                                 session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None,
-                                                 monitoring_proxy_headers: Mapping = None):
+                                                 monitoring_proxy_url: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self.pc.Index(bucket_index)
@@ -117,10 +118,11 @@ class PineconeClient(PineconeBaseClass):
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 doc.set_content(chunk_text)
 
-                chunk_summary = await self.chartwise_assistant.summarize_chunk(chunk_text=chunk_text,
+                chunk_summary = await self.chartwise_assistant.summarize_chunk(user_id=user_id,
+                                                                               session_id=session_id,
+                                                                               chunk_text=chunk_text,
                                                                                openai_client=openai_client,
                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                               monitoring_proxy_headers=monitoring_proxy_headers,
                                                                                monitoring_proxy_url=monitoring_proxy_url)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
@@ -227,13 +229,13 @@ class PineconeClient(PineconeBaseClass):
             raise Exception(str(e))
 
     async def update_preexisting_history_vectors(self,
+                                                 session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
                                                  use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str = None,
-                                                 monitoring_proxy_headers: Mapping = None):
+                                                 monitoring_proxy_url: str = None):
         try:
             # Delete the outdated data
             self.delete_preexisting_history_vectors(user_id=user_id,
@@ -241,12 +243,12 @@ class PineconeClient(PineconeBaseClass):
 
             # Insert the fresh data
             await self.insert_preexisting_history_vectors(user_id=user_id,
+                                                          session_id=session_id,
                                                           patient_id=patient_id,
                                                           text=text,
                                                           openai_client=openai_client,
                                                           use_monitoring_proxy=use_monitoring_proxy,
-                                                          monitoring_proxy_url=monitoring_proxy_url,
-                                                          monitoring_proxy_headers=monitoring_proxy_headers)
+                                                          monitoring_proxy_url=monitoring_proxy_url)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
@@ -259,9 +261,9 @@ class PineconeClient(PineconeBaseClass):
                                        patient_id: str,
                                        query_top_k: int,
                                        rerank_top_n: int,
+                                       session_id: str,
                                        use_monitoring_proxy: bool,
                                        monitoring_proxy_url: str = None,
-                                       monitoring_proxy_headers: Mapping = None,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         missing_session_data_error = ("There's no data from patient sessions. "
@@ -316,8 +318,9 @@ class PineconeClient(PineconeBaseClass):
                                                                              top_n=rerank_top_n,
                                                                              query_input=query_input,
                                                                              use_monitoring_proxy=use_monitoring_proxy,
-                                                                             monitoring_proxy_url=monitoring_proxy_url,
-                                                                             monitoring_proxy_headers=monitoring_proxy_headers)
+                                                                             session_id=session_id,
+                                                                             user_id=user_id,
+                                                                             monitoring_proxy_url=monitoring_proxy_url)
             reranked_context = ""
             reranked_documents = reranked_response_results['reranked_documents']
             dates_contained = []

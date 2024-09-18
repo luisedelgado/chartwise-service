@@ -93,51 +93,38 @@ class ChartWiseAssistant:
                 prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{reformulate_question_system_prompt}\n{reformulate_question_user_prompt}"))
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-                monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                           llm_model=openai_client.LLM_MODEL)
-                query_input = await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+                query_input = await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                                max_tokens=max_tokens,
                                                                                 messages=[
                                                                                     {"role": "system", "content": reformulate_question_system_prompt},
                                                                                     {"role": "user", "content": reformulate_question_user_prompt},
                                                                                 ],
                                                                                 expects_json_response=False,
                                                                                 use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                monitoring_proxy_headers=monitoring_proxy_headers,
                                                                                 monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
 
-            query_store_rerank_top_n = 3
-            metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "rerank_top_n": query_store_rerank_top_n,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=10,
-                                                                     rerank_top_n=query_store_rerank_top_n,
+                                                                     rerank_top_n=3,
+                                                                     session_id=session_id,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             async for part in openai_client.stream_chat_completion(vector_context=context,
                                                                    language_code=response_language_code,
                                                                    query_input=query_input,
                                                                    is_first_message_in_conversation=is_first_message_in_conversation,
                                                                    patient_name=patient_name,
                                                                    patient_gender=patient_gender,
+                                                                   metadata=metadata,
                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                   monitoring_proxy_headers=monitoring_proxy_headers,
                                                                    last_session_date=last_session_date):
                 yield part
 
@@ -184,23 +171,15 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=BRIEFING_CONTEXT_SESSIONS_CAP)
 
-            reranking_metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "rerank_top_n": 0,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=reranking_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     session_id=session_id,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -221,7 +200,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (patient_id + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            completion_metadata = {
+            metadata = {
                 "environment": environment,
                 "user_id": user_id,
                 "patient_id": patient_id,
@@ -231,18 +210,18 @@ class ChartWiseAssistant:
                 "action": BRIEFING_ACTON_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=completion_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL,
-                                                                       cache_max_age=86400, # 24 hours
-                                                                       caching_shard_key=caching_shard_key)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -281,23 +260,15 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP)
 
-            reranking_metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "rerank_top_n": 0,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=reranking_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     session_id=session_id,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -313,7 +284,7 @@ class ChartWiseAssistant:
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (patient_id + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
-            completion_metadata = {
+            metadata = {
                 "environment": environment,
                 "user_id": user_id,
                 "patient_id": patient_id,
@@ -323,18 +294,18 @@ class ChartWiseAssistant:
                 "action": QUESTION_SUGGESTIONS_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=completion_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL,
-                                                                       cache_max_age=86400, # 24 hours
-                                                                       caching_shard_key=caching_shard_key)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
                                                                      expects_json_response=True,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -374,23 +345,15 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            reranking_metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "rerank_top_n": 0,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=reranking_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     session_id=session_id,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
@@ -417,18 +380,18 @@ class ChartWiseAssistant:
                 "action": TOPICS_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL,
-                                                                       cache_max_age=86400, # 24 hours
-                                                                       caching_shard_key=caching_shard_key)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
                                                                      expects_json_response=True,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -470,23 +433,15 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            reranking_metadata = {
-                "action": openai_client.RERANK_ACTION_NAME,
-                "session_id": str(session_id),
-                "rerank_top_n": 0,
-                "user_id": user_id
-            }
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=reranking_metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
             context = await pinecone_client.get_vector_store_context(query_input=query_input,
                                                                      user_id=user_id,
                                                                      patient_id=patient_id,
                                                                      openai_client=openai_client,
                                                                      query_top_k=0,
                                                                      rerank_top_n=0,
+                                                                     session_id=session_id,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      include_preexisting_history=False,
                                                                      session_dates_override=session_dates_override)
 
@@ -513,18 +468,18 @@ class ChartWiseAssistant:
                 "action": TOPICS_INSIGHTS_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL,
-                                                                       cache_max_age=86400, # 24 hours
-                                                                       caching_shard_key=caching_shard_key)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
                                                                      expects_json_response=False,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -561,18 +516,18 @@ class ChartWiseAssistant:
                 "action": ATTENDANCE_INSIGHTS_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL,
-                                                                       cache_max_age=86400, # 24 hours
-                                                                       caching_shard_key=caching_shard_key)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
+                                                                     cache_configuration={
+                                                                         'cache_max_age': 86400, # 24 hours
+                                                                         'caching_shard_key': caching_shard_key,
+                                                                     },
                                                                      expects_json_response=False,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -607,16 +562,14 @@ class ChartWiseAssistant:
                 "action": SOAP_REPORT_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)
@@ -625,17 +578,19 @@ class ChartWiseAssistant:
     Summarizes a chunk for faster fetching.
 
     Arguments:
+    user_id – the user id.
+    session_id – the session id.
     chunk_text – the text associated with the incoming chunk.
     openai_client – the openai client to be leveraged internally.
     use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
-    monitoring_proxy_headers – the optional monitoring proxy headers.
     monitoring_proxy_url – the optional url for the monitoring proxy.
     """
     async def summarize_chunk(self,
+                              user_id: str,
+                              session_id: str,
                               chunk_text: str,
                               openai_client: OpenAIBaseClass,
                               use_monitoring_proxy: bool,
-                              monitoring_proxy_headers: Mapping = None,
                               monitoring_proxy_url: str = None) -> str:
         try:
             prompt_crafter = PromptCrafter()
@@ -645,14 +600,19 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            metadata = {
+                "user_id": user_id,
+                "session_id": str(session_id),
+                "action": SUMMARIZE_CHUNK_ACTION_NAME
+            }
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
                                                                      use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=monitoring_proxy_url)
         except Exception as e:
             raise Exception(e)
@@ -694,16 +654,14 @@ class ChartWiseAssistant:
                 "action": MINI_SUMMARY_ACTION_NAME
             }
 
-            monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                       llm_model=openai_client.LLM_MODEL)
-            return await openai_client.trigger_async_chat_completion(max_tokens=max_tokens,
+            return await openai_client.trigger_async_chat_completion(metadata=metadata,
+                                                                     max_tokens=max_tokens,
                                                                      messages=[
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
                                                                      expects_json_response=False,
                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
         except Exception as e:
             raise Exception(e)

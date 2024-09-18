@@ -286,20 +286,14 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                monitoring_proxy_headers = create_monitoring_proxy_headers(metadata={
-                                                                               "user_id": therapist_id,
-                                                                               "session_id": str(session_id),
-                                                                               "action": SUMMARIZE_CHUNK_ACTION_NAME
-                                                                           },
-                                                                           llm_model=openai_client.LLM_MODEL)
                 background_tasks.add_task(pinecone_client.insert_preexisting_history_vectors,
+                                          session_id,
                                           therapist_id,
                                           patient_id,
                                           filtered_body['pre_existing_history'],
                                           openai_client,
                                           auth_manager.is_monitoring_proxy_reachable(),
-                                          auth_manager.get_monitoring_proxy_url(),
-                                          monitoring_proxy_headers)
+                                          auth_manager.get_monitoring_proxy_url())
 
             # Load default question suggestions in a background thread
             self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
@@ -364,21 +358,14 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata={
-                                                                       "user_id": therapist_id,
-                                                                       "session_id": str(session_id),
-                                                                       "action": SUMMARIZE_CHUNK_ACTION_NAME
-                                                                   },
-                                                                   llm_model=openai_client.LLM_MODEL)
-
         background_tasks.add_task(pinecone_client.update_preexisting_history_vectors,
+                                  session_id,
                                   therapist_id,
                                   filtered_body['id'],
                                   filtered_body['pre_existing_history'],
                                   openai_client,
                                   auth_manager.is_monitoring_proxy_reachable(),
-                                  auth_manager.get_monitoring_proxy_url(),
-                                  monitoring_proxy_headers)
+                                  auth_manager.get_monitoring_proxy_url())
 
         # New pre-existing history content means we should clear any existing conversation.
         await openai_client.clear_chat_history()
@@ -918,20 +905,13 @@ class AssistantManager:
                                                                pinecone_client=pinecone_client,
                                                                patient_id=patient_id)
 
-        monitoring_metadata = {
-            "user_id": therapist_id,
-            "session_id": str(session_id),
-            "action": SUMMARIZE_CHUNK_ACTION_NAME
-        }
-        monitoring_proxy_headers = create_monitoring_proxy_headers(metadata=monitoring_metadata,
-                                                                   llm_model=openai_client.LLM_MODEL)
-        await pinecone_client.insert_session_vectors(user_id=therapist_id,
+        await pinecone_client.insert_session_vectors(session_id=session_id,
+                                                     user_id=therapist_id,
                                                      patient_id=patient_id,
                                                      text=notes_text,
                                                      session_report_id=session_notes_id,
                                                      openai_client=openai_client,
                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                     monitoring_proxy_headers=monitoring_proxy_headers,
                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                      therapy_session_date=session_date)
 
