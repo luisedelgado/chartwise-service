@@ -32,8 +32,6 @@ class PineconeClient(PineconeBaseClass):
                                      text: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         try:
@@ -62,9 +60,7 @@ class PineconeClient(PineconeBaseClass):
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
-                                                      openai_client=openai_client,
-                                                      use_monitoring_proxy=use_monitoring_proxy,
-                                                      monitoring_proxy_url=monitoring_proxy_url)
+                                                      openai_client=openai_client)
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -77,8 +73,7 @@ class PineconeClient(PineconeBaseClass):
                     "session_report_id": session_report_id
                 })
 
-                doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
-                                                                      use_monitoring_proxy=use_monitoring_proxy)
+                doc.embedding = await openai_client.create_embeddings(text=chunk_summary)
                 vectors.append(doc)
 
             await run_in_threadpool(vector_store.add, vectors)
@@ -94,8 +89,6 @@ class PineconeClient(PineconeBaseClass):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -121,17 +114,14 @@ class PineconeClient(PineconeBaseClass):
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
-                                                      openai_client=openai_client,
-                                                      use_monitoring_proxy=use_monitoring_proxy,
-                                                      monitoring_proxy_url=monitoring_proxy_url)
+                                                      openai_client=openai_client)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
                                                     "-",
                                                     self.PRE_EXISTING_HISTORY_PREFIX])
                 doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
-                doc.embedding = await openai_client.create_embeddings(text=chunk_summary,
-                                                                      use_monitoring_proxy=use_monitoring_proxy)
+                doc.embedding = await openai_client.create_embeddings(text=chunk_summary)
                 doc.metadata.update({
                     "pre_existing_history_summary": chunk_summary,
                     "pre_existing_history_text": chunk_text
@@ -205,8 +195,6 @@ class PineconeClient(PineconeBaseClass):
                                      new_date: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable):
         try:
             # Delete the outdated data
@@ -221,8 +209,6 @@ class PineconeClient(PineconeBaseClass):
                                               text=text,
                                               session_report_id=session_report_id,
                                               openai_client=openai_client,
-                                              use_monitoring_proxy=use_monitoring_proxy,
-                                              monitoring_proxy_url=monitoring_proxy_url,
                                               therapy_session_date=new_date,
                                               summarize_chunk=summarize_chunk)
         except PineconeApiException as e:
@@ -236,8 +222,6 @@ class PineconeClient(PineconeBaseClass):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         try:
             # Delete the outdated data
@@ -250,8 +234,6 @@ class PineconeClient(PineconeBaseClass):
                                                           patient_id=patient_id,
                                                           text=text,
                                                           openai_client=openai_client,
-                                                          use_monitoring_proxy=use_monitoring_proxy,
-                                                          monitoring_proxy_url=monitoring_proxy_url,
                                                           summarize_chunk=summarize_chunk)
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
@@ -266,8 +248,6 @@ class PineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         missing_session_data_error = ("There's no data from patient sessions. "
@@ -294,8 +274,7 @@ class PineconeClient(PineconeBaseClass):
 
         # Check if caller wants us to fetch any vectors
         if query_top_k > 0:
-            embeddings = await openai_client.create_embeddings(text=query_input,
-                                                               use_monitoring_proxy=use_monitoring_proxy)
+            embeddings = await openai_client.create_embeddings(text=query_input)
             query_result = index.query(vector=embeddings,
                                        top_k=query_top_k,
                                        namespace=namespace,
@@ -321,10 +300,8 @@ class PineconeClient(PineconeBaseClass):
             reranked_response_results = await openai_client.rerank_documents(documents=retrieved_docs,
                                                                              top_n=rerank_top_n,
                                                                              query_input=query_input,
-                                                                             use_monitoring_proxy=use_monitoring_proxy,
                                                                              session_id=session_id,
-                                                                             user_id=user_id,
-                                                                             monitoring_proxy_url=monitoring_proxy_url)
+                                                                             user_id=user_id)
             reranked_context = ""
             reranked_documents = reranked_response_results['reranked_documents']
             dates_contained = []

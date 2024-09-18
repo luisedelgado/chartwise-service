@@ -131,9 +131,7 @@ class AudioProcessingManager:
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            diarization = await dependency_container.get_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path,
-                                                                                         use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                         monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+            diarization = await dependency_container.get_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path)
             update_body = {
                 "id": session_report_id,
                 "diarization": diarization,
@@ -202,9 +200,7 @@ class AudioProcessingManager:
                                                                                         {"role": "system", "content": system_prompt},
                                                                                         {"role": "user", "content": user_prompt},
                                                                                     ],
-                                                                                    expects_json_response=False,
-                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                    expects_json_response=False)
 
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
@@ -268,9 +264,7 @@ class AudioProcessingManager:
                                          template: SessionNotesTemplate,
                                          files_to_clean: list):
         try:
-            transcription = await dependency_container.get_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path,
-                                                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+            transcription = await dependency_container.get_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path)
             if template == SessionNotesTemplate.SOAP:
                 transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                                     therapist_id=therapist_id,
@@ -426,9 +420,7 @@ class AudioProcessingManager:
                                                                                               {"role": "system", "content": summarize_chunk_system_prompt},
                                                                                               {"role": "user", "content": user_prompt},
                                                                                           ],
-                                                                                          expects_json_response=False,
-                                                                                          use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                          monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                          expects_json_response=False)
                 chunk_summaries.append(current_chunk_summary)
 
             assert len(chunk_summaries or '') > 0, "No chunked summaries available to create a grand summary for incoming (large) diarization"
@@ -452,9 +444,7 @@ class AudioProcessingManager:
                                                                                   {"role": "system", "content": grand_summary_system_prompt},
                                                                                   {"role": "user", "content": grand_summary_user_prompt},
                                                                               ],
-                                                                              expects_json_response=False,
-                                                                              use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                              monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                              expects_json_response=False)
             return grand_summary
         except Exception as e:
             logger_worker.log_error(background_tasks=background_tasks,

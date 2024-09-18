@@ -19,8 +19,6 @@ class PineconeBaseClass(ABC):
     text – the text to be inserted in the record.
     session_report_id – the session report id.
     openai_client – the openai client to be leveraged internally.
-    use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
-    monitoring_proxy_url – the optional monitoring proxy url.
     summarize_chunk – a callable method used to summarize chunks.
     therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
     """
@@ -30,8 +28,6 @@ class PineconeBaseClass(ABC):
                                      text: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         pass
@@ -46,8 +42,6 @@ class PineconeBaseClass(ABC):
     patient_id – the patient id associated with the operation.
     text – the text to be inserted in the record.
     openai_client – the openai client to be leveraged internally.
-    use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
-    monitoring_proxy_url – the optional monitoring proxy url.
     summarize_chunk – a callable method used to summarize chunks.
     """
     async def insert_preexisting_history_vectors(session_id: str,
@@ -55,8 +49,6 @@ class PineconeBaseClass(ABC):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         pass
 
@@ -95,8 +87,6 @@ class PineconeBaseClass(ABC):
     new_date – the date associated with the new version of the record.
     session_report_id – the session report id.
     openai_client – the openai client to be leveraged internally.
-    use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
-    monitoring_proxy_url – the optional monitoring proxy url.
     summarize_chunk – a callable method used to summarize chunks.
     """
     async def update_session_vectors(session_id: str,
@@ -107,8 +97,6 @@ class PineconeBaseClass(ABC):
                                      new_date: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable):
         pass
 
@@ -121,8 +109,6 @@ class PineconeBaseClass(ABC):
     patient_id – the patient id associated with the operation.
     text – the text to be inserted in the record.
     openai_client – the openai client to be leveraged internally.
-    use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
-    monitoring_proxy_url – the optional monitoring proxy url.
     summarize_chunk – a callable method used to summarize chunks.
     """
     async def update_preexisting_history_vectors(session_id: str,
@@ -130,8 +116,6 @@ class PineconeBaseClass(ABC):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         pass
 
@@ -146,8 +130,6 @@ class PineconeBaseClass(ABC):
     query_top_k – the top k results that should be retrieved from the vector store.
     rerank_top_n – the top n results that should be returned after reranking vectors.
     session_id – the session id.
-    use_monitoring_proxy – flag determining whether or not we should use the monitoring proxy.
-    monitoring_proxy_url – the optional monitoring proxy url.
     include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
     session_date_override – the optional override for including session-date-specific vectors.
     """
@@ -158,8 +140,6 @@ class PineconeBaseClass(ABC):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         pass

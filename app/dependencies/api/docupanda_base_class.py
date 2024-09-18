@@ -9,11 +9,9 @@ class DocupandaBaseClass(ABC):
     Arguments:
     image_filepath – the local filepath for the image that will be uploaded.
     image_filename – the file name of the image that will be uploaded.
-    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
     """
     async def upload_image(image_filepath: str,
-                           image_filename: str,
-                           use_monitoring_proxy: bool) -> str:
+                           image_filename: str) -> str:
         pass
 
     """

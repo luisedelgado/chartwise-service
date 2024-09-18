@@ -9,8 +9,7 @@ class FakeDocupandaClient(DocupandaBaseClass):
 
     async def upload_image(self,
                            image_filepath: str,
-                           image_filename: str,
-                           use_monitoring_proxy: bool) -> str:
+                           image_filename: str) -> str:
         return "Fake ID"
 
     async def retrieve_text_from_document(self, document_id) -> Tuple[int, str]:

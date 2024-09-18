@@ -277,8 +277,6 @@ class AssistantManager:
                                           patient_id,
                                           filtered_body['pre_existing_history'],
                                           dependency_container.get_openai_client(),
-                                          auth_manager.is_monitoring_proxy_reachable(),
-                                          auth_manager.get_monitoring_proxy_url(),
                                           self.chartwise_assistant.summarize_chunk)
 
             # Load default question suggestions in a background thread
@@ -349,8 +347,6 @@ class AssistantManager:
                                   filtered_body['id'],
                                   filtered_body['pre_existing_history'],
                                   openai_client,
-                                  auth_manager.is_monitoring_proxy_reachable(),
-                                  auth_manager.get_monitoring_proxy_url(),
                                   self.chartwise_assistant.summarize_chunk)
 
         # New pre-existing history content means we should clear any existing conversation.
@@ -364,9 +360,7 @@ class AssistantManager:
         try:
             soap_report = await self.chartwise_assistant.create_soap_report(text=session_notes_text,
                                                                             therapist_id=therapist_id,
-                                                                            session_id=session_id,
-                                                                            use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                            monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                            session_id=session_id)
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -453,8 +447,6 @@ class AssistantManager:
                                                                    session_id=session_id,
                                                                    method=api_method,
                                                                    environment=environment,
-                                                                   use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                   monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                                    session_date_override=session_date_override):
                 yield part
         except Exception as e:
@@ -490,9 +482,7 @@ class AssistantManager:
                                                                                         environment=environment,
                                                                                         supabase_client=supabase_client,
                                                                                         patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                                        patient_gender=patient_gender,
-                                                                                        use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                        monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                        patient_gender=patient_gender)
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             question_suggestions_query = supabase_client.select(fields="*",
@@ -573,9 +563,7 @@ class AssistantManager:
                                                                       therapist_name=therapist_name,
                                                                       therapist_gender=therapist_gender,
                                                                       session_number=session_number,
-                                                                      supabase_client=supabase_client,
-                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                      supabase_client=supabase_client)
 
             briefing_query = supabase_client.select(fields="*",
                                                     filters={
@@ -645,9 +633,7 @@ class AssistantManager:
                                                                                     environment=environment,
                                                                                     supabase_client=supabase_client,
                                                                                     patient_name=patient_full_name,
-                                                                                    patient_gender=patient_gender,
-                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                    monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                    patient_gender=patient_gender)
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
             if generate_insights:
@@ -660,9 +646,7 @@ class AssistantManager:
                                                                                                 patient_name=patient_full_name,
                                                                                                 patient_gender=patient_gender,
                                                                                                 supabase_client=supabase_client,
-                                                                                                auth_manager=auth_manager,
-                                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                                auth_manager=auth_manager)
             else:
                 topics_insights = None
 
@@ -880,8 +864,6 @@ class AssistantManager:
                                                                                 text=notes_text,
                                                                                 session_report_id=session_notes_id,
                                                                                 openai_client=dependency_container.get_openai_client(),
-                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                                                 therapy_session_date=session_date,
                                                                                 summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
@@ -943,8 +925,6 @@ class AssistantManager:
                                                                                 new_date=new_session_date,
                                                                                 session_report_id=session_notes_id,
                                                                                 openai_client=dependency_container.get_openai_client(),
-                                                                                use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                monitoring_proxy_url=auth_manager.get_monitoring_proxy_url(),
                                                                                 summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
@@ -1209,9 +1189,7 @@ class AssistantManager:
                                                                                       therapist_id=therapist_id,
                                                                                       language_code=language_code,
                                                                                       session_id=session_id,
-                                                                                      patient_id=patient_id,
-                                                                                      use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable(),
-                                                                                      monitoring_proxy_url=auth_manager.get_monitoring_proxy_url())
+                                                                                      patient_id=patient_id)
             await self.update_session(language_code=language_code,
                                       logger_worker=logger_worker,
                                       environment=environment,

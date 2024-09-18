@@ -12,6 +12,7 @@ from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
 
+from ...internal.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
 from ...internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...vectors.message_templates import PromptCrafter, PromptScenario
@@ -23,12 +24,10 @@ class OpenAIClient(OpenAIBaseClass):
                                             max_tokens: int,
                                             messages: list,
                                             expects_json_response: bool,
-                                            use_monitoring_proxy: bool,
-                                            monitoring_proxy_url: str,
                                             cache_configuration: dict = None):
         try:
-            if use_monitoring_proxy:
-                api_base = monitoring_proxy_url
+            if use_monitoring_proxy():
+                api_base = get_monitoring_proxy_url()
                 cache_max_age = (None if (cache_configuration is None or 'cache_max_age' not in cache_configuration)
                                     else cache_configuration['cache_max_age'])
                 caching_shard_key = (None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration)
@@ -71,12 +70,11 @@ class OpenAIClient(OpenAIBaseClass):
                                      is_first_message_in_conversation: bool,
                                      patient_name: str,
                                      patient_gender: str,
-                                     use_monitoring_proxy: bool,
                                      metadata: dict,
-                                     monitoring_proxy_url: str,
                                      last_session_date: str = None) -> AsyncIterable[str]:
         try:
-            if use_monitoring_proxy:
+            if use_monitoring_proxy():
+                monitoring_proxy_url = get_monitoring_proxy_url()
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url"
 
                 api_base = monitoring_proxy_url
@@ -171,9 +169,8 @@ class OpenAIClient(OpenAIBaseClass):
         return flattened_chat_history
 
     async def create_embeddings(self,
-                                text: str,
-                                use_monitoring_proxy: bool):
-        if use_monitoring_proxy:
+                                text: str):
+        if use_monitoring_proxy():
             portkey = Portkey(
                 api_key=os.environ.get("PORTKEY_API_KEY"),
                 virtual_key=os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
@@ -201,10 +198,8 @@ class OpenAIClient(OpenAIBaseClass):
                                documents: list,
                                top_n: int,
                                query_input: str,
-                               use_monitoring_proxy: bool,
                                session_id: str,
-                               user_id: str,
-                               monitoring_proxy_url: str):
+                               user_id: str):
         try:
             context = ""
             for document in documents:
@@ -234,9 +229,7 @@ class OpenAIClient(OpenAIBaseClass):
                                                                     {"role": "system", "content": system_prompt},
                                                                     {"role": "user", "content": user_prompt},
                                                                 ],
-                                                                expects_json_response=True,
-                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                monitoring_proxy_url=monitoring_proxy_url)
+                                                                expects_json_response=True)
             assert "reranked_documents" in response
             return response
         except Exception as e:

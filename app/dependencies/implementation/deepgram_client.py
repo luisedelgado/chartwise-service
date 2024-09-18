@@ -8,6 +8,7 @@ from deepgram import (
 from fastapi import HTTPException, status
 from httpx import Timeout
 
+from ...internal.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
 from ..api.deepgram_base_class import DeepgramBaseClass
 from ...data_processing.diarization_cleaner import DiarizationCleaner
 from ...internal.utilities import general_utilities
@@ -16,12 +17,10 @@ class DeepgramClient(DeepgramBaseClass):
 
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
-    async def diarize_audio(self,
-                            file_full_path: str,
-                            use_monitoring_proxy: bool,
-                            monitoring_proxy_url: str) -> str:
-        if use_monitoring_proxy:
+    async def diarize_audio(self, file_full_path: str) -> str:
+        if use_monitoring_proxy():
             try:
+                monitoring_proxy_url = get_monitoring_proxy_url()
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
 
                 custom_host_url = os.environ.get("DG_URL")
@@ -94,11 +93,10 @@ class DeepgramClient(DeepgramBaseClass):
         return diarization
 
     async def transcribe_audio(self,
-                               file_full_path: str,
-                               use_monitoring_proxy: bool,
-                               monitoring_proxy_url: str) -> str:
-        if use_monitoring_proxy:
+                               file_full_path: str) -> str:
+        if use_monitoring_proxy():
             try:
+                monitoring_proxy_url = get_monitoring_proxy_url()
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
 
                 custom_host_url = os.environ.get("DG_URL")

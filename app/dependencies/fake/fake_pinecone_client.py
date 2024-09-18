@@ -20,8 +20,6 @@ class FakePineconeClient(PineconeBaseClass):
                                      text: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable,
                                      therapy_session_date: str = None):
         self.fake_vectors_insertion = text
@@ -32,8 +30,6 @@ class FakePineconeClient(PineconeBaseClass):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
@@ -57,8 +53,6 @@ class FakePineconeClient(PineconeBaseClass):
                                      new_date: str,
                                      session_report_id: str,
                                      openai_client: OpenAIBaseClass,
-                                     use_monitoring_proxy: bool,
-                                     monitoring_proxy_url: str,
                                      summarize_chunk: Callable):
         pass
 
@@ -68,8 +62,6 @@ class FakePineconeClient(PineconeBaseClass):
                                                  patient_id: str,
                                                  text: str,
                                                  openai_client: OpenAIBaseClass,
-                                                 use_monitoring_proxy: bool,
-                                                 monitoring_proxy_url: str,
                                                  summarize_chunk: Callable):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
@@ -81,8 +73,6 @@ class FakePineconeClient(PineconeBaseClass):
                                        query_top_k: int,
                                        rerank_top_n: int,
                                        session_id: str,
-                                       use_monitoring_proxy: bool,
-                                       monitoring_proxy_url: str,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         if not self.vector_store_context_returns_data:

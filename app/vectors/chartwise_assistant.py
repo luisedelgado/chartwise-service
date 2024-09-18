@@ -43,8 +43,6 @@ class ChartWiseAssistant:
     session_id – the session id.
     method – the API method that was invoked.
     environment – the current running environment.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     session_date_override – the optional override for including date-specific vectors.
     """
     async def query_store(self,
@@ -57,8 +55,6 @@ class ChartWiseAssistant:
                           session_id: str,
                           method: str,
                           environment: str,
-                          use_monitoring_proxy: bool,
-                          monitoring_proxy_url: str,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
             openai_client = dependency_container.get_openai_client()
@@ -96,9 +92,7 @@ class ChartWiseAssistant:
                                                                                     {"role": "system", "content": reformulate_question_system_prompt},
                                                                                     {"role": "user", "content": reformulate_question_user_prompt},
                                                                                 ],
-                                                                                expects_json_response=False,
-                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                monitoring_proxy_url=monitoring_proxy_url)
+                                                                                expects_json_response=False)
 
             context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
@@ -107,8 +101,6 @@ class ChartWiseAssistant:
                                                                                                 query_top_k=10,
                                                                                                 rerank_top_n=3,
                                                                                                 session_id=session_id,
-                                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                                monitoring_proxy_url=monitoring_proxy_url,
                                                                                                 session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
@@ -120,8 +112,6 @@ class ChartWiseAssistant:
                                                                    patient_name=patient_name,
                                                                    patient_gender=patient_gender,
                                                                    metadata=metadata,
-                                                                   use_monitoring_proxy=use_monitoring_proxy,
-                                                                   monitoring_proxy_url=monitoring_proxy_url,
                                                                    last_session_date=last_session_date):
                 yield part
 
@@ -140,8 +130,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be referred to.
     therapist_name – the name by which the patient should be referred to.
     session_number – the nth time on which the therapist is meeting with the patient.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     """
     async def create_briefing(self,
                               user_id: str,
@@ -154,9 +142,7 @@ class ChartWiseAssistant:
                               therapist_name: str,
                               therapist_gender: str,
                               session_number: int,
-                              supabase_client: SupabaseBaseClass,
-                              use_monitoring_proxy: bool,
-                              monitoring_proxy_url: str) -> str:
+                              supabase_client: SupabaseBaseClass) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
             "What's most valuable for me to remember, and what would be good avenues to explore in our upcoming session?")
@@ -173,8 +159,6 @@ class ChartWiseAssistant:
                                                                                                 query_top_k=0,
                                                                                                 rerank_top_n=0,
                                                                                                 session_id=session_id,
-                                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                                monitoring_proxy_url=monitoring_proxy_url,
                                                                                                 session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -215,9 +199,7 @@ class ChartWiseAssistant:
                                                                      cache_configuration={
                                                                          'cache_max_age': 86400, # 24 hours
                                                                          'caching_shard_key': caching_shard_key,
-                                                                     },
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     })
         except Exception as e:
             raise Exception(e)
 
@@ -232,8 +214,6 @@ class ChartWiseAssistant:
     session_id – the session id.
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     """
     async def create_question_suggestions(self,
                                           user_id: str,
@@ -243,9 +223,7 @@ class ChartWiseAssistant:
                                           session_id: str,
                                           patient_name: str,
                                           patient_gender: str,
-                                          supabase_client: SupabaseBaseClass,
-                                          use_monitoring_proxy: bool,
-                                          monitoring_proxy_url: str) -> str:
+                                          supabase_client: SupabaseBaseClass) -> str:
         try:
             query_input = f"What are 2 questions about different topics that I could ask about {patient_name}'s session history?"
 
@@ -261,8 +239,6 @@ class ChartWiseAssistant:
                                                                                                 query_top_k=0,
                                                                                                 rerank_top_n=0,
                                                                                                 session_id=session_id,
-                                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                                monitoring_proxy_url=monitoring_proxy_url,
                                                                                                 session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
@@ -298,9 +274,7 @@ class ChartWiseAssistant:
                                                                          'cache_max_age': 86400, # 24 hours
                                                                          'caching_shard_key': caching_shard_key,
                                                                      },
-                                                                     expects_json_response=True,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=True)
         except Exception as e:
             raise Exception(e)
 
@@ -316,8 +290,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     supabase_client – the supabase client to be leveraged internally.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     """
     async def fetch_recent_topics(self,
                                   user_id: str,
@@ -327,9 +299,7 @@ class ChartWiseAssistant:
                                   session_id: str,
                                   patient_name: str,
                                   patient_gender: str,
-                                  supabase_client: SupabaseBaseClass,
-                                  use_monitoring_proxy: bool,
-                                  monitoring_proxy_url: str) -> str:
+                                  supabase_client: SupabaseBaseClass) -> str:
         try:
             query_input = f"What are the topics that have come up the most in {patient_name}'s most recent sessions?"
 
@@ -345,8 +315,6 @@ class ChartWiseAssistant:
                                                                                                 query_top_k=0,
                                                                                                 rerank_top_n=0,
                                                                                                 session_id=session_id,
-                                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                                monitoring_proxy_url=monitoring_proxy_url,
                                                                                                 include_preexisting_history=False,
                                                                                                 session_dates_override=session_dates_override)
 
@@ -383,9 +351,7 @@ class ChartWiseAssistant:
                                                                          'cache_max_age': 86400, # 24 hours
                                                                          'caching_shard_key': caching_shard_key,
                                                                      },
-                                                                     expects_json_response=True,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=True)
         except Exception as e:
             raise Exception(e)
 
@@ -402,8 +368,6 @@ class ChartWiseAssistant:
     patient_name – the name by which the patient should be addressed.
     patient_gender – the patient gender.
     supabase_client – the supabase client to be leveraged internally.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     """
     async def generate_recent_topics_insights(self,
                                               recent_topics_json: str,
@@ -414,9 +378,7 @@ class ChartWiseAssistant:
                                               session_id: str,
                                               patient_name: str,
                                               patient_gender: str,
-                                              supabase_client: SupabaseBaseClass,
-                                              use_monitoring_proxy: bool,
-                                              monitoring_proxy_url: str) -> str:
+                                              supabase_client: SupabaseBaseClass) -> str:
         try:
             query_input = f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
 
@@ -432,8 +394,6 @@ class ChartWiseAssistant:
                                                                                                 query_top_k=0,
                                                                                                 rerank_top_n=0,
                                                                                                 session_id=session_id,
-                                                                                                use_monitoring_proxy=use_monitoring_proxy,
-                                                                                                monitoring_proxy_url=monitoring_proxy_url,
                                                                                                 include_preexisting_history=False,
                                                                                                 session_dates_override=session_dates_override)
 
@@ -470,9 +430,7 @@ class ChartWiseAssistant:
                                                                          'cache_max_age': 86400, # 24 hours
                                                                          'caching_shard_key': caching_shard_key,
                                                                      },
-                                                                     expects_json_response=False,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=False)
         except Exception as e:
             raise Exception(e)
 
@@ -483,9 +441,7 @@ class ChartWiseAssistant:
                                            language_code: str,
                                            session_id: str,
                                            supabase_client: SupabaseBaseClass,
-                                           openai_client: OpenAIBaseClass,
-                                           use_monitoring_proxy: bool,
-                                           monitoring_proxy_url: str) -> str:
+                                           openai_client: OpenAIBaseClass) -> str:
         try:
             patient_session_dates = [date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                                                               patient_id=patient_id,
@@ -519,9 +475,7 @@ class ChartWiseAssistant:
                                                                          'cache_max_age': 86400, # 24 hours
                                                                          'caching_shard_key': caching_shard_key,
                                                                      },
-                                                                     expects_json_response=False,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=False)
         except Exception as e:
             raise Exception(e)
 
@@ -532,15 +486,11 @@ class ChartWiseAssistant:
     text – the text to be adapted to a SOAP format.
     therapist_id – the therapist_id.
     session_id – the session id.
-    use_monitoring_proxy – flag representing whether to use the monitoring proxy.
-    monitoring_proxy_url – the monitoring proxy url.
     """
     async def create_soap_report(self,
                                  text: str,
                                  therapist_id: str,
-                                 session_id: str,
-                                 use_monitoring_proxy: bool,
-                                 monitoring_proxy_url: str) -> str:
+                                 session_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE,
@@ -563,9 +513,7 @@ class ChartWiseAssistant:
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
-                                                                     expects_json_response=False,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=False)
         except Exception as e:
             raise Exception(e)
 
@@ -577,16 +525,12 @@ class ChartWiseAssistant:
     session_id – the session id.
     chunk_text – the text associated with the incoming chunk.
     openai_client – the openai client to be leveraged internally.
-    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
-    monitoring_proxy_url – the optional url for the monitoring proxy.
     """
     async def summarize_chunk(self,
                               user_id: str,
                               session_id: str,
                               chunk_text: str,
-                              openai_client: OpenAIBaseClass,
-                              use_monitoring_proxy: bool,
-                              monitoring_proxy_url: str) -> str:
+                              openai_client: OpenAIBaseClass) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.CHUNK_SUMMARY,
@@ -606,9 +550,7 @@ class ChartWiseAssistant:
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
-                                                                     expects_json_response=False,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=False)
         except Exception as e:
             raise Exception(e)
 
@@ -621,17 +563,13 @@ class ChartWiseAssistant:
     language_code – the language_code to be used for generating the response.
     session_id – the session id.
     patient_id – the patient id.
-    use_monitoring_proxy – flag to determine whether or not the monitoring proxy is used.
-    monitoring_proxy_url – the optional url for the monitoring proxy.
     """
     async def create_session_mini_summary(self,
                                           session_notes: str,
                                           therapist_id: str,
                                           language_code: str,
                                           session_id: str,
-                                          patient_id: str,
-                                          use_monitoring_proxy: bool,
-                                          monitoring_proxy_url: str) -> str:
+                                          patient_id: str) -> str:
         try:
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(PromptScenario.SESSION_MINI_SUMMARY,
@@ -657,9 +595,7 @@ class ChartWiseAssistant:
                                                                          {"role": "system", "content": system_prompt},
                                                                          {"role": "user", "content": user_prompt},
                                                                      ],
-                                                                     expects_json_response=False,
-                                                                     use_monitoring_proxy=use_monitoring_proxy,
-                                                                     monitoring_proxy_url=monitoring_proxy_url)
+                                                                     expects_json_response=False)
         except Exception as e:
             raise Exception(e)
 

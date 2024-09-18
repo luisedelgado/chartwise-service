@@ -38,8 +38,7 @@ class ImageProcessingManager:
                 raise Exception("Something went wrong while processing the image.")
 
             doc_id = await dependency_container.get_docupanda_client().upload_image(image_filepath=image_copy_path,
-                                                                                    image_filename=image.filename,
-                                                                                    use_monitoring_proxy=auth_manager.is_monitoring_proxy_reachable())
+                                                                                    image_filename=image.filename)
 
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload={

@@ -131,14 +131,3 @@ class AuthManager:
         response.delete_cookie("session_id")
         response.delete_cookie("datastore_access_token")
         response.delete_cookie("datastore_refresh_token")
-
-    # Portkey
-
-    def get_monitoring_proxy_url(self) -> str:
-        return PORTKEY_GATEWAY_URL
-
-    def is_monitoring_proxy_reachable(self) -> bool:
-        try:
-            return requests.get(self.get_monitoring_proxy_url()).status_code < status.HTTP_500_INTERNAL_SERVER_ERROR
-        except:
-            return False
