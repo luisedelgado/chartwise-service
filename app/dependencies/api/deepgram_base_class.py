@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 class DeepgramBaseClass(ABC):
 
@@ -8,6 +8,7 @@ class DeepgramBaseClass(ABC):
     Arguments:
     file_full_path – the audio file's full path.
     """
+    @abstractmethod
     async def transcribe_audio(file_full_path: str) -> str:
         pass
 
@@ -17,5 +18,6 @@ class DeepgramBaseClass(ABC):
     Arguments:
     file_full_path – the audio file's full path.
     """
+    @abstractmethod
     async def diarize_audio(file_full_path: str):
         pass

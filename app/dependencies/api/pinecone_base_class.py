@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from pinecone import Index
 from typing import Callable
@@ -22,6 +22,7 @@ class PineconeBaseClass(ABC):
     summarize_chunk – a callable method used to summarize chunks.
     therapy_session_date – the session_date to be used as metadata (only when scenario is NEW_SESSION).
     """
+    @abstractmethod
     async def insert_session_vectors(session_id: str,
                                      user_id: str,
                                      patient_id: str,
@@ -44,6 +45,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     summarize_chunk – a callable method used to summarize chunks.
     """
+    @abstractmethod
     async def insert_preexisting_history_vectors(session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
@@ -61,6 +63,7 @@ class PineconeBaseClass(ABC):
     patient_id – the patient id associated with the operation.
     date – the optional value to be used as a filtering prefix.
     """
+    @abstractmethod
     def delete_session_vectors(user_id: str,
                                patient_id: str,
                                date: str = None):
@@ -73,6 +76,7 @@ class PineconeBaseClass(ABC):
     user_id – the user id associated with the operation.
     patient_id – the patient id associated with the operation.
     """
+    @abstractmethod
     def delete_preexisting_history_vectors(user_id: str, patient_id: str):
         pass
 
@@ -89,6 +93,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     summarize_chunk – a callable method used to summarize chunks.
     """
+    @abstractmethod
     async def update_session_vectors(session_id: str,
                                      user_id: str,
                                      patient_id: str,
@@ -111,6 +116,7 @@ class PineconeBaseClass(ABC):
     openai_client – the openai client to be leveraged internally.
     summarize_chunk – a callable method used to summarize chunks.
     """
+    @abstractmethod
     async def update_preexisting_history_vectors(session_id: str,
                                                  user_id: str,
                                                  patient_id: str,
@@ -133,6 +139,7 @@ class PineconeBaseClass(ABC):
     include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
     session_date_override – the optional override for including session-date-specific vectors.
     """
+    @abstractmethod
     async def get_vector_store_context(openai_client: OpenAIBaseClass,
                                        query_input: str,
                                        user_id: str,
@@ -151,6 +158,7 @@ class PineconeBaseClass(ABC):
     index_id – the index that should be used to query the data.
     namespace – the namespace that should be used for querying the index.
     """
+    @abstractmethod
     async def fetch_historical_context(index: Index,
                                        namespace: str):
         pass

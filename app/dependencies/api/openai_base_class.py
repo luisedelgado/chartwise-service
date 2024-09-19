@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from langchain.schema import BaseMessage
 from typing import AsyncIterable
 
@@ -20,6 +20,7 @@ class OpenAIBaseClass(ABC):
     expects_json_response – a flag representing whether or not the response is expected to be in json format.
     cache_configuration – the optional cache configuration.
     """
+    @abstractmethod
     async def trigger_async_chat_completion(metadata: dict,
                                             max_tokens: int,
                                             messages: list,
@@ -40,6 +41,7 @@ class OpenAIBaseClass(ABC):
     metadata – the metadata associated with the completion request.
     last_session_date – the optional last session date for further contextualizing the prompts.
     """
+    @abstractmethod
     async def stream_chat_completion(vector_context: str,
                                      language_code: str,
                                      query_input: str,
@@ -53,12 +55,14 @@ class OpenAIBaseClass(ABC):
     """
     Clears any existing chat history.
     """
+    @abstractmethod
     async def clear_chat_history():
         pass
 
     """
     Returns a flattened version of the full chat history.
     """
+    @abstractmethod
     async def flatten_chat_history() -> str:
         pass
 
@@ -68,6 +72,7 @@ class OpenAIBaseClass(ABC):
     Arguments:
     text – the text to be embedded.
     """
+    @abstractmethod
     async def create_embeddings(text: str):
         pass
 
@@ -81,6 +86,7 @@ class OpenAIBaseClass(ABC):
     session_id – the session id.
     user_id – the user id.
     """
+    @abstractmethod
     async def rerank_documents(documents: list,
                                top_n: int,
                                query_input: str,

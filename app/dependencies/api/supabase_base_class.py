@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 class SupabaseBaseClass(ABC):
 
@@ -9,6 +9,7 @@ class SupabaseBaseClass(ABC):
     payload – the payload to be inserted.
     table_name – the table into which the payload should be inserted.
     """
+    @abstractmethod
     def insert(payload: dict,
                table_name: str):
         pass
@@ -21,6 +22,7 @@ class SupabaseBaseClass(ABC):
     filters – the set of filters to be applied to the table.
     table_name – the table that should be updated.
     """
+    @abstractmethod
     def update(payload: dict,
                filters: dict,
                table_name: str):
@@ -36,6 +38,7 @@ class SupabaseBaseClass(ABC):
     limit – the optional cap for count of results to be returned.
     order_desc_column – the optional column that should be sorted desc.
     """
+    @abstractmethod
     def select(fields: str,
                filters: dict,
                table_name: str,
@@ -52,6 +55,7 @@ class SupabaseBaseClass(ABC):
     table_name – the table that should be queried.
     order_desc_column – the optional column that should be sorted desc.
     """
+    @abstractmethod
     def select_either_or_from_column(fields: str,
                                      possible_values: list,
                                      table_name: str,
@@ -65,6 +69,7 @@ class SupabaseBaseClass(ABC):
     filters – the set of filters to be applied to the table.
     table_name – the table name.
     """
+    @abstractmethod
     def delete(filters: dict,
                table_name: str):
         pass
@@ -72,23 +77,27 @@ class SupabaseBaseClass(ABC):
     """
     Retrieves the current user.
     """
+    @abstractmethod
     def get_user():
         pass
 
     """
     Retrieves the current user id.
     """
+    @abstractmethod
     def get_current_user_id() -> str:
         pass
 
     """
     Refreshes the current session.
     """
+    @abstractmethod
     def refresh_session():
         pass
 
     """
     Signs out.
     """
+    @abstractmethod
     def sign_out():
         pass
