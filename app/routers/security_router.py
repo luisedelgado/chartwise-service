@@ -201,7 +201,7 @@ class SecurityRouter:
                                    endpoint_name=self.TOKEN_ENDPOINT,
                                    therapist_id=body.user_id)
 
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=body.datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=body.datastore_access_token,
                                                                                                       refresh_token=body.datastore_refresh_token)
             authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
                                                                                         supabase_client=supabase_client)
@@ -212,7 +212,7 @@ class SecurityRouter:
                                                                   response=response,
                                                                   datastore_access_token=body.datastore_access_token,
                                                                   datastore_refresh_token=body.datastore_refresh_token)
-            background_tasks.add_task(dependency_container.get_openai_client().clear_chat_history)
+            background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
@@ -312,14 +312,14 @@ class SecurityRouter:
                                session_id: Annotated[Union[str, None], Cookie()]):
         user_id = None
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(refresh_token=datastore_refresh_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(refresh_token=datastore_refresh_token,
                                                                                                       access_token=datastore_access_token)
             user_id = supabase_client.get_current_user_id()
         except Exception:
             pass
 
         self._auth_manager.logout(response)
-        background_tasks.add_task(dependency_container.get_openai_client().clear_chat_history)
+        background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
 
         if user_id is not None:
             background_tasks.add_task(self._schedule_logout_activity_logging,
@@ -375,7 +375,7 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
@@ -475,7 +475,7 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
@@ -565,7 +565,7 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,

@@ -30,13 +30,13 @@ class TestingHarnessImageProcessingRouter:
         dependency_container._supabase_client_factory = None
         dependency_container._testing_environment = "testing"
 
-        self.fake_openai_client = dependency_container.get_openai_client()
-        self.fake_docupanda_client = dependency_container.get_docupanda_client()
-        self.fake_supabase_admin_client = dependency_container.get_supabase_client_factory().supabase_admin_client()
-        self.fake_supabase_user_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=FAKE_ACCESS_TOKEN,
+        self.fake_openai_client = dependency_container.inject_openai_client()
+        self.fake_docupanda_client = dependency_container.inject_docupanda_client()
+        self.fake_supabase_admin_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+        self.fake_supabase_user_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=FAKE_ACCESS_TOKEN,
                                                                                                                  refresh_token=FAKE_REFRESH_TOKEN)
-        self.fake_pinecone_client = dependency_container.get_pinecone_client()
-        self.fake_supabase_client_factory = dependency_container.get_supabase_client_factory()
+        self.fake_pinecone_client = dependency_container.inject_pinecone_client()
+        self.fake_supabase_client_factory = dependency_container.inject_supabase_client_factory()
         self.auth_cookie, _ = AuthManager().create_access_token(user_id=FAKE_THERAPIST_ID)
         coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)

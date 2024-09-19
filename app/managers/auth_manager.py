@@ -96,7 +96,7 @@ class AuthManager:
                                     samesite="none")
             # If we have datastore tokens in cookies, let's refresh them.
             elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
-                supabase_client_factory = dependency_container.get_supabase_client_factory()
+                supabase_client_factory = dependency_container.inject_supabase_client_factory()
                 supabase_client: SupabaseBaseClass = supabase_client_factory.supabase_user_client(access_token=request.cookies['datastore_access_token'],
                                                                                                   refresh_token=request.cookies['datastore_refresh_token'])
                 refresh_session_response = supabase_client.refresh_session().dict()

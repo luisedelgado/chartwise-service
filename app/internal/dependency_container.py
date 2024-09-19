@@ -21,27 +21,27 @@ class DependencyContainer:
         self._deepgram_client = None
         self._supabase_client_factory = None
 
-    def get_deepgram_client(self) -> DeepgramBaseClass:
+    def inject_deepgram_client(self) -> DeepgramBaseClass:
         if self._deepgram_client is None:
             self._deepgram_client = FakeDeepgramClient() if self._testing_environment else DeepgramClient()
         return self._deepgram_client
 
-    def get_openai_client(self) -> OpenAIBaseClass:
+    def inject_openai_client(self) -> OpenAIBaseClass:
         if self._openai_client is None:
             self._openai_client = FakeAsyncOpenAI() if self._testing_environment else OpenAIClient()
         return self._openai_client
 
-    def get_pinecone_client(self) -> PineconeBaseClass:
+    def inject_pinecone_client(self) -> PineconeBaseClass:
         if self._pinecone_client is None:
             self._pinecone_client = FakePineconeClient() if self._testing_environment else PineconeClient()
         return self._pinecone_client
 
-    def get_docupanda_client(self) -> DocupandaBaseClass:
+    def inject_docupanda_client(self) -> DocupandaBaseClass:
         if self._docupanda_client is None:
             self._docupanda_client = FakeDocupandaClient() if self._testing_environment else DocupandaClient()
         return self._docupanda_client
 
-    def get_supabase_client_factory(self) -> SupabaseFactoryBaseClass:
+    def inject_supabase_client_factory(self) -> SupabaseFactoryBaseClass:
         if self._supabase_client_factory is None:
             self._supabase_client_factory = FakeSupabaseClientFactory(FakeSupabaseClient(), FakeSupabaseClient()) if self._testing_environment else SupabaseClientFactory()
         return self._supabase_client_factory

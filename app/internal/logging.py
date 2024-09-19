@@ -12,7 +12,7 @@ class Logger:
     API_METHOD_DELETE = "DELETE"
 
     def __init__(self):
-        self.supabase_client = dependency_container.get_supabase_client_factory().supabase_admin_client()
+        self.supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
     """
     Logs data about an API request.

@@ -149,7 +149,7 @@ class AudioProcessingRouter:
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -262,7 +262,7 @@ class AudioProcessingRouter:
                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,

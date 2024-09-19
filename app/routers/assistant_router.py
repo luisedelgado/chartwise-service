@@ -133,7 +133,7 @@ class AssistantRouter:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
 
             try:
-                supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+                supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                           refresh_token=datastore_refresh_token)
                 therapist_id = supabase_client.get_current_user_id()
                 await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -276,7 +276,7 @@ class AssistantRouter:
                                method=post_api_method,)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -380,7 +380,7 @@ class AssistantRouter:
                                method=put_api_method)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -477,7 +477,7 @@ class AssistantRouter:
                                method=delete_api_method)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -644,7 +644,7 @@ class AssistantRouter:
                                endpoint_name=self.PATIENTS_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -747,7 +747,7 @@ class AssistantRouter:
                                patient_id=body.id)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -838,7 +838,7 @@ class AssistantRouter:
                                patient_id=patient_id,)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
@@ -937,7 +937,7 @@ class AssistantRouter:
                                endpoint_name=self.TEMPLATES_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.get_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,

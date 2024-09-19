@@ -57,7 +57,7 @@ class ChartWiseAssistant:
                           environment: str,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
-            openai_client = dependency_container.get_openai_client()
+            openai_client = dependency_container.inject_openai_client()
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -94,7 +94,7 @@ class ChartWiseAssistant:
                                                                                 ],
                                                                                 expects_json_response=False)
 
-            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+            context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
                                                                                                 patient_id=patient_id,
                                                                                                 openai_client=openai_client,
@@ -151,8 +151,8 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=BRIEFING_CONTEXT_SESSIONS_CAP)
 
-            openai_client = dependency_container.get_openai_client()
-            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+            openai_client = dependency_container.inject_openai_client()
+            context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
                                                                                                 patient_id=patient_id,
                                                                                                 openai_client=openai_client,
@@ -231,8 +231,8 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP)
 
-            openai_client = dependency_container.get_openai_client()
-            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+            openai_client = dependency_container.inject_openai_client()
+            context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
                                                                                                 patient_id=patient_id,
                                                                                                 openai_client=openai_client,
@@ -307,8 +307,8 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            openai_client = dependency_container.get_openai_client()
-            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+            openai_client = dependency_container.inject_openai_client()
+            context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
                                                                                                 patient_id=patient_id,
                                                                                                 openai_client=openai_client,
@@ -386,8 +386,8 @@ class ChartWiseAssistant:
                                                                                 patient_id=patient_id,
                                                                                 n=TOPICS_CONTEXT_SESSIONS_CAP)
 
-            openai_client = dependency_container.get_openai_client()
-            context = await dependency_container.get_pinecone_client().get_vector_store_context(query_input=query_input,
+            openai_client = dependency_container.inject_openai_client()
+            context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
                                                                                                 user_id=user_id,
                                                                                                 patient_id=patient_id,
                                                                                                 openai_client=openai_client,
@@ -498,7 +498,7 @@ class ChartWiseAssistant:
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.SOAP_TEMPLATE)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
 
-            openai_client = dependency_container.get_openai_client()
+            openai_client = dependency_container.inject_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {
@@ -578,7 +578,7 @@ class ChartWiseAssistant:
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
 
-            openai_client = dependency_container.get_openai_client()
+            openai_client = dependency_container.inject_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             metadata = {

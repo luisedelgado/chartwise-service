@@ -271,12 +271,12 @@ class AssistantManager:
             patient_id = response.dict()['data'][0]['id']
 
             if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                background_tasks.add_task(dependency_container.get_pinecone_client().insert_preexisting_history_vectors,
+                background_tasks.add_task(dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
                                           session_id,
                                           therapist_id,
                                           patient_id,
                                           filtered_body['pre_existing_history'],
-                                          dependency_container.get_openai_client(),
+                                          dependency_container.inject_openai_client(),
                                           self.chartwise_assistant.summarize_chunk)
 
             # Load default question suggestions in a background thread
@@ -340,8 +340,8 @@ class AssistantManager:
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
             return
 
-        openai_client = dependency_container.get_openai_client()
-        background_tasks.add_task(dependency_container.get_pinecone_client().update_preexisting_history_vectors,
+        openai_client = dependency_container.inject_openai_client()
+        background_tasks.add_task(dependency_container.inject_pinecone_client().update_preexisting_history_vectors,
                                   session_id,
                                   therapist_id,
                                   filtered_body['id'],
@@ -369,7 +369,7 @@ class AssistantManager:
                                     therapist_id: str,
                                     patient_id: str):
         try:
-            pinecone_client = dependency_container.get_pinecone_client()
+            pinecone_client = dependency_container.inject_pinecone_client()
             pinecone_client.delete_session_vectors(user_id=therapist_id, patient_id=patient_id)
             pinecone_client.delete_preexisting_history_vectors(user_id=therapist_id,
                                                                patient_id=patient_id)
@@ -382,7 +382,7 @@ class AssistantManager:
                                           user_id: str,
                                           patient_ids: list[str]):
         try:
-            pinecone_client = dependency_container.get_pinecone_client()
+            pinecone_client = dependency_container.inject_pinecone_client()
             for patient_id in patient_ids:
                 pinecone_client.delete_session_vectors(user_id=user_id,
                                                        patient_id=patient_id)
@@ -858,12 +858,12 @@ class AssistantManager:
                                                                supabase_client=supabase_client,
                                                                patient_id=patient_id)
 
-        await dependency_container.get_pinecone_client().insert_session_vectors(session_id=session_id,
+        await dependency_container.inject_pinecone_client().insert_session_vectors(session_id=session_id,
                                                                                 user_id=therapist_id,
                                                                                 patient_id=patient_id,
                                                                                 text=notes_text,
                                                                                 session_report_id=session_notes_id,
-                                                                                openai_client=dependency_container.get_openai_client(),
+                                                                                openai_client=dependency_container.inject_openai_client(),
                                                                                 therapy_session_date=session_date,
                                                                                 summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
@@ -917,14 +917,14 @@ class AssistantManager:
                                                                supabase_client=supabase_client,
                                                                patient_id=patient_id)
 
-        await dependency_container.get_pinecone_client().update_session_vectors(session_id=session_id,
+        await dependency_container.inject_pinecone_client().update_session_vectors(session_id=session_id,
                                                                                 user_id=therapist_id,
                                                                                 patient_id=patient_id,
                                                                                 text=notes_text,
                                                                                 old_date=old_session_date,
                                                                                 new_date=new_session_date,
                                                                                 session_report_id=session_notes_id,
-                                                                                openai_client=dependency_container.get_openai_client(),
+                                                                                openai_client=dependency_container.inject_openai_client(),
                                                                                 summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
@@ -960,7 +960,7 @@ class AssistantManager:
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
                                                     supabase_client: SupabaseBaseClass):
-        dependency_container.get_pinecone_client().delete_session_vectors(user_id=therapist_id,
+        dependency_container.inject_pinecone_client().delete_session_vectors(user_id=therapist_id,
                                                                           patient_id=patient_id,
                                                                           date=session_date)
 
@@ -1000,7 +1000,7 @@ class AssistantManager:
         self.cached_patient_query_data = None
 
         # Given our chat history may be stale based on the new data, let's clear anything we have
-        await dependency_container.get_openai_client().clear_chat_history()
+        await dependency_container.inject_openai_client().clear_chat_history()
 
         # Pinecone uses an eventually-consistent architecture so we need to wait a few minutes before
         # Reading vectors to maximize chance of data freshness

@@ -131,7 +131,7 @@ class AudioProcessingManager:
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            diarization = await dependency_container.get_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path)
+            diarization = await dependency_container.inject_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path)
             update_body = {
                 "id": session_report_id,
                 "diarization": diarization,
@@ -176,7 +176,7 @@ class AudioProcessingManager:
             encoding = get_encoding("o200k_base")
             prompt_tokens = len(encoding.encode(f"{system_prompt}\n{user_prompt}"))
 
-            openai_client = dependency_container.get_openai_client()
+            openai_client = dependency_container.inject_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             if max_tokens < 0:
@@ -264,7 +264,7 @@ class AudioProcessingManager:
                                          template: SessionNotesTemplate,
                                          files_to_clean: list):
         try:
-            transcription = await dependency_container.get_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path)
+            transcription = await dependency_container.inject_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path)
             if template == SessionNotesTemplate.SOAP:
                 transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                                     therapist_id=therapist_id,
@@ -412,7 +412,7 @@ class AudioProcessingManager:
 
                 prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
 
-                openai_client = dependency_container.get_openai_client()
+                openai_client = dependency_container.inject_openai_client()
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
                 current_chunk_summary = await openai_client.trigger_async_chat_completion(metadata=metadata,
                                                                                           max_tokens=max_tokens,

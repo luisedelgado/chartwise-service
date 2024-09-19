@@ -36,7 +36,7 @@ class ImageProcessingManager:
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            doc_id = await dependency_container.get_docupanda_client().upload_image(image_filepath=image_copy_path,
+            doc_id = await dependency_container.inject_docupanda_client().upload_image(image_filepath=image_copy_path,
                                                                                     image_filename=image.filename)
 
             insert_result = supabase_client.insert(table_name="session_reports",
@@ -72,7 +72,7 @@ class ImageProcessingManager:
             session_notes_id = None
 
             for attempt in range(MAX_RETRIES):
-                textraction_status_code, textraction = await dependency_container.get_docupanda_client().retrieve_text_from_document(document_id)
+                textraction_status_code, textraction = await dependency_container.inject_docupanda_client().retrieve_text_from_document(document_id)
 
                 if textraction_status_code == status.HTTP_202_ACCEPTED:
                     if attempt < MAX_RETRIES - 1:
