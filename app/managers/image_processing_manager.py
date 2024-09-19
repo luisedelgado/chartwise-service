@@ -24,7 +24,6 @@ class ImageProcessingManager:
                                            therapist_id: str,
                                            session_date: str,
                                            template: SessionNotesTemplate,
-                                           auth_manager: AuthManager,
                                            supabase_client: SupabaseBaseClass,
                                            image: UploadFile = File(...)) -> Tuple[str, str]:
         files_to_clean = None
