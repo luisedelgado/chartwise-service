@@ -4,6 +4,7 @@ from fastapi import (BackgroundTasks, File, UploadFile)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
 
+from .media_processing_manager import MediaProcessingManager
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
@@ -17,7 +18,7 @@ from ..vectors import data_cleaner
 
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
-class AudioProcessingManager:
+class AudioProcessingManager(MediaProcessingManager):
 
     DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
     DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME = "diarization_chunks_grand_summary"
@@ -357,29 +358,6 @@ class AudioProcessingManager:
                                     })
         except Exception as e:
             raise Exception(e)
-
-    async def _update_session_processing_status(self,
-                                                assistant_manager: AssistantManager,
-                                                language_code: str,
-                                                logger_worker: Logger,
-                                                environment: str,
-                                                background_tasks: BackgroundTasks,
-                                                auth_manager: AuthManager,
-                                                session_id: str,
-                                                supabase_client: SupabaseBaseClass,
-                                                session_upload_status: str,
-                                                session_notes_id: str):
-        await assistant_manager.update_session(language_code=language_code,
-                                               logger_worker=logger_worker,
-                                               environment=environment,
-                                               background_tasks=background_tasks,
-                                               auth_manager=auth_manager,
-                                               filtered_body={
-                                                   "id": session_notes_id,
-                                                   "processing_status": session_upload_status
-                                               },
-                                               session_id=session_id,
-                                               supabase_client=supabase_client)
 
     async def _chunk_diarization_and_summarize(self,
                                                encoding: Encoding,
