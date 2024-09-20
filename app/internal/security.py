@@ -14,6 +14,6 @@ STORE_TOKENS_ERROR = HTTPException(
 )
 
 class Token(BaseModel):
-    access_token: str
+    auth_token: str
     token_type: str
     expiration_timestamp: str

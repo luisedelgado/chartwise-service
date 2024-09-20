@@ -87,7 +87,7 @@ class TestingHarnessAudioProcessingRouter:
                                                                                                                  refresh_token=FAKE_REFRESH_TOKEN)
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
         self.fake_supabase_client_factory = dependency_container.inject_supabase_client_factory()
-        self.auth_cookie, _ = AuthManager().create_access_token(user_id=FAKE_THERAPIST_ID)
+        self.auth_cookie, _ = AuthManager().create_auth_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)

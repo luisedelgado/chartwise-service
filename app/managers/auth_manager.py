@@ -37,7 +37,7 @@ class AuthManager:
         except Exception as e:
             raise Exception(str(e))
 
-    def create_access_token(self, user_id: str) -> Tuple[str, str]:
+    def create_auth_token(self, user_id: str) -> Tuple[str, str]:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,15 +72,15 @@ class AuthManager:
                               user_id: str,
                               response: Response) -> Token:
         try:
-            access_token, expiration_timestamp = self.create_access_token(user_id)
+            auth_token, expiration_timestamp = self.create_auth_token(user_id)
             response.set_cookie(key="authorization",
-                                value=access_token,
+                                value=auth_token,
                                 domain=self.APP_COOKIE_DOMAIN,
                                 httponly=True,
                                 secure=True,
                                 samesite="none")
 
-            return Token(access_token=access_token,
+            return Token(auth_token=auth_token,
                          token_type="bearer",
                          expiration_timestamp=expiration_timestamp)
         except Exception as e:
