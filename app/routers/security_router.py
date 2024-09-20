@@ -211,13 +211,13 @@ class SecurityRouter:
     store_refresh_token – the store refresh token.
     session_id – the id of the current user session.
     """
-    async def _refresh_new_access_token_internal(self,
-                                                 authorization: Annotated[Union[str, None], Cookie()],
-                                                 background_tasks: BackgroundTasks,
-                                                 response: Response,
-                                                 store_access_token: Annotated[str | None, Header()],
-                                                 store_refresh_token: Annotated[str | None, Header()],
-                                                 session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+    async def _refresh_access_token_internal(self,
+                                             authorization: Annotated[Union[str, None], Cookie()],
+                                             background_tasks: BackgroundTasks,
+                                             response: Response,
+                                             store_access_token: Annotated[str | None, Header()],
+                                             store_refresh_token: Annotated[str | None, Header()],
+                                             session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         logger = Logger()
         put_api_method = logger.API_METHOD_PUT
 
