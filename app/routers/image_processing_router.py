@@ -120,15 +120,14 @@ class ImageProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              patient_id=patient_id,
                              method=post_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             assert len(patient_id or '') > 0, "Didn't receive a valid document id."

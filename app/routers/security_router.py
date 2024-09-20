@@ -176,7 +176,7 @@ class SecurityRouter:
                                     method=post_api_method)
             return auth_token
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = status.HTTP_401_UNAUTHORIZED
             description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
@@ -272,14 +272,13 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=post_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -369,14 +368,13 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=put_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -456,14 +454,13 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.ACCOUNT_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=delete_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             patients_response = supabase_client.select(fields="id",

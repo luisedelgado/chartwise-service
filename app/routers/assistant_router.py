@@ -111,11 +111,12 @@ class AssistantRouter:
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             if not self._auth_manager.access_token_is_valid(authorization):
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
+                raise security.AUTH_TOKEN_EXPIRED_ERROR
 
             if store_access_token is None or store_refresh_token is None:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, headers={"WWW-Authenticate": "Bearer"})
+                raise security.STORE_TOKENS_ERROR
 
+            logger = Logger()
             try:
                 supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                              refresh_token=store_refresh_token)
@@ -123,8 +124,15 @@ class AssistantRouter:
                 await self._auth_manager.refresh_session(user_id=therapist_id,
                                                          response=response)
             except Exception as e:
-                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-                raise HTTPException(status_code=status_code)
+                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+                logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.QUERIES_ENDPOINT,
+                             patient_id=query.patient_id,
+                             error_code=status_code,
+                             description=str(e),
+                             method=logger.API_METHOD_POST)
+                raise security.STORE_TOKENS_ERROR
 
             try:
                 assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
@@ -247,16 +255,15 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
-            description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
                              patient_id=body.patient_id,
-                             description=description,
+                             description=str(e),
                              method=post_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -348,16 +355,15 @@ class AssistantRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
-            description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              session_report_id=body.id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=put_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -443,15 +449,14 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              session_report_id=session_report_id,
                              endpoint_name=self.SESSIONS_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=delete_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             assert len(session_report_id or '') > 0, "Received invalid session_report_id"
@@ -607,14 +612,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=post_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -707,15 +711,14 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              error_code=status_code,
                              patient_id=body.id,
-                             description=description,
+                             description=str(e),
                              method=put_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             body = body.dict(exclude_unset=True)
@@ -795,15 +798,14 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.PATIENTS_ENDPOINT,
                              patient_id=patient_id,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=delete_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             assert len(patient_id or '') > 0, "Missing patient_id param"
@@ -891,14 +893,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
             logger.log_error(background_tasks=background_tasks,
                              session_id=session_id,
                              endpoint_name=self.TEMPLATES_ENDPOINT,
                              error_code=status_code,
-                             description=description,
+                             description=str(e),
                              method=post_api_method)
-            raise HTTPException(status_code=status_code, detail=description)
+            raise security.STORE_TOKENS_ERROR
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"
