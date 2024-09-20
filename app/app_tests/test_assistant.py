@@ -53,26 +53,6 @@ class TestingHarnessAssistantRouter:
                                })
         assert response.status_code == 401
 
-    def test_insert_new_session_with_auth_token_but_supabase_returns_unathenticated_session(self):
-        response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
-                               cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                },
-                                json={
-                                    "insert_payload": {
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "session_date": "01-01-2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                        "source": "manual_input"
-                                    },
-                                    "client_timezone_identifier": TZ_IDENTIFIER,
-                               })
-        assert response.status_code == 401
-
     def test_insert_new_session_with_valid_authentication_but_invalid_date_format(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -204,24 +184,6 @@ class TestingHarnessAssistantRouter:
                                         },
                                         "client_timezone_identifier": TZ_IDENTIFIER,
                                     })
-        assert response.status_code == 401
-
-    def test_update_session_with_auth_token_but_supabase_returns_unathenticated_session(self):
-        response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
-                               cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                },
-                                json={
-                                    "update_payload": {
-                                        "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
-                                        "session_date": "01/01/2020",
-                                        "source": "manual_input",
-                                        "id": FAKE_SESSION_REPORT_ID
-                                    },
-                                    "client_timezone_identifier": TZ_IDENTIFIER,
-                               })
         assert response.status_code == 401
 
     def test_update_session_with_valid_auth_but_invalid_date_format(self):
@@ -486,19 +448,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_session_query_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "text": "Quien es el jugador favorito de Lionel Andres?",
-                                    })
-        assert response.status_code == 401
-
     def test_session_query_with_valid_auth_token_but_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -599,24 +548,6 @@ class TestingHarnessAssistantRouter:
                                         "first_name": "Pepito",
                                         "last_name": "Perez",
                                         "pre_existing_history": "My history",
-                                        "birth_date": "10-24-1991",
-                                        "gender": "female",
-                                        "email": "foo@foo.foo",
-                                        "phone_number": "123",
-                                        "consentment_channel": "verbal",
-                                    })
-        assert response.status_code == 401
-
-    def test_add_patient_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "first_name": "Pepito",
-                                        "last_name": "Perez",
                                         "birth_date": "10-24-1991",
                                         "gender": "female",
                                         "email": "foo@foo.foo",
@@ -906,25 +837,6 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_update_patient_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "id": FAKE_PATIENT_ID,
-                                        "first_name": "Pepito",
-                                        "last_name": "Perez",
-                                        "birth_date": "10-24-1991",
-                                        "gender": "female",
-                                        "email": "foo@foo.foo",
-                                        "phone_number": "123",
-                                        "consentment_channel": "verbal",
-                                    })
-        assert response.status_code == 401
-
     def test_update_patient_with_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -1002,18 +914,6 @@ class TestingHarnessAssistantRouter:
 
     def test_delete_patient_with_missing_auth(self):
         response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                    })
-        assert response.status_code == 401
-
-    def test_delete_patient_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
                                     })

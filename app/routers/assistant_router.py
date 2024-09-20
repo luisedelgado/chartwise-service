@@ -53,7 +53,6 @@ class AssistantRouter:
     def _register_routes(self):
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def insert_new_session(insert_payload: SessionNotesInsert,
-                                     request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
                                      store_access_token: Annotated[str | None, Header()] = None,
@@ -66,7 +65,6 @@ class AssistantRouter:
             return await self._insert_new_session_internal(body=insert_payload,
                                                            client_timezone_identifier=client_timezone_identifier,
                                                            background_tasks=background_tasks,
-                                                           request=request,
                                                            response=response,
                                                            datastore_access_token=datastore_access_token,
                                                            datastore_refresh_token=datastore_refresh_token,
@@ -75,7 +73,6 @@ class AssistantRouter:
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_session(update_payload: SessionNotesUpdate,
-                                 request: Request,
                                  response: Response,
                                  background_tasks: BackgroundTasks,
                                  client_timezone_identifier: Annotated[str, Body()] = None,
@@ -88,7 +85,6 @@ class AssistantRouter:
             return await self._update_session_internal(body=update_payload,
                                                        client_timezone_identifier=client_timezone_identifier,
                                                        response=response,
-                                                       request=request,
                                                        background_tasks=background_tasks,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
@@ -97,7 +93,6 @@ class AssistantRouter:
 
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_session(response: Response,
-                                 request: Request,
                                  background_tasks: BackgroundTasks,
                                  session_report_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
@@ -109,7 +104,6 @@ class AssistantRouter:
             return await self._delete_session_internal(session_report_id=session_report_id,
                                                        background_tasks=background_tasks,
                                                        response=response,
-                                                       request=request,
                                                        datastore_access_token=datastore_access_token,
                                                        datastore_refresh_token=datastore_refresh_token,
                                                        authorization=authorization,
@@ -118,7 +112,6 @@ class AssistantRouter:
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           response: Response,
-                                          request: Request,
                                           background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
@@ -137,7 +130,6 @@ class AssistantRouter:
                                                                                                           refresh_token=datastore_refresh_token)
                 therapist_id = supabase_client.get_current_user_id()
                 await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                         request=request,
                                                          response=response)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -158,7 +150,6 @@ class AssistantRouter:
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
-                              request: Request,
                               background_tasks: BackgroundTasks,
                               body: PatientInsertPayload,
                               store_access_token: Annotated[str | None, Header()] = None,
@@ -168,7 +159,6 @@ class AssistantRouter:
                               authorization: Annotated[Union[str, None], Cookie()] = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(response=response,
-                                                    request=request,
                                                     background_tasks=background_tasks,
                                                     body=body,
                                                     datastore_access_token=datastore_access_token,
@@ -178,7 +168,6 @@ class AssistantRouter:
 
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
-                                 request: Request,
                                  background_tasks: BackgroundTasks,
                                  body: PatientUpdatePayload,
                                  store_access_token: Annotated[str | None, Header()] = None,
@@ -188,7 +177,6 @@ class AssistantRouter:
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(response=response,
-                                                       request=request,
                                                        body=body,
                                                        background_tasks=background_tasks,
                                                        datastore_access_token=datastore_access_token,
@@ -198,7 +186,6 @@ class AssistantRouter:
 
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(response: Response,
-                                 request: Request,
                                  background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
@@ -208,7 +195,6 @@ class AssistantRouter:
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(response=response,
-                                                       request=request,
                                                        background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        datastore_access_token=datastore_access_token,
@@ -218,7 +204,6 @@ class AssistantRouter:
 
         @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def transform_session_with_template(response: Response,
-                                                  request: Request,
                                                   background_tasks: BackgroundTasks,
                                                   body: TemplatePayload,
                                                   store_access_token: Annotated[str | None, Header()] = None,
@@ -228,7 +213,6 @@ class AssistantRouter:
                                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(response=response,
-                                                                        request=request,
                                                                         background_tasks=background_tasks,
                                                                         session_notes_text=body.session_notes_text,
                                                                         template=body.template,
@@ -243,7 +227,6 @@ class AssistantRouter:
     Arguments:
     body – the incoming request json body.
     client_timezone_identifier – the client's timezone identifier.
-    request – the incoming request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
@@ -254,7 +237,6 @@ class AssistantRouter:
     async def _insert_new_session_internal(self,
                                            body: SessionNotesInsert,
                                            client_timezone_identifier: str,
-                                           request: Request,
                                            response: Response,
                                            background_tasks: BackgroundTasks,
                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -280,7 +262,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             description = str(e)
@@ -347,7 +328,6 @@ class AssistantRouter:
     Arguments:
     body – the incoming request body.
     client_timezone_identifier – the client's timezone identifier.
-    request – the incoming request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
@@ -358,7 +338,6 @@ class AssistantRouter:
     async def _update_session_internal(self,
                                        body: SessionNotesUpdate,
                                        client_timezone_identifier: str,
-                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -384,7 +363,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             description = str(e)
@@ -445,7 +423,6 @@ class AssistantRouter:
 
     Arguments:
     session_report_id – the id for the incoming session report.
-    request – the incoming request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     datastore_access_token – the datastore access token.
@@ -455,7 +432,6 @@ class AssistantRouter:
     """
     async def _delete_session_internal(self,
                                        session_report_id: str,
-                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -481,7 +457,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -604,7 +579,6 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
     datastore_access_token – the datastore access token.
@@ -614,7 +588,6 @@ class AssistantRouter:
     """
     async def _add_patient_internal(self,
                                     response: Response,
-                                    request: Request,
                                     background_tasks: BackgroundTasks,
                                     body: PatientInsertPayload,
                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -648,7 +621,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -706,7 +678,6 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
     datastore_access_token – the datastore access token.
@@ -716,7 +687,6 @@ class AssistantRouter:
     """
     async def _update_patient_internal(self,
                                        response: Response,
-                                       request: Request,
                                        background_tasks: BackgroundTasks,
                                        body: PatientUpdatePayload,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -751,7 +721,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -806,7 +775,6 @@ class AssistantRouter:
 
     Arguments:
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
     datastore_access_token – the datastore access token.
@@ -816,7 +784,6 @@ class AssistantRouter:
     """
     async def _delete_patient_internal(self,
                                        response: Response,
-                                       request: Request,
                                        background_tasks: BackgroundTasks,
                                        patient_id: str,
                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
@@ -842,7 +809,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -904,7 +870,6 @@ class AssistantRouter:
 
     Arguments:
     response – the response model used for the final response that will be returned.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     session_notes_text – the session notes to be adapted into SOAP.
     template – the template to be applied.
@@ -915,7 +880,6 @@ class AssistantRouter:
     """
     async def _transform_session_with_template_internal(self,
                                                         response: Response,
-                                                        request: Request,
                                                         background_tasks: BackgroundTasks,
                                                         session_notes_text: str,
                                                         template: SessionNotesTemplate,
@@ -941,7 +905,6 @@ class AssistantRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)

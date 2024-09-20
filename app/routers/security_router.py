@@ -1,12 +1,13 @@
 import uuid
 
 from enum import Enum
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
+                     Depends,
                      Header,
                      HTTPException,
-                     Request,
                      Response,
                      status,)
 from langcodes import Language
@@ -26,14 +27,6 @@ class LoginMechanism(Enum):
     GOOGLE = "google"
     FACEBOOK = "facebook"
     INTERNAL = "internal"
-
-class LoginData(BaseModel):
-    datastore_access_token: str
-    datastore_refresh_token: str
-    user_id: str
-
-class RefreshAuthData(BaseModel):
-    user_id: str
 
 class TherapistInsertPayload(BaseModel):
     email: str
@@ -70,100 +63,70 @@ class SecurityRouter:
     """
     def _register_routes(self):
         @self.router.post(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def request_new_access_token(body: LoginData,
+        async def request_new_access_token(credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                            background_tasks: BackgroundTasks,
                                            response: Response,
-                                           request: Request,
                                            session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-            return await self._request_new_access_token_internal(body=body,
+            return await self._request_new_access_token_internal(credentials_data=credentials_data,
                                                                  background_tasks=background_tasks,
-                                                                 request=request,
                                                                  response=response,
                                                                  session_id=session_id)
-
-        @self.router.put(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def refresh_access_token(refresh_data: RefreshAuthData,
-                                       background_tasks: BackgroundTasks,
-                                       response: Response,
-                                       request: Request,
-                                       authorization: Annotated[Union[str, None], Cookie()] = None,
-                                       session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-            return await self._refresh_authorization_token_internal(user_id=refresh_data.user_id,
-                                                                    background_tasks=background_tasks,
-                                                                    request=request,
-                                                                    response=response,
-                                                                    authorization=authorization,
-                                                                    session_id=session_id)
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
                          background_tasks: BackgroundTasks,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
-                         datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                         datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(response=response,
-                                               datastore_access_token=datastore_access_token,
-                                               datastore_refresh_token=datastore_refresh_token,
+                                               store_access_token=store_access_token,
+                                               store_refresh_token=store_refresh_token,
                                                background_tasks=background_tasks,
                                                session_id=session_id)
 
         @self.router.post(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_new_account(body: TherapistInsertPayload,
                                   response: Response,
-                                  request: Request,
                                   background_tasks: BackgroundTasks,
                                   store_access_token: Annotated[str | None, Header()] = None,
                                   store_refresh_token: Annotated[str | None, Header()] = None,
-                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_new_account_internal(body=body,
                                                         response=response,
-                                                        request=request,
                                                         background_tasks=background_tasks,
-                                                        datastore_access_token=datastore_access_token,
-                                                        datastore_refresh_token=datastore_refresh_token,
+                                                        store_access_token=store_access_token,
+                                                        store_refresh_token=store_refresh_token,
                                                         authorization=authorization,
                                                         session_id=session_id)
 
         @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_account_data(response: Response,
-                                      request: Request,
                                       background_tasks: BackgroundTasks,
                                       body: TherapistUpdatePayload,
                                       store_access_token: Annotated[str | None, Header()] = None,
                                       store_refresh_token: Annotated[str | None, Header()] = None,
-                                      datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                      datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_account_data_internal(response=response,
-                                                            request=request,
                                                             background_tasks=background_tasks,
                                                             body=body,
-                                                            datastore_access_token=datastore_access_token,
-                                                            datastore_refresh_token=datastore_refresh_token,
+                                                            store_access_token=store_access_token,
+                                                            store_refresh_token=store_refresh_token,
                                                             authorization=authorization,
                                                             session_id=session_id)
 
         @self.router.delete(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_all_account_data(response: Response,
-                                          request: Request,
                                           background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
-                                          datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                          datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_all_account_data_internal(response=response,
-                                                                request=request,
                                                                 background_tasks=background_tasks,
-                                                                datastore_access_token=datastore_access_token,
-                                                                datastore_refresh_token=datastore_refresh_token,
+                                                                store_access_token=store_access_token,
+                                                                store_refresh_token=store_refresh_token,
                                                                 authorization=authorization,
                                                                 session_id=session_id)
 
@@ -171,16 +134,14 @@ class SecurityRouter:
     Returns an oauth token to be used for invoking the endpoints.
 
     Arguments:
-    body – the body associated with the request.
+    credentials_data – the credentials data to be used for authentication.
     background_tasks – object for scheduling concurrent tasks.
-    request – the incoming request object.
     response – the response object to be used for creating the final response.
     session_id – the id of the current user session.
     """
     async def _request_new_access_token_internal(self,
-                                                 body: LoginData,
+                                                 credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                                  background_tasks: BackgroundTasks,
-                                                 request: Request,
                                                  response: Response,
                                                  session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
         logger = Logger()
@@ -198,26 +159,20 @@ class SecurityRouter:
             logger.log_api_request(background_tasks=background_tasks,
                                    session_id=session_id,
                                    method=post_api_method,
-                                   endpoint_name=self.TOKEN_ENDPOINT,
-                                   therapist_id=body.user_id)
+                                   endpoint_name=self.TOKEN_ENDPOINT)
 
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=body.datastore_access_token,
-                                                                                                      refresh_token=body.datastore_refresh_token)
-            authenticated_successfully = self._auth_manager.authenticate_datastore_user(user_id=body.user_id,
-                                                                                        supabase_client=supabase_client)
-            assert authenticated_successfully, "Failed to authenticate the user. Check the tokens you are sending."
+            user_id = self._auth_manager.authenticate_datastore_user(username=credentials_data.username,
+                                                                     password=credentials_data.password)
+            assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
-            auth_token = await self._auth_manager.refresh_session(user_id=body.user_id,
-                                                                  request=request,
-                                                                  response=response,
-                                                                  datastore_access_token=body.datastore_access_token,
-                                                                  datastore_refresh_token=body.datastore_refresh_token)
+            auth_token = await self._auth_manager.refresh_session(user_id=user_id,
+                                                                  response=response)
             background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
             logger.log_api_response(background_tasks=background_tasks,
                                     session_id=session_id,
                                     endpoint_name=self.TOKEN_ENDPOINT,
                                     http_status_code=status.HTTP_200_OK,
-                                    therapist_id=body.user_id,
+                                    therapist_id=user_id,
                                     method=post_api_method)
             return auth_token
         except Exception as e:
@@ -232,88 +187,25 @@ class SecurityRouter:
             raise HTTPException(detail=description, status_code=status_code)
 
     """
-    Refreshes an existing authorization token that may or may have not expired.
-
-    Arguments:
-    user_id – the current user's id.
-    background_tasks – object for scheduling concurrent tasks.
-    request – the incoming request object.
-    response – the response object to be used for creating the final response.
-    authorization – the current authorization token to be updated.
-    session_id – the id of the current user session.
-    """
-    async def _refresh_authorization_token_internal(self,
-                                                    user_id: str,
-                                                    background_tasks: BackgroundTasks,
-                                                    request: Request,
-                                                    response: Response,
-                                                    authorization: Annotated[Union[str, None], Cookie()],
-                                                    session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
-        logger = Logger()
-        try:
-            put_api_method = logger.API_METHOD_PUT
-            logger.log_api_request(background_tasks=background_tasks,
-                                   method=put_api_method,
-                                   session_id=session_id,
-                                   endpoint_name=self.TOKEN_ENDPOINT,
-                                   therapist_id=user_id)
-            assert len(authorization or '') > 0, "There isn't an existing authorization token to be refreshed."
-            assert len(user_id or '') > 0, "user_id param is missing"
-        except Exception as e:
-            description = str(e)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=user_id,
-                             endpoint_name=self.TOKEN_ENDPOINT,
-                             error_code=status.HTTP_400_BAD_REQUEST,
-                             description=description,
-                             method=put_api_method)
-            raise HTTPException(detail=str(e),
-                                status_code=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            auth_token = await self._auth_manager.refresh_session(user_id=user_id,
-                                                                  request=request,
-                                                                  response=response)
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    endpoint_name=self.TOKEN_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    therapist_id=user_id,
-                                    method=put_api_method)
-            return auth_token
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            description = str(e)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=user_id,
-                             endpoint_name=self.TOKEN_ENDPOINT,
-                             error_code=status.HTTP_400_BAD_REQUEST,
-                             description=description,
-                             method=put_api_method)
-            raise HTTPException(detail=description, status_code=status_code)
-
-    """
     Logs out the user.
 
     Arguments:
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
                                response: Response,
                                background_tasks: BackgroundTasks,
-                               datastore_access_token: Annotated[Union[str, None], Cookie()],
-                               datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                               store_access_token: Annotated[str | None, Header()],
+                               store_refresh_token: Annotated[str | None, Header()],
                                session_id: Annotated[Union[str, None], Cookie()]):
         user_id = None
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(refresh_token=datastore_refresh_token,
-                                                                                                      access_token=datastore_access_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(refresh_token=store_access_token,
+                                                                                                         access_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
         except Exception:
             pass
@@ -334,26 +226,24 @@ class SecurityRouter:
     Arguments:
     body – the body associated with the request.
     background_tasks – object for scheduling concurrent tasks.
-    request – the incoming request object.
     response – the response model to be used for creating the final response.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _add_new_account_internal(self,
                                         body: TherapistInsertPayload,
                                         background_tasks: BackgroundTasks,
-                                        request: Request,
                                         response: Response,
-                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                        store_access_token: Annotated[str | None, Header()],
+                                        store_refresh_token: Annotated[str | None, Header()],
                                         authorization: Annotated[Union[str, None], Cookie()],
                                         session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger()
@@ -375,11 +265,10 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -435,20 +324,18 @@ class SecurityRouter:
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
     body – the body associated with the request.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _update_account_data_internal(self,
                                             background_tasks: BackgroundTasks,
                                             response: Response,
-                                            request: Request,
                                             body: TherapistUpdatePayload,
-                                            datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                            store_access_token: Annotated[str | None, Header()],
+                                            store_refresh_token: Annotated[str | None, Header()],
                                             authorization: Annotated[Union[str, None], Cookie()],
                                             session_id: Annotated[Union[str, None], Cookie()]):
         logger = Logger()
@@ -456,7 +343,7 @@ class SecurityRouter:
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         put_api_method = logger.API_METHOD_PUT
@@ -475,11 +362,10 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -537,24 +423,22 @@ class SecurityRouter:
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
-    request – the incoming request object.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
     async def _delete_all_account_data_internal(self,
                                                 background_tasks: BackgroundTasks,
                                                 response: Response,
-                                                request: Request,
-                                                datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                                datastore_refresh_token: Annotated[Union[str, None], Cookie()],
+                                                store_access_token: Annotated[str | None, Header()],
+                                                store_refresh_token: Annotated[str | None, Header()],
                                                 authorization: Annotated[Union[str, None], Cookie()],
                                                 session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger()
@@ -565,11 +449,10 @@ class SecurityRouter:
                                endpoint_name=self.ACCOUNT_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)

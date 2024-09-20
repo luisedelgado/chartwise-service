@@ -3,11 +3,29 @@ from pydantic import BaseModel
 from .fake_supabase_session import FakeSession
 from ..api.supabase_base_class import SupabaseBaseClass
 
+FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
+
 class FakeSupabaseResult(BaseModel):
     data: list
 
 class FakeSupabaseUser(BaseModel):
     user: dict
+
+class FakeSupabaseAuth():
+
+    return_authenticated_user = False
+
+    def __init__(self, return_authenticated_user: bool):
+        self.return_authenticated_user = return_authenticated_user
+
+    def sign_in_with_password(self, credentials: dict) -> dict:
+        if not self.return_authenticated_user:
+            return {}
+        return {
+            "user": {
+                "id": FAKE_USER_ID_TOKEN
+            }
+        }
 
 class FakeSupabaseClient(SupabaseBaseClass):
 
@@ -15,7 +33,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
     FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
 
-    return_authenticated_session: bool = False
+    _return_authenticated_session: bool = False
     fake_access_token: str = None
     fake_refresh_token: str = None
     fake_text: str = None
@@ -27,6 +45,18 @@ class FakeSupabaseClient(SupabaseBaseClass):
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
+
+    def __init__(self):
+        self.auth = FakeSupabaseAuth(return_authenticated_user=self._return_authenticated_session)
+
+    @property
+    def return_authenticated_session(self):
+        return self._return_authenticated_session
+
+    @return_authenticated_session.setter
+    def return_authenticated_session(self, should_return_authenticated_session: bool):
+        self.auth = FakeSupabaseAuth(return_authenticated_user=should_return_authenticated_session)
+        self._return_authenticated_session = should_return_authenticated_session
 
     def insert(self,
                payload: dict,

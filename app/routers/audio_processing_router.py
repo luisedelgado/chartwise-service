@@ -41,7 +41,6 @@ class AudioProcessingRouter:
     def _register_routes(self):
         @self.router.post(self.NOTES_TRANSCRIPTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def transcribe_session_notes(response: Response,
-                                           request: Request,
                                            background_tasks: BackgroundTasks,
                                            template: Annotated[SessionNotesTemplate, Form()],
                                            patient_id: Annotated[str, Form()],
@@ -55,7 +54,6 @@ class AudioProcessingRouter:
                                            datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
-                                                                 request=request,
                                                                  background_tasks=background_tasks,
                                                                  template=template,
                                                                  patient_id=patient_id,
@@ -69,7 +67,6 @@ class AudioProcessingRouter:
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def diarize_session(response: Response,
-                                  request: Request,
                                   background_tasks: BackgroundTasks,
                                   template: Annotated[SessionNotesTemplate, Form()],
                                   patient_id: Annotated[str, Form()],
@@ -83,7 +80,6 @@ class AudioProcessingRouter:
                                   datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(response=response,
-                                                        request=request,
                                                         background_tasks=background_tasks,
                                                         template=template,
                                                         patient_id=patient_id,
@@ -100,7 +96,6 @@ class AudioProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     template – the template to be used for generating the output.
     patient_id – the patient id associated with the operation.
@@ -114,7 +109,6 @@ class AudioProcessingRouter:
     """
     async def _transcribe_session_notes_internal(self,
                                                  response: Response,
-                                                 request: Request,
                                                  background_tasks: BackgroundTasks,
                                                  template: Annotated[SessionNotesTemplate, Form()],
                                                  patient_id: Annotated[str, Form()],
@@ -153,7 +147,6 @@ class AudioProcessingRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -213,7 +206,6 @@ class AudioProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     template – the template to be used for generating the output.
     patient_id – the patient id associated with the operation.
@@ -227,7 +219,6 @@ class AudioProcessingRouter:
     """
     async def _diarize_session_internal(self,
                                         response: Response,
-                                        request: Request,
                                         background_tasks: BackgroundTasks,
                                         template: Annotated[SessionNotesTemplate, Form()],
                                         patient_id: Annotated[str, Form()],
@@ -266,7 +257,6 @@ class AudioProcessingRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)

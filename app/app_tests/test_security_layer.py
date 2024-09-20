@@ -39,104 +39,27 @@ class TestingHarnessSecurityRouter:
                                                  environment=os.environ.get("ENVIRONMENT"))
         self.client = TestClient(coordinator.app)
 
-    def test_login_for_token_with_missing_supabase_tokens(self):
-        response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                               json={
-                                   "datastore_access_token": "",
-                                   "datastore_refresh_token": "",
-                                   "user_id": FAKE_THERAPIST_ID
-                               })
-        assert response.status_code == 401
-
-    def test_login_for_token_with_supabase_tokens_but_missing_user_id(self):
-        response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                               json={
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                   "user_id": ""
-                               })
-        assert response.status_code == 401
-
     def test_login_for_token_unauthenticated(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                               json={
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                   "user_id": FAKE_THERAPIST_ID
+                               data={
+                                   "username": "g",
+                                   "password": "g"
                                })
         assert response.status_code == 401
 
     def test_login_for_token_authenticated_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.user_authentication_id = FAKE_THERAPIST_ID
+        self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
         response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
-                                    json={
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
-                                        "user_id": FAKE_THERAPIST_ID
+                                    data={
+                                        "username": "g",
+                                        "password": "g"
                                     })
         assert response.status_code == 200
-        assert response.cookies.get("datastore_access_token") == FAKE_ACCESS_TOKEN
-        assert response.cookies.get("datastore_refresh_token") == FAKE_REFRESH_TOKEN
         assert response.cookies.get("authorization") != None
         assert response.cookies.get("session_id") is not None
-
-    def test_refresh_token_with_invalid_user_id(self):
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
-                                    json={
-                                        "user_id": ""
-                                    })
-        assert response.status_code == 400
-
-    def test_refresh_token_without_existing_auth_token(self):
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
-                                    json={
-                                        "user_id": FAKE_THERAPIST_ID
-                                    })
-        assert response.status_code == 400
-
-    def test_refresh_token_without_supabase_cookies_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.user_authentication_id = FAKE_THERAPIST_ID
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
-                                    json={
-                                        "user_id": FAKE_THERAPIST_ID
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    })
-        assert response.status_code == 200
-        assert self.fake_supabase_user_client.invoked_refresh_session == False
-        assert response.cookies.get("datastore_access_token") == None
-        assert response.cookies.get("datastore_refresh_token") == None
-        assert response.cookies.get("authorization") != None
-
-    def test_refresh_token_along_supabase_cookies_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.user_authentication_id = FAKE_THERAPIST_ID
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
-                                    json={
-                                        "user_id": FAKE_THERAPIST_ID
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    })
-        assert response.status_code == 200
-        assert self.fake_supabase_user_client.invoked_refresh_session == True
-        assert response.cookies.get("datastore_access_token") != None
-        assert response.cookies.get("datastore_refresh_token") != None
-        assert response.cookies.get("authorization") != None
 
     def test_add_therapist_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
@@ -158,9 +81,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                   "authorization": self.auth_cookie
+                               },
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
                                    "id": FAKE_THERAPIST_ID,
@@ -180,9 +105,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                   "authorization": self.auth_cookie
+                               },
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
                                    "id": FAKE_THERAPIST_ID,
@@ -202,9 +129,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                                 cookies={
-                                    "authorization": self.auth_cookie,
-                                    "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                    "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    "authorization": self.auth_cookie
+                                },
+                                headers={
+                                    "store-access-token": FAKE_ACCESS_TOKEN,
+                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                 },
                                 json={
                                     "id": FAKE_THERAPIST_ID,
@@ -224,9 +153,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                   "authorization": self.auth_cookie
+                               },
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
                                    "id": FAKE_THERAPIST_ID,
@@ -246,9 +177,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie,
-                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                "authorization": self.auth_cookie
+                            },
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -281,9 +214,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie,
-                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                "authorization": self.auth_cookie
+                            },
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -301,9 +236,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie,
-                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                "authorization": self.auth_cookie
+                            },
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -321,9 +258,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie,
-                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                "authorization": self.auth_cookie
+                            },
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -341,9 +280,11 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie,
-                                "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                "authorization": self.auth_cookie
+                            },
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -360,9 +301,9 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT,
-                                    cookies={
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     })
 
         assert response.status_code == 200
@@ -383,8 +324,10 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(SecurityRouter.ACCOUNT_ENDPOINT,
                                         cookies={
-                                            "authorization": self.auth_cookie,
-                                            "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                            "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                            "authorization": self.auth_cookie
+                                        },
+                                        headers={
+                                            "store-access-token": FAKE_ACCESS_TOKEN,
+                                            "store-refresh-token": FAKE_REFRESH_TOKEN
                                         })
         assert response.status_code == 200

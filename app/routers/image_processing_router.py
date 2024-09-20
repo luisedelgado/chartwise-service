@@ -40,7 +40,6 @@ class ImageProcessingRouter:
     def _register_routes(self):
         @self.router.post(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def extract_text(response: Response,
-                               request: Request,
                                background_tasks: BackgroundTasks,
                                patient_id: Annotated[str, Form()],
                                session_date: Annotated[str, Form()],
@@ -54,7 +53,6 @@ class ImageProcessingRouter:
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
-                                                     request=request,
                                                      background_tasks=background_tasks,
                                                      image=image,
                                                      template=template,
@@ -71,7 +69,6 @@ class ImageProcessingRouter:
 
     Arguments:
     response – the response model with which to create the final response.
-    request – the incoming request object.
     background_tasks – object for scheduling concurrent tasks.
     image – the image to be uploaded.
     template – the template to be used for returning the output.
@@ -85,7 +82,6 @@ class ImageProcessingRouter:
     """
     async def _extract_text_internal(self,
                                      response: Response,
-                                     request: Request,
                                      background_tasks: BackgroundTasks,
                                      image: UploadFile,
                                      template: SessionNotesTemplate,
@@ -124,7 +120,6 @@ class ImageProcessingRouter:
                                                                                                       refresh_token=datastore_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
-                                                     request=request,
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)

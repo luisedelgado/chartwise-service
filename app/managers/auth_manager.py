@@ -1,7 +1,7 @@
-import jwt, logging, os, requests
+import jwt, logging, os
 
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException, status, Request, Response
+from fastapi import HTTPException, status, Response
 from passlib.context import CryptContext
 from portkey_ai import PORTKEY_GATEWAY_URL
 from typing import Tuple
@@ -26,11 +26,14 @@ class AuthManager:
     # Authentication
 
     def authenticate_datastore_user(self,
-                                    user_id: str,
-                                    supabase_client: SupabaseBaseClass) -> bool:
+                                    username: str,
+                                    password: str) -> bool:
         try:
-            response = supabase_client.get_user().dict()
-            return response['user']['id'] == user_id
+            supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+            signin_response = supabase_client.auth.sign_in_with_password({"email": username, "password": password})
+
+            assert "user" in signin_response, "Failed to authenticate user."
+            return signin_response['user']['id']
         except Exception as e:
             raise Exception(str(e))
 
@@ -67,10 +70,7 @@ class AuthManager:
 
     async def refresh_session(self,
                               user_id: str,
-                              request: Request,
-                              response: Response,
-                              datastore_access_token: str = None,
-                              datastore_refresh_token: str = None) -> Token:
+                              response: Response) -> Token:
         try:
             access_token, expiration_timestamp = self.create_access_token(user_id)
             response.set_cookie(key="authorization",
@@ -79,46 +79,6 @@ class AuthManager:
                                 httponly=True,
                                 secure=True,
                                 samesite="none")
-
-            # We are being sent new datastore tokens. Let's update cookies.
-            if len(datastore_access_token or '') > 0 and len(datastore_refresh_token or '') > 0:
-                response.set_cookie(key="datastore_access_token",
-                                    value=datastore_access_token,
-                                    domain=self.APP_COOKIE_DOMAIN,
-                                    httponly=True,
-                                    secure=True,
-                                    samesite="none")
-                response.set_cookie(key="datastore_refresh_token",
-                                    value=datastore_refresh_token,
-                                    domain=self.APP_COOKIE_DOMAIN,
-                                    httponly=True,
-                                    secure=True,
-                                    samesite="none")
-            # If we have datastore tokens in cookies, let's refresh them.
-            elif "datastore_access_token" in request.cookies and "datastore_refresh_token" in request.cookies:
-                supabase_client_factory = dependency_container.inject_supabase_client_factory()
-                supabase_client: SupabaseBaseClass = supabase_client_factory.supabase_user_client(access_token=request.cookies['datastore_access_token'],
-                                                                                                  refresh_token=request.cookies['datastore_refresh_token'])
-                refresh_session_response = supabase_client.refresh_session().dict()
-                assert refresh_session_response['user']['role'] == 'authenticated'
-
-                datastore_access_token = refresh_session_response['session']['access_token']
-                datastore_refresh_token = refresh_session_response['session']['refresh_token']
-                response.set_cookie(key="datastore_access_token",
-                                    value=datastore_access_token,
-                                    domain=self.APP_COOKIE_DOMAIN,
-                                    httponly=True,
-                                    secure=True,
-                                    samesite="none")
-                response.set_cookie(key="datastore_refresh_token",
-                                    value=datastore_refresh_token,
-                                    domain=self.APP_COOKIE_DOMAIN,
-                                    httponly=True,
-                                    secure=True,
-                                    samesite="none")
-            else:
-                datastore_access_token = None
-                datastore_refresh_token = None
 
             return Token(access_token=access_token,
                          token_type="bearer",
@@ -129,5 +89,3 @@ class AuthManager:
     def logout(self, response: Response):
         response.delete_cookie("authorization")
         response.delete_cookie("session_id")
-        response.delete_cookie("datastore_access_token")
-        response.delete_cookie("datastore_refresh_token")
