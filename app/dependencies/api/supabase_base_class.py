@@ -101,3 +101,10 @@ class SupabaseBaseClass(ABC):
     @abstractmethod
     def sign_out():
         pass
+
+    """
+    Signs user in.
+    """
+    @abstractmethod
+    def sign_in(email: str, password: str) -> dict:
+        pass

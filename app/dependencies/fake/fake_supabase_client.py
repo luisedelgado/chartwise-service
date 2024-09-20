@@ -11,29 +11,13 @@ class FakeSupabaseResult(BaseModel):
 class FakeSupabaseUser(BaseModel):
     user: dict
 
-class FakeSupabaseAuth():
-
-    return_authenticated_user = False
-
-    def __init__(self, return_authenticated_user: bool):
-        self.return_authenticated_user = return_authenticated_user
-
-    def sign_in_with_password(self, credentials: dict) -> dict:
-        if not self.return_authenticated_user:
-            return {}
-        return {
-            "user": {
-                "id": FAKE_USER_ID_TOKEN
-            }
-        }
-
 class FakeSupabaseClient(SupabaseBaseClass):
 
     FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
     FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
     FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
 
-    _return_authenticated_session: bool = False
+    return_authenticated_session: bool = False
     fake_access_token: str = None
     fake_refresh_token: str = None
     fake_text: str = None
@@ -45,18 +29,6 @@ class FakeSupabaseClient(SupabaseBaseClass):
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
-
-    def __init__(self):
-        self.auth = FakeSupabaseAuth(return_authenticated_user=self._return_authenticated_session)
-
-    @property
-    def return_authenticated_session(self):
-        return self._return_authenticated_session
-
-    @return_authenticated_session.setter
-    def return_authenticated_session(self, should_return_authenticated_session: bool):
-        self.auth = FakeSupabaseAuth(return_authenticated_user=should_return_authenticated_session)
-        self._return_authenticated_session = should_return_authenticated_session
 
     def insert(self,
                payload: dict,
@@ -238,3 +210,12 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
     def sign_out(self):
         pass
+
+    def sign_in(self, email: str, password: str) -> dict:
+        if not self.return_authenticated_session:
+            return {}
+        return {
+            "user": {
+                "id": FAKE_USER_ID_TOKEN
+            }
+        }

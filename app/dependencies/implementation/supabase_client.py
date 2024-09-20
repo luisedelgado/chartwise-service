@@ -107,3 +107,11 @@ class SupabaseClient(SupabaseBaseClass):
             self.client.auth.sign_out()
         except Exception as e:
             raise Exception(e)
+
+    def sign_in(self, email: str, password: str) -> dict:
+        try:
+            res_dict = self.client.auth.sign_in_with_password({"email": email, "password": password}).dict()
+            assert "user" in res_dict, "Failed to authenticate user"
+            return res_dict['user']['id']
+        except Exception as e:
+            raise Exception(e)
