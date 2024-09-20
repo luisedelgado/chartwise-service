@@ -25,9 +25,9 @@ class AuthManager:
 
     # Authentication
 
-    def authenticate_datastore_user(self,
-                                    username: str,
-                                    password: str) -> bool:
+    def authenticate_store_user(self,
+                                username: str,
+                                password: str) -> bool:
         try:
             supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             signin_response = supabase_client.auth.sign_in_with_password({"email": username, "password": password})

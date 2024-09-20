@@ -9,7 +9,7 @@ from ..api.openai_base_class import OpenAIBaseClass
 class PineconeBaseClass(ABC):
 
     """
-    Inserts a new record to the datastore leveraging the incoming data.
+    Inserts a new record to the store leveraging the incoming data.
     The record is associated with information about a session.
 
     Arguments:
@@ -34,7 +34,7 @@ class PineconeBaseClass(ABC):
         pass
 
     """
-    Inserts a new record to the datastore leveraging the incoming data.
+    Inserts a new record to the store leveraging the incoming data.
     The record is associated with information about pre-existing history.
 
     Arguments:

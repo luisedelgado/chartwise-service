@@ -30,7 +30,7 @@ class ChartWiseAssistant:
         self.namespace_used_for_streaming = None
 
     """
-    Queries the respective datastore with the incoming parameters.
+    Queries the respective store with the incoming parameters.
     Returns the query result.
 
     Arguments:

@@ -45,8 +45,6 @@ class TestingHarnessAssistantRouter:
                                         "patient_id": FAKE_PATIENT_ID,
                                         "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
                                         "session_date": "01-01-2020",
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                         "source": "manual_input"
                                    },
                                    "client_timezone_identifier": TZ_IDENTIFIER,
@@ -59,9 +57,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "insert_payload": {
@@ -80,9 +80,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "insert_payload": {
@@ -105,9 +107,11 @@ class TestingHarnessAssistantRouter:
         insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "insert_payload": {
@@ -130,9 +134,11 @@ class TestingHarnessAssistantRouter:
         insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "insert_payload": {
@@ -156,9 +162,11 @@ class TestingHarnessAssistantRouter:
         insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "insert_payload": {
@@ -192,9 +200,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -213,9 +223,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -234,9 +246,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -255,9 +269,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -276,9 +292,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -301,9 +319,11 @@ class TestingHarnessAssistantRouter:
         update_text = "new_text"
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -327,9 +347,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_returns_data = True
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "update_payload": {
@@ -356,9 +378,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                         cookies={
-                                            "authorization": self.auth_cookie,
-                                            "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                            "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                            "authorization": self.auth_cookie
+                                        },
+                                        headers={
+                                            "store-access-token": FAKE_ACCESS_TOKEN,
+                                            "store-refresh-token": FAKE_REFRESH_TOKEN
                                         },
                                         params={
                                             "session_report_id": FAKE_SESSION_REPORT_ID,
@@ -371,9 +395,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                         cookies={
-                                            "authorization": self.auth_cookie,
-                                            "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                            "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                            "authorization": self.auth_cookie
+                                        },
+                                        headers={
+                                            "store-access-token": FAKE_ACCESS_TOKEN,
+                                            "store-refresh-token": FAKE_REFRESH_TOKEN
                                         },
                                         params={
                                             "session_report_id": "",
@@ -386,9 +412,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
                                         "session_report_id": "4123sdggsdgsdgdsgsdg",
@@ -401,9 +429,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID,
@@ -418,9 +448,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_returns_data = True
         response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID,
@@ -435,28 +467,17 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 401
 
-    def test_session_query_with_auth_token_but_supabase_returns_unauthenticated(self):
-        response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "text": "Quien es el jugador favorito de Lionel Andres?",
-                                    })
-        assert response.status_code == 401
-
     def test_session_query_with_valid_auth_token_but_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": "",
@@ -470,9 +491,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
@@ -488,9 +511,11 @@ class TestingHarnessAssistantRouter:
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
@@ -511,9 +536,11 @@ class TestingHarnessAssistantRouter:
         assert len(self.fake_openai_client.chat_history) == 0
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_PATIENT_ID,
@@ -527,9 +554,11 @@ class TestingHarnessAssistantRouter:
         # Now trigger a query for a different patient id
         response = self.client.post(AssistantRouter.QUERIES_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "patient_id": FAKE_SECOND_THERAPIST_ID,
@@ -562,9 +591,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -583,9 +614,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -604,9 +637,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -627,9 +662,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -651,9 +688,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -675,9 +714,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = True
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -699,9 +740,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_default_briefing_has_different_pronouns = False
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -724,9 +767,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -751,9 +796,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -778,9 +825,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -805,9 +854,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "first_name": "Pepito",
@@ -843,9 +894,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "id": "",
@@ -868,9 +921,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
         response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "id": FAKE_PATIENT_ID,
@@ -894,9 +949,11 @@ class TestingHarnessAssistantRouter:
         assert self.fake_pinecone_client.update_preexisting_history_num_invocations == 0
         response = self.client.put(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
                                         "id": FAKE_PATIENT_ID,
@@ -925,9 +982,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
                                         "patient_id": "",
@@ -941,9 +1000,11 @@ class TestingHarnessAssistantRouter:
         self.fake_supabase_user_client.select_returns_data = True
         response = self.client.delete(AssistantRouter.PATIENTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     params={
                                         "patient_id": FAKE_PATIENT_ID,
@@ -967,10 +1028,12 @@ class TestingHarnessAssistantRouter:
                                         "template": "soap",
                                         "session_notes_text": ""
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
                                     },)
         assert response.status_code == 400
 
@@ -983,9 +1046,11 @@ class TestingHarnessAssistantRouter:
                                         "template": "soap",
                                         "session_notes_text": "My fake session notes"
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN
+                                        "authorization": self.auth_cookie
                                     },)
         assert response.status_code == 200

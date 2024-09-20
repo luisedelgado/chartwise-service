@@ -161,8 +161,8 @@ class SecurityRouter:
                                    method=post_api_method,
                                    endpoint_name=self.TOKEN_ENDPOINT)
 
-            user_id = self._auth_manager.authenticate_datastore_user(username=credentials_data.username,
-                                                                     password=credentials_data.password)
+            user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
+                                                                 password=credentials_data.password)
             assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
@@ -192,8 +192,8 @@ class SecurityRouter:
     Arguments:
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
-    store_access_token – the datastore access token.
-    store_refresh_token – the datastore refresh token.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
@@ -227,8 +227,8 @@ class SecurityRouter:
     body – the body associated with the request.
     background_tasks – object for scheduling concurrent tasks.
     response – the response model to be used for creating the final response.
-    store_access_token – the datastore access token.
-    store_refresh_token – the datastore refresh token.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -244,7 +244,7 @@ class SecurityRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
+            raise security.STORE_TOKENS_ERROR
 
         logger = Logger()
         post_api_method = logger.API_METHOD_POST
@@ -325,8 +325,8 @@ class SecurityRouter:
     background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
     body – the body associated with the request.
-    store_access_token – the datastore access token.
-    store_refresh_token – the datastore refresh token.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -344,7 +344,7 @@ class SecurityRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
+            raise security.STORE_TOKENS_ERROR
 
         put_api_method = logger.API_METHOD_PUT
         description = "".join([
@@ -423,8 +423,8 @@ class SecurityRouter:
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
     response – the object to be used for constructing the final response.
-    store_access_token – the datastore access token.
-    store_refresh_token – the datastore refresh token.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -439,7 +439,7 @@ class SecurityRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
+            raise security.STORE_TOKENS_ERROR
 
         logger = Logger()
         delete_api_method = logger.API_METHOD_DELETE

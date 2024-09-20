@@ -72,8 +72,8 @@ class ImageProcessingRouter:
     patient_id – the patient id.
     session_date – the associated session date.
     client_timezone_identifier – the client timezone id.
-    store_access_token – the datastore access token.
-    store_refresh_token – the datastore refresh token.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
@@ -93,7 +93,7 @@ class ImageProcessingRouter:
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.DATASTORE_TOKENS_ERROR
+            raise security.STORE_TOKENS_ERROR
 
         logger = Logger()
         post_api_method = logger.API_METHOD_POST
