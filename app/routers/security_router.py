@@ -72,6 +72,20 @@ class SecurityRouter:
                                                                  response=response,
                                                                  session_id=session_id)
 
+        @self.router.put(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def refresh_new_access_token(background_tasks: BackgroundTasks,
+                                           response: Response,
+                                           store_access_token: Annotated[str | None, Header()] = None,
+                                           store_refresh_token: Annotated[str | None, Header()] = None,
+                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+            return await self._refresh_new_access_token_internal(authorization=authorization,
+                                                                 background_tasks=background_tasks,
+                                                                 response=response,
+                                                                 store_access_token=store_access_token,
+                                                                 store_refresh_token=store_refresh_token,
+                                                                 session_id=session_id)
+
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
                          background_tasks: BackgroundTasks,
@@ -185,6 +199,60 @@ class SecurityRouter:
                              description=description,
                              method=post_api_method)
             raise HTTPException(detail=description, status_code=status_code)
+
+    """
+    Refreshes an oauth token to be used for invoking the endpoints.
+
+    Arguments:
+    authorization – the authorization cookie, if exists.
+    background_tasks – object for scheduling concurrent tasks.
+    response – the response object to be used for creating the final response.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    session_id – the id of the current user session.
+    """
+    async def _refresh_new_access_token_internal(self,
+                                                 authorization: Annotated[Union[str, None], Cookie()],
+                                                 background_tasks: BackgroundTasks,
+                                                 response: Response,
+                                                 store_access_token: Annotated[str | None, Header()],
+                                                 store_refresh_token: Annotated[str | None, Header()],
+                                                 session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+        logger = Logger()
+        put_api_method = logger.API_METHOD_PUT
+
+        try:
+            if not self._auth_manager.access_token_is_valid(authorization):
+                raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+            logger.log_api_request(background_tasks=background_tasks,
+                                   session_id=session_id,
+                                   method=put_api_method,
+                                   endpoint_name=self.TOKEN_ENDPOINT)
+
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+
+            user_id = supabase_client.get_current_user_id()
+            token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
+
+            logger.log_api_request(background_tasks=background_tasks,
+                                   session_id=session_id,
+                                   therapist_id=user_id,
+                                   method=put_api_method,
+                                   endpoint_name=self.TOKEN_ENDPOINT)
+            return token
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.TOKEN_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=put_api_method)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
 
     """
     Logs out the user.

@@ -61,6 +61,30 @@ class TestingHarnessSecurityRouter:
         assert response.cookies.get("authorization") != None
         assert response.cookies.get("session_id") is not None
 
+    def test_refresh_token_without_previous_auth_session(self):
+        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               })
+        assert response.status_code == 401
+
+    def test_refresh_token_success(self):
+        self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
+        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    })
+        assert response.status_code == 200
+        assert "authorization" in response.json()
+
     def test_add_therapist_with_invalid_credentials(self):
         response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
                                json={

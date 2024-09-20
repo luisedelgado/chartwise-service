@@ -56,7 +56,7 @@ class AuthManager:
         try:
             payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             user_id: str = payload.get("sub")
-            if user_id == None:
+            if user_id == None or len(user_id) == 0:
                 return False
 
             # Check that token hasn't expired
@@ -78,7 +78,7 @@ class AuthManager:
                                 secure=True,
                                 samesite="none")
 
-            return Token(auth_token=auth_token,
+            return Token(authorization=auth_token,
                          token_type="bearer",
                          expiration_timestamp=expiration_timestamp)
         except Exception as e:
