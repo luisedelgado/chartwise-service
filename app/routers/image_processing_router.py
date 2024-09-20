@@ -5,7 +5,6 @@ from fastapi import (APIRouter,
                      Form,
                      Header,
                      HTTPException,
-                     Request,
                      Response,
                      status,
                      UploadFile)
@@ -48,8 +47,6 @@ class ImageProcessingRouter:
                                store_access_token: Annotated[str | None, Header()] = None,
                                store_refresh_token: Annotated[str | None, Header()] = None,
                                image: UploadFile = File(...),
-                               datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                               datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(response=response,
@@ -59,8 +56,8 @@ class ImageProcessingRouter:
                                                      patient_id=patient_id,
                                                      session_date=session_date,
                                                      client_timezone_identifier=client_timezone_identifier,
-                                                     datastore_access_token=datastore_access_token,
-                                                     datastore_refresh_token=datastore_refresh_token,
+                                                     store_access_token=store_access_token,
+                                                     store_refresh_token=store_refresh_token,
                                                      authorization=authorization,
                                                      session_id=session_id)
 
@@ -75,9 +72,9 @@ class ImageProcessingRouter:
     patient_id – the patient id.
     session_date – the associated session date.
     client_timezone_identifier – the client timezone id.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _extract_text_internal(self,
@@ -88,14 +85,14 @@ class ImageProcessingRouter:
                                      patient_id: str,
                                      session_date: str,
                                      client_timezone_identifier: str,
+                                     store_access_token: Annotated[str | None, Header()],
+                                     store_refresh_token: Annotated[str | None, Header()],
                                      authorization: Annotated[Union[str, None], Cookie()],
-                                     datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                     datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                      session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger()
@@ -116,8 +113,8 @@ class ImageProcessingRouter:
                                endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      response=response)

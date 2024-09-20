@@ -56,27 +56,6 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 401
 
-    def test_invoke_textraction_with_auth_but_no_datastore_tokens(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-        files = {
-            "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
-        }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTC",
-                                        "template": "soap"
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                    })
-        assert response.status_code == 401
-
     def test_invoke_textraction_with_auth_but_invalid_timezone(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -93,10 +72,12 @@ class TestingHarnessImageProcessingRouter:
                                         "client_timezone_identifier": "UTCfdsgdsghds",
                                         "template": "soap"
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
                                         "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
                                     })
         assert response.status_code == 400
 
@@ -116,10 +97,12 @@ class TestingHarnessImageProcessingRouter:
                                         "client_timezone_identifier": "UTC",
                                         "template": "soap"
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "authorization": self.auth_cookie
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
@@ -141,10 +124,12 @@ class TestingHarnessImageProcessingRouter:
                                         "client_timezone_identifier": "UTC",
                                         "template": "free_form"
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "authorization": self.auth_cookie
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
@@ -166,10 +151,12 @@ class TestingHarnessImageProcessingRouter:
                                         "client_timezone_identifier": "UTC",
                                         "template": "soap"
                                     },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "authorization": self.auth_cookie
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()

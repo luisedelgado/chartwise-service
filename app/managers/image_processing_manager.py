@@ -11,8 +11,7 @@ from ..internal.logging import Logger
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
-                                          SessionNotesSource,
-                                          SessionCrudOperation)
+                                          SessionNotesSource)
 from ..managers.auth_manager import AuthManager
 
 MAX_RETRIES = 5

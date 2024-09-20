@@ -124,10 +124,12 @@ class TestingHarnessAudioProcessingRouter:
                                         "client_timezone_identifier": "UTC",
                                     },
                                     files=files,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
                                     cookies={
-                                        "authorization": self.auth_cookie,
-                                        "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                        "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                        "authorization": self.auth_cookie
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
@@ -149,10 +151,12 @@ class TestingHarnessAudioProcessingRouter:
                                     "client_timezone_identifier": "UTC",
                                 },
                                files=files,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               },
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   "authorization": self.auth_cookie
                                })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
@@ -186,6 +190,10 @@ class TestingHarnessAudioProcessingRouter:
                                    "client_timezone_identifier": "UTC"
                                },
                                files=files,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               },
                                cookies={
                                    "authorization": self.auth_cookie,
                                })
@@ -206,10 +214,14 @@ class TestingHarnessAudioProcessingRouter:
                                    "client_timezone_identifier": "UTC"
                                },
                                files=files,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               },
                                cookies={
                                    "authorization": self.auth_cookie,
                                })
-        assert response.status_code == 401
+        assert response.status_code == 400
 
     def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -226,12 +238,14 @@ class TestingHarnessAudioProcessingRouter:
                                    "client_timezone_identifier": "gfhhfhdfhhs"
                                },
                                files=files,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               },
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   "authorization": self.auth_cookie
                                })
-        assert response.status_code == 417
+        assert response.status_code == 400
 
     def test_invoke_diarization_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
@@ -250,10 +264,12 @@ class TestingHarnessAudioProcessingRouter:
                                    "client_timezone_identifier": "UTC"
                                },
                                files=files,
+                               headers={
+                                   "store-access-token": FAKE_ACCESS_TOKEN,
+                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                               },
                                cookies={
-                                   "authorization": self.auth_cookie,
-                                   "datastore_access_token": FAKE_ACCESS_TOKEN,
-                                   "datastore_refresh_token": FAKE_REFRESH_TOKEN,
+                                   "authorization": self.auth_cookie
                                })
         assert response.status_code == 200
         assert "session_report_id" in response.json()

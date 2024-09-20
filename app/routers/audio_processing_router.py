@@ -50,8 +50,6 @@ class AudioProcessingRouter:
                                            store_refresh_token: Annotated[str | None, Header()] = None,
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
-                                           datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                           datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(response=response,
                                                                  background_tasks=background_tasks,
@@ -61,8 +59,8 @@ class AudioProcessingRouter:
                                                                  client_timezone_identifier=client_timezone_identifier,
                                                                  audio_file=audio_file,
                                                                  authorization=authorization,
-                                                                 datastore_access_token=datastore_access_token,
-                                                                 datastore_refresh_token=datastore_refresh_token,
+                                                                 store_access_token=store_access_token,
+                                                                 store_refresh_token=store_refresh_token,
                                                                  session_id=session_id)
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -76,8 +74,6 @@ class AudioProcessingRouter:
                                   store_refresh_token: Annotated[str | None, Header()] = None,
                                   audio_file: UploadFile = File(...),
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
-                                  datastore_access_token: Annotated[Union[str, None], Cookie()] = None,
-                                  datastore_refresh_token: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(response=response,
                                                         background_tasks=background_tasks,
@@ -87,8 +83,8 @@ class AudioProcessingRouter:
                                                         client_timezone_identifier=client_timezone_identifier,
                                                         audio_file=audio_file,
                                                         authorization=authorization,
-                                                        datastore_access_token=datastore_access_token,
-                                                        datastore_refresh_token=datastore_refresh_token,
+                                                        store_access_token=store_access_token,
+                                                        store_refresh_token=store_refresh_token,
                                                         session_id=session_id)
 
     """
@@ -102,9 +98,9 @@ class AudioProcessingRouter:
     session_date – the session date associated with the operation.
     client_timezone_identifier – the timezone associated with the client.
     audio_file – the audio file for which the transcription will be created.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _transcribe_session_notes_internal(self,
@@ -115,14 +111,14 @@ class AudioProcessingRouter:
                                                  session_date: Annotated[str, Form()],
                                                  client_timezone_identifier: Annotated[str, Form()],
                                                  audio_file: UploadFile,
+                                                 store_access_token: Annotated[str | None, Header()],
+                                                 store_refresh_token: Annotated[str | None, Header()],
                                                  authorization: Annotated[Union[str, None], Cookie()],
-                                                 datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                                 datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                                  session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger()
@@ -143,8 +139,8 @@ class AudioProcessingRouter:
                                endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
@@ -212,9 +208,9 @@ class AudioProcessingRouter:
     session_date – the session date associated with the operation.
     client_timezone_identifier – the timezone associated with the client.
     audio_file – the audio file for which the transcription will be created.
+    store_access_token – the datastore access token.
+    store_refresh_token – the datastore refresh token.
     authorization – the authorization cookie, if exists.
-    datastore_access_token – the datastore access token.
-    datastore_refresh_token – the datastore refresh token.
     session_id – the session_id cookie, if exists.
     """
     async def _diarize_session_internal(self,
@@ -225,14 +221,14 @@ class AudioProcessingRouter:
                                         session_date: Annotated[str, Form()],
                                         client_timezone_identifier: Annotated[str, Form()],
                                         audio_file: UploadFile,
+                                        store_access_token: Annotated[str | None, Header()],
+                                        store_refresh_token: Annotated[str | None, Header()],
                                         authorization: Annotated[Union[str, None], Cookie()],
-                                        datastore_access_token: Annotated[Union[str, None], Cookie()],
-                                        datastore_refresh_token: Annotated[Union[str, None], Cookie()],
                                         session_id: Annotated[Union[str, None], Cookie()]):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-        if datastore_access_token is None or datastore_refresh_token is None:
+        if store_access_token is None or store_refresh_token is None:
             raise security.DATASTORE_TOKENS_ERROR
 
         logger = Logger()
@@ -253,8 +249,8 @@ class AudioProcessingRouter:
                                endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=datastore_access_token,
-                                                                                                      refresh_token=datastore_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
@@ -277,6 +273,18 @@ class AudioProcessingRouter:
                                                   tz_identifier=client_timezone_identifier), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            logger.log_error(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.DIARIZATION_ENDPOINT,
+                             error_code=status_code,
+                             description=description,
+                             method=post_api_method)
+            raise HTTPException(status_code=status_code, detail=description)
+
+        try:
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
                                                                                            assistant_manager=self._assistant_manager,
                                                                                            auth_manager=self._auth_manager,
