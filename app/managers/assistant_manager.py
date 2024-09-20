@@ -859,13 +859,13 @@ class AssistantManager:
                                                                patient_id=patient_id)
 
         await dependency_container.inject_pinecone_client().insert_session_vectors(session_id=session_id,
-                                                                                user_id=therapist_id,
-                                                                                patient_id=patient_id,
-                                                                                text=notes_text,
-                                                                                session_report_id=session_notes_id,
-                                                                                openai_client=dependency_container.inject_openai_client(),
-                                                                                therapy_session_date=session_date,
-                                                                                summarize_chunk=self.chartwise_assistant.summarize_chunk)
+                                                                                   user_id=therapist_id,
+                                                                                   patient_id=patient_id,
+                                                                                   text=notes_text,
+                                                                                   session_report_id=session_notes_id,
+                                                                                   openai_client=dependency_container.inject_openai_client(),
+                                                                                   therapy_session_date=session_date,
+                                                                                   summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
@@ -918,14 +918,14 @@ class AssistantManager:
                                                                patient_id=patient_id)
 
         await dependency_container.inject_pinecone_client().update_session_vectors(session_id=session_id,
-                                                                                user_id=therapist_id,
-                                                                                patient_id=patient_id,
-                                                                                text=notes_text,
-                                                                                old_date=old_session_date,
-                                                                                new_date=new_session_date,
-                                                                                session_report_id=session_notes_id,
-                                                                                openai_client=dependency_container.inject_openai_client(),
-                                                                                summarize_chunk=self.chartwise_assistant.summarize_chunk)
+                                                                                   user_id=therapist_id,
+                                                                                   patient_id=patient_id,
+                                                                                   text=notes_text,
+                                                                                   old_date=old_session_date,
+                                                                                   new_date=new_session_date,
+                                                                                   session_report_id=session_notes_id,
+                                                                                   openai_client=dependency_container.inject_openai_client(),
+                                                                                   summarize_chunk=self.chartwise_assistant.summarize_chunk)
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.

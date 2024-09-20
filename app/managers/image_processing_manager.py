@@ -146,18 +146,6 @@ class ImageProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_notes_id)
 
-            # Update patient metrics around last session date, and total session count AFTER
-            # session has already been updated.
-            background_tasks.add_task(assistant_manager.update_patient_metrics_after_session_report_operation,
-                                      supabase_client,
-                                      patient_id,
-                                      therapist_id,
-                                      logger_worker,
-                                      session_id,
-                                      background_tasks,
-                                      SessionCrudOperation.UPDATE_COMPLETED,
-                                      session_date)
-
         except HTTPException as e:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.
