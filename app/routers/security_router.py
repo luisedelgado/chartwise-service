@@ -79,12 +79,12 @@ class SecurityRouter:
                                            store_refresh_token: Annotated[str | None, Header()] = None,
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
-            return await self._refresh_new_access_token_internal(authorization=authorization,
-                                                                 background_tasks=background_tasks,
-                                                                 response=response,
-                                                                 store_access_token=store_access_token,
-                                                                 store_refresh_token=store_refresh_token,
-                                                                 session_id=session_id)
+            return await self._refresh_access_token_internal(authorization=authorization,
+                                                             background_tasks=background_tasks,
+                                                             response=response,
+                                                             store_access_token=store_access_token,
+                                                             store_refresh_token=store_refresh_token,
+                                                             session_id=session_id)
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def logout(response: Response,
