@@ -3,7 +3,6 @@ import jwt, logging, os
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Response
 from passlib.context import CryptContext
-from portkey_ai import PORTKEY_GATEWAY_URL
 from typing import Tuple
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
