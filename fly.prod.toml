@@ -31,20 +31,6 @@ primary_region = 'mia'
 [machines.app]
   count = 4  # 4 machines for FastAPI
 
-# Celery Worker process
-[[services]]
-  processes = ["worker"]
-  [services.vm]
-    memory = "2gb"
-    cpu_kind = "shared"
-    cpus = 2
-
-[machines.worker]
-  count = 2  # 2 machines for Celery workers
-
 [processes]
   # This is your FastAPI process
   app = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
-
-  # Celery worker process for background tasks
-  worker = "celery -A app.data_processing.celery:celery_app worker --loglevel=info"

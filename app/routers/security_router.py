@@ -73,7 +73,7 @@ class SecurityRouter:
                                                                  session_id=session_id)
 
         @self.router.put(self.TOKEN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def refresh_new_access_token(background_tasks: BackgroundTasks,
+        async def refresh_access_token(background_tasks: BackgroundTasks,
                                            response: Response,
                                            store_access_token: Annotated[str | None, Header()] = None,
                                            store_refresh_token: Annotated[str | None, Header()] = None,

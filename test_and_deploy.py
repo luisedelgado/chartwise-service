@@ -1,4 +1,4 @@
-import argparse, subprocess, os, pty, time
+import argparse, subprocess, os, pty
 
 from pathlib import Path
 
@@ -81,16 +81,6 @@ if __name__ == "__main__":
                             "deploy",
                             "--process-groups",
                             "app",
-                            "-c",
-                            toml_file_name,
-                            "-a",
-                            app_name])
-
-    print("\nDeploying Celery worker...")
-    deploy_process(commands=["fly",
-                            "deploy",
-                            "--process-groups",
-                            "worker",
                             "-c",
                             toml_file_name,
                             "-a",
