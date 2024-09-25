@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"  # Expose the internal port 8080 and map it to host port 8080
+      - "5678:5678"  # Expose the debugger port
+    environment:
+      PYTHONUNBUFFERED: "True"
+      APP_HOME: "/app"
+      DEBUG_MODE: "true"
+    volumes:
+      - .:/app  # Mount the current directory into the container
+    command: "python3 -Xfrozen_modules=off -m uvicorn app.main:app --host 0.0.0.0 --port 8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2g"
+    restart: always  # Ensure the service is restarted on failure
+
+# Running command:
+# docker-compose up --build

@@ -6,6 +6,13 @@ from .routers.image_processing_router import ImageProcessingRouter
 from .routers.security_router import SecurityRouter
 from .service_coordinator import EndpointServiceCoordinator
 
+if os.environ.get("DEBUG_MODE") == "true":
+    import debugpy
+    print("Debugger is enabled. Waiting for client to attach...")
+    debugpy.listen(("0.0.0.0", 5678))
+    debugpy.wait_for_client()  # Pause execution until debugger attaches
+    print("Debugger attached, resuming execution...")
+
 environment = os.environ.get("ENVIRONMENT")
 
 app = EndpointServiceCoordinator(routers=[
