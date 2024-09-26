@@ -540,7 +540,7 @@ class PromptCrafter:
             "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state.\n"
             "\nIt is very important that the output meets the following criteria:\n"
             "1. Format the output in bullet points.\n"
-            "2. Limit the output to 500 characters.\n"
+            "2. Limit the output to 270 characters.\n"
             f"3. Ensure the output is generated using language code {language_code}.\n"
         )
 
@@ -591,7 +591,7 @@ class PromptCrafter:
                     "Provide analytics that could help the therapist understand the patient's commitment, punctuality, or potential barriers to consistent attendance. "
                     "\n\nIt is very important that the output meets the following criteria:\n"
                     "1. Format the output in bullet points.\n"
-                    "2. Limit the output to 500 characters.\n"
+                    "2. Limit the output to 290 characters.\n"
                     f"3. Ensure the output is generated using language code {language_code}.\n")
         except Exception as e:
             raise Exception(e)
