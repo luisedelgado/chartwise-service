@@ -129,7 +129,8 @@ class ChartWiseAssistant:
     session_id – the session id.
     patient_name – the name by which the patient should be referred to.
     therapist_name – the name by which the patient should be referred to.
-    session_number – the nth time on which the therapist is meeting with the patient.
+    session_count – the count of sessions so far with this patient.
+    supabase_client – the supabase client.
     """
     async def create_briefing(self,
                               user_id: str,
@@ -141,7 +142,7 @@ class ChartWiseAssistant:
                               patient_gender: str,
                               therapist_name: str,
                               therapist_gender: str,
-                              session_number: int,
+                              session_count: int,
                               supabase_client: SupabaseBaseClass) -> str:
         try:
             query_input = (f"I'm coming up to speed with {patient_name}'s session notes. "
@@ -174,7 +175,7 @@ class ChartWiseAssistant:
                                                                            therapist_gender=therapist_gender,
                                                                            patient_name=patient_name,
                                                                            patient_gender=patient_gender,
-                                                                           session_number=session_number)
+                                                                           session_count=session_count)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 

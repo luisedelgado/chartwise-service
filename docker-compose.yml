@@ -10,6 +10,8 @@ services:
       PYTHONUNBUFFERED: "True"
       APP_HOME: "/app"
       DEBUG_MODE: "true"
+    env_file:
+      - .env
     volumes:
       - .:/app  # Mount the current directory into the container
     command: "python3 -Xfrozen_modules=off -m uvicorn app.main:app --host 0.0.0.0 --port 8080"

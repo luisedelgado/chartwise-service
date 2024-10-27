@@ -9,9 +9,11 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import Logger
+from ..internal.logging import log_error
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
+from ..internal.utilities.audio_file_utilities import (get_output_filepath_for_sample_rate_reduction,
+                                                       reduce_sample_rate_if_worthwhile)
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 from ..vectors import data_cleaner
@@ -34,7 +36,6 @@ class AudioProcessingManager(MediaProcessingManager):
                                     language_code: str,
                                     patient_id: str,
                                     session_date: str,
-                                    logger_worker: Logger,
                                     environment: str,
                                     diarize: bool = False,
                                     audio_file: UploadFile = File(...)) -> str:
@@ -47,6 +48,18 @@ class AudioProcessingManager(MediaProcessingManager):
             if not os.path.exists(audio_copy_result.file_copy_full_path):
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
+
+            reduced_sample_rate_output_filepath: str = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
+                                                                                                     input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
+            reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
+                                                                         output_filepath=reduced_sample_rate_output_filepath)
+            if reduction_succeeded:
+                files_to_clean.append(reduced_sample_rate_output_filepath)
+                audio_filepath = reduced_sample_rate_output_filepath
+            else:
+                audio_filepath = audio_copy_result.file_copy_full_path
+
+            source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
 
             session_report_creation_response = supabase_client.insert(table_name="session_reports",
                                                                       payload={
@@ -63,7 +76,6 @@ class AudioProcessingManager(MediaProcessingManager):
             if diarize:
                 background_tasks.add_task(self._diarize_audio_and_save,
                                           session_report_id,
-                                          logger_worker,
                                           environment,
                                           background_tasks,
                                           supabase_client,
@@ -73,13 +85,12 @@ class AudioProcessingManager(MediaProcessingManager):
                                           patient_id,
                                           language_code,
                                           session_id,
-                                          audio_copy_result,
+                                          audio_filepath,
                                           template,
                                           files_to_clean)
             else:
                 background_tasks.add_task(self._transcribe_audio_and_save,
                                           session_report_id,
-                                          logger_worker,
                                           environment,
                                           background_tasks,
                                           supabase_client,
@@ -88,7 +99,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                           therapist_id,
                                           language_code,
                                           session_id,
-                                          audio_copy_result,
+                                          audio_filepath,
                                           template,
                                           files_to_clean)
 
@@ -99,26 +110,22 @@ class AudioProcessingManager(MediaProcessingManager):
 
             return session_report_id
         except Exception as e:
-            # We want to synchronously log the failed processing status to avoid execution
-            # stoppage when the exception is raised.
             if session_report_id is not None:
                 await self._update_session_processing_status(assistant_manager=assistant_manager,
-                                                            language_code=language_code,
-                                                            logger_worker=logger_worker,
-                                                            environment=environment,
-                                                            background_tasks=background_tasks,
-                                                            auth_manager=auth_manager,
-                                                            session_id=session_id,
-                                                            supabase_client=supabase_client,
-                                                            session_upload_status=SessionUploadStatus.FAILED.value,
-                                                            session_notes_id=session_report_id)
+                                                             language_code=language_code,
+                                                             environment=environment,
+                                                             background_tasks=background_tasks,
+                                                             auth_manager=auth_manager,
+                                                             session_id=session_id,
+                                                             supabase_client=supabase_client,
+                                                             session_upload_status=SessionUploadStatus.FAILED.value,
+                                                             session_notes_id=session_report_id)
             raise Exception(e)
 
     # Private
 
     async def _diarize_audio_and_save(self,
                                       session_report_id: str,
-                                      logger_worker: Logger,
                                       environment: str,
                                       background_tasks: BackgroundTasks,
                                       supabase_client: SupabaseBaseClass,
@@ -128,29 +135,25 @@ class AudioProcessingManager(MediaProcessingManager):
                                       patient_id: str,
                                       language_code: str,
                                       session_id: str,
-                                      audio_copy_result: file_copiers.FileCopyResult,
+                                      audio_filepath: str,
                                       template: SessionNotesTemplate,
                                       files_to_clean: list):
         try:
-            diarization = await dependency_container.inject_deepgram_client().diarize_audio(file_full_path=audio_copy_result.file_copy_full_path)
+            diarization = await dependency_container.inject_deepgram_client().diarize_audio(file_full_path=audio_filepath)
             update_body = {
                 "id": session_report_id,
                 "diarization": diarization,
             }
             await assistant_manager.update_session(language_code=language_code,
-                                                   logger_worker=logger_worker,
                                                    environment=environment,
                                                    background_tasks=background_tasks,
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_body,
                                                    session_id=session_id,
                                                    supabase_client=supabase_client)
-        except:
-            # We want to synchronously log the failed processing status to avoid execution
-            # stoppage when the exception is raised.
+        except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -188,7 +191,6 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                               prompt_crafter=prompt_crafter,
                                                                               summarize_chunk_system_prompt=system_prompt,
                                                                               language_code=language_code,
-                                                                              logger_worker=logger_worker,
                                                                               background_tasks=background_tasks,
                                                                               patient_id=patient_id,
                                                                               therapist_id=therapist_id,
@@ -214,7 +216,6 @@ class AudioProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(language_code=language_code,
-                                                   logger_worker=logger_worker,
                                                    environment=environment,
                                                    background_tasks=background_tasks,
                                                    auth_manager=auth_manager,
@@ -224,7 +225,6 @@ class AudioProcessingManager(MediaProcessingManager):
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -233,11 +233,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id)
         except Exception as e:
-            # We want to synchronously log the failed processing status to avoid execution
-            # stoppage when the exception is raised.
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -251,7 +248,6 @@ class AudioProcessingManager(MediaProcessingManager):
 
     async def _transcribe_audio_and_save(self,
                                          session_report_id: str,
-                                         logger_worker: Logger,
                                          environment: str,
                                          background_tasks: BackgroundTasks,
                                          supabase_client: SupabaseBaseClass,
@@ -260,11 +256,11 @@ class AudioProcessingManager(MediaProcessingManager):
                                          therapist_id: str,
                                          language_code: str,
                                          session_id: str,
-                                         audio_copy_result: file_copiers.FileCopyResult,
+                                         audio_filepath: str,
                                          template: SessionNotesTemplate,
                                          files_to_clean: list):
         try:
-            transcription = await dependency_container.inject_deepgram_client().transcribe_audio(file_full_path=audio_copy_result.file_copy_full_path)
+            transcription = await dependency_container.inject_deepgram_client().transcribe_audio(file_full_path=audio_filepath)
             if template == SessionNotesTemplate.SOAP:
                 transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
                                                                                     therapist_id=therapist_id,
@@ -277,7 +273,6 @@ class AudioProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(language_code=language_code,
-                                                   logger_worker=logger_worker,
                                                    environment=environment,
                                                    background_tasks=background_tasks,
                                                    auth_manager=auth_manager,
@@ -287,7 +282,6 @@ class AudioProcessingManager(MediaProcessingManager):
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -296,11 +290,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id)
         except Exception as e:
-            # We want to synchronously log the failed processing status to avoid execution
-            # stoppage when the exception is raised.
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -365,7 +356,6 @@ class AudioProcessingManager(MediaProcessingManager):
                                                prompt_crafter: PromptCrafter,
                                                summarize_chunk_system_prompt: str,
                                                language_code: str,
-                                               logger_worker: Logger,
                                                background_tasks: BackgroundTasks,
                                                patient_id: str,
                                                therapist_id: str,
@@ -423,9 +413,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                               expects_json_response=False)
             return grand_summary
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description=str(e),
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description=str(e),
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)

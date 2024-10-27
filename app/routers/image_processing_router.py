@@ -14,7 +14,10 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal import security
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import Logger
+from ..internal.logging import (API_METHOD_POST,
+                                log_api_request,
+                                log_api_response,
+                                log_error)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
@@ -95,8 +98,7 @@ class ImageProcessingRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
+        post_api_method = API_METHOD_POST
         description = "".join([
             "template=\"",
             f"{template.value or ''}\";",
@@ -105,12 +107,12 @@ class ImageProcessingRouter:
             "client_timezone=\"",
             f"{client_timezone_identifier or ''}\""
         ])
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               description=description,
-                               patient_id=patient_id,
-                               endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=post_api_method,
+                        description=description,
+                        patient_id=patient_id,
+                        endpoint_name=self.TEXT_EXTRACTION_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -120,13 +122,13 @@ class ImageProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             patient_id=patient_id,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      patient_id=patient_id,
+                      method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -138,12 +140,12 @@ class ImageProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             description = str(e)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
@@ -157,16 +159,15 @@ class ImageProcessingRouter:
                                       job_id,
                                       user_id,
                                       session_id,
-                                      logger,
                                       background_tasks,
                                       supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=user_id,
-                                    endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=user_id,
+                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
 
             return {
                 "session_report_id": session_report_id
@@ -174,19 +175,18 @@ class ImageProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     async def _process_textraction(self,
                                    job_id: str,
                                    therapist_id: str,
                                    session_id: str,
-                                   logger: Logger,
                                    background_tasks: BackgroundTasks,
                                    supabase_client: SupabaseBaseClass):
         language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
@@ -194,7 +194,6 @@ class ImageProcessingRouter:
                                                                  session_id=session_id,
                                                                  environment=self._environment,
                                                                  language_code=language_code,
-                                                                 logger_worker=logger,
                                                                  background_tasks=background_tasks,
                                                                  supabase_client=supabase_client,
                                                                  auth_manager=self._auth_manager,

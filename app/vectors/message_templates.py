@@ -1,7 +1,5 @@
 from enum import Enum
 
-from num2words import num2words
-
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
 from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT_YYYY_MM_DD
 
@@ -127,13 +125,13 @@ class PromptCrafter:
             patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
             therapist_name = None if 'therapist_name' not in kwargs else kwargs['therapist_name']
             therapist_gender = None if 'therapist_gender' not in kwargs else kwargs['therapist_gender']
-            session_number = None if 'session_number' not in kwargs else kwargs['session_number']
+            session_count = None if 'session_count' not in kwargs else kwargs['session_count']
             return self._create_briefing_system_message(language_code=language_code,
                                                         therapist_name=therapist_name,
                                                         therapist_gender=therapist_gender,
                                                         patient_name=patient_name,
                                                         patient_gender=patient_gender,
-                                                        session_number=session_number)
+                                                        session_count=session_count)
         elif scenario == PromptScenario.QUESTION_SUGGESTIONS:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_question_suggestions_system_message(language_code=language_code)
@@ -244,24 +242,23 @@ class PromptCrafter:
                                         therapist_gender: str,
                                         patient_name: str,
                                         patient_gender: str,
-                                        session_number: int) -> str | None:
+                                        session_count: int) -> str | None:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
             assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
-            assert session_number > 0, "Something went wrong when building system message"
+            assert session_count >= 0, "Something went wrong when building system message"
 
             therapist_gender = ("" if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
                                 else f" ({therapist_gender})")
             patient_gender = ("" if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
                               else f" ({patient_gender})")
-            ordinal_session_number = num2words(session_number, to='ordinal_num')
 
             return (
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
-                    f"This will be their {ordinal_session_number} session together. "
-                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they are going to be seeing {patient_name} for the {ordinal_session_number} time."
+                    f"{therapist_name} has had {session_count} sessions with {patient_name} so far. "
+                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they have had {session_count} with {patient_name} in the past."
                     f"\n\nOnce you've said hi to {therapist_name}, your job is to provide a summary of {patient_name}'s session history in two sections: **Most Recent Sessions** and **Historical Themes**. "
                     "You should never attempt to diagnose the patient yourself. "
                     "The practitioner relies on your support for organization and information retrieval, not for making clinical decisions. Focus on providing objective data analysis rather than offering diagnostic recommendations.\n\n"

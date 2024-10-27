@@ -1,8 +1,8 @@
 import asyncio, json
 
+from celery import shared_task
 from datetime import datetime
 from enum import Enum
-
 from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from typing import AsyncIterable, Optional
@@ -12,7 +12,7 @@ from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
-from ..internal.logging import Logger
+from ..internal.logging import log_error
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
@@ -104,7 +104,6 @@ class AssistantManager:
                                        session_id: str,
                                        therapist_id: str,
                                        supabase_client: SupabaseBaseClass,
-                                       logger_worker: Logger,
                                        diarization: str = None) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
@@ -137,7 +136,6 @@ class AssistantManager:
                                       session_id,
                                       language_code,
                                       environment,
-                                      logger_worker,
                                       background_tasks,
                                       auth_manager,
                                       supabase_client)
@@ -147,7 +145,6 @@ class AssistantManager:
 
     async def update_session(self,
                              language_code: str,
-                             logger_worker: Logger,
                              environment: str,
                              background_tasks: BackgroundTasks,
                              auth_manager: AuthManager,
@@ -203,7 +200,6 @@ class AssistantManager:
                                           session_id,
                                           language_code,
                                           environment,
-                                          logger_worker,
                                           background_tasks,
                                           auth_manager,
                                           supabase_client)
@@ -218,7 +214,6 @@ class AssistantManager:
                              background_tasks: BackgroundTasks,
                              therapist_id: str,
                              session_report_id: str,
-                             logger_worker: Logger,
                              supabase_client: SupabaseBaseClass):
         try:
             # Delete the session notes from Supabase
@@ -244,7 +239,6 @@ class AssistantManager:
                                       session_id,
                                       language_code,
                                       environment,
-                                      logger_worker,
                                       background_tasks,
                                       auth_manager,
                                       supabase_client)
@@ -254,11 +248,9 @@ class AssistantManager:
     async def add_patient(self,
                           background_tasks: BackgroundTasks,
                           language_code: str,
-                          auth_manager: AuthManager,
                           filtered_body: dict,
                           therapist_id: str,
                           session_id: str,
-                          logger_worker: Logger,
                           supabase_client: SupabaseBaseClass) -> str:
         try:
             payload = {"therapist_id": therapist_id}
@@ -284,7 +276,6 @@ class AssistantManager:
                                                                     language_code=language_code,
                                                                     patient_id=patient_id,
                                                                     therapist_id=therapist_id,
-                                                                    logger_worker=logger_worker,
                                                                     background_tasks=background_tasks,
                                                                     session_id=session_id)
 
@@ -294,7 +285,6 @@ class AssistantManager:
             self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
                                                                 patient_id=patient_id,
                                                                 therapist_id=therapist_id,
-                                                                logger_worker=logger_worker,
                                                                 background_tasks=background_tasks,
                                                                 session_id=session_id,
                                                                 supabase_client=supabase_client,
@@ -457,10 +447,8 @@ class AssistantManager:
                                           therapist_id: str,
                                           patient_id: str,
                                           background_tasks: BackgroundTasks,
-                                          auth_manager: AuthManager,
                                           environment: str,
                                           session_id: str,
-                                          logger_worker: Logger,
                                           supabase_client: SupabaseBaseClass):
         try:
             patient_query = supabase_client.select(fields="*",
@@ -514,22 +502,20 @@ class AssistantManager:
                                        },
                                        table_name="patient_question_suggestions")
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the question suggestions failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the question suggestions failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     async def update_presession_tray(self,
                                      background_tasks: BackgroundTasks,
                                      therapist_id: str,
                                      patient_id: str,
-                                     auth_manager: AuthManager,
                                      environment: str,
                                      session_id: str,
-                                     supabase_client: SupabaseBaseClass,
-                                     logger_worker: Logger):
+                                     supabase_client: SupabaseBaseClass):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -541,7 +527,7 @@ class AssistantManager:
             patient_response_data = patient_query.dict()['data'][0]
             patient_name = patient_response_data['first_name']
             patient_gender = patient_response_data['gender']
-            session_number = 1 + patient_response_data['total_sessions']
+            session_count = patient_response_data['total_sessions']
 
             therapist_query = supabase_client.select(fields="*",
                                                      filters={
@@ -562,7 +548,7 @@ class AssistantManager:
                                                                       patient_gender=patient_gender,
                                                                       therapist_name=therapist_name,
                                                                       therapist_gender=therapist_gender,
-                                                                      session_number=session_number,
+                                                                      session_count=session_count,
                                                                       supabase_client=supabase_client)
 
             briefing_query = supabase_client.select(fields="*",
@@ -594,11 +580,11 @@ class AssistantManager:
                                        },
                                        table_name="patient_briefings")
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the presession tray failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the presession tray failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     async def update_patient_recent_topics(self,
@@ -610,7 +596,6 @@ class AssistantManager:
                                            session_id: str,
                                            background_tasks: BackgroundTasks,
                                            supabase_client: SupabaseBaseClass,
-                                           logger_worker: Logger,
                                            generate_insights: bool):
         try:
             patient_query = supabase_client.select(fields="*",
@@ -681,11 +666,11 @@ class AssistantManager:
                                        },
                                        table_name="patient_topics")
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the recent topics failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the recent topics failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     async def generate_attendance_insights(self,
@@ -697,8 +682,7 @@ class AssistantManager:
                                            environment: str,
                                            auth_manager: AuthManager,
                                            openai_client: OpenAIBaseClass,
-                                           supabase_client: SupabaseBaseClass,
-                                           logger_worker: Logger):
+                                           supabase_client: SupabaseBaseClass):
         try:
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(therapist_id=therapist_id,
                                                                                               patient_id=patient_id,
@@ -739,18 +723,17 @@ class AssistantManager:
                                        table_name="patient_attendance")
 
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the attendance insights failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the attendance insights failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     async def update_patient_metrics_after_session_report_operation(self,
                                                                     supabase_client: SupabaseBaseClass,
                                                                     patient_id: str,
                                                                     therapist_id: str,
-                                                                    logger_worker: Logger,
                                                                     session_id: str,
                                                                     background_tasks: BackgroundTasks,
                                                                     operation: SessionCrudOperation,
@@ -803,11 +786,11 @@ class AssistantManager:
                                        'id': patient_id
                                    })
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     def default_streaming_error_message(self,
@@ -831,6 +814,8 @@ class AssistantManager:
 
     # Private
 
+    # TODO: Flip switch to use Celery
+    # @shared_task(name="app.managers.assistant_manager._insert_vectors_and_generate_insights")
     async def _insert_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
                                                     therapist_id: str,
@@ -840,7 +825,6 @@ class AssistantManager:
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,
-                                                    logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
                                                     supabase_client: SupabaseBaseClass):
@@ -854,7 +838,6 @@ class AssistantManager:
                                                                session_id=session_id,
                                                                environment=environment,
                                                                background_tasks=background_tasks,
-                                                               logger_worker=logger_worker,
                                                                supabase_client=supabase_client,
                                                                patient_id=patient_id)
 
@@ -872,7 +855,6 @@ class AssistantManager:
         await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
-                                                                         logger_worker=logger_worker,
                                                                          session_id=session_id,
                                                                          background_tasks=background_tasks,
                                                                          operation=SessionCrudOperation.INSERT_COMPLETED,
@@ -886,8 +868,7 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client,
-                                  logger_worker)
+                                  supabase_client)
 
     async def _update_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
@@ -899,7 +880,6 @@ class AssistantManager:
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,
-                                                    logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
                                                     supabase_client: SupabaseBaseClass):
@@ -913,7 +893,6 @@ class AssistantManager:
                                                                session_id=session_id,
                                                                environment=environment,
                                                                background_tasks=background_tasks,
-                                                               logger_worker=logger_worker,
                                                                supabase_client=supabase_client,
                                                                patient_id=patient_id)
 
@@ -932,7 +911,6 @@ class AssistantManager:
         await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
-                                                                         logger_worker=logger_worker,
                                                                          session_id=session_id,
                                                                          background_tasks=background_tasks,
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
@@ -946,8 +924,7 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client,
-                                  logger_worker)
+                                  supabase_client)
 
     async def _delete_vectors_and_generate_insights(self,
                                                     therapist_id: str,
@@ -956,7 +933,6 @@ class AssistantManager:
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,
-                                                    logger_worker: Logger,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
                                                     supabase_client: SupabaseBaseClass):
@@ -969,7 +945,6 @@ class AssistantManager:
         await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
-                                                                         logger_worker=logger_worker,
                                                                          session_id=session_id,
                                                                          background_tasks=background_tasks,
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
@@ -983,8 +958,7 @@ class AssistantManager:
                                   auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client,
-                                  logger_worker)
+                                  supabase_client)
 
     async def _generate_metrics_and_insights(self,
                                              language_code: str,
@@ -994,8 +968,7 @@ class AssistantManager:
                                              auth_manager: AuthManager,
                                              environment: str,
                                              session_id: str,
-                                             supabase_client: SupabaseBaseClass,
-                                             logger_worker: Logger):
+                                             supabase_client: SupabaseBaseClass):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
@@ -1016,28 +989,23 @@ class AssistantManager:
                                                 session_id=session_id,
                                                 background_tasks=background_tasks,
                                                 supabase_client=supabase_client,
-                                                logger_worker=logger_worker,
                                                 generate_insights=False)
 
         # Update this patient's presession tray for future fetches.
         await self.update_presession_tray(background_tasks=background_tasks,
                                           therapist_id=therapist_id,
                                           patient_id=patient_id,
-                                          auth_manager=auth_manager,
                                           environment=environment,
                                           session_id=session_id,
-                                          supabase_client=supabase_client,
-                                          logger_worker=logger_worker)
+                                          supabase_client=supabase_client)
 
         # Update this patient's question suggestions for future fetches.
         await self.update_question_suggestions(language_code=language_code,
                                                therapist_id=therapist_id,
                                                patient_id=patient_id,
                                                background_tasks=background_tasks,
-                                               auth_manager=auth_manager,
                                                environment=environment,
                                                session_id=session_id,
-                                               logger_worker=logger_worker,
                                                supabase_client=supabase_client)
 
         # TODO: Uncomment once we're rendering attendance insights
@@ -1050,8 +1018,7 @@ class AssistantManager:
         #                                         environment=environment,
         #                                         auth_manager=auth_manager,
         #                                         openai_client=openai_client,
-        #                                         supabase_client=supabase_client,
-        #                                         logger_worker=logger_worker)
+        #                                         supabase_client=supabase_client)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):
@@ -1074,7 +1041,6 @@ class AssistantManager:
                                                            language_code: str,
                                                            patient_id: str,
                                                            therapist_id: str,
-                                                           logger_worker: Logger,
                                                            background_tasks: BackgroundTasks,
                                                            session_id: str):
         try:
@@ -1097,18 +1063,17 @@ class AssistantManager:
                                        "questions": eval(json.dumps(response_dict, ensure_ascii=False))
                                        })
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Updating the default question suggestions failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Updating the default question suggestions failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     def _load_default_pre_session_tray_for_new_patient(self,
                                                        language_code: str,
                                                        patient_id: str,
                                                        therapist_id: str,
-                                                       logger_worker: Logger,
                                                        background_tasks: BackgroundTasks,
                                                        session_id: str,
                                                        supabase_client: SupabaseBaseClass,
@@ -1165,11 +1130,11 @@ class AssistantManager:
                                         "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
                                     })
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description="Loading the default pre-session tray failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      description="Loading the default pre-session tray failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      patient_id=patient_id)
             raise Exception(e)
 
     async def _update_session_notes_with_mini_summary(self,
@@ -1181,7 +1146,6 @@ class AssistantManager:
                                                       session_id: str,
                                                       environment: str,
                                                       background_tasks: BackgroundTasks,
-                                                      logger_worker: Logger,
                                                       supabase_client: SupabaseBaseClass,
                                                       patient_id: str):
         try:
@@ -1191,7 +1155,6 @@ class AssistantManager:
                                                                                       session_id=session_id,
                                                                                       patient_id=patient_id)
             await self.update_session(language_code=language_code,
-                                      logger_worker=logger_worker,
                                       environment=environment,
                                       background_tasks=background_tasks,
                                       auth_manager=auth_manager,
@@ -1202,8 +1165,8 @@ class AssistantManager:
                                       session_id=session_id,
                                       supabase_client=supabase_client)
         except Exception as e:
-            logger_worker.log_error(background_tasks=background_tasks,
-                                    description=f"Updating session report {session_notes_id} with a mini summary failed",
-                                    session_id=session_id,
-                                    therapist_id=therapist_id)
+            log_error(background_tasks=background_tasks,
+                      description=f"Updating session report {session_notes_id} with a mini summary failed",
+                      session_id=session_id,
+                      therapist_id=therapist_id)
             raise Exception(e)

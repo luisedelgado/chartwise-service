@@ -7,7 +7,7 @@ from .media_processing_manager import MediaProcessingManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import Logger
+from ..internal.logging import log_textraction_event
 from ..internal.schemas import SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
@@ -63,7 +63,6 @@ class ImageProcessingManager(MediaProcessingManager):
                                   session_id: str,
                                   environment: str,
                                   language_code: str,
-                                  logger_worker: Logger,
                                   background_tasks: BackgroundTasks,
                                   supabase_client: SupabaseBaseClass,
                                   auth_manager: AuthManager,
@@ -78,12 +77,12 @@ class ImageProcessingManager(MediaProcessingManager):
                     if attempt < MAX_RETRIES - 1:
                         await asyncio.sleep(RETRY_DELAY)
                     else:
-                        logger_worker.log_textraction_event(background_tasks=background_tasks,
-                                                            therapist_id=therapist_id,
-                                                            session_id=session_id,
-                                                            job_id=document_id,
-                                                            error_code=status.HTTP_408_REQUEST_TIMEOUT,
-                                                            description=f"Textraction with job id {document_id} is still processing after maximum retries")
+                        log_textraction_event(background_tasks=background_tasks,
+                                              therapist_id=therapist_id,
+                                              session_id=session_id,
+                                              job_id=document_id,
+                                              error_code=status.HTTP_408_REQUEST_TIMEOUT,
+                                              description=f"Textraction with job id {document_id} is still processing after maximum retries")
                         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Textraction is still processing after maximum retries")
                 else:
                     # Got successful response
@@ -126,7 +125,6 @@ class ImageProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(language_code=language_code,
-                                                   logger_worker=logger_worker,
                                                    environment=environment,
                                                    background_tasks=background_tasks,
                                                    auth_manager=auth_manager,
@@ -136,7 +134,6 @@ class ImageProcessingManager(MediaProcessingManager):
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
-                                                         logger_worker=logger_worker,
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
@@ -151,7 +148,6 @@ class ImageProcessingManager(MediaProcessingManager):
             if session_notes_id is not None:
                 await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                              language_code=language_code,
-                                                             logger_worker=logger_worker,
                                                              environment=environment,
                                                              background_tasks=background_tasks,
                                                              auth_manager=auth_manager,
@@ -166,7 +162,6 @@ class ImageProcessingManager(MediaProcessingManager):
             if session_notes_id is not None:
                 await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                             language_code=language_code,
-                                                            logger_worker=logger_worker,
                                                             environment=environment,
                                                             background_tasks=background_tasks,
                                                             auth_manager=auth_manager,

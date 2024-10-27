@@ -14,7 +14,12 @@ from ..internal.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
-from ..internal.logging import Logger
+from ..internal.logging import (API_METHOD_DELETE,
+                                API_METHOD_POST,
+                                API_METHOD_PUT,
+                                log_api_request,
+                                log_api_response,
+                                log_error)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
@@ -116,7 +121,6 @@ class AssistantRouter:
             if store_access_token is None or store_refresh_token is None:
                 raise security.STORE_TOKENS_ERROR
 
-            logger = Logger()
             try:
                 supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                              refresh_token=store_refresh_token)
@@ -125,13 +129,13 @@ class AssistantRouter:
                                                          response=response)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-                logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.QUERIES_ENDPOINT,
-                             patient_id=query.patient_id,
-                             error_code=status_code,
-                             description=str(e),
-                             method=logger.API_METHOD_POST)
+                log_error(background_tasks=background_tasks,
+                          session_id=session_id,
+                          endpoint_name=self.QUERIES_ENDPOINT,
+                          patient_id=query.patient_id,
+                          error_code=status_code,
+                          description=str(e),
+                          method=API_METHOD_POST)
                 raise security.STORE_TOKENS_ERROR
 
             try:
@@ -240,13 +244,12 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               patient_id=body.patient_id,
-                               endpoint_name=self.SESSIONS_ENDPOINT,
-                               method=post_api_method,)
+        post_api_method = API_METHOD_POST
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        patient_id=body.patient_id,
+                        endpoint_name=self.SESSIONS_ENDPOINT,
+                        method=post_api_method,)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -256,13 +259,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             patient_id=body.patient_id,
-                             description=str(e),
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      patient_id=body.patient_id,
+                      description=str(e),
+                      method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -284,31 +287,30 @@ class AssistantRouter:
                                                                                       notes_text=body['notes_text'],
                                                                                       session_date=body['session_date'],
                                                                                       source=SessionNotesSource.MANUAL_INPUT,
-                                                                                      logger_worker=logger,
                                                                                       background_tasks=background_tasks,
                                                                                       session_id=session_id,
                                                                                       therapist_id=therapist_id,
                                                                                       supabase_client=supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=body['patient_id'],
-                                    endpoint_name=self.SESSIONS_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=body['patient_id'],
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
 
             return {"session_report_id": session_notes_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             patient_id=body['patient_id'],
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      patient_id=body['patient_id'],
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -340,13 +342,12 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        put_api_method = logger.API_METHOD_PUT
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               session_report_id=body.id,
-                               endpoint_name=self.SESSIONS_ENDPOINT,
-                               method=put_api_method)
+        put_api_method = API_METHOD_PUT
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        session_report_id=body.id,
+                        endpoint_name=self.SESSIONS_ENDPOINT,
+                        method=put_api_method)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -356,13 +357,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             session_report_id=body.id,
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=put_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      session_report_id=body.id,
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=put_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -380,30 +381,29 @@ class AssistantRouter:
             await self._assistant_manager.update_session(language_code=language_code,
                                                          environment=self._environment,
                                                          background_tasks=background_tasks,
-                                                         logger_worker=logger,
                                                          auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    session_report_id=body['id'],
-                                    endpoint_name=self.SESSIONS_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=put_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             session_report_id=body['id'],
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=put_api_method)
 
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             session_report_id=body['id'],
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=put_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      session_report_id=body['id'],
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=put_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -433,13 +433,12 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               session_report_id=session_report_id,
-                               endpoint_name=self.SESSIONS_ENDPOINT,
-                               method=delete_api_method)
+        delete_api_method = API_METHOD_DELETE
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        session_report_id=session_report_id,
+                        endpoint_name=self.SESSIONS_ENDPOINT,
+                        method=delete_api_method)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -449,13 +448,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             session_report_id=session_report_id,
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=delete_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      session_report_id=session_report_id,
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=delete_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -463,14 +462,14 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             session_report_id=session_report_id,
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=delete_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      therapist_id=therapist_id,
+                      session_report_id=session_report_id,
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -481,29 +480,28 @@ class AssistantRouter:
                                                          environment=self._environment,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
-                                                         logger_worker=logger,
                                                          therapist_id=therapist_id,
                                                          session_report_id=session_report_id,
                                                          supabase_client=supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    description=f"session_report_id: {session_report_id}",
-                                    endpoint_name=self.SESSIONS_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=delete_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             description=f"session_report_id: {session_report_id}",
+                             endpoint_name=self.SESSIONS_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=delete_api_method)
 
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=delete_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.SESSIONS_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -525,14 +523,13 @@ class AssistantRouter:
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               therapist_id=therapist_id,
-                               patient_id=query.patient_id,
-                               endpoint_name=self.QUERIES_ENDPOINT,
-                               method=post_api_method)
+        post_api_method = API_METHOD_POST
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        therapist_id=therapist_id,
+                        patient_id=query.patient_id,
+                        endpoint_name=self.QUERIES_ENDPOINT,
+                        method=post_api_method)
 
         try:
             async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
@@ -544,23 +541,23 @@ class AssistantRouter:
                                                                     supabase_client=supabase_client):
                 yield part
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    patient_id=query.patient_id,
-                                    endpoint_name=self.QUERIES_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             patient_id=query.patient_id,
+                             endpoint_name=self.QUERIES_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
         except Exception as e:
             yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id,
                                                                                   supabase_client=supabase_client))
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             patient_id=query.patient_id,
-                             endpoint_name=self.QUERIES_ENDPOINT,
-                             error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
-                             description=str(e),
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      patient_id=query.patient_id,
+                      endpoint_name=self.QUERIES_ENDPOINT,
+                      error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
+                      description=str(e),
+                      method=post_api_method)
 
     """
     Adds a patient.
@@ -588,8 +585,7 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
+        post_api_method = API_METHOD_POST
         description = "".join([
             "birthdate=\"",
             f"{body.birth_date or ''}\";",
@@ -598,11 +594,11 @@ class AssistantRouter:
             "consentment_channel=\"",
             f"{body.consentment_channel}\""
         ])
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               description = description,
-                               endpoint_name=self.PATIENTS_ENDPOINT)
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=post_api_method,
+                        description = description,
+                        endpoint_name=self.PATIENTS_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -612,12 +608,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -631,32 +627,30 @@ class AssistantRouter:
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             patient_id = await self._assistant_manager.add_patient(language_code=language_code,
                                                                    background_tasks=background_tasks,
-                                                                   auth_manager=self._auth_manager,
                                                                    filtered_body=body,
-                                                                   logger_worker=logger,
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    supabase_client=supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    method=post_api_method,
-                                    endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=therapist_id,
-                                    patient_id=patient_id,
-                                    http_status_code=status.HTTP_200_OK)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             method=post_api_method,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             therapist_id=therapist_id,
+                             patient_id=patient_id,
+                             http_status_code=status.HTTP_200_OK)
 
             return {"patient_id": patient_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             error_code=status_code,
-                             therapist_id=therapist_id,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      error_code=status_code,
+                      therapist_id=therapist_id,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -686,8 +680,7 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        put_api_method = logger.API_METHOD_PUT
+        put_api_method = API_METHOD_PUT
         description = "".join([
             "birthdate=\"",
             f"{body.birth_date or ''}\";",
@@ -696,12 +689,12 @@ class AssistantRouter:
             "consentment_channel=\"",
             f"{body.consentment_channel}\""
         ])
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               description=description,
-                               method=put_api_method,
-                               endpoint_name=self.PATIENTS_ENDPOINT,
-                               patient_id=body.id)
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        description=description,
+                        method=put_api_method,
+                        endpoint_name=self.PATIENTS_ENDPOINT,
+                        patient_id=body.id)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -711,13 +704,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             error_code=status_code,
-                             patient_id=body.id,
-                             description=str(e),
-                             method=put_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      error_code=status_code,
+                      patient_id=body.id,
+                      description=str(e),
+                      method=put_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -735,24 +728,24 @@ class AssistantRouter:
                                                          background_tasks=background_tasks,
                                                          supabase_client=supabase_client)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    method=put_api_method,
-                                    endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=therapist_id,
-                                    patient_id=body['id'],
-                                    http_status_code=status.HTTP_200_OK)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             method=put_api_method,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             therapist_id=therapist_id,
+                             patient_id=body['id'],
+                             http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             error_code=status_code,
-                             patient_id=body['id'],
-                             description=description,
-                             method=put_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      error_code=status_code,
+                      patient_id=body['id'],
+                      description=description,
+                      method=put_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -782,13 +775,12 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        delete_api_method = logger.API_METHOD_DELETE
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=delete_api_method,
-                               endpoint_name=self.PATIENTS_ENDPOINT,
-                               patient_id=patient_id,)
+        delete_api_method = API_METHOD_DELETE
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=delete_api_method,
+                        endpoint_name=self.PATIENTS_ENDPOINT,
+                        patient_id=patient_id,)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -798,13 +790,13 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             patient_id=patient_id,
-                             error_code=status_code,
-                             description=str(e),
-                             method=delete_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      patient_id=patient_id,
+                      error_code=status_code,
+                      description=str(e),
+                      method=delete_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -829,24 +821,24 @@ class AssistantRouter:
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
                                                                 patient_id=patient_id)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    method=delete_api_method,
-                                    endpoint_name=self.PATIENTS_ENDPOINT,
-                                    therapist_id=therapist_id,
-                                    description=f"patient_id: {patient_id}",
-                                    http_status_code=status.HTTP_200_OK)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             method=delete_api_method,
+                             endpoint_name=self.PATIENTS_ENDPOINT,
+                             therapist_id=therapist_id,
+                             description=f"patient_id: {patient_id}",
+                             http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             error_code=status_code,
-                             therapist_id=therapist_id,
-                             description=description,
-                             method=delete_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PATIENTS_ENDPOINT,
+                      error_code=status_code,
+                      therapist_id=therapist_id,
+                      description=description,
+                      method=delete_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -878,12 +870,11 @@ class AssistantRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               endpoint_name=self.TEMPLATES_ENDPOINT)
+        post_api_method = API_METHOD_POST
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=post_api_method,
+                        endpoint_name=self.TEMPLATES_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -893,12 +884,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEMPLATES_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.TEMPLATES_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -910,22 +901,22 @@ class AssistantRouter:
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    endpoint_name=self.TEMPLATES_ENDPOINT,
-                                    therapist_id=therapist_id,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             endpoint_name=self.TEMPLATES_ENDPOINT,
+                             therapist_id=therapist_id,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
 
             return {"soap_notes": soap_notes}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEMPLATES_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.TEMPLATES_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code,
                                 detail=description)

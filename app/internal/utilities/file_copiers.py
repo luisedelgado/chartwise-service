@@ -11,8 +11,15 @@ FILES_DIR = 'app/files'
 A result representation of an image-copy operation.
 """
 class FileCopyResult:
-    def __init__(self, file_copy_name: str, file_copy_full_path: str, file_copies: list):
-        self.file_copy_name = file_copy_name
+    def __init__(self,
+                 file_copy_name_with_ext: str,
+                 file_copy_full_path: str,
+                 file_copies: list,
+                 file_copy_directory: str,
+                 file_copy_name_without_ext: str):
+        self.file_copy_directory = file_copy_directory
+        self.file_copy_name_with_ext = file_copy_name_with_ext
+        self.file_copy_name_without_ext = file_copy_name_without_ext
         self.file_copy_full_path = file_copy_full_path
         self.file_copies = file_copies
 
@@ -25,7 +32,7 @@ image – the image file to be processed
 async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
     try:
         copy_file_result: FileCopyResult = await make_file_copy(image)
-        copy_bare_name, copy_extension = os.path.splitext(copy_file_result.file_copy_name)
+        copy_bare_name, copy_extension = os.path.splitext(copy_file_result.file_copy_name_with_ext)
 
         pdf_extension = '.pdf'
         if copy_extension.lower() == pdf_extension:
@@ -33,15 +40,18 @@ async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
             return copy_file_result
 
         # We need to make a PDF copy.
-        image_copy_pdf_path = FILES_DIR + '/' + copy_bare_name + pdf_extension
+        image_copy_directory = FILES_DIR + '/'
+        image_copy_pdf_path = image_copy_directory + copy_bare_name + pdf_extension
         file_copies = copy_file_result.file_copies
 
         Image.open(copy_file_result.file_copy_full_path).convert('RGB').save(image_copy_pdf_path)
         file_copies.append(image_copy_pdf_path)
 
-        return FileCopyResult(file_copy_name=copy_file_result.file_copy_name,
+        return FileCopyResult(file_copy_name_with_ext=copy_file_result.file_copy_name_with_ext,
                               file_copy_full_path=image_copy_pdf_path,
-                              file_copies=file_copies)
+                              file_copies=file_copies,
+                              file_copy_directory=image_copy_directory,
+                              file_copy_name_without_ext=copy_bare_name)
     finally:
         await image.close()
 
@@ -54,8 +64,10 @@ file – the file to be processed
 async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
     try:
         _, file_extension = os.path.splitext(file.filename)
-        audio_copy_file_name = datetime.now().strftime("%d-%m-%Y-%H-%M-%S") + file_extension
-        audio_copy_full_path = FILES_DIR + '/' + audio_copy_file_name
+        audio_copy_file_name_without_ext = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        audio_copy_file_name_with_ext = audio_copy_file_name_without_ext + file_extension
+        audio_copy_directory = FILES_DIR + '/'
+        audio_copy_full_path = audio_copy_directory + audio_copy_file_name_with_ext
 
         # Write incoming audio to our local volume for further processing
         with open(audio_copy_full_path, 'wb+') as buffer:
@@ -63,9 +75,11 @@ async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
 
         assert os.path.exists(audio_copy_full_path), "Something went wrong while processing the file."
 
-        return FileCopyResult(file_copy_name=audio_copy_file_name,
+        return FileCopyResult(file_copy_name_with_ext=audio_copy_file_name_with_ext,
                               file_copy_full_path=audio_copy_full_path,
-                              file_copies=[audio_copy_full_path])
+                              file_copies=[audio_copy_full_path],
+                              file_copy_directory=audio_copy_directory,
+                              file_copy_name_without_ext=audio_copy_file_name_without_ext)
     finally:
         await file.close()
 

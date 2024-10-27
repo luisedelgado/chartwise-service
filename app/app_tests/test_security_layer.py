@@ -40,7 +40,7 @@ class TestingHarnessSecurityRouter:
         self.client = TestClient(coordinator.app)
 
     def test_login_for_token_unauthenticated(self):
-        response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
                                data={
                                    "username": "g",
                                    "password": "g"
@@ -52,7 +52,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
-        response = self.client.post(SecurityRouter.TOKEN_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
                                     data={
                                         "username": "g",
                                         "password": "g"
@@ -62,7 +62,7 @@ class TestingHarnessSecurityRouter:
         assert response.cookies.get("session_id") is not None
 
     def test_refresh_token_without_previous_auth_session(self):
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
+        response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -74,7 +74,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
-        response = self.client.put(SecurityRouter.TOKEN_ENDPOINT,
+        response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
                                     },
@@ -85,25 +85,27 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 200
         assert "authorization" in response.json()
 
-    def test_add_therapist_with_invalid_credentials(self):
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
+    def test_add_therapist_with_missing_store_tokens(self):
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                json={
-                                   "id": FAKE_THERAPIST_ID,
-                                   "email": "foo@foo.com",
-                                   "first_name": "foo",
-                                   "last_name": "bar",
-                                   "birth_date": "01/01/2000",
-                                   "login_mechanism": "internal",
-                                   "language_preference": "es-419",
-                                   "gender": "male",
+                                   "password": "fake_password",
+                                   "body": {
+                                       "email": "foo@foo.com",
+                                       "first_name": "foo",
+                                       "last_name": "bar",
+                                       "birth_date": "01/01/2000",
+                                       "login_mechanism": "internal",
+                                       "language_preference": "es-419",
+                                       "gender": "male"
+                                   }
                                })
         assert response.status_code == 401
 
     def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                cookies={
                                    "authorization": self.auth_cookie
                                },
@@ -112,22 +114,24 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
-                                   "id": FAKE_THERAPIST_ID,
-                                   "email": "foo@foo.com",
-                                   "first_name": "foo",
-                                   "last_name": "bar",
-                                   "birth_date": "01/01/2000",
-                                   "login_mechanism": "internal",
-                                   "language_preference": "es-419",
-                                   "gender": "male",
+                                   "password": "fake_password",
+                                   "body": {
+                                       "email": "foo@foo.com",
+                                       "first_name": "foo",
+                                       "last_name": "bar",
+                                       "birth_date": "01/01/2000",
+                                       "login_mechanism": "internal",
+                                       "language_preference": "es-419",
+                                       "gender": "male"
+                                   }
                                })
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                cookies={
                                    "authorization": self.auth_cookie
                                },
@@ -136,22 +140,24 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
-                                   "id": FAKE_THERAPIST_ID,
-                                   "email": "foo@foo.com",
-                                   "first_name": "foo",
-                                   "last_name": "bar",
-                                   "birth_date": "01-01-2000",
-                                   "login_mechanism": "internal",
-                                   "language_preference": "brbrbrbrbr",
-                                   "gender": "male",
+                                   "password": "fake_password",
+                                   "body": {
+                                       "email": "foo@foo.com",
+                                       "first_name": "foo",
+                                       "last_name": "bar",
+                                       "birth_date": "01/01/2000",
+                                       "login_mechanism": "internal",
+                                       "language_preference": "brbrbrbrbr",
+                                       "gender": "male"
+                                   }
                                })
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_gender_format(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                 cookies={
                                     "authorization": self.auth_cookie
                                 },
@@ -160,22 +166,24 @@ class TestingHarnessSecurityRouter:
                                     "store-refresh-token": FAKE_REFRESH_TOKEN
                                 },
                                 json={
-                                    "id": FAKE_THERAPIST_ID,
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01-01-2000",
-                                    "login_mechanism": "internal",
-                                    "language_preference": "es-419",
-                                    "gender": "undefined",
+                                   "password": "fake_password",
+                                   "body": {
+                                       "email": "foo@foo.com",
+                                       "first_name": "foo",
+                                       "last_name": "bar",
+                                       "birth_date": "01/01/2000",
+                                       "login_mechanism": "internal",
+                                       "language_preference": "es-419",
+                                       "gender": "undefined"
+                                   }
                                 })
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_undefined_login_mechanism(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
+        self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                cookies={
                                    "authorization": self.auth_cookie
                                },
@@ -184,41 +192,74 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
-                                   "id": FAKE_THERAPIST_ID,
-                                   "email": "foo@foo.com",
-                                   "first_name": "foo",
-                                   "last_name": "bar",
-                                   "birth_date": "01-01-2000",
-                                   "login_mechanism": "undefined",
-                                   "language_preference": "es-419",
-                                   "gender": "male",
+                                   "password": "fake_password",
+                                   "body": {
+                                       "email": "foo@foo.com",
+                                       "first_name": "foo",
+                                       "last_name": "bar",
+                                       "birth_date": "01/01/2000",
+                                       "login_mechanism": "undefined",
+                                       "language_preference": "es-419",
+                                       "gender": "male"
+                                   }
                                })
         assert response.status_code == 400
 
-    def test_add_therapist_success(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
+    def test_add_therapist_without_previous_auth_cookie_success(self):
+        self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.ACCOUNT_ENDPOINT,
-                            cookies={
-                                "authorization": self.auth_cookie
-                            },
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "login_mechanism": "facebook",
-                                "language_preference": "es-419",
-                                "gender": "male",
+                                "password": "fake_password",
+                                "body": {
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01-01-2000",
+                                    "login_mechanism": "internal",
+                                    "language_preference": "es-419",
+                                    "gender": "male"
+                                }
                             })
         assert response.status_code == 200
-        assert response.json()["therapist_id"] == self.fake_supabase_user_client.FAKE_THERAPIST_ID
-        assert response.cookies.get("authorization") is not None
+        response_json = response.json()
+        assert response_json["therapist_id"] == self.fake_supabase_user_client.FAKE_THERAPIST_ID
+        assert response_json["authorization"] is not None
+        assert response_json["expiration_timestamp"] is not None
+        assert response_json["token_type"] is not None
+
+    def test_add_therapist_with_existing_auth_cookie_success(self):
+        self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
+        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
+        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+                            headers={
+                                "store-access-token": FAKE_ACCESS_TOKEN,
+                                "store-refresh-token": FAKE_REFRESH_TOKEN
+                            },
+                            json={
+                                "password": "fake_password",
+                                "body": {
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01-01-2000",
+                                    "login_mechanism": "internal",
+                                    "language_preference": "es-419",
+                                    "gender": "male"
+                                }
+                            })
+        assert response.status_code == 200
+        response_json = response.json()
+        assert response_json["therapist_id"] == self.fake_supabase_user_client.FAKE_THERAPIST_ID
+        assert response_json["authorization"] is not None
+        assert response_json["expiration_timestamp"] is not None
+        assert response_json["token_type"] is not None
 
     def test_update_therapist_with_invalid_credentials(self):
         response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,

@@ -104,11 +104,6 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "therapist_id": self.FAKE_THERAPIST_ID,
                 "template": "free_form" if not self.session_notes_return_soap_notes else "soap",
             }])
-        if table_name == "diarization_logs":
-            return FakeSupabaseResult(data=[{
-            "session_id": "123",
-            "therapist_id": self.FAKE_THERAPIST_ID,
-        }])
         if table_name == "textraction_logs":
             return FakeSupabaseResult(data=[{
             "session_id": "123",

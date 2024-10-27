@@ -6,7 +6,6 @@ from fastapi import (APIRouter,
                      Header,
                      HTTPException,
                      Response,
-                     Request,
                      status,
                      UploadFile)
 from typing import Annotated, Union
@@ -14,7 +13,10 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import Logger
+from ..internal.logging import (API_METHOD_POST,
+                                log_api_request,
+                                log_api_response,
+                                log_error)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
@@ -121,8 +123,7 @@ class AudioProcessingRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
-        post_api_method = logger.API_METHOD_POST
+        post_api_method = API_METHOD_POST
         description = "".join([
             "template=\"",
             f"{template.value or ''}\";",
@@ -131,12 +132,12 @@ class AudioProcessingRouter:
             "client_timezone=\"",
             f"{client_timezone_identifier or ''}\""
         ])
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               description=description,
-                               patient_id=patient_id,
-                               endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=post_api_method,
+                        description=description,
+                        patient_id=patient_id,
+                        endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -146,13 +147,13 @@ class AudioProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=post_api_method,
-                             patient_id=patient_id)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=post_api_method,
+                      patient_id=patient_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -171,29 +172,28 @@ class AudioProcessingRouter:
                                                                                            therapist_id=therapist_id,
                                                                                            session_id=session_id,
                                                                                            audio_file=audio_file,
-                                                                                           logger_worker=logger,
                                                                                            session_date=session_date,
                                                                                            patient_id=patient_id,
                                                                                            environment=self._environment,
                                                                                            language_code=language_code)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
 
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -230,7 +230,6 @@ class AudioProcessingRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        logger = Logger()
         description = "".join([
             "template=\"",
             f"{template.value or ''}\";",
@@ -239,13 +238,13 @@ class AudioProcessingRouter:
             "client_timezone=\"",
             f"{client_timezone_identifier or ''}\""
         ])
-        post_api_method = logger.API_METHOD_POST
-        logger.log_api_request(background_tasks=background_tasks,
-                               session_id=session_id,
-                               method=post_api_method,
-                               description=description,
-                               patient_id=patient_id,
-                               endpoint_name=self.DIARIZATION_ENDPOINT)
+        post_api_method = API_METHOD_POST
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=post_api_method,
+                        description=description,
+                        patient_id=patient_id,
+                        endpoint_name=self.DIARIZATION_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -255,12 +254,12 @@ class AudioProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.DIARIZATION_ENDPOINT,
-                             error_code=status_code,
-                             description=str(e),
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.DIARIZATION_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -274,12 +273,12 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.DIARIZATION_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.DIARIZATION_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
@@ -293,26 +292,25 @@ class AudioProcessingRouter:
                                                                                            patient_id=patient_id,
                                                                                            session_id=session_id,
                                                                                            audio_file=audio_file,
-                                                                                           logger_worker=logger,
                                                                                            environment=self._environment,
                                                                                            language_code=language_code,
                                                                                            diarize=True)
 
-            logger.log_api_response(background_tasks=background_tasks,
-                                    session_id=session_id,
-                                    therapist_id=therapist_id,
-                                    endpoint_name=self.DIARIZATION_ENDPOINT,
-                                    http_status_code=status.HTTP_200_OK,
-                                    method=post_api_method)
+            log_api_response(background_tasks=background_tasks,
+                             session_id=session_id,
+                             therapist_id=therapist_id,
+                             endpoint_name=self.DIARIZATION_ENDPOINT,
+                             http_status_code=status.HTTP_200_OK,
+                             method=post_api_method)
 
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            logger.log_error(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.DIARIZATION_ENDPOINT,
-                             error_code=status_code,
-                             description=description,
-                             method=post_api_method)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.DIARIZATION_ENDPOINT,
+                      error_code=status_code,
+                      description=description,
+                      method=post_api_method)
             raise HTTPException(status_code=status_code, detail=description)

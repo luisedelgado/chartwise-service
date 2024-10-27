@@ -15,6 +15,9 @@ from ...internal.utilities import general_utilities
 
 class DeepgramClient(DeepgramBaseClass):
 
+    CONNECT_TIMEOUT = 300
+    DIARIZATION_READ_TIMEOUT = 900
+    TRANSCRIPTION_READ_TIMEOUT = 120
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
     async def diarize_audio(self, file_full_path: str) -> str:
@@ -46,7 +49,7 @@ class DeepgramClient(DeepgramBaseClass):
                     response = requests.post(endpoint_configuration,
                                              headers=headers,
                                              data=audio_file,
-                                             timeout=(300.0, 20.0))
+                                             timeout=(self.CONNECT_TIMEOUT, self.DIARIZATION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -80,7 +83,7 @@ class DeepgramClient(DeepgramBaseClass):
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                               options,
-                                                                              timeout=Timeout(300.0, connect=20.0))
+                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT, read=self.DIARIZATION_READ_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 utterances = json_response.get('results').get('utterances')
@@ -120,7 +123,7 @@ class DeepgramClient(DeepgramBaseClass):
                     response = requests.post(endpoint_configuration,
                                              headers=headers,
                                              data=audio_file,
-                                             timeout=(300.0, 10.0))
+                                             timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -152,7 +155,7 @@ class DeepgramClient(DeepgramBaseClass):
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                               options,
-                                                                              timeout=Timeout(300.0, connect=10.0))
+                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT, read=self.TRANSCRIPTION_READ_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']

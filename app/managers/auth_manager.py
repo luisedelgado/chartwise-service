@@ -62,7 +62,7 @@ class AuthManager:
             token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
                                                            tz=timezone.utc)
             return (token_expiration_date > datetime.now(timezone.utc))
-        except:
+        except Exception:
             return False
 
     async def refresh_session(self,
