@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     if env == "staging":
         toml_file_name = "fly.staging.toml"
-        app_name = "chartwise-service-staging"
+        app_name = "chartwise-staging-service"
     elif env == "prod":
         toml_file_name = "fly.prod.toml"
         app_name = "chartwise-service-prod"
@@ -79,8 +79,6 @@ if __name__ == "__main__":
     print("\nDeploying FastAPI app...")
     deploy_process(commands=["fly",
                             "deploy",
-                            "--process-groups",
-                            "app",
                             "-c",
                             toml_file_name,
                             "-a",

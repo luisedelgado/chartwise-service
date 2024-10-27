@@ -106,9 +106,6 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
-                               cookies={
-                                   "authorization": self.auth_cookie
-                               },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN

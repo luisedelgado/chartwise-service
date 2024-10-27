@@ -83,12 +83,14 @@ class SecurityRouter:
 
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.ROUTER_TAG])
         async def refresh_auth_token(response: Response,
+                                     background_tasks: BackgroundTasks,
                                      store_access_token: Annotated[str | None, Header()] = None,
                                      store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
             return await self._refresh_auth_token_internal(authorization=authorization,
                                                            response=response,
+                                                           background_tasks=background_tasks,
                                                            store_access_token=store_access_token,
                                                            store_refresh_token=store_refresh_token,
                                                            session_id=session_id)
@@ -108,17 +110,17 @@ class SecurityRouter:
         @self.router.post(self.SIGNUP_ENDPOINT, tags=[self.ROUTER_TAG])
         async def signup(body: SignupPayload,
                          response: Response,
+                         background_tasks: BackgroundTasks,
                          password: Annotated[str, Body()] = None,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
-                         authorization: Annotated[Union[str, None], Cookie()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signup_internal(body=body,
                                                password=password,
                                                response=response,
+                                               background_tasks=background_tasks,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
-                                               authorization=authorization,
                                                session_id=session_id)
 
         @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -312,7 +314,6 @@ class SecurityRouter:
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
                                store_refresh_token: Annotated[str | None, Header()],
-                               authorization: Annotated[Union[str, None], Cookie()],
                                session_id: Annotated[Union[str, None], Cookie()]):
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
@@ -325,6 +326,7 @@ class SecurityRouter:
             # Because of this, the client may not have an auth cookie yet, so if it isn't present, we'll attempt authentication.
             credentials_data = OAuth2PasswordRequestForm(username=body.email, password=password)
             authorization_data = await self._signin_internal(credentials_data=credentials_data,
+                                                             background_tasks=background_tasks,
                                                              response=response,
                                                              session_id=session_id)
         except Exception as e:
