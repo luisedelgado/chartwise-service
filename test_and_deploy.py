@@ -69,6 +69,7 @@ if __name__ == "__main__":
         print("Invalid environment to deploy.")
         exit()
 
+    print("Running tests...\n")
     tests_passed = run_tests()
     if not tests_passed:
         print("Some tests failed.")
