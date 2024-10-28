@@ -591,12 +591,10 @@ class AssistantManager:
                                            language_code: str,
                                            therapist_id: str,
                                            patient_id: str,
-                                           auth_manager: AuthManager,
                                            environment: str,
                                            session_id: str,
                                            background_tasks: BackgroundTasks,
-                                           supabase_client: SupabaseBaseClass,
-                                           generate_insights: bool):
+                                           supabase_client: SupabaseBaseClass):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -621,19 +619,15 @@ class AssistantManager:
                                                                                     patient_gender=patient_gender)
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
-            if generate_insights:
-                topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
+            topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
                                                                                                 user_id=therapist_id,
                                                                                                 patient_id=patient_id,
                                                                                                 environment=environment,
                                                                                                 language_code=language_code,
                                                                                                 session_id=session_id,
-                                                                                                patient_name=patient_full_name,
+                                                                                                patient_name=patient_first_name,
                                                                                                 patient_gender=patient_gender,
-                                                                                                supabase_client=supabase_client,
-                                                                                                auth_manager=auth_manager)
-            else:
-                topics_insights = None
+                                                                                                supabase_client=supabase_client)
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
@@ -680,18 +674,27 @@ class AssistantManager:
                                            patient_id: str,
                                            session_id: str,
                                            environment: str,
-                                           auth_manager: AuthManager,
-                                           openai_client: OpenAIBaseClass,
                                            supabase_client: SupabaseBaseClass):
         try:
+            patient_query = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                       'id': patient_id
+                                                   },
+                                                   table_name="patients")
+            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+            patient_query_data = patient_query.dict()['data'][0]
+            patient_first_name = patient_query_data['first_name']
+            patient_gender = patient_query_data['gender']
+
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(therapist_id=therapist_id,
                                                                                               patient_id=patient_id,
+                                                                                              patient_gender=patient_gender,
+                                                                                              patient_name=patient_first_name,
                                                                                               environment=environment,
                                                                                               language_code=language_code,
                                                                                               session_id=session_id,
-                                                                                              supabase_client=supabase_client,
-                                                                                              openai_client=openai_client,
-                                                                                              auth_manager=auth_manager)
+                                                                                              supabase_client=supabase_client)
 
             attendance_query = supabase_client.select(fields="*",
                                                       filters={
@@ -814,8 +817,6 @@ class AssistantManager:
 
     # Private
 
-    # TODO: Flip switch to use Celery
-    # @shared_task(name="app.managers.assistant_manager._insert_vectors_and_generate_insights")
     async def _insert_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
                                                     therapist_id: str,
@@ -984,12 +985,10 @@ class AssistantManager:
         await self.update_patient_recent_topics(language_code=language_code,
                                                 therapist_id=therapist_id,
                                                 patient_id=patient_id,
-                                                auth_manager=auth_manager,
                                                 environment=environment,
                                                 session_id=session_id,
                                                 background_tasks=background_tasks,
-                                                supabase_client=supabase_client,
-                                                generate_insights=False)
+                                                supabase_client=supabase_client)
 
         # Update this patient's presession tray for future fetches.
         await self.update_presession_tray(background_tasks=background_tasks,
@@ -1008,17 +1007,14 @@ class AssistantManager:
                                                session_id=session_id,
                                                supabase_client=supabase_client)
 
-        # TODO: Uncomment once we're rendering attendance insights
-        # # Update attendance insights
-        # await self.generate_attendance_insights(language_code=language_code,
-        #                                         background_tasks=background_tasks,
-        #                                         therapist_id=therapist_id,
-        #                                         patient_id=patient_id,
-        #                                         session_id=session_id,
-        #                                         environment=environment,
-        #                                         auth_manager=auth_manager,
-        #                                         openai_client=openai_client,
-        #                                         supabase_client=supabase_client)
+        # Update attendance insights
+        await self.generate_attendance_insights(language_code=language_code,
+                                                background_tasks=background_tasks,
+                                                therapist_id=therapist_id,
+                                                patient_id=patient_id,
+                                                session_id=session_id,
+                                                environment=environment,
+                                                supabase_client=supabase_client)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es-'):

@@ -96,7 +96,11 @@ class PromptCrafter:
                                                              query_input=query_input)
         elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
             patient_session_dates = [] if 'patient_session_dates' not in kwargs else kwargs['patient_session_dates']
-            return self._create_attendance_insights_user_message(patient_session_dates=patient_session_dates)
+            patient_name = [] if 'patient_name' not in kwargs else kwargs['patient_name']
+            patient_gender = [] if 'patient_gender' not in kwargs else kwargs['patient_gender']
+            return self._create_attendance_insights_user_message(patient_session_dates=patient_session_dates,
+                                                                 patient_gender=patient_gender,
+                                                                 patient_name=patient_name)
         elif scenario == PromptScenario.DIARIZATION_SUMMARY:
             diarization = None if 'diarization' not in kwargs else kwargs['diarization']
             return self._summarize_diarization_user_message(diarization=diarization)
@@ -258,7 +262,7 @@ class PromptCrafter:
                     f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
                     f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
                     f"{therapist_name} has had {session_count} sessions with {patient_name} so far. "
-                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they have had {session_count} with {patient_name} in the past."
+                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they have had {session_count} with {patient_name} **since the patient was onboarded onto our platform** (this distinction is very important). "
                     f"\n\nOnce you've said hi to {therapist_name}, your job is to provide a summary of {patient_name}'s session history in two sections: **Most Recent Sessions** and **Historical Themes**. "
                     "You should never attempt to diagnose the patient yourself. "
                     "The practitioner relies on your support for organization and information retrieval, not for making clinical decisions. Focus on providing objective data analysis rather than offering diagnostic recommendations.\n\n"
@@ -537,9 +541,10 @@ class PromptCrafter:
             "Ensure that the analysis is objective, avoiding interpretation or assumptions that are not explicitly supported by the data. "
             "Focus on rationalizing the data in a way that could assist the practitioner in understanding the patient's current focus or emotional state.\n"
             "\nIt is very important that the output meets the following criteria:\n"
-            "1. Format the output in bullet points.\n"
+            "1. Format the output as a single paragraph.\n"
             "2. Limit the output to 270 characters.\n"
-            f"3. Ensure the output is generated using language code {language_code}.\n"
+            "3. Do not mention again each topic's frequency percentage (this is already highlighted to the user).\n"
+            f"4. Ensure the output is generated using language code {language_code}.\n"
         )
 
     def _create_topics_insights_user_message(self,
@@ -567,13 +572,21 @@ class PromptCrafter:
     # Attendance Insights
 
     def _create_attendance_insights_user_message(self,
+                                                 patient_gender: str,
+                                                 patient_name: str,
                                                  patient_session_dates: list[str]):
         try:
+            assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
             assert len(patient_session_dates or '') >= 0, "Missing patient_session_dates param for building user message"
+
+            gender_context = (". " if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
+                              else f" ({patient_gender}). ")
             return ("Given the following dates of sessions that a patient has had with their therapist, provide an analysis of the patient's attendance pattern. "
                     "Highlight any trends, consistency, or notable gaps in the sessions. "
                     "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance. "
-                    "If the set of dates is empty, return only a 50-character sentence stating that the patient is yet to start attending sessions.\n\n"
+                    "If the set of dates is empty, return only a 50-character sentence stating that the patient is yet to start attending sessions. "
+                    f"Note that the patient name is {patient_name}{gender_context}"
+                    "\n\n"
                     f"Here is the set of dates: {patient_session_dates}")
         except Exception as e:
             raise Exception(e)
@@ -584,11 +597,11 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return ("You are a mental health assistant helping practitioners analyze their patients' attendance patterns. "
                     "You receive an array of dates (with format YYYY-MM-DD) representing the last N sessions a patient has had with their therapist. "
-                    "Your task is to generate a brief, insightful set of bullet points that highlights trends or irregularities in the patient's attendance. "
+                    "Your task is to generate a brief, insightful paragraph that highlights trends or irregularities in the patient's attendance. "
                     "Consider factors such as consistency, gaps between sessions, and any changes in frequency over time. "
                     "Provide analytics that could help the therapist understand the patient's commitment, punctuality, or potential barriers to consistent attendance. "
                     "\n\nIt is very important that the output meets the following criteria:\n"
-                    "1. Format the output in bullet points.\n"
+                    "1. Format the output as a single paragraph.\n"
                     "2. Limit the output to 290 characters.\n"
                     f"3. Ensure the output is generated using language code {language_code}.\n")
         except Exception as e:

@@ -441,18 +441,22 @@ class ChartWiseAssistant:
                                            environment: str,
                                            language_code: str,
                                            session_id: str,
-                                           supabase_client: SupabaseBaseClass,
-                                           openai_client: OpenAIBaseClass) -> str:
+                                           patient_name: str,
+                                           patient_gender: str,
+                                           supabase_client: SupabaseBaseClass) -> str:
         try:
             patient_session_dates = [date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(supabase_client=supabase_client,
                                                                                                                               patient_id=patient_id,
                                                                                                                               n=ATTENDANCE_CONTEXT_SESSIONS_CAP)]
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.ATTENDANCE_INSIGHTS,
-                                                                       patient_session_dates=patient_session_dates)
+                                                                       patient_session_dates=patient_session_dates,
+                                                                       patient_name=patient_name,
+                                                                       patient_gender=patient_gender)
             system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.ATTENDANCE_INSIGHTS,
                                                                            language_code=language_code)
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
+            openai_client = dependency_container.inject_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
             caching_shard_key = (patient_id + "-attendance-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
