@@ -6,9 +6,6 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, module='pydub.utils')
 
 from pydub import AudioSegment
 
-# Define a list of compressed formats where converting to WAV would result in a larger file
-COMPRESSED_FORMATS = ['.mp3', '.ogg', '.aac', '.flac', '.m4a']
-
 COMPRESSED_SAMPLE_RATE = 16000
 MIN_SIZE_REDUCTION = 20
 MIN_FILE_SIZE_KB = 500
@@ -23,8 +20,9 @@ def reduce_sample_rate_if_worthwhile(input_filepath: str, output_filepath: str) 
 
     # Check if input format is in a compressed format (e.g., mp3, ogg, etc.)
     file_extension = os.path.splitext(input_filepath)[1].lower()
-    if file_extension in COMPRESSED_FORMATS:
-        # Skip reduction as it's likely to increase the file size
+    if file_extension != ".wav":
+        # Skip reduction as file is likely already compressed and the reduction attempt
+        # may increase the file size.
         return False
 
     # Load the audio file
