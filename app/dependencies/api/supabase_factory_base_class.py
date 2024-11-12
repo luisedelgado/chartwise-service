@@ -8,7 +8,7 @@ class SupabaseFactoryBaseClass(ABC):
     Returns a Supabase client with full priviledges.
     """
     @abstractmethod
-    def supabase_admin_client(self) -> SupabaseBaseClass:
+    def supabase_admin_client() -> SupabaseBaseClass:
         pass
 
     """
@@ -19,5 +19,5 @@ class SupabaseFactoryBaseClass(ABC):
     refresh_token – the refresh_token.
     """
     @abstractmethod
-    def supabase_user_client(self, access_token: str, refresh_token: str) -> SupabaseBaseClass:
+    def supabase_user_client(access_token: str, refresh_token: str) -> SupabaseBaseClass:
         pass

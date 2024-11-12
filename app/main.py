@@ -3,6 +3,7 @@ import os
 from .routers.assistant_router import AssistantRouter
 from .routers.audio_processing_router import AudioProcessingRouter
 from .routers.image_processing_router import ImageProcessingRouter
+from .routers.payment_processing_router import PaymentProcessingRouter
 from .routers.security_router import SecurityRouter
 from .service_coordinator import EndpointServiceCoordinator
 
@@ -18,6 +19,7 @@ environment = os.environ.get("ENVIRONMENT")
 app = EndpointServiceCoordinator(routers=[
                                     AssistantRouter(environment=environment).router,
                                     AudioProcessingRouter(environment=environment).router,
+                                    PaymentProcessingRouter(environment=environment).router,
                                     SecurityRouter().router,
                                     ImageProcessingRouter(environment=environment).router,
                                 ],

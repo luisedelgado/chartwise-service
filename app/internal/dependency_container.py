@@ -1,15 +1,17 @@
 import os
 
+from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_docupanda_client import FakeDocupandaClient
-from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
+from ..dependencies.fake.fake_stripe_client import FakeStripeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..dependencies.implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
 from ..dependencies.implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
 from ..dependencies.implementation.openai_client import OpenAIBaseClass, OpenAIClient
 from ..dependencies.implementation.pinecone_client import PineconeBaseClass, PineconeClient
+from ..dependencies.implementation.stripe_client import StripeBaseClass, StripeClient
 from ..dependencies.implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
 
 class DependencyContainer:
@@ -20,6 +22,7 @@ class DependencyContainer:
         self._docupanda_client = None
         self._deepgram_client = None
         self._supabase_client_factory = None
+        self._stripe_client = None
 
     def inject_deepgram_client(self) -> DeepgramBaseClass:
         if self._deepgram_client is None:
@@ -45,5 +48,10 @@ class DependencyContainer:
         if self._supabase_client_factory is None:
             self._supabase_client_factory = FakeSupabaseClientFactory(FakeSupabaseClient(), FakeSupabaseClient()) if self._testing_environment else SupabaseClientFactory()
         return self._supabase_client_factory
+
+    def inject_stripe_client(self) -> StripeBaseClass:
+        if self._stripe_client is None:
+            self._stripe_client = FakeStripeClient() if self._testing_environment else StripeClient()
+        return self._stripe_client
 
 dependency_container = DependencyContainer()

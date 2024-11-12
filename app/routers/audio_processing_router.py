@@ -25,7 +25,6 @@ from ..managers.auth_manager import AuthManager
 class AudioProcessingRouter:
 
     DIARIZATION_ENDPOINT = "/v1/diarization"
-    DIARIZATION_NOTIFICATION_ENDPOINT = "/v1/diarization-notification"
     NOTES_TRANSCRIPTION_ENDPOINT = "/v1/transcriptions"
     ROUTER_TAG = "audio-files"
 
