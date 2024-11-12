@@ -3,6 +3,8 @@ from ..api.stripe_base_class import StripeBaseClass
 class FakeStripeClient(StripeBaseClass):
 
     def generate_payment_session(self,
+                                 session_id: str,
+                                 therapist_id: str,
                                  price_id: str,
                                  success_url: str,
                                  cancel_url: str) -> str | None:
@@ -12,4 +14,7 @@ class FakeStripeClient(StripeBaseClass):
                                 payload,
                                 sig_header,
                                 webhook_secret):
+        pass
+
+    def is_signature_verification_error(e: Exception) -> bool:
         pass
