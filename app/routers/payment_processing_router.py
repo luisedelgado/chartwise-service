@@ -171,7 +171,7 @@ class PaymentProcessingRouter:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
         except Exception as e:
             # Check for invalid signature
-            if stripe_client.is_signature_verification_error(e):
+            if stripe_client.is_signature_verification_error(e=e):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
             else:
                 raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Expectation failed")

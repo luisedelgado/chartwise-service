@@ -103,3 +103,13 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "payment_session_url" in response.json()
+
+    def test_capture_payment_event_with_empty_stripe_signature(self):
+        response = self.client.post(PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
+                                    headers={})
+        assert response.status_code == 401
+
+    def test_capture_payment_event_with_valid_stripe_signature(self):
+        response = self.client.post(PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
+                                    headers={"stripe-signature": "my_signature"})
+        assert response.status_code == 200

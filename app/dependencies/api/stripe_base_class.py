@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from stripe._error import SignatureVerificationError
 
 class StripeBaseClass(ABC):
 
@@ -17,6 +18,6 @@ class StripeBaseClass(ABC):
                                 webhook_secret):
         pass
 
-    @abstractmethod
+    @staticmethod
     def is_signature_verification_error(e: Exception) -> bool:
-        pass
+        return isinstance(e, SignatureVerificationError)

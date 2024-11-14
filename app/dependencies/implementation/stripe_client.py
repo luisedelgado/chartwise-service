@@ -41,6 +41,3 @@ class StripeClient(StripeBaseClass):
             sig_header=sig_header,
             secret=webhook_secret
         )
-
-    def is_signature_verification_error(e: Exception) -> bool:
-        return isinstance(e, SignatureVerificationError)
