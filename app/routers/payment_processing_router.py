@@ -119,15 +119,17 @@ class PaymentProcessingRouter:
                                                                          therapist_id=therapist_id,
                                                                          success_url=payload.success_callback_url,
                                                                          cancel_url=payload.cancel_callback_url)
+            assert len(payment_session_url or '') > 0, "Received invalid checkout URL"
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            message = str(e)
             log_error(background_tasks=background_tasks,
                       session_id=session_id,
                       endpoint_name=self.PAYMENT_SESSION_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
+                      description=message,
                       method=post_api_method)
-            raise Exception(e)
+            raise HTTPException(detail=message, status_code=status_code)
 
         log_api_response(background_tasks=background_tasks,
                          session_id=session_id,
