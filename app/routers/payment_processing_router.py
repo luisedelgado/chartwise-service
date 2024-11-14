@@ -61,7 +61,8 @@ class PaymentProcessingRouter:
         @self.router.post(self.PAYMENT_EVENT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def capture_payment_event(request: Request,
                                         background_tasks: BackgroundTasks):
-            return await self._capture_payment_event_internal(request=request, background_tasks=background_tasks)
+            return await self._capture_payment_event_internal(request=request,
+                                                              background_tasks=background_tasks)
 
     """
     Creates a new payment session.
@@ -150,10 +151,16 @@ class PaymentProcessingRouter:
         stripe_client = dependency_container.inject_stripe_client()
 
         try:
-            is_prod_env = os.environ.get('ENVIRONMENT') == 'prod'
+            environment = os.environ.get('ENVIRONMENT')
+            if environment == "prod":
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
+            elif environment == "staging":
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
+            else:
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEV")
+
             payload = await request.body()
             sig_header = request.headers.get("stripe-signature")
-            webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET_PROD') if is_prod_env else os.environ.get('STRIPE_WEBHOOK_SECRET_STAGING')
             event = stripe_client.construct_webhook_event(payload=payload,
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
@@ -171,8 +178,8 @@ class PaymentProcessingRouter:
         event_type = event["type"]
         data_object = event["data"]["object"]
         metadata = data_object['metadata']
-        therapist_id = metadata['user_id']
-        session_id = metadata['session_id']
+        therapist_id = None if 'user_id' not in metadata else metadata['user_id']
+        session_id = None if 'session_id' not in metadata else metadata['session_id']
 
         post_api_method = API_METHOD_POST
         log_api_request(background_tasks=background_tasks,

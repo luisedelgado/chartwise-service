@@ -1,9 +1,12 @@
-import stripe
+import os, stripe
 from stripe._error import SignatureVerificationError
 
 from ..api.stripe_base_class import StripeBaseClass
 
 class StripeClient(StripeBaseClass):
+
+    def __init__(self):
+        stripe.api_key = os.environ.get("STRIPE_API_KEY")
 
     def generate_payment_session(self,
                                  session_id: str,
@@ -34,7 +37,9 @@ class StripeClient(StripeBaseClass):
                                 sig_header,
                                 webhook_secret):
         return stripe.Webhook.construct_event(
-            payload=payload, sig_header=sig_header, secret=webhook_secret
+            payload=payload,
+            sig_header=sig_header,
+            secret=webhook_secret
         )
 
     def is_signature_verification_error(e: Exception) -> bool:
