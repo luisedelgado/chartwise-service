@@ -22,6 +22,14 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
+    def retrieve_customer_subscriptions(customer_id: str) -> dict:
+        pass
+
+    @abstractmethod
+    def delete_customer_subscription(subscription_id: str) -> bool:
+        pass
+
+    @abstractmethod
     def add_subscription_metadata(subscription_id: str, metadata: dict):
         pass
 

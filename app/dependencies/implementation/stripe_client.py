@@ -44,6 +44,13 @@ class StripeClient(StripeBaseClass):
     def retrieve_session(self, session_id):
         return stripe.checkout.Session.retrieve(session_id)
 
+    def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
+        return stripe.Subscription.list(customer=customer_id)
+
+    def delete_customer_subscription(self, subscription_id: str) -> bool:
+        return stripe.Subscription.modify(subscription_id,
+                                          cancel_at_period_end=True)
+
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):
         stripe.Subscription.modify(subscription_id, metadata=metadata)
 
