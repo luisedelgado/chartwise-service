@@ -14,6 +14,7 @@ from typing import Annotated, Tuple, Union
 from ..internal import security
 from ..internal.dependency_container import dependency_container
 from ..internal.logging import (API_METHOD_DELETE,
+                                API_METHOD_GET,
                                 API_METHOD_POST,
                                 API_METHOD_PUT,
                                 log_api_request,
@@ -38,6 +39,7 @@ class PaymentProcessingRouter:
     PAYMENT_SESSION_ENDPOINT = "/v1/payment-session"
     SUBSCRIPTIONS_ENDPOINT = "/v1/subscriptions"
     PAYMENT_EVENT_ENDPOINT = "/v1/payment-event"
+    PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
 
     def __init__(self, environment: str):
@@ -121,6 +123,20 @@ class PaymentProcessingRouter:
                                                             session_id=session_id,
                                                             store_access_token=store_access_token,
                                                             store_refresh_token=store_refresh_token)
+
+        @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
+        async def retrieve_product_catalog(response: Response,
+                                           background_tasks: BackgroundTasks,
+                                           store_access_token: Annotated[str | None, Header()],
+                                           store_refresh_token: Annotated[str | None, Header()],
+                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._retrieve_product_catalog_internal(authorization=authorization,
+                                                                 background_tasks=background_tasks,
+                                                                 response=response,
+                                                                 session_id=session_id,
+                                                                 store_access_token=store_access_token,
+                                                                 store_refresh_token=store_refresh_token)
 
     """
     Creates a new payment session.
@@ -249,6 +265,16 @@ class PaymentProcessingRouter:
         try:
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
+
+            subscription_data = response['data']
+            filtered_data = []
+            for object in subscription_data:
+                filtered_data.append({
+                    "subscription_id": object['id'],
+                    "price_id": object['plan']['id'],
+                    "product_id": object['items']['data'][0]['id'],
+                })
+
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
@@ -267,7 +293,7 @@ class PaymentProcessingRouter:
                          http_status_code=status.HTTP_200_OK,
                          method=post_api_method)
 
-        return {"subscriptions": response}
+        return {"subscriptions": filtered_data}
 
     """
     Deletes the subscriptions associated with the incoming ID.
@@ -416,6 +442,64 @@ class PaymentProcessingRouter:
                          method=update_api_method)
 
         return {}
+
+    async def _retrieve_product_catalog_internal(self,
+                                                 background_tasks: BackgroundTasks,
+                                                 authorization: str,
+                                                 store_access_token: str,
+                                                 store_refresh_token: str,
+                                                 session_id: str,
+                                                 response: Response):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        get_api_method = API_METHOD_GET
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=get_api_method,
+                        endpoint_name=self.PRODUCT_CATALOG)
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PRODUCT_CATALOG,
+                      error_code=status_code,
+                      description=str(e),
+                      method=get_api_method)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            stripe_client = dependency_container.inject_stripe_client()
+            response = stripe_client.retrieve_product_catalog()
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            message = str(e)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PRODUCT_CATALOG,
+                      error_code=status_code,
+                      description=message,
+                      method=get_api_method)
+            raise HTTPException(detail="Subscription not found", status_code=status_code)
+
+        log_api_response(background_tasks=background_tasks,
+                         session_id=session_id,
+                         therapist_id=therapist_id,
+                         endpoint_name=self.PRODUCT_CATALOG,
+                         http_status_code=status.HTTP_200_OK,
+                         method=get_api_method)
+
+        return {"catalog": response}
 
     """
     Webhook for handling Stripe events.

@@ -36,6 +36,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
+    def retrieve_product_catalog(self) -> list:
+        pass
+
+    @abstractmethod
     def add_subscription_metadata(subscription_id: str, metadata: dict):
         pass
 

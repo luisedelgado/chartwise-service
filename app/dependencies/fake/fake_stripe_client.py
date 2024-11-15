@@ -58,6 +58,9 @@ class FakeStripeClient(StripeBaseClass):
                                      price_id: str):
         pass
 
+    def retrieve_product_catalog(self) -> list:
+        pass
+
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):
         pass
 

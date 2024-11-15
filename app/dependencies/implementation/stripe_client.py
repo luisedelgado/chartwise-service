@@ -58,6 +58,43 @@ class StripeClient(StripeBaseClass):
         return stripe.Subscription.modify(subscription_id,
                                           items=[{"id": product_id, "price": price_id}])
 
+    def retrieve_product_catalog(self) -> list:
+        products = stripe.Product.list(active=True)
+        product_prices = {}
+
+        for product in products['data']:
+            prices = stripe.Price.list(product=product['id'])
+            product_prices[product['id']] = {
+                "name": product['name'],
+                "description": product['description'],
+                "prices": [
+                    {
+                        "id": price['id'],
+                        "unit_amount": price['unit_amount'],
+                        "currency": price['currency'],
+                        "recurring": price.get('recurring'),  # Optional for recurring prices
+                    }
+                    for price in prices['data']
+                ],
+            }
+
+        catalog = []
+        for product_id, details in product_prices.items():
+            price_data = []
+            for price in details['prices']:
+                price_data.append({
+                    "price_id": price['id'],
+                    "amount": f"{price['unit_amount']} {price['currency']}",
+                })
+
+            catalog.append({
+                "product": details['name'],
+                "product_id": product_id,
+                "description": details['description'],
+                "price_data": price_data
+            })
+        return catalog
+
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):
         stripe.Subscription.modify(subscription_id, metadata=metadata)
 
