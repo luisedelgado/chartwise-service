@@ -42,3 +42,12 @@ class FakeStripeClient(StripeBaseClass):
                 }
             }
         }
+
+    def retrieve_session(self, session_id):
+        pass
+
+    def add_subscription_metadata(self, subscription_id: str, metadata: dict):
+        pass
+
+    def add_invoice_metadata(self, invoice_id: str, metadata: dict):
+            pass
