@@ -26,7 +26,13 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def delete_customer_subscription(subscription_id: str) -> bool:
+    def delete_customer_subscription(subscription_id: str):
+        pass
+
+    @abstractmethod
+    def update_customer_subscription(subscription_id: str,
+                                     product_id: str,
+                                     price_id: str):
         pass
 
     @abstractmethod

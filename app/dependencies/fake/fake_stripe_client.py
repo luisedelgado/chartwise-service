@@ -49,7 +49,13 @@ class FakeStripeClient(StripeBaseClass):
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         pass
 
-    def delete_customer_subscription(self, subscription_id: str) -> bool:
+    def delete_customer_subscription(self, subscription_id: str):
+        pass
+
+    def update_customer_subscription(self,
+                                     subscription_id: str,
+                                     product_id: str,
+                                     price_id: str):
         pass
 
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):

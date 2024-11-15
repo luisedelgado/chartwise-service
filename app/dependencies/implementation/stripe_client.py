@@ -47,9 +47,16 @@ class StripeClient(StripeBaseClass):
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
 
-    def delete_customer_subscription(self, subscription_id: str) -> bool:
+    def delete_customer_subscription(self, subscription_id: str):
         return stripe.Subscription.modify(subscription_id,
                                           cancel_at_period_end=True)
+
+    def update_customer_subscription(self,
+                                     subscription_id: str,
+                                     product_id: str,
+                                     price_id: str):
+        return stripe.Subscription.modify(subscription_id,
+                                          items=[{"id": product_id, "price": price_id}])
 
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):
         stripe.Subscription.modify(subscription_id, metadata=metadata)
