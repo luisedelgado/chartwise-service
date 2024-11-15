@@ -47,7 +47,41 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
-        pass
+        return {
+            "object": "list",
+            "url": "/v1/subscriptions",
+            "has_more": "false",
+            "data": [
+                {
+                "id": "su_1NXPiE2eZvKYlo2COk9fohqA",
+                "object": "subscription",
+                "application": "null",
+                "application_fee_percent": "null",
+                "automatic_tax": {
+                    "enabled": "false"
+                },
+                "plan": {
+                    "id": "plan_OK3pbS1dvdQYJP"
+                },
+                "items": {
+                    "object": "list",
+                    "data": [
+                        {
+                            "id": "si_OK3pbS1dvdQYJP",
+                            "object": "subscription_item",
+                            "billing_thresholds": "null",
+                            "created": "1690208774",
+                            "metadata": {},
+                            "price": {
+                            "id": "price_1NOhvg2eZvKYlo2CqkpQDVRT",
+                            "object": "price"
+                            }
+                        }
+                    ]
+                }
+                }
+            ]
+        }
 
     def delete_customer_subscription(self, subscription_id: str):
         pass
@@ -59,7 +93,27 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def retrieve_product_catalog(self) -> list:
-        pass
+        return {
+                "catalog": [{
+                    "product": "myproduct",
+                    "product_id": "prod_RCr6wwfVmOVvly",
+                    "description": "(created by Stripe CLI)",
+                    "price_data": [{
+                            "price_id": "price_1QKROSL2OU4L8JdeMZIxSIt0",
+                            "amount": "1500 usd"
+                        }
+                    ]
+                }, {
+                    "product": "Premium Plan",
+                    "product_id": "prod_RCpduG3DY2CCQU",
+                    "description": "Our premium plan for unlimited usage",
+                    "price_data": [{
+                            "price_id": "price_1QKPyiL2OU4L8JdeoVF2QXS2",
+                            "amount": "81000 usd"
+                        }
+                    ]
+                }]
+        }
 
     def add_subscription_metadata(self, subscription_id: str, metadata: dict):
         pass

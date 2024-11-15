@@ -14,6 +14,9 @@ FAKE_SESSION_REPORT_ID = "09b6da8d-a58e-45e2-9022-7d58ca02266b"
 FAKE_REFRESH_TOKEN = "3ac77394-86b5-42dc-be14-0b92414d8443"
 FAKE_ACCESS_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 FAKE_PRICE_ID = "5db60936-4a36-4487-8586-de4aef383a03"
+FAKE_CUSTOMER_ID = "ea549096-41a1-4857-be1c-5f2b57a72123"
+FAKE_SUBSCRIPTION_ID = "ea549096-41a1-4857-be1c-5f2b57a72123"
+FAKE_PRODUCT_ID = "5db60936-4a36-4487-8586-de4aef383a03"
 ENVIRONMENT = os.environ.get("ENVIRONMENT")
 
 class TestingHarnessPaymentProcessingRouter:
@@ -113,3 +116,104 @@ class TestingHarnessPaymentProcessingRouter:
         response = self.client.post(PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
                                     headers={"stripe-signature": "my_signature"})
         assert response.status_code == 200
+
+    def test_retrieve_subscriptions_without_auth_token(self):
+        response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "customer_id": FAKE_CUSTOMER_ID,
+                                    })
+        assert response.status_code == 401
+
+    def test_retrieve_subscriptions_success(self):
+        response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "customer_id": FAKE_CUSTOMER_ID,
+                                    })
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "subscriptions" in response_json
+
+    def test_delete_subscription_without_auth_token(self):
+        response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
+                                    })
+        assert response.status_code == 401
+
+    def test_delete_subscription_success(self):
+        response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    params={
+                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
+                                    })
+        assert response.status_code == 200
+
+    def test_update_subscription_without_auth_token(self):
+        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
+                                        "existing_product_id": FAKE_PRODUCT_ID,
+                                        "new_price_id": FAKE_PRICE_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_update_subscription_success(self):
+        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
+                                        "existing_product_id": FAKE_PRODUCT_ID,
+                                        "new_price_id": FAKE_PRICE_ID
+                                    })
+        assert response.status_code == 200
+
+    def test_retrieve_product_catalog_without_auth_token(self):
+        response = self.client.get(PaymentProcessingRouter.PRODUCT_CATALOG,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    })
+        assert response.status_code == 401
+
+    def test_update_subscription_success(self):
+        response = self.client.get(PaymentProcessingRouter.PRODUCT_CATALOG,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    })
+        assert response.status_code == 200
+        assert "catalog" in response.json()
