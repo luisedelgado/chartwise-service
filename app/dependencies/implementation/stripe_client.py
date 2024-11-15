@@ -72,7 +72,7 @@ class StripeClient(StripeBaseClass):
                         "id": price['id'],
                         "unit_amount": price['unit_amount'],
                         "currency": price['currency'],
-                        "recurring": price.get('recurring'),  # Optional for recurring prices
+                        "recurring_interval": price['recurring']['interval'],  # Optional for recurring prices
                     }
                     for price in prices['data']
                 ],
@@ -84,7 +84,9 @@ class StripeClient(StripeBaseClass):
             for price in details['prices']:
                 price_data.append({
                     "price_id": price['id'],
-                    "amount": f"{price['unit_amount']} {price['currency']}",
+                    "amount": f"{price['unit_amount']}",
+                    "currency": price['currency'],
+                    "recurring_interval": price['recurring_interval']
                 })
 
             catalog.append({
