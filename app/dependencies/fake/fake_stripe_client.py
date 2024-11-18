@@ -115,8 +115,8 @@ class FakeStripeClient(StripeBaseClass):
                 }]
         }
 
-    def add_subscription_metadata(self, subscription_id: str, metadata: dict):
+    def attach_subscription_metadata(self, subscription_id: str, metadata: dict):
         pass
 
-    def add_invoice_metadata(self, invoice_id: str, metadata: dict):
+    def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         pass

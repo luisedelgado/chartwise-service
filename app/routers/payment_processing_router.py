@@ -19,6 +19,9 @@ from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_PUT,
                                 log_api_request,
                                 log_api_response,
+                                log_payment_event,
+                                log_metadata_from_stripe_invoice_event,
+                                log_metadata_from_stripe_subscription_event,
                                 log_error)
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
@@ -538,7 +541,7 @@ class PaymentProcessingRouter:
                 raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Expectation failed")
 
         try:
-            self._handle_stripe_event(event)
+            self._handle_stripe_event(event=event, background_tasks=background_tasks)
         except Exception as e:
             print(f"EXCEPTION = {e}")
             raise HTTPException(e)
@@ -547,37 +550,16 @@ class PaymentProcessingRouter:
 
     # Private
 
-    def _get_metadata_from_invoice_event(self, event) -> Tuple[str | None, str | None]:
-        invoice = event['data']['object']
+    """
+    Internal funnel for specific handlings of Stripe events.
 
-        if not 'checkout_session' in invoice.get('metadata', {}):
-            return (None, None)
-
-        stripe_session_id = invoice['metadata']['checkout_session']
-
-        stripe_client = dependency_container.inject_stripe_client()
-        session = stripe_client.retrieve_session(stripe_session_id)
-        metadata = session.get('metadata', {})
-        if 'therapist_id' not in metadata and 'session_id' in metadata:
-            return (None, metadata['session_id'])
-        if 'therapist_id' in metadata and 'session_id' not in metadata:
-            return (metadata['therapist_id'], None)
-        if 'therapist_id' not in metadata and 'session_id' not in metadata:
-            return (None, None)
-        return (metadata['therapist_id'], metadata['session_id'])
-
-    def _get_metadata_from_subscription_event(self, event) -> Tuple[str | None, str | None]:
-        subscription = event['data']['object']
-        metadata = subscription.get('metadata', {})
-        if 'therapist_id' not in metadata and 'session_id' in metadata:
-            return (None, metadata['session_id'])
-        if 'therapist_id' in metadata and 'session_id' not in metadata:
-            return (metadata['therapist_id'], None)
-        if 'therapist_id' not in metadata and 'session_id' not in metadata:
-            return (None, None)
-        return (metadata['therapist_id'], metadata['session_id'])
-
-    def _handle_stripe_event(self, event):
+    Arguments:
+    event – the Stripe event.
+    background_tasks – object for scheduling concurrent tasks.
+    """
+    def _handle_stripe_event(self,
+                             event,
+                             background_tasks: BackgroundTasks):
         event_type: str = event["type"]
 
         if event_type == 'checkout.session.completed':
@@ -585,76 +567,65 @@ class PaymentProcessingRouter:
             # You should provision the subscription, grant access to the platform,
             # and save the customer ID to your database.
             data_object = event["data"]["object"]
-            metadata = data_object['metadata']
-            therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
-            session_id = None if 'session_id' not in metadata else metadata['session_id']
+            subscription_id = data_object.get('subscription')
 
             # Update the subscription with metadata
-            subscription_id = data_object.get('subscription')
             if subscription_id:
                 stripe_client = dependency_container.inject_stripe_client()
-                stripe_client.add_subscription_metadata(subscription_id=subscription_id,
-                                                        metadata=data_object.get('metadata', {}))
+                stripe_client.attach_subscription_metadata(subscription_id=subscription_id,
+                                                           metadata=data_object.get('metadata', {}))
+                
+    # therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
+    # event_name = None if "event_name" not in kwargs else kwargs["event_name"]
+    # customer_id = None if "customer_id" not in kwargs else kwargs["customer_id"]
+    # price_id = None if "price_id" not in kwargs else kwargs["price_id"]
+    # subscription_id = None if "subscription_id" not in kwargs else kwargs["subscription_id"]
+    # session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+    # invoice_id = None if "invoice_id" not in kwargs else kwargs["invoice_id"]
 
-            return
-
-        if event_type == 'invoice.created':
+            log_payment_event(background_tasks=background_tasks,)
+        elif event_type == 'invoice.created':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
 
-            print("INVOICE CREATED")
-            print(f"{invoice}")
-            # if subscription_id:
-            #     # Retrieve the subscription to access its metadata
-            #     print(f"ABOUT TO RETRIEVE SESSION WITH ID: {subscription_id}")
-            #     stripe_client = dependency_container.inject_stripe_client()
-            #     subscription = stripe_client.retrieve_session(subscription_id)
-            #     print("ABOUT TO ATTACH METADATA TO INVOICE")
-            #     stripe_client.add_invoice_metadata(invoice_id=invoice['id'],
-            #                                        metadata=subscription.get('metadata', {}))
+            if subscription_id:
+                stripe_client = dependency_container.inject_stripe_client()
+                subscription = stripe_client.retrieve_session(subscription_id)
+                stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
+                                                        metadata=subscription.get('metadata', {}))
+
+            log_metadata_from_stripe_subscription_event(event=event,
+                                                        background_tasks=background_tasks)
+
         elif event_type == 'invoice.updated':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
 
-            print("INVOICE UPDATED")
-            print(f"{invoice}")
-            # if subscription_id:
-            #     # Retrieve the subscription to access its metadata
-            #     print(f"ABOUT TO RETRIEVE SESSION WITH ID: {subscription_id}")
-            #     stripe_client = dependency_container.inject_stripe_client()
-            #     subscription = stripe_client.retrieve_session(subscription_id)
-            #     print("ABOUT TO ATTACH METADATA TO INVOICE")
-            #     stripe_client.add_invoice_metadata(invoice_id=invoice['id'],
-            #                                        metadata=subscription.get('metadata', {}))
+            if subscription_id:
+                stripe_client = dependency_container.inject_stripe_client()
+                subscription = stripe_client.retrieve_session(subscription_id)
+                stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
+                                                      metadata=subscription.get('metadata', {}))
+
+            log_metadata_from_stripe_invoice_event(event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'invoice.paid':
             # Log event, and send ChartWise receipt to user.
             # Update Subscription Renewal Date in any UI that may be showing it.
-            # metadata = self._get_metadata_from_invoice_event(event)
-            # therapist_id = metadata['therapist_id']
-            # session_id = metadata['session_id']
-            # print(f"THERAPIST_ID: {therapist_id}")
-            # print(f"SESSION_ID: {session_id}")
-            print("Invoice payment_succeeded!")
+            log_metadata_from_stripe_invoice_event(event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'invoice.upcoming':
             # Notify Customers of Upcoming Payment: Alert users of an upcoming charge
             # if you want to provide transparency or avoid surprises, especially
             # for annual subscriptions.
-            # metadata = self._get_metadata_from_invoice_event(event)
-            # therapist_id = metadata['therapist_id']
-            # session_id = metadata['session_id']
-            # print(f"THERAPIST_ID: {therapist_id}")
-            # print(f"SESSION_ID: {session_id}")
-            print("upcoming!")
+            log_metadata_from_stripe_invoice_event(event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'invoice.payment_failed':
             # The payment failed or the customer does not have a valid payment method.
             # The subscription becomes past_due. Notify your customer and send them to the
             # customer portal to update their payment information.
-            # metadata = self._get_metadata_from_invoice_event(event)
-            # therapist_id = metadata['therapist_id']
-            # session_id = metadata['session_id']
-            # print(f"THERAPIST_ID: {therapist_id}")
-            # print(f"SESSION_ID: {session_id}")
-            print("Invoice payment failed!")
+            log_metadata_from_stripe_invoice_event(event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'customer.subscription.created':
             # Handle Plan Upgrades/Downgrades: If a user changes their plan (e.g: monthly to annually),
             # this event lets you adjust access or resource allocations accordingly. You could also trigger
@@ -662,8 +633,8 @@ class PaymentProcessingRouter:
             #
             # Detect Subscription Status Changes: If a subscription moves to past_due, you could set up
             # notifications or alerts.
-            therapist_id, session_id = self._get_metadata_from_subscription_event(event)
-            print("Subscription created!")
+            log_metadata_from_stripe_subscription_event(event=event,
+                                                        background_tasks=background_tasks)
         elif event_type == 'customer.subscription.updated':
             # Handle Plan Upgrades/Downgrades: If a user changes their plan (e.g: monthly to annually),
             # this event lets you adjust access or resource allocations accordingly. You could also trigger
@@ -671,16 +642,16 @@ class PaymentProcessingRouter:
             # 
             # Detect Subscription Status Changes: If a subscription moves to past_due, you could set up
             # notifications or alerts. 
-            therapist_id, session_id = self._get_metadata_from_subscription_event(event)
-            print("Subscription updated!")
+            log_metadata_from_stripe_subscription_event(event=event,
+                                                        background_tasks=background_tasks)
         elif event_type == 'customer.subscription.paused':
             # Send an automated email confirming the pause.
-            therapist_id, session_id = self._get_metadata_from_subscription_event(event)
-            print("Subscription paused!")
+            log_metadata_from_stripe_subscription_event(event=event,
+                                                        background_tasks=background_tasks)
         elif event_type == 'customer.subscription.deleted':
             # Send an automated email confirming the cancellation, offering a reactivation discount,
             # or sharing helpful info about resuming their subscription in the future.
-            therapist_id, session_id = self._get_metadata_from_subscription_event(event)
-            print("Subscription deleted!")
+            log_metadata_from_stripe_subscription_event(event=event,
+                                                        background_tasks=background_tasks)
         else:
             print(f'Unhandled event type {event_type}')

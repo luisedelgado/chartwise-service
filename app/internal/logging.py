@@ -181,3 +181,116 @@ def log_account_deletion(background_tasks: BackgroundTasks, **kwargs):
                                     "account_deletion_logs")
     except Exception as e:
         print(f"Silently failing when trying to log response - Error: {str(e)}")
+
+"""
+Logs data about a payment event.
+
+Arguments:
+background_tasks – object for scheduling concurrent tasks.
+kwargs – the set of associated optional args.
+"""
+def log_payment_event(background_tasks: BackgroundTasks, **kwargs):
+    # We don't want to log if we're in staging or dev
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
+        return
+
+    therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
+    event_name = None if "event_name" not in kwargs else kwargs["event_name"]
+    customer_id = None if "customer_id" not in kwargs else kwargs["customer_id"]
+    price_id = None if "price_id" not in kwargs else kwargs["price_id"]
+    subscription_id = None if "subscription_id" not in kwargs else kwargs["subscription_id"]
+    session_id = None if "session_id" not in kwargs else kwargs["session_id"]
+    invoice_id = None if "invoice_id" not in kwargs else kwargs["invoice_id"]
+
+    try:
+        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+        background_tasks.add_task(supabase_client.insert,
+                                    {
+                                        "therapist_id": therapist_id,
+                                        "event_name": event_name,
+                                        "customer_id": customer_id,
+                                        "price_id": price_id,
+                                        "subscription_id": subscription_id,
+                                        "session_id": session_id,
+                                        "invoice_id": invoice_id,
+                                    },
+                                    "payment_activity")
+    except Exception as e:
+        print(f"Silently failing when trying to log response - Error: {str(e)}")
+
+"""
+Extracts metadata from incoming invoice `event`, and invokes a logging payment event.
+
+Arguments:
+event – the event containing the subscription data.
+background_tasks – the object with which to schedule concurrent operations.
+"""
+def log_metadata_from_stripe_invoice_event(event, background_tasks: BackgroundTasks):
+    try:
+        invoice = event['data']['object']
+    except:
+        return
+
+    if not 'checkout_session' in invoice.get('metadata', {}):
+        return
+
+    stripe_session_id = invoice['metadata']['checkout_session']
+
+    stripe_client = dependency_container.inject_stripe_client()
+    payment_session = stripe_client.retrieve_session(stripe_session_id)
+    metadata = payment_session.get('metadata', {})
+
+    payment_event = None if 'type' not in event else event['type']
+    therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
+    session_id = None if 'session_id' not in metadata else metadata['session_id']
+    invoice_id = None if 'id' not in metadata else metadata['id']
+    customer_id = None if 'customer' not in invoice else invoice['customer']
+    subscription_id = None if 'subscription' not in invoice else invoice['subscription']
+
+    try:
+        price_id = invoice["lines"]["data"][0]["price"]["id"]
+    except:
+        price_id = None
+
+    log_payment_event(background_tasks=background_tasks,
+                      therapist_id=therapist_id,
+                      event_name=payment_event,
+                      customer_id=customer_id,
+                      price_id=price_id,
+                      invoice_id = invoice_id,
+                      subscription_id=subscription_id,
+                      session_id=session_id)
+
+"""
+Extracts metadata from incoming subscription `event`, and invokes a logging payment event.
+
+Arguments:
+event – the event containing the subscription data.
+background_tasks – the object with which to schedule concurrent operations.
+"""
+def log_metadata_from_stripe_subscription_event(event,
+                                                background_tasks: BackgroundTasks):
+    subscription = event['data']['object']
+    metadata = subscription.get('metadata', {})
+
+    payment_event = None if 'type' not in event else event['type']
+    therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
+    session_id = None if 'session_id' not in metadata else metadata['session_id']
+    customer_id = None if 'customer' not in subscription else subscription['customer']
+    subscription_id = None if 'subscription' not in subscription else subscription['id']
+    invoice_id = None if 'latest_invoice' not in subscription else subscription['latest_invoice']
+
+    try:
+        price_id = subscription["items"]["data"][0]["price"]["id"]
+    except:
+        price_id = None
+
+    log_payment_event(background_tasks=background_tasks,
+                      therapist_id=therapist_id,
+                      event_name=payment_event,
+                      customer_id=customer_id,
+                      price_id=price_id,
+                      subscription_id=subscription_id,
+                      session_id=session_id,
+                      invoice_id=invoice_id)

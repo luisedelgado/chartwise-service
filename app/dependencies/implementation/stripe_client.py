@@ -101,10 +101,10 @@ class StripeClient(StripeBaseClass):
             })
         return catalog
 
-    def add_subscription_metadata(self, subscription_id: str, metadata: dict):
+    def attach_subscription_metadata(self, subscription_id: str, metadata: dict):
         stripe.Subscription.modify(subscription_id, metadata=metadata)
 
-    def add_invoice_metadata(self, invoice_id: str, metadata: dict):
+    def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         res = stripe.Invoice.modify(invoice_id, metadata=metadata)
         print(res)
 

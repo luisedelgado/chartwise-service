@@ -40,11 +40,11 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def add_subscription_metadata(subscription_id: str, metadata: dict):
+    def attach_subscription_metadata(subscription_id: str, metadata: dict):
         pass
 
     @abstractmethod
-    def add_invoice_metadata(invoice_id: str, metadata: dict):
+    def attach_invoice_metadata(invoice_id: str, metadata: dict):
         pass
 
     @staticmethod
