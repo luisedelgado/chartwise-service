@@ -566,24 +566,36 @@ class PaymentProcessingRouter:
             # Payment is successful and the subscription is created.
             # You should provision the subscription, grant access to the platform,
             # and save the customer ID to your database.
-            data_object = event["data"]["object"]
-            subscription_id = data_object.get('subscription')
+            checkout_session = event['data']['object']
+            customer_id = checkout_session['customer']
+            subscription_id = checkout_session.get('subscription')
+            invoice_id = checkout_session.get('invoice')
 
             # Update the subscription with metadata
             if subscription_id:
                 stripe_client = dependency_container.inject_stripe_client()
+                metadata = checkout_session.get('metadata', {})
                 stripe_client.attach_subscription_metadata(subscription_id=subscription_id,
-                                                           metadata=data_object.get('metadata', {}))
-                
-    # therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
-    # event_name = None if "event_name" not in kwargs else kwargs["event_name"]
-    # customer_id = None if "customer_id" not in kwargs else kwargs["customer_id"]
-    # price_id = None if "price_id" not in kwargs else kwargs["price_id"]
-    # subscription_id = None if "subscription_id" not in kwargs else kwargs["subscription_id"]
-    # session_id = None if "session_id" not in kwargs else kwargs["session_id"]
-    # invoice_id = None if "invoice_id" not in kwargs else kwargs["invoice_id"]
+                                                           metadata=metadata)
+                therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
+                session_id = None if 'session_id' not in metadata else metadata['session_id']
+            else:
+                therapist_id = None
+                session_id = None
 
-            log_payment_event(background_tasks=background_tasks,)
+            try:
+                price_id = checkout_session["line_items"]["data"][0]["price"]["id"]
+            except:
+                price_id = None
+
+            log_payment_event(background_tasks=background_tasks,
+                              event_name=event_type,
+                              invoice_id=invoice_id,
+                              customer_id=customer_id,
+                              subscription_id=subscription_id,
+                              price_id=price_id,
+                              therapist_id=therapist_id,
+                              session_id=session_id)
         elif event_type == 'invoice.created':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
