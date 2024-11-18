@@ -224,22 +224,16 @@ Extracts metadata from incoming invoice `event`, and invokes a logging payment e
 
 Arguments:
 event – the event containing the subscription data.
+metadata – the metadata associated to the incoming event.
 background_tasks – the object with which to schedule concurrent operations.
 """
-def log_metadata_from_stripe_invoice_event(event, background_tasks: BackgroundTasks):
+def log_metadata_from_stripe_invoice_event(event,
+                                           metadata: dict,
+                                           background_tasks: BackgroundTasks):
     try:
         invoice = event['data']['object']
     except:
         return
-
-    if not 'checkout_session' in invoice.get('metadata', {}):
-        return
-
-    stripe_session_id = invoice['metadata']['checkout_session']
-
-    stripe_client = dependency_container.inject_stripe_client()
-    payment_session = stripe_client.retrieve_session(stripe_session_id)
-    metadata = payment_session.get('metadata', {})
 
     payment_event = None if 'type' not in event else event['type']
     therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']

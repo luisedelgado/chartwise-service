@@ -22,6 +22,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
+    def retrieve_subscription(self, subscription_id):
+        pass
+
+    @abstractmethod
     def retrieve_customer_subscriptions(customer_id: str) -> dict:
         pass
 

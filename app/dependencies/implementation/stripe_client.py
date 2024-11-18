@@ -45,6 +45,9 @@ class StripeClient(StripeBaseClass):
     def retrieve_session(self, session_id):
         return stripe.checkout.Session.retrieve(session_id)
 
+    def retrieve_subscription(self, subscription_id):
+        return stripe.Subscription.retrieve(subscription_id)
+
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
 
@@ -106,7 +109,6 @@ class StripeClient(StripeBaseClass):
 
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         res = stripe.Invoice.modify(invoice_id, metadata=metadata)
-        print(res)
 
     # Private
 

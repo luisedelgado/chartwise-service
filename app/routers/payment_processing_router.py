@@ -543,7 +543,6 @@ class PaymentProcessingRouter:
         try:
             self._handle_stripe_event(event=event, background_tasks=background_tasks)
         except Exception as e:
-            print(f"EXCEPTION = {e}")
             raise HTTPException(e)
 
         return {}
@@ -599,44 +598,60 @@ class PaymentProcessingRouter:
         elif event_type == 'invoice.created':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
+            invoice_metadata = invoice.get("metadata", {})
 
-            if subscription_id:
+            # If the invoice has no metadata, and a subscription exists, let's retrieve
+            # the subscription object to attach its metadata to the invoice.
+            if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
                 stripe_client = dependency_container.inject_stripe_client()
-                subscription = stripe_client.retrieve_session(subscription_id)
+                subscription = stripe_client.retrieve_subscription(subscription_id)
+                invoice_metadata = subscription.get('metadata', {})
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
-                                                        metadata=subscription.get('metadata', {}))
+                                                      metadata=invoice_metadata)
 
-            log_metadata_from_stripe_subscription_event(event=event,
-                                                        background_tasks=background_tasks)
+            log_metadata_from_stripe_invoice_event(event=event,
+                                                   metadata=invoice_metadata,
+                                                   background_tasks=background_tasks)
 
         elif event_type == 'invoice.updated':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
+            invoice_metadata = invoice.get("metadata", {})
 
-            if subscription_id:
+            # If the invoice has no metadata, and a subscription exists, let's retrieve
+            # the subscription object to attach its metadata to the invoice.
+            if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
                 stripe_client = dependency_container.inject_stripe_client()
-                subscription = stripe_client.retrieve_session(subscription_id)
+                subscription = stripe_client.retrieve_subscription(subscription_id)
+                invoice_metadata = subscription.get('metadata', {})
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
-                                                      metadata=subscription.get('metadata', {}))
+                                                      metadata=invoice_metadata)
 
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   metadata=invoice_metadata,
                                                    background_tasks=background_tasks)
         elif event_type == 'invoice.paid':
             # Log event, and send ChartWise receipt to user.
             # Update Subscription Renewal Date in any UI that may be showing it.
+            invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'invoice.upcoming':
             # Notify Customers of Upcoming Payment: Alert users of an upcoming charge
             # if you want to provide transparency or avoid surprises, especially
             # for annual subscriptions.
+            invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'invoice.payment_failed':
             # The payment failed or the customer does not have a valid payment method.
             # The subscription becomes past_due. Notify your customer and send them to the
             # customer portal to update their payment information.
+            invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'customer.subscription.created':
             # Handle Plan Upgrades/Downgrades: If a user changes their plan (e.g: monthly to annually),
@@ -666,4 +681,4 @@ class PaymentProcessingRouter:
             log_metadata_from_stripe_subscription_event(event=event,
                                                         background_tasks=background_tasks)
         else:
-            print(f'Unhandled event type {event_type}')
+            print(f"[Stripe Event] Unhandled event type: '{event_type}'")
