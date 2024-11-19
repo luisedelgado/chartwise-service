@@ -46,6 +46,9 @@ class FakeStripeClient(StripeBaseClass):
     def retrieve_session(self, session_id):
         pass
 
+    def retrieve_payment_method(self, payment_method_id):
+        pass
+
     def retrieve_subscription(self, subscription_id):
         pass
 

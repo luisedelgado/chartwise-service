@@ -48,6 +48,9 @@ class StripeClient(StripeBaseClass):
     def retrieve_subscription(self, subscription_id):
         return stripe.Subscription.retrieve(subscription_id)
 
+    def retrieve_payment_method(self, payment_method_id):
+        return stripe.PaymentMethod.retrieve(payment_method_id)
+
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
 

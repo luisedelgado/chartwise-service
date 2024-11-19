@@ -272,10 +272,18 @@ class PaymentProcessingRouter:
             subscription_data = response['data']
             filtered_data = []
             for object in subscription_data:
+                payment_method_id = object.get("default_payment_method")
+                payment_method_data = stripe_client.retrieve_payment_method(payment_method_id)
+
                 filtered_data.append({
                     "subscription_id": object['id'],
                     "price_id": object['plan']['id'],
                     "product_id": object['items']['data'][0]['id'],
+                    "payment_method_data": {
+                        "id": payment_method_data['id'],
+                        "type": payment_method_data['type'],
+                        "data": payment_method_data['card'],
+                    },
                 })
 
         except Exception as e:
