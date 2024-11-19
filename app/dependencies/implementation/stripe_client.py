@@ -71,6 +71,7 @@ class StripeClient(StripeBaseClass):
             product_prices[product['id']] = {
                 "name": product['name'],
                 "description": product['description'],
+                "metadata": product['metadata'],
                 "prices": [
                     {
                         "id": price['id'],
@@ -100,7 +101,8 @@ class StripeClient(StripeBaseClass):
                 "product": details['name'],
                 "product_id": product_id,
                 "description": details['description'],
-                "price_data": price_data
+                "price_data": price_data,
+                "metadata": details['metadata'],
             })
         return catalog
 
