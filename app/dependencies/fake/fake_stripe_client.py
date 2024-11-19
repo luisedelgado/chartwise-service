@@ -4,6 +4,7 @@ from ..api.stripe_base_class import StripeBaseClass
 
 FAKE_THERAPIST_ID = "4987b72e-dcbb-41fb-96a6-bf69756942cc"
 FAKE_SESSION_ID = "884f507c-f391-4248-91c4-7c25a138633a"
+FAKE_PAYMENT_METHOD_ID = "884f507c-f391-4248-91c4-7c25a138633a"
 
 class FakeStripeClient(StripeBaseClass):
 
@@ -47,7 +48,13 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def retrieve_payment_method(self, payment_method_id):
-        pass
+        return {
+            "id": FAKE_PAYMENT_METHOD_ID,
+            "type": "card",
+            "card": {
+                "lastFour": 1111
+            }
+        }
 
     def retrieve_subscription(self, subscription_id):
         pass
@@ -69,6 +76,7 @@ class FakeStripeClient(StripeBaseClass):
                 "plan": {
                     "id": "plan_OK3pbS1dvdQYJP"
                 },
+                "default_payment_method": "pm_OK3pbS1dvdQYJP",
                 "items": {
                     "object": "list",
                     "data": [
