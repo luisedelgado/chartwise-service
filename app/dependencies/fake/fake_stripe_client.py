@@ -11,7 +11,7 @@ class FakeStripeClient(StripeBaseClass):
     request_throws_exception = False
     request_returns_none = False
 
-    def generate_payment_session(self,
+    def generate_checkout_session(self,
                                  session_id: str,
                                  therapist_id: str,
                                  price_id: str,
@@ -104,10 +104,15 @@ class FakeStripeClient(StripeBaseClass):
     def delete_customer_subscription(self, subscription_id: str):
         pass
 
-    def update_customer_subscription(self,
+    def update_customer_subscription_plan(self,
                                      subscription_id: str,
                                      product_id: str,
                                      price_id: str):
+        pass
+
+    def update_subscription_payment_method(self,
+                                           subscription_id: str,
+                                           payment_method_id: str):
         pass
 
     def retrieve_product_catalog(self) -> list:
@@ -138,3 +143,9 @@ class FakeStripeClient(StripeBaseClass):
 
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         pass
+
+    def generate_payment_method_update_session(self,
+                                               customer_id: str,
+                                               success_url: str,
+                                               cancel_url) -> str:
+        return "fakePaymentMethodURL"

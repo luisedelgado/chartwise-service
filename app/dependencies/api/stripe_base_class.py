@@ -4,7 +4,7 @@ from stripe._error import SignatureVerificationError
 class StripeBaseClass(ABC):
 
     @abstractmethod
-    def generate_payment_session(session_id: str,
+    def generate_checkout_session(session_id: str,
                                  therapist_id: str,
                                  price_id: str,
                                  success_url: str,
@@ -42,9 +42,14 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def update_customer_subscription(subscription_id: str,
+    def update_customer_subscription_plan(subscription_id: str,
                                      product_id: str,
                                      price_id: str):
+        pass
+
+    @abstractmethod
+    def update_subscription_payment_method(subscription_id: str,
+                                           payment_method_id: str):
         pass
 
     @abstractmethod
@@ -57,6 +62,12 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def attach_invoice_metadata(invoice_id: str, metadata: dict):
+        pass
+
+    @abstractmethod
+    def generate_payment_method_update_session(customer_id: str,
+                                               success_url: str,
+                                               cancel_url) -> str:
         pass
 
     @staticmethod

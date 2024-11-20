@@ -10,14 +10,14 @@ class StripeClient(StripeBaseClass):
     def __init__(self):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
 
-    def generate_payment_session(self,
+    def generate_checkout_session(self,
                                  session_id: str,
                                  therapist_id: str,
                                  price_id: str,
                                  success_url: str,
                                  cancel_url: str) -> str | None:
         try:
-            session = stripe.checkout.Session.create(
+            checkout_session = stripe.checkout.Session.create(
                 success_url=success_url,
                 cancel_url=cancel_url,
                 mode='subscription',
@@ -33,7 +33,7 @@ class StripeClient(StripeBaseClass):
                     'therapist_id': str(therapist_id)
                 }
             )
-            return session['url']
+            return checkout_session['url']
         except Exception as e:
             raise Exception(e)
 
@@ -66,12 +66,18 @@ class StripeClient(StripeBaseClass):
         return stripe.Subscription.modify(subscription_id,
                                           cancel_at_period_end=True)
 
-    def update_customer_subscription(self,
-                                     subscription_id: str,
-                                     product_id: str,
-                                     price_id: str):
+    def update_customer_subscription_plan(self,
+                                          subscription_id: str,
+                                          product_id: str,
+                                          price_id: str):
         return stripe.Subscription.modify(subscription_id,
                                           items=[{"id": product_id, "price": price_id}])
+
+    def update_subscription_payment_method(self,
+                                           subscription_id: str,
+                                           payment_method_id: str):
+        return stripe.Subscription.modify(subscription_id,
+                                          default_payment_method=payment_method_id)
 
     def retrieve_product_catalog(self) -> list:
         products = stripe.Product.list(active=True)
@@ -122,6 +128,22 @@ class StripeClient(StripeBaseClass):
 
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         res = stripe.Invoice.modify(invoice_id, metadata=metadata)
+
+    def generate_payment_method_update_session(self,
+                                               customer_id: str,
+                                               success_url: str,
+                                               cancel_url) -> str:
+        try:
+            update_payment_method_session = stripe.checkout.Session.create(
+                customer=customer_id,
+                mode="setup",
+                payment_method_types=["card"],
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+            return update_payment_method_session['url']
+        except Exception as e:
+            raise Exception(e)
 
     # Private
 

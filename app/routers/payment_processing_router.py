@@ -42,11 +42,17 @@ class UpdateSubscriptionPayload(BaseModel):
     existing_product_id: str
     new_price_id: str
 
+class UpdatePaymentMethodPayload(BaseModel):
+    customer_id: str
+    success_callback_url: str
+    cancel_callback_url: str
+
 class PaymentProcessingRouter:
 
-    PAYMENT_SESSION_ENDPOINT = "/v1/payment-session"
+    CHECKOUT_SESSION_ENDPOINT = "/v1/checkout-session"
     SUBSCRIPTIONS_ENDPOINT = "/v1/subscriptions"
     PAYMENT_EVENT_ENDPOINT = "/v1/payment-event"
+    UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT = "/v1/payment-method-session"
     PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
@@ -61,21 +67,21 @@ class PaymentProcessingRouter:
     Registers the set of routes that the class' router can access.
     """
     def _register_routes(self):
-        @self.router.post(self.PAYMENT_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def create_payment_session(response: Response,
-                                         payload: PaymentSessionPayload,
-                                         background_tasks: BackgroundTasks,
-                                         store_access_token: Annotated[str | None, Header()],
-                                         store_refresh_token: Annotated[str | None, Header()],
-                                         authorization: Annotated[Union[str, None], Cookie()] = None,
-                                         session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._create_payment_session_internal(authorization=authorization,
-                                                               payload=payload,
-                                                               background_tasks=background_tasks,
-                                                               response=response,
-                                                               session_id=session_id,
-                                                               store_access_token=store_access_token,
-                                                               store_refresh_token=store_refresh_token)
+        @self.router.post(self.CHECKOUT_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def create_checkout_session(response: Response,
+                                          payload: PaymentSessionPayload,
+                                          background_tasks: BackgroundTasks,
+                                          store_access_token: Annotated[str | None, Header()],
+                                          store_refresh_token: Annotated[str | None, Header()],
+                                          authorization: Annotated[Union[str, None], Cookie()] = None,
+                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._create_checkout_session_internal(authorization=authorization,
+                                                                payload=payload,
+                                                                background_tasks=background_tasks,
+                                                                response=response,
+                                                                session_id=session_id,
+                                                                store_access_token=store_access_token,
+                                                                store_refresh_token=store_refresh_token)
 
         @self.router.post(self.PAYMENT_EVENT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def capture_payment_event(request: Request,
@@ -147,8 +153,24 @@ class PaymentProcessingRouter:
                                                                  store_access_token=store_access_token,
                                                                  store_refresh_token=store_refresh_token)
 
+        @self.router.post(self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def create_update_payment_method_session(response: Response,
+                                                       payload: UpdatePaymentMethodPayload,
+                                                       background_tasks: BackgroundTasks,
+                                                       store_access_token: Annotated[str | None, Header()],
+                                                       store_refresh_token: Annotated[str | None, Header()],
+                                                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                                                       session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._create_update_payment_method_session_internal(authorization=authorization,
+                                                                             background_tasks=background_tasks,
+                                                                             response=response,
+                                                                             session_id=session_id,
+                                                                             payload=payload,
+                                                                             store_access_token=store_access_token,
+                                                                             store_refresh_token=store_refresh_token)
+
     """
-    Creates a new payment session.
+    Creates a new checkout session.
 
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
@@ -159,14 +181,14 @@ class PaymentProcessingRouter:
     response – the response model with which to create the final response.
     payload – the incoming request's payload.
     """
-    async def _create_payment_session_internal(self,
-                                               background_tasks: BackgroundTasks,
-                                               authorization: str,
-                                               store_access_token: str,
-                                               store_refresh_token: str,
-                                               session_id: str,
-                                               response: Response,
-                                               payload: PaymentSessionPayload):
+    async def _create_checkout_session_internal(self,
+                                                background_tasks: BackgroundTasks,
+                                                authorization: str,
+                                                store_access_token: str,
+                                                store_refresh_token: str,
+                                                session_id: str,
+                                                response: Response,
+                                                payload: PaymentSessionPayload):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
@@ -177,7 +199,7 @@ class PaymentProcessingRouter:
         log_api_request(background_tasks=background_tasks,
                         session_id=session_id,
                         method=post_api_method,
-                        endpoint_name=self.PAYMENT_SESSION_ENDPOINT)
+                        endpoint_name=self.CHECKOUT_SESSION_ENDPOINT)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -189,7 +211,7 @@ class PaymentProcessingRouter:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             log_error(background_tasks=background_tasks,
                       session_id=session_id,
-                      endpoint_name=self.PAYMENT_SESSION_ENDPOINT,
+                      endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
                       error_code=status_code,
                       description=str(e),
                       method=post_api_method)
@@ -197,7 +219,7 @@ class PaymentProcessingRouter:
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
-            payment_session_url = stripe_client.generate_payment_session(price_id=payload.price_id,
+            payment_session_url = stripe_client.generate_checkout_session(price_id=payload.price_id,
                                                                          session_id=session_id,
                                                                          therapist_id=therapist_id,
                                                                          success_url=payload.success_callback_url,
@@ -208,7 +230,7 @@ class PaymentProcessingRouter:
             message = str(e)
             log_error(background_tasks=background_tasks,
                       session_id=session_id,
-                      endpoint_name=self.PAYMENT_SESSION_ENDPOINT,
+                      endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
                       error_code=status_code,
                       description=message,
                       method=post_api_method)
@@ -217,7 +239,7 @@ class PaymentProcessingRouter:
         log_api_response(background_tasks=background_tasks,
                          session_id=session_id,
                          therapist_id=therapist_id,
-                         endpoint_name=self.PAYMENT_SESSION_ENDPOINT,
+                         endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
                          http_status_code=status.HTTP_200_OK,
                          method=post_api_method)
 
@@ -446,7 +468,7 @@ class PaymentProcessingRouter:
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
-            stripe_client.update_customer_subscription(subscription_id=subscription_id,
+            stripe_client.update_customer_subscription_plan(subscription_id=subscription_id,
                                                        product_id=product_id,
                                                        price_id=price_id)
         except Exception as e:
@@ -526,6 +548,79 @@ class PaymentProcessingRouter:
                          method=get_api_method)
 
         return {"catalog": response}
+
+    """
+    Generates a URL for updating a subscription's payment method with the incoming data.
+
+    Arguments:
+    background_tasks – object for scheduling concurrent tasks.
+    authorization – the authorization cookie, if exists.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    session_id – the session_id cookie, if exists.
+    response – the response model with which to create the final response.
+    payload – the JSON payload containing the update data.
+    """
+    async def _create_update_payment_method_session_internal(self,
+                                                             background_tasks: BackgroundTasks,
+                                                             authorization: str,
+                                                             store_access_token: str,
+                                                             store_refresh_token: str,
+                                                             session_id: str,
+                                                             response: Response,
+                                                             payload: UpdatePaymentMethodPayload):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        put_api_method = API_METHOD_PUT
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=put_api_method,
+                        endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT)
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=put_api_method)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            stripe_client = dependency_container.inject_stripe_client()
+            update_payment_method_url = stripe_client.generate_payment_method_update_session(customer_id=payload.customer_id,
+                                                                                             success_url=payload.success_callback_url,
+                                                                                             cancel_url=payload.cancel_callback_url)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            message = str(e)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+                      error_code=status_code,
+                      description=message,
+                      method=put_api_method)
+            raise HTTPException(detail=message, status_code=status_code)
+
+        log_api_response(background_tasks=background_tasks,
+                         session_id=session_id,
+                         therapist_id=therapist_id,
+                         endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+                         http_status_code=status.HTTP_200_OK,
+                         method=put_api_method)
+
+        return { "update_payment_method_url": update_payment_method_url }
 
     """
     Webhook for handling Stripe events.
@@ -733,5 +828,21 @@ class PaymentProcessingRouter:
             log_metadata_from_stripe_subscription_event(event=event,
                                                         status=SUCCESS_RESULT,
                                                         background_tasks=background_tasks)
+
+        elif event_type == 'setup_intent.succeeded':
+            setup_intent = event["data"]["object"]
+            payment_method_id = setup_intent["payment_method"]
+            customer_id = setup_intent["customer"]
+
+            # Update the default payment method for the subscription
+            subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id)
+            for subscription in subscriptions:
+                stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
+                                                                 payment_method_id=payment_method_id)
+
+                log_metadata_from_stripe_subscription_event(event=event,
+                                                            status=SUCCESS_RESULT,
+                                                            background_tasks=background_tasks)
+
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")

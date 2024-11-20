@@ -43,8 +43,8 @@ class TestingHarnessPaymentProcessingRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
-    def test_invoke_generate_payment_session_without_auth_token(self):
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_SESSION_ENDPOINT,
+    def test_generate_checkout_session_without_auth_token(self):
+        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -56,9 +56,9 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 401
 
-    def test_invoke_generate_payment_session_stripe_client_throws(self):
+    def test_generate_checkout_session_stripe_client_throws(self):
         self.fake_stripe_client.request_throws_exception = True
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_SESSION_ENDPOINT,
+        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
                                     },
@@ -73,9 +73,9 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 417
 
-    def test_invoke_generate_payment_session_stripe_client_returns_none(self):
+    def test_generate_checkout_session_stripe_client_returns_none(self):
         self.fake_stripe_client.request_returns_none = True
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_SESSION_ENDPOINT,
+        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
                                     },
@@ -90,8 +90,8 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 417
 
-    def test_invoke_generate_payment_session_stripe_client_returns_success(self):
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_SESSION_ENDPOINT,
+    def test_generate_checkout_session_stripe_client_returns_success(self):
+        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
                                     },
@@ -169,7 +169,7 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 200
 
-    def test_update_subscription_without_auth_token(self):
+    def test_update_subscription_plan_without_auth_token(self):
         response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
@@ -182,7 +182,7 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 401
 
-    def test_update_subscription_success(self):
+    def test_update_subscription_plan_success(self):
         response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -206,7 +206,7 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 401
 
-    def test_update_subscription_success(self):
+    def test_retrieve_product_catalog_success(self):
         response = self.client.get(PaymentProcessingRouter.PRODUCT_CATALOG,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -217,3 +217,34 @@ class TestingHarnessPaymentProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "catalog" in response.json()
+
+    def test_generate_update_payment_method_session_url_without_auth_token(self):
+        response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "customer_id": FAKE_CUSTOMER_ID,
+                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
+                                        "cancel_callback_url": "https://www.chartwise.ai",
+                                    })
+        assert response.status_code == 401
+
+    def test_generate_update_payment_method_session_url_success(self):
+        response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "customer_id": FAKE_CUSTOMER_ID,
+                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
+                                        "cancel_callback_url": "https://www.chartwise.ai",
+                                    })
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "update_payment_method_url" in response_json
