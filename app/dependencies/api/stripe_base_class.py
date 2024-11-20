@@ -22,6 +22,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
+    def retrieve_product(product_id):
+        pass
+
+    @abstractmethod
     def retrieve_payment_method(payment_method_id):
         pass
 

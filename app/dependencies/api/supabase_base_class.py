@@ -29,6 +29,20 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Upserts into a Supabase table with the incoming data.
+
+    Arguments:
+    payload – the payload to be updated.
+    on_conflict – the key to be used to update the table if a conflict arises.
+    table_name – the table that should be updated.
+    """
+    @abstractmethod
+    def upsert(payload: dict,
+               on_conflict: str,
+               table_name: str):
+        pass
+
+    """
     Fetches data from a Supabase table based on the incoming params.
 
     Arguments:

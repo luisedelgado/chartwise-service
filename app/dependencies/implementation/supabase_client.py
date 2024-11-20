@@ -15,6 +15,15 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def upsert(self,
+               payload: dict,
+               on_conflict: str,
+               table_name: str):
+        try:
+            return self.client.table(table_name).upsert(json=payload, on_conflict=on_conflict).execute()
+        except Exception as e:
+            raise Exception(e)
+
     def update(self,
                payload: dict,
                filters: dict,

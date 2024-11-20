@@ -5,6 +5,8 @@ from ..api.stripe_base_class import StripeBaseClass
 
 class StripeClient(StripeBaseClass):
 
+    FREE_TRIAL_DURATION_IN_DAYS = 30
+
     def __init__(self):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
 
@@ -23,6 +25,9 @@ class StripeClient(StripeBaseClass):
                     'price': price_id,
                     'quantity': 1
                 }],
+                subscription_data={
+                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS
+                },
                  metadata={
                     'session_id': str(session_id),
                     'therapist_id': str(therapist_id)
@@ -50,6 +55,9 @@ class StripeClient(StripeBaseClass):
 
     def retrieve_payment_method(self, payment_method_id):
         return stripe.PaymentMethod.retrieve(payment_method_id)
+
+    def retrieve_product(self, product_id):
+        return stripe.Product.retrieve(id=product_id)
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)

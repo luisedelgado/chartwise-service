@@ -44,6 +44,9 @@ class FakeStripeClient(StripeBaseClass):
             }
         }
 
+    def retrieve_product(self, product_id):
+        pass
+
     def retrieve_session(self, session_id):
         pass
 
@@ -68,6 +71,7 @@ class FakeStripeClient(StripeBaseClass):
                 {
                 "id": "su_1NXPiE2eZvKYlo2COk9fohqA",
                 "object": "subscription",
+                "status": "active",
                 "application": "null",
                 "application_fee_percent": "null",
                 "automatic_tax": {

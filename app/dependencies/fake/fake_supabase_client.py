@@ -69,6 +69,12 @@ class FakeSupabaseClient(SupabaseBaseClass):
         else:
             pass
 
+    def upsert(self,
+               payload: dict,
+               on_conflict: str,
+               table_name: str):
+        pass
+
     def select(self,
                fields: str,
                filters: dict,

@@ -8,6 +8,8 @@ API_METHOD_POST = "POST"
 API_METHOD_PUT = "PUT"
 API_METHOD_GET = "GET"
 API_METHOD_DELETE = "DELETE"
+SUCCESS_RESULT = "success"
+FAILED_RESULT = "failed"
 
 """
 Logs data about an API request.
@@ -202,6 +204,8 @@ def log_payment_event(background_tasks: BackgroundTasks, **kwargs):
     subscription_id = None if "subscription_id" not in kwargs else kwargs["subscription_id"]
     session_id = None if "session_id" not in kwargs else kwargs["session_id"]
     invoice_id = None if "invoice_id" not in kwargs else kwargs["invoice_id"]
+    status = None if "status" not in kwargs else kwargs['status']
+    message = None if "message" not in kwargs else kwargs['message']
 
     try:
         supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
@@ -214,6 +218,8 @@ def log_payment_event(background_tasks: BackgroundTasks, **kwargs):
                                         "subscription_id": subscription_id,
                                         "session_id": session_id,
                                         "invoice_id": invoice_id,
+                                        "status": status,
+                                        "message": message,
                                     },
                                     "payment_activity")
     except Exception as e:
@@ -225,11 +231,19 @@ Extracts metadata from incoming invoice `event`, and invokes a logging payment e
 Arguments:
 event – the event containing the subscription data.
 metadata – the metadata associated to the incoming event.
+status – the event handling result status
 background_tasks – the object with which to schedule concurrent operations.
+message – the optional event handling result message
 """
 def log_metadata_from_stripe_invoice_event(event,
                                            metadata: dict,
-                                           background_tasks: BackgroundTasks):
+                                           status: str,
+                                           background_tasks: BackgroundTasks,
+                                           message: str = None):
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
+        return
+
     try:
         invoice = event['data']['object']
     except:
@@ -254,17 +268,27 @@ def log_metadata_from_stripe_invoice_event(event,
                       price_id=price_id,
                       invoice_id = invoice_id,
                       subscription_id=subscription_id,
-                      session_id=session_id)
+                      session_id=session_id,
+                      status=status,
+                      message=message,)
 
 """
 Extracts metadata from incoming subscription `event`, and invokes a logging payment event.
 
 Arguments:
 event – the event containing the subscription data.
+status – the event handling result status
 background_tasks – the object with which to schedule concurrent operations.
+message – the optional event handling result message
 """
 def log_metadata_from_stripe_subscription_event(event,
-                                                background_tasks: BackgroundTasks):
+                                                status: str,
+                                                background_tasks: BackgroundTasks,
+                                                message: str = None):
+    environment = os.environ.get("ENVIRONMENT").lower()
+    if environment != "prod":
+        return
+
     subscription = event['data']['object']
     metadata = subscription.get('metadata', {})
 
@@ -285,6 +309,8 @@ def log_metadata_from_stripe_subscription_event(event,
                       event_name=payment_event,
                       customer_id=customer_id,
                       price_id=price_id,
+                      message=message,
+                      status=status,
                       subscription_id=subscription_id,
                       session_id=session_id,
                       invoice_id=invoice_id)

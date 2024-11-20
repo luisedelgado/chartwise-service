@@ -1,5 +1,6 @@
 import os
 
+from datetime import datetime
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
@@ -9,22 +10,26 @@ from fastapi import (APIRouter,
                      Response,
                      status)
 from pydantic import BaseModel
-from typing import Annotated, Tuple, Union
+from typing import Annotated, Union
 
+from ..internal.utilities import datetime_handler
 from ..internal import security
-from ..internal.dependency_container import dependency_container
+from ..internal.dependency_container import dependency_container, StripeBaseClass
 from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_GET,
                                 API_METHOD_POST,
                                 API_METHOD_PUT,
+                                FAILED_RESULT,
                                 log_api_request,
                                 log_api_response,
                                 log_payment_event,
                                 log_metadata_from_stripe_invoice_event,
                                 log_metadata_from_stripe_subscription_event,
-                                log_error)
+                                log_error,
+                                SUCCESS_RESULT,)
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
+from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
 
 class PaymentSessionPayload(BaseModel):
@@ -44,6 +49,7 @@ class PaymentProcessingRouter:
     PAYMENT_EVENT_ENDPOINT = "/v1/payment-event"
     PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
+    ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
 
     def __init__(self, environment: str):
         self._environment = environment
@@ -275,16 +281,25 @@ class PaymentProcessingRouter:
                 payment_method_id = object.get("default_payment_method")
                 payment_method_data = stripe_client.retrieve_payment_method(payment_method_id)
 
-                filtered_data.append({
+                subscription_status = object['status']
+                current_subscription = {
                     "subscription_id": object['id'],
                     "price_id": object['plan']['id'],
                     "product_id": object['items']['data'][0]['id'],
+                    "status": subscription_status,
                     "payment_method_data": {
                         "id": payment_method_data['id'],
                         "type": payment_method_data['type'],
                         "data": payment_method_data['card'],
                     },
-                })
+                }
+
+                if subscription_status == 'trialing':
+                    trial_end = datetime.fromtimestamp(object['trial_end'])
+                    formatted_trial_end = trial_end.strftime(DATE_FORMAT)
+                    current_subscription['trial_end'] = formatted_trial_end
+
+                filtered_data.append(current_subscription)
 
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
@@ -549,7 +564,9 @@ class PaymentProcessingRouter:
                 raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Expectation failed")
 
         try:
-            self._handle_stripe_event(event=event, background_tasks=background_tasks)
+            self._handle_stripe_event(event=event,
+                                      stripe_client=stripe_client,
+                                      background_tasks=background_tasks)
         except Exception as e:
             raise HTTPException(e)
 
@@ -562,33 +579,27 @@ class PaymentProcessingRouter:
 
     Arguments:
     event – the Stripe event.
+    stripe_client – the Stripe client.
     background_tasks – object for scheduling concurrent tasks.
     """
     def _handle_stripe_event(self,
                              event,
+                             stripe_client: StripeBaseClass,
                              background_tasks: BackgroundTasks):
         event_type: str = event["type"]
 
         if event_type == 'checkout.session.completed':
-            # Payment is successful and the subscription is created.
-            # You should provision the subscription, grant access to the platform,
-            # and save the customer ID to your database.
             checkout_session = event['data']['object']
-            customer_id = checkout_session['customer']
             subscription_id = checkout_session.get('subscription')
-            invoice_id = checkout_session.get('invoice')
+
+            metadata = checkout_session.get('metadata', {})
+            therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
+            session_id = None if 'session_id' not in metadata else metadata['session_id']
 
             # Update the subscription with metadata
             if subscription_id:
-                stripe_client = dependency_container.inject_stripe_client()
-                metadata = checkout_session.get('metadata', {})
                 stripe_client.attach_subscription_metadata(subscription_id=subscription_id,
                                                            metadata=metadata)
-                therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
-                session_id = None if 'session_id' not in metadata else metadata['session_id']
-            else:
-                therapist_id = None
-                session_id = None
 
             try:
                 price_id = checkout_session["line_items"]["data"][0]["price"]["id"]
@@ -597,12 +608,14 @@ class PaymentProcessingRouter:
 
             log_payment_event(background_tasks=background_tasks,
                               event_name=event_type,
-                              invoice_id=invoice_id,
-                              customer_id=customer_id,
+                              invoice_id=checkout_session.get('invoice'),
+                              customer_id=checkout_session.get('customer'),
                               subscription_id=subscription_id,
                               price_id=price_id,
                               therapist_id=therapist_id,
+                              status=SUCCESS_RESULT,
                               session_id=session_id)
+
         elif event_type == 'invoice.created':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
@@ -611,13 +624,13 @@ class PaymentProcessingRouter:
             # If the invoice has no metadata, and a subscription exists, let's retrieve
             # the subscription object to attach its metadata to the invoice.
             if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
-                stripe_client = dependency_container.inject_stripe_client()
                 subscription = stripe_client.retrieve_subscription(subscription_id)
                 invoice_metadata = subscription.get('metadata', {})
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
                                                       metadata=invoice_metadata)
 
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   status=SUCCESS_RESULT,
                                                    metadata=invoice_metadata,
                                                    background_tasks=background_tasks)
 
@@ -629,28 +642,27 @@ class PaymentProcessingRouter:
             # If the invoice has no metadata, and a subscription exists, let's retrieve
             # the subscription object to attach its metadata to the invoice.
             if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
-                stripe_client = dependency_container.inject_stripe_client()
                 subscription = stripe_client.retrieve_subscription(subscription_id)
                 invoice_metadata = subscription.get('metadata', {})
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
                                                       metadata=invoice_metadata)
 
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   status=SUCCESS_RESULT,
                                                    metadata=invoice_metadata,
                                                    background_tasks=background_tasks)
-        elif event_type == 'invoice.paid':
-            # Log event, and send ChartWise receipt to user.
-            # Update Subscription Renewal Date in any UI that may be showing it.
+        elif event_type == 'invoice.payment_succeeded':
+            # TODO: Send ChartWise receipt to user.
             invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   status=SUCCESS_RESULT,
                                                    metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'invoice.upcoming':
-            # Notify Customers of Upcoming Payment: Alert users of an upcoming charge
-            # if you want to provide transparency or avoid surprises, especially
-            # for annual subscriptions.
+            # TODO: Notify Customers of Upcoming Charge
             invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   status=SUCCESS_RESULT,
                                                    metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'invoice.payment_failed':
@@ -659,34 +671,67 @@ class PaymentProcessingRouter:
             # customer portal to update their payment information.
             invoice = event['data']['object']
             log_metadata_from_stripe_invoice_event(event=event,
+                                                   status=FAILED_RESULT,
                                                    metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
         elif event_type == 'customer.subscription.created':
-            # Handle Plan Upgrades/Downgrades: If a user changes their plan (e.g: monthly to annually),
-            # this event lets you adjust access or resource allocations accordingly. You could also trigger
-            # welcome or upsell emails when users upgrade.
-            #
-            # Detect Subscription Status Changes: If a subscription moves to past_due, you could set up
-            # notifications or alerts.
+            # TODO: Trigger welcome or upsell emails when users upgrade.
+
             log_metadata_from_stripe_subscription_event(event=event,
+                                                        status=SUCCESS_RESULT,
                                                         background_tasks=background_tasks)
         elif event_type == 'customer.subscription.updated':
-            # Handle Plan Upgrades/Downgrades: If a user changes their plan (e.g: monthly to annually),
-            # this event lets you adjust access or resource allocations accordingly. You could also trigger
-            # welcome or upsell emails when users upgrade.
-            # 
-            # Detect Subscription Status Changes: If a subscription moves to past_due, you could set up
-            # notifications or alerts. 
-            log_metadata_from_stripe_subscription_event(event=event,
-                                                        background_tasks=background_tasks)
+            # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
+
+            subscription = event['data']['object']
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+
+            try:
+                therapist_id = (subscription.get('metadata', {})).get('therapist_id', None)
+            except Exception as e:
+                therapist_id = None
+
+            payload = {
+                "last_updated": now_timestamp,
+                "customer_id": subscription.get('customer'),
+                "therapist_id": therapist_id,
+            }
+
+            # Free trial is ongoing, or subscription is active.
+            if subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES:
+                try:
+                    product_id = subscription['items']['data'][0]['price']['product']
+                    product_data = stripe_client.retrieve_product(product_id)
+                    stripe_product_name = product_data['metadata']['product_name']
+                    tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
+                    payload['current_tier'] = tier_name
+                    supabase_client.upsert(payload=payload,
+                                           table_name="subscription_status",
+                                           on_conflict="therapist_id")
+                except Exception as e:
+                    log_metadata_from_stripe_subscription_event(event=event,
+                                                                status=FAILED_RESULT,
+                                                                message=str(e),
+                                                                background_tasks=background_tasks)
+                    return
+            else:
+                # Subscription is not active. Restrict functionality
+                payload['current_tier'] = "not_active"
+                supabase_client.upsert(payload=payload,
+                                    table_name="subscription_status",
+                                    on_conflict="therapist_id")
+
         elif event_type == 'customer.subscription.paused':
-            # Send an automated email confirming the pause.
+            # TODO: Send an automated email confirming the pause.
             log_metadata_from_stripe_subscription_event(event=event,
+                                                        status=SUCCESS_RESULT,
                                                         background_tasks=background_tasks)
         elif event_type == 'customer.subscription.deleted':
-            # Send an automated email confirming the cancellation, offering a reactivation discount,
+            # TODO: Send an automated email confirming the cancellation, offering a reactivation discount,
             # or sharing helpful info about resuming their subscription in the future.
             log_metadata_from_stripe_subscription_event(event=event,
+                                                        status=SUCCESS_RESULT,
                                                         background_tasks=background_tasks)
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")

@@ -112,3 +112,11 @@ def create_monitoring_proxy_headers(**kwargs):
                          api_key=os.environ.get("PORTKEY_API_KEY"),
                          config=monitoring_proxy_config,
                          metadata=metadata)
+
+def map_stripe_product_name_to_chartwise_tier(stripe_plan: str) -> str:
+    if stripe_plan == "premium_plan_yearly" or stripe_plan == "premium_plan_monthly":
+        return "premium"
+    elif stripe_plan == "basic_plan_yearly" or stripe_plan == "basic_plan_monthly":
+        return "basic"
+    else:
+        raise Exception("Untracked Stripe product name")
