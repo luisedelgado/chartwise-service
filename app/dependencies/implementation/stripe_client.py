@@ -90,41 +90,30 @@ class StripeClient(StripeBaseClass):
         product_prices = {}
 
         for product in products['data']:
-            prices = stripe.Price.list(product=product['id'])
+            price = stripe.Price.retrieve(product['default_price'])
+            currency = price['currency']
+            formatted_price_amount = self._format_currency_amount(amount=float(price['unit_amount']),
+                                                                  currency_code=currency)
+
             product_prices[product['id']] = {
                 "name": product['name'],
                 "description": product['description'],
                 "metadata": product['metadata'],
-                "prices": [
-                    {
-                        "id": price['id'],
-                        "unit_amount": price['unit_amount'],
-                        "currency": price['currency'],
-                        "recurring_interval": price['recurring']['interval'],
-                    }
-                    for price in prices['data']
-                ],
+                "price": {
+                    "id": price['id'],
+                    "unit_amount": formatted_price_amount,
+                    "currency": price['currency'],
+                    "recurring_interval": price['recurring']['interval'],
+                },
             }
 
         catalog = []
         for product_id, details in product_prices.items():
-            price_data = []
-            for price in details['prices']:
-                currency = price['currency']
-                formatted_amount = self._format_currency_amount(amount=float(price['unit_amount']),
-                                                                currency_code=currency)
-                price_data.append({
-                    "price_id": price['id'],
-                    "amount": formatted_amount,
-                    "currency": currency,
-                    "recurring_interval": price['recurring_interval']
-                })
-
             catalog.append({
                 "product": details['name'],
                 "product_id": product_id,
                 "description": details['description'],
-                "price_data": price_data,
+                "price_data": details['price'],
                 "metadata": details['metadata'],
             })
         return catalog
