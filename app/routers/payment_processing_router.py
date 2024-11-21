@@ -218,12 +218,20 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            is_new_customer = (0 == len((customer_data).data))
+
             stripe_client = dependency_container.inject_stripe_client()
             payment_session_url = stripe_client.generate_checkout_session(price_id=payload.price_id,
-                                                                         session_id=session_id,
-                                                                         therapist_id=therapist_id,
-                                                                         success_url=payload.success_callback_url,
-                                                                         cancel_url=payload.cancel_callback_url)
+                                                                          session_id=session_id,
+                                                                          therapist_id=therapist_id,
+                                                                          success_url=payload.success_callback_url,
+                                                                          cancel_url=payload.cancel_callback_url,
+                                                                          is_new_customer=is_new_customer)
             assert len(payment_session_url or '') > 0, "Received invalid checkout URL"
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)

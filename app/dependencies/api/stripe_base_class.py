@@ -5,10 +5,11 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def generate_checkout_session(session_id: str,
-                                 therapist_id: str,
-                                 price_id: str,
-                                 success_url: str,
-                                 cancel_url: str) -> str | None:
+                                  therapist_id: str,
+                                  price_id: str,
+                                  success_url: str,
+                                  cancel_url: str,
+                                  is_new_customer: bool) -> str | None:
         pass
 
     @abstractmethod
@@ -18,19 +19,19 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_session(session_id):
+    def retrieve_session(session_id: str):
         pass
 
     @abstractmethod
-    def retrieve_product(product_id):
+    def retrieve_product(product_id: str):
         pass
 
     @abstractmethod
-    def retrieve_payment_method(payment_method_id):
+    def retrieve_payment_method(payment_method_id: str):
         pass
 
     @abstractmethod
-    def retrieve_subscription(self, subscription_id):
+    def retrieve_subscription(subscription_id: str):
         pass
 
     @abstractmethod
@@ -53,7 +54,7 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_product_catalog(self) -> list:
+    def retrieve_product_catalog() -> list:
         pass
 
     @abstractmethod

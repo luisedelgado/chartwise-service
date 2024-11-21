@@ -12,11 +12,12 @@ class FakeStripeClient(StripeBaseClass):
     request_returns_none = False
 
     def generate_checkout_session(self,
-                                 session_id: str,
-                                 therapist_id: str,
-                                 price_id: str,
-                                 success_url: str,
-                                 cancel_url: str) -> str | None:
+                                  session_id: str,
+                                  therapist_id: str,
+                                  price_id: str,
+                                  success_url: str,
+                                  cancel_url: str,
+                                  is_new_customer: bool) -> str | None:
         if self.request_returns_none:
             return None
 
@@ -59,7 +60,7 @@ class FakeStripeClient(StripeBaseClass):
             }
         }
 
-    def retrieve_subscription(self, subscription_id):
+    def retrieve_subscription(self, subscription_id: str):
         pass
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:

@@ -11,12 +11,20 @@ class StripeClient(StripeBaseClass):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
 
     def generate_checkout_session(self,
-                                 session_id: str,
-                                 therapist_id: str,
-                                 price_id: str,
-                                 success_url: str,
-                                 cancel_url: str) -> str | None:
+                                  session_id: str,
+                                  therapist_id: str,
+                                  price_id: str,
+                                  success_url: str,
+                                  cancel_url: str,
+                                  is_new_customer: bool) -> str | None:
         try:
+            if is_new_customer:
+                subscription_data = {
+                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS
+                }
+            else:
+                subscription_data = {}
+
             checkout_session = stripe.checkout.Session.create(
                 success_url=success_url,
                 cancel_url=cancel_url,
@@ -25,9 +33,7 @@ class StripeClient(StripeBaseClass):
                     'price': price_id,
                     'quantity': 1
                 }],
-                subscription_data={
-                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS
-                },
+                subscription_data=subscription_data,
                  metadata={
                     'session_id': str(session_id),
                     'therapist_id': str(therapist_id)
