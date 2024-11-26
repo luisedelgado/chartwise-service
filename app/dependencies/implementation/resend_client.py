@@ -40,11 +40,14 @@ class ResendClient(ResendBaseClass):
                     to_addresses: list[str],
                     subject: str,
                     html: str):
-        params: resend.Emails.SendParams = {
-            "from": from_address,
-            "to": to_addresses,
-            "subject": subject,
-            "html": html,
-        }
+        try:
+            params: resend.Emails.SendParams = {
+                "from": from_address,
+                "to": to_addresses,
+                "subject": subject,
+                "html": html,
+            }
 
-        resend.Emails.send(params)
+            resend.Emails.send(params)
+        except Exception as e:
+            raise Exception(e)
