@@ -31,6 +31,7 @@ from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 
 class PaymentSessionPayload(BaseModel):
     price_id: str
@@ -60,6 +61,7 @@ class PaymentProcessingRouter:
     def __init__(self, environment: str):
         self._environment = environment
         self._auth_manager = AuthManager()
+        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -667,9 +669,9 @@ class PaymentProcessingRouter:
                 raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Expectation failed")
 
         try:
-            self._handle_stripe_event(event=event,
-                                      stripe_client=stripe_client,
-                                      background_tasks=background_tasks)
+            await self._handle_stripe_event(event=event,
+                                            stripe_client=stripe_client,
+                                            background_tasks=background_tasks)
         except Exception as e:
             raise HTTPException(e)
 
@@ -685,10 +687,10 @@ class PaymentProcessingRouter:
     stripe_client – the Stripe client.
     background_tasks – object for scheduling concurrent tasks.
     """
-    def _handle_stripe_event(self,
-                             event,
-                             stripe_client: StripeBaseClass,
-                             background_tasks: BackgroundTasks):
+    async def _handle_stripe_event(self,
+                                   event,
+                                   stripe_client: StripeBaseClass,
+                                   background_tasks: BackgroundTasks):
         event_type: str = event["type"]
 
         if event_type == 'checkout.session.completed':
@@ -804,6 +806,18 @@ class PaymentProcessingRouter:
             # Free trial is ongoing, or subscription is active.
             if subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES:
                 try:
+                    therapist_query = supabase_client.select(fields="*",
+                                                             filters={
+                                                                 'therapist_id': therapist_id
+                                                             },
+                                                             table_name="subscription_status")
+                    therapist_query_data = therapist_query.dict()
+                    if 0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']):
+                        current_tier = therapist_query_data['data'][0]['current_tier']
+                        therapist_already_subscribed = (current_tier == "basic" or current_tier == "premium")
+                    else:
+                        therapist_already_subscribed = False
+
                     product_id = subscription['items']['data'][0]['price']['product']
                     product_data = stripe_client.retrieve_product(product_id)
                     stripe_product_name = product_data['metadata']['product_name']
@@ -812,6 +826,11 @@ class PaymentProcessingRouter:
                     supabase_client.upsert(payload=payload,
                                            table_name="subscription_status",
                                            on_conflict="therapist_id")
+
+                    if not therapist_already_subscribed and (tier_name == "basic" or tier_name == "premium"):
+                        # Therapist is entering a valid subscription status, let's send a welcome email
+                        await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
+                                                                              supabase_client=supabase_client)
                 except Exception as e:
                     log_metadata_from_stripe_subscription_event(event=event,
                                                                 status=FAILED_RESULT,
@@ -845,12 +864,15 @@ class PaymentProcessingRouter:
             # Update the default payment method for the subscription
             subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id)
             for subscription in subscriptions:
-                stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
-                                                                 payment_method_id=payment_method_id)
+                try:
+                    stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
+                                                                    payment_method_id=payment_method_id)
 
-                log_metadata_from_stripe_subscription_event(event=event,
-                                                            status=SUCCESS_RESULT,
-                                                            background_tasks=background_tasks)
+                    log_metadata_from_stripe_subscription_event(event=event,
+                                                                status=SUCCESS_RESULT,
+                                                                background_tasks=background_tasks)
+                except Exception as e:
+                    print(f"Failed to update a subscription's payment method. Failing silently with exception: {e}")
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
