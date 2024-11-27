@@ -779,12 +779,6 @@ class PaymentProcessingRouter:
                                                    status=FAILED_RESULT,
                                                    metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
-        elif event_type == 'customer.subscription.created':
-            # TODO: Trigger welcome or upsell emails when users upgrade.
-
-            log_metadata_from_stripe_subscription_event(event=event,
-                                                        status=SUCCESS_RESULT,
-                                                        background_tasks=background_tasks)
         elif event_type == 'customer.subscription.updated':
             # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
 
