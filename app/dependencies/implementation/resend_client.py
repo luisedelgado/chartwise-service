@@ -17,12 +17,26 @@ class ResendClient(ResendBaseClass):
                                             user_first_name: str,
                                             language_code: str,
                                             to_address: str):
-        html_content = self.welcome_template.render(user_first_name=user_first_name,
-                                                    use_spanish_template=False)
-        self._send_email(from_address="luis@chartwise.ai",
-                         to_addresses=["luis.e.delgado24@gmail.com"],
-                         subject="Welcome to ChartWise!",
-                         html=html_content)
+        try:
+            if language_code.startswith("es-"):
+                subject = "¡Te damos la bienvenida a ChartWise!"
+                from_address = "El equipo de ChartWise <hello@chartwise.ai>"
+                use_spanish_template = True
+            elif language_code.startswith("en-"):
+                subject = "Welcome to ChartWise!"
+                from_address = "ChartWise Team <hello@chartwise.ai>"
+                use_spanish_template = False
+            else:
+                raise Exception("Unrecognized language code")
+
+            html_content = self.welcome_template.render(user_first_name=user_first_name,
+                                                        use_spanish_template=use_spanish_template)
+            self._send_email(from_address=from_address,
+                             to_addresses=[to_address],
+                             subject=subject,
+                             html=html_content)
+        except Exception as e:
+            raise Exception(e)
 
     # Private
 
@@ -40,14 +54,11 @@ class ResendClient(ResendBaseClass):
                     to_addresses: list[str],
                     subject: str,
                     html: str):
-        try:
-            params: resend.Emails.SendParams = {
-                "from": from_address,
-                "to": to_addresses,
-                "subject": subject,
-                "html": html,
-            }
+        params: resend.Emails.SendParams = {
+            "from": from_address,
+            "to": to_addresses,
+            "subject": subject,
+            "html": html,
+        }
 
-            resend.Emails.send(params)
-        except Exception as e:
-            raise Exception(e)
+        resend.Emails.send(params)
