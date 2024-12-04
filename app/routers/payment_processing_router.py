@@ -96,11 +96,9 @@ class PaymentProcessingRouter:
                                          background_tasks: BackgroundTasks,
                                          store_access_token: Annotated[str | None, Header()],
                                          store_refresh_token: Annotated[str | None, Header()],
-                                         customer_id: str = None,
                                          authorization: Annotated[Union[str, None], Cookie()] = None,
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_subscriptions_internal(authorization=authorization,
-                                                               customer_id=customer_id,
                                                                background_tasks=background_tasks,
                                                                response=response,
                                                                session_id=session_id,
@@ -265,7 +263,6 @@ class PaymentProcessingRouter:
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
     response – the response model with which to create the final response.
-    customer_id – the customer_id to be used for fetching subscriptions.
     """
     async def _retrieve_subscriptions_internal(self,
                                                background_tasks: BackgroundTasks,
@@ -273,8 +270,7 @@ class PaymentProcessingRouter:
                                                store_access_token: str,
                                                store_refresh_token: str,
                                                session_id: str,
-                                               response: Response,
-                                               customer_id: str):
+                                               response: Response):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
@@ -304,6 +300,14 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            customer_id = customer_data.dict()['data'][0]['customer_id']
+
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
 
@@ -791,10 +795,21 @@ class PaymentProcessingRouter:
             except Exception as e:
                 therapist_id = None
 
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
+            current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
+
+            # Get trial information (either current free trial or their already finished one)
+            is_trialing = subscription['status'] == 'trialing'
+            trial_end_date = datetime.fromtimestamp(subscription['trial_end'])
+            formatted_trial_end_date = trial_end_date.strftime(DATE_FORMAT)
+
             payload = {
                 "last_updated": now_timestamp,
                 "customer_id": subscription.get('customer'),
                 "therapist_id": therapist_id,
+                "current_billing_period_end_date": current_billing_period_end_date,
+                "free_trial_active": is_trialing,
+                "free_trial_end_date": formatted_trial_end_date
             }
 
             # Free trial is ongoing, or subscription is active.

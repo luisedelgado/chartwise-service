@@ -90,6 +90,10 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "first_name": "Fake first name",
                 "gender": "female",
             }])
+        if table_name == "subscription_status":
+            return FakeSupabaseResult(data=[{
+                "customer_id": FAKE_USER_ID_TOKEN,
+            }])
         if table_name == "patients":
             return FakeSupabaseResult(data=[{
                 "last_session_date":"2000-01-01",

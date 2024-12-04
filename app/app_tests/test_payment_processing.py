@@ -122,13 +122,11 @@ class TestingHarnessPaymentProcessingRouter:
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "customer_id": FAKE_CUSTOMER_ID,
                                     })
         assert response.status_code == 401
 
     def test_retrieve_subscriptions_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -136,9 +134,6 @@ class TestingHarnessPaymentProcessingRouter:
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "customer_id": FAKE_CUSTOMER_ID,
                                     })
         assert response.status_code == 200
         response_json = response.json()
