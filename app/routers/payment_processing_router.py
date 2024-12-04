@@ -44,7 +44,6 @@ class UpdateSubscriptionPayload(BaseModel):
     new_price_id: str
 
 class UpdatePaymentMethodPayload(BaseModel):
-    customer_id: str
     success_callback_url: str
     cancel_callback_url: str
 
@@ -612,8 +611,16 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            customer_id = customer_data.dict()['data'][0]['customer_id']
+
             stripe_client = dependency_container.inject_stripe_client()
-            update_payment_method_url = stripe_client.generate_payment_method_update_session(customer_id=payload.customer_id,
+            update_payment_method_url = stripe_client.generate_payment_method_update_session(customer_id=customer_id,
                                                                                              success_url=payload.success_callback_url,
                                                                                              cancel_url=payload.cancel_callback_url)
         except Exception as e:

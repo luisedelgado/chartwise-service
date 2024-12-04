@@ -227,6 +227,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_generate_update_payment_method_session_url_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -236,7 +237,6 @@ class TestingHarnessPaymentProcessingRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "customer_id": FAKE_CUSTOMER_ID,
                                         "success_callback_url": "https://www.chartwise.ai/payment-success",
                                         "cancel_callback_url": "https://www.chartwise.ai",
                                     })
