@@ -175,13 +175,17 @@ class PaymentProcessingRouter:
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
-                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+                                           session_id: Annotated[Union[str, None], Cookie()] = None,
+                                           batch_size: int = 0,
+                                           pagination_last_item_retrieved: str = None):
             return await self._retrieve_payment_history_internal(background_tasks=background_tasks,
                                                                  authorization=authorization,
                                                                  store_access_token=store_access_token,
                                                                  store_refresh_token=store_refresh_token,
                                                                  session_id=session_id,
-                                                                 response=response)
+                                                                 response=response,
+                                                                 limit=batch_size,
+                                                                 starting_after=pagination_last_item_retrieved)
 
     """
     Creates a new checkout session.
@@ -664,7 +668,9 @@ class PaymentProcessingRouter:
                                                  store_access_token: str,
                                                  store_refresh_token: str,
                                                  session_id: str,
-                                                 response: Response):
+                                                 response: Response,
+                                                 limit: int,
+                                                 starting_after: str | None):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
@@ -703,7 +709,9 @@ class PaymentProcessingRouter:
             customer_id = customer_data.dict()['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
-            payment_intent_history = stripe_client.retrieve_payment_intent_history(customer_id)
+            payment_intent_history = stripe_client.retrieve_payment_intent_history(customer_id=customer_id,
+                                                                                   limit=limit,
+                                                                                   starting_after=starting_after)
 
             successful_payments = []
             for intent in payment_intent_history["data"]:

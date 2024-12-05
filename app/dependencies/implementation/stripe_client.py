@@ -68,8 +68,13 @@ class StripeClient(StripeBaseClass):
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
 
-    def retrieve_payment_intent_history(self, customer_id: str):
-        return stripe.PaymentIntent.list(customer=customer_id)
+    def retrieve_payment_intent_history(self,
+                                        customer_id: str,
+                                        limit: int,
+                                        starting_after: str | None):
+        return stripe.PaymentIntent.list(customer=customer_id,
+                                         limit=limit,
+                                         starting_after=starting_after)
 
     def delete_customer_subscription(self, subscription_id: str):
         return stripe.Subscription.modify(subscription_id,

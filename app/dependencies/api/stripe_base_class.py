@@ -50,10 +50,14 @@ class StripeBaseClass(ABC):
     Retrieves the payment history associated with the incoming customer id
 
     Arguments:
-    customer_id – the customer ID to be used for pulling a payment history
+    customer_id – the customer ID to be used for pulling a payment history.
+    limit – the limit for the batch size to be returned.
+    starting_after – the id of the last intent that was retrieved (for pagination purposes).
     """
     @abstractmethod
-    def retrieve_payment_intent_history(customer_id: str):
+    def retrieve_payment_intent_history(customer_id: str,
+                                        limit: int,
+                                        starting_after: str | None):
         pass
 
     """

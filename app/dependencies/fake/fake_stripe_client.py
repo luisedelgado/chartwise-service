@@ -51,7 +51,10 @@ class FakeStripeClient(StripeBaseClass):
     def retrieve_invoice(self, invoice_id: str):
         pass
 
-    def retrieve_payment_intent_history(self, customer_id: str):
+    def retrieve_payment_intent_history(self,
+                                        customer_id: str,
+                                        limit: int,
+                                        starting_after: str | None):
         return {
             "data": [{
                 "status": "succeeded",
