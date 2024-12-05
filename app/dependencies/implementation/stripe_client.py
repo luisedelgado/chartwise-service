@@ -1,7 +1,7 @@
 import os, stripe
-from babel.numbers import format_currency, get_currency_precision
 
 from ..api.stripe_base_class import StripeBaseClass
+from ...internal.utilities.general_utilities import format_currency_amount
 
 class StripeClient(StripeBaseClass):
 
@@ -63,10 +63,13 @@ class StripeClient(StripeBaseClass):
         return stripe.PaymentMethod.retrieve(payment_method_id)
 
     def retrieve_product(self, product_id):
-        return stripe.Product.retrieve(id=product_id)
+        return stripe.Product.retrieve(product_id)
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
+
+    def retrieve_payment_intent_history(self, customer_id: str):
+        return stripe.PaymentIntent.list(customer=customer_id)
 
     def delete_customer_subscription(self, subscription_id: str):
         return stripe.Subscription.modify(subscription_id,
@@ -92,8 +95,8 @@ class StripeClient(StripeBaseClass):
         for product in products['data']:
             price = stripe.Price.retrieve(product['default_price'])
             currency = price['currency']
-            formatted_price_amount = self._format_currency_amount(amount=float(price['unit_amount']),
-                                                                  currency_code=currency)
+            formatted_price_amount = format_currency_amount(amount=float(price['unit_amount']),
+                                                            currency_code=currency)
 
             product_prices[product['id']] = {
                 "name": product['name'],
@@ -118,11 +121,20 @@ class StripeClient(StripeBaseClass):
             })
         return catalog
 
+    def retrieve_price(self, price_id: str):
+        return stripe.Price.retrieve(price_id)
+
     def attach_subscription_metadata(self, subscription_id: str, metadata: dict):
         stripe.Subscription.modify(subscription_id, metadata=metadata)
 
+    def attach_payment_intent_metadata(self, payment_intent_id: str, metadata: dict):
+        stripe.PaymentIntent.modify(payment_intent_id, metadata=metadata)
+
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
-        res = stripe.Invoice.modify(invoice_id, metadata=metadata)
+        stripe.Invoice.modify(invoice_id, metadata=metadata)
+
+    def retrieve_invoice(self, invoice_id: str):
+        return stripe.Invoice.retrieve(invoice_id)
 
     def generate_payment_method_update_session(self,
                                                customer_id: str,
@@ -139,16 +151,3 @@ class StripeClient(StripeBaseClass):
             return update_payment_method_session['url']
         except Exception as e:
             raise Exception(e)
-
-    # Private
-
-    def _format_currency_amount(self, amount: float, currency_code: str) -> str:
-        # Get the currency precision (e.g., 2 for USD, 0 for JPY)
-        precision = get_currency_precision(currency_code.upper())
-
-        # Convert the amount to the main currency unit
-        divisor = 10 ** precision
-        amount = amount / divisor
-
-        # Format the currency
-        return format_currency(number=amount, currency=currency_code.upper(), locale='en_US')

@@ -1,5 +1,6 @@
 import os, uuid
 
+from babel.numbers import format_currency, get_currency_precision
 from fastapi import HTTPException, status
 from portkey_ai import createHeaders
 from pytz import timezone
@@ -113,6 +114,9 @@ def create_monitoring_proxy_headers(**kwargs):
                          config=monitoring_proxy_config,
                          metadata=metadata)
 
+"""
+Map a given Stripe product to a ChartWise tier.
+"""
 def map_stripe_product_name_to_chartwise_tier(stripe_plan: str) -> str:
     if stripe_plan == "premium_plan_yearly" or stripe_plan == "premium_plan_monthly":
         return "premium"
@@ -120,3 +124,17 @@ def map_stripe_product_name_to_chartwise_tier(stripe_plan: str) -> str:
         return "basic"
     else:
         raise Exception("Untracked Stripe product name")
+
+"""
+Formats a currency amount based on the incoming currency code.
+"""
+def format_currency_amount(amount: float, currency_code: str) -> str:
+    # Get the currency precision (e.g., 2 for USD, 0 for JPY)
+    precision = get_currency_precision(currency_code.upper())
+
+    # Convert the amount to the main currency unit
+    divisor = 10 ** precision
+    amount = amount / divisor
+
+    # Format the currency
+    return format_currency(number=amount, currency=currency_code.upper(), locale='en_US')

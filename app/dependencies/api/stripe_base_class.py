@@ -47,6 +47,36 @@ class StripeBaseClass(ABC):
         pass
 
     """
+    Retrieves the payment history associated with the incoming customer id
+
+    Arguments:
+    customer_id – the customer ID to be used for pulling a payment history
+    """
+    @abstractmethod
+    def retrieve_payment_intent_history(customer_id: str):
+        pass
+
+    """
+    Retrieves a price
+
+    Arguments:
+    price_id – the price ID to be retrieved.
+    """
+    @abstractmethod
+    def retrieve_price(self, price_id: str):
+        pass
+
+    """
+    Retrieves the invoice associated with the incoming id
+
+    Arguments:
+    invoice_id – the invoice ID to be fetched.
+    """
+    @abstractmethod
+    def retrieve_invoice(invoice_id: str):
+        pass
+
+    """
     Retrieves the product associated with the incoming id
 
     Arguments:
@@ -137,6 +167,17 @@ class StripeBaseClass(ABC):
     """
     @abstractmethod
     def attach_invoice_metadata(invoice_id: str, metadata: dict):
+        pass
+
+    """
+    Attach metadata to the payment intent associated with the incoming ID
+
+    Arguments:
+    payment_intent_id – the payment intent ID to be updated.
+    metadata the – metadata to be attached to the payment intent.
+    """
+    @abstractmethod
+    def attach_payment_intent_metadata(payment_intent_id: str, metadata: dict):
         pass
 
     """

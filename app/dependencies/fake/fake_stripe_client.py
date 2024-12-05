@@ -45,6 +45,15 @@ class FakeStripeClient(StripeBaseClass):
             }
         }
 
+    def retrieve_price(self, price_id: str):
+        pass
+
+    def retrieve_invoice(self, invoice_id: str):
+        pass
+
+    def retrieve_payment_intent_history(self, customer_id: str):
+        pass
+
     def retrieve_product(self, product_id):
         pass
 
@@ -140,6 +149,9 @@ class FakeStripeClient(StripeBaseClass):
         }
 
     def attach_subscription_metadata(self, subscription_id: str, metadata: dict):
+        pass
+
+    def attach_payment_intent_metadata(self, payment_intent_id: str, metadata: dict):
         pass
 
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):

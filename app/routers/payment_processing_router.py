@@ -53,6 +53,7 @@ class PaymentProcessingRouter:
     SUBSCRIPTIONS_ENDPOINT = "/v1/subscriptions"
     PAYMENT_EVENT_ENDPOINT = "/v1/payment-event"
     UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT = "/v1/payment-method-session"
+    PAYMENT_HISTORY_ENDPOINT = "/v1/payment-history"
     PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
@@ -167,6 +168,20 @@ class PaymentProcessingRouter:
                                                                              payload=payload,
                                                                              store_access_token=store_access_token,
                                                                              store_refresh_token=store_refresh_token)
+
+        @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def retrieve_payment_history(response: Response,
+                                           background_tasks: BackgroundTasks,
+                                           store_access_token: Annotated[str | None, Header()],
+                                           store_refresh_token: Annotated[str | None, Header()],
+                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._retrieve_payment_history_internal(background_tasks=background_tasks,
+                                                                 authorization=authorization,
+                                                                 store_access_token=store_access_token,
+                                                                 store_refresh_token=store_refresh_token,
+                                                                 session_id=session_id,
+                                                                 response=response)
 
     """
     Creates a new checkout session.
@@ -643,6 +658,96 @@ class PaymentProcessingRouter:
 
         return { "update_payment_method_url": update_payment_method_url }
 
+    async def _retrieve_payment_history_internal(self,
+                                                 background_tasks: BackgroundTasks,
+                                                 authorization: str,
+                                                 store_access_token: str,
+                                                 store_refresh_token: str,
+                                                 session_id: str,
+                                                 response: Response):
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        get_api_method = API_METHOD_GET
+        log_api_request(background_tasks=background_tasks,
+                        session_id=session_id,
+                        method=get_api_method,
+                        endpoint_name=self.PAYMENT_HISTORY_ENDPOINT)
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
+                      error_code=status_code,
+                      description=str(e),
+                      method=get_api_method)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            customer_id = customer_data.dict()['data'][0]['customer_id']
+
+            stripe_client = dependency_container.inject_stripe_client()
+            payment_intent_history = stripe_client.retrieve_payment_intent_history(customer_id)
+
+            successful_payments = []
+            for intent in payment_intent_history["data"]:
+                if intent["status"] != "succeeded":
+                    continue
+
+                # Format amount
+                formatted_price_amount = general_utilities.format_currency_amount(amount=float(intent["amount"]),
+                                                                                  currency_code=intent["currency"])
+
+                # Format date
+                date_from_unix_timestamp = datetime.fromtimestamp(intent["created"])
+                formatted_date = date_from_unix_timestamp.strftime(DATE_FORMAT)
+                successful_payments.append({
+                    "id": intent["id"],
+                    "amount": formatted_price_amount,
+                    "status": intent["status"],
+                    "description": intent["description"],
+                    "date": formatted_date,
+                    "currency": intent["currency"],
+                    "payment_method": intent.get("payment_method_types", []),
+                    "metadata": intent.get("metadata", {})
+                })
+
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            message = str(e)
+            log_error(background_tasks=background_tasks,
+                      session_id=session_id,
+                      endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
+                      error_code=status_code,
+                      description=message,
+                      method=get_api_method)
+            raise HTTPException(detail=message, status_code=status_code)
+
+        log_api_response(background_tasks=background_tasks,
+                         session_id=session_id,
+                         therapist_id=therapist_id,
+                         endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
+                         http_status_code=status.HTTP_200_OK,
+                         method=get_api_method)
+
+        return {"payments": successful_payments}
+
     """
     Webhook for handling Stripe events.
 
@@ -707,27 +812,35 @@ class PaymentProcessingRouter:
         if event_type == 'checkout.session.completed':
             checkout_session = event['data']['object']
             subscription_id = checkout_session.get('subscription')
-
             metadata = checkout_session.get('metadata', {})
             therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
             session_id = None if 'session_id' not in metadata else metadata['session_id']
 
-            # Update the subscription with metadata
             if subscription_id:
+                # Update the subscription with metadata
                 stripe_client.attach_subscription_metadata(subscription_id=subscription_id,
                                                            metadata=metadata)
 
-            try:
-                price_id = checkout_session["line_items"]["data"][0]["price"]["id"]
-            except:
-                price_id = None
+                # Attach product metadata to the underlying payment intent
+                try:
+                    subscription = stripe_client.retrieve_subscription(subscription_id)
+                    latest_invoice = stripe_client.retrieve_invoice(subscription.get("latest_invoice"))
+                    price_id = subscription["items"]["data"][0]["price"]["id"]
+
+                    # Retrieve product metadata associated with the price id.
+                    price = stripe_client.retrieve_price(price_id)
+                    product_id = price.get("product")
+                    product = stripe_client.retrieve_product(product_id)
+                    stripe_client.attach_payment_intent_metadata(payment_intent_id=latest_invoice.get("payment_intent"),
+                                                                 metadata=product.get("metadata", {}))
+                except Exception:
+                    pass
 
             log_payment_event(background_tasks=background_tasks,
                               event_name=event_type,
                               invoice_id=checkout_session.get('invoice'),
                               customer_id=checkout_session.get('customer'),
                               subscription_id=subscription_id,
-                              price_id=price_id,
                               therapist_id=therapist_id,
                               status=SUCCESS_RESULT,
                               session_id=session_id)
@@ -770,6 +883,26 @@ class PaymentProcessingRouter:
         elif event_type == 'invoice.payment_succeeded':
             # TODO: Send ChartWise receipt to user.
             invoice = event['data']['object']
+
+            try:
+                # Attach metadata containing the product ID to the payment intent
+                payment_intent_id = invoice.get("payment_intent")
+                assert payment_intent_id, "No ID found for associated payment intent."
+
+                subscription_id = invoice.get("subscription")
+                assert subscription_id, "No ID found for associated subscription."
+
+                subscription = stripe_client.retrieve_subscription(subscription_id)
+                price_id = subscription["items"]["data"][0]["price"]["id"]
+                price = stripe_client.retrieve_price(price_id)
+                product_id = price.get("product", {})
+                product = stripe_client.retrieve_product(product_id)
+                product_metadata = product.get("metadata", {})
+                stripe_client.attach_payment_intent_metadata(payment_intent_id=payment_intent_id,
+                                                             metadata=product_metadata)
+            except:
+                pass
+
             log_metadata_from_stripe_invoice_event(event=event,
                                                    status=SUCCESS_RESULT,
                                                    metadata=invoice.get("metadata", {}),
@@ -807,8 +940,8 @@ class PaymentProcessingRouter:
 
             # Get trial information (either current free trial or their already finished one)
             is_trialing = subscription['status'] == 'trialing'
-            trial_end_date = datetime.fromtimestamp(subscription['trial_end'])
-            formatted_trial_end_date = trial_end_date.strftime(DATE_FORMAT)
+            trial_end_date = None if not is_trialing else datetime.fromtimestamp(subscription['trial_end'])
+            formatted_trial_end_date = None if not is_trialing else trial_end_date.strftime(DATE_FORMAT)
 
             payload = {
                 "last_updated": now_timestamp,
@@ -887,8 +1020,9 @@ class PaymentProcessingRouter:
                     log_metadata_from_stripe_subscription_event(event=event,
                                                                 status=SUCCESS_RESULT,
                                                                 background_tasks=background_tasks)
-                except Exception as e:
-                    print(f"Failed to update a subscription's payment method. Failing silently with exception: {e}")
+                except Exception:
+                    # Failed to update a subscription's payment method. Failing silently.
+                    pass
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
