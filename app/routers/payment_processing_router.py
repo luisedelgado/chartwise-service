@@ -935,6 +935,7 @@ class PaymentProcessingRouter:
             except Exception as e:
                 therapist_id = None
 
+            billing_interval = subscription['items']['data'][0]['plan']['interval']
             current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
             current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
 
@@ -949,7 +950,8 @@ class PaymentProcessingRouter:
                 "therapist_id": therapist_id,
                 "current_billing_period_end_date": current_billing_period_end_date,
                 "free_trial_active": is_trialing,
-                "free_trial_end_date": formatted_trial_end_date
+                "free_trial_end_date": formatted_trial_end_date,
+                "recurrence": billing_interval
             }
 
             # Free trial is ongoing, or subscription is active.
