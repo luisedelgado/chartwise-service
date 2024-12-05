@@ -52,7 +52,16 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def retrieve_payment_intent_history(self, customer_id: str):
-        pass
+        return {
+            "data": [{
+                "status": "succeeded",
+                "id": "fakeID",
+                "amount": "52",
+                "currency": "usd",
+                "created": 1733011200,
+                "description": "fakePayment",
+            }]
+        }
 
     def retrieve_product(self, product_id):
         pass

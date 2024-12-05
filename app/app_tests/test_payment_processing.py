@@ -243,3 +243,23 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 200
         response_json = response.json()
         assert "update_payment_method_url" in response_json
+
+    def test_retrieve_payment_history_without_auth_token(self):
+        response = self.client.get(PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    })
+        assert response.status_code == 401
+
+    def test_retrieve_payment_history_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    })
+        assert response.status_code == 200
+        assert "payments" in response.json()
