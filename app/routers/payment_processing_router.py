@@ -177,7 +177,7 @@ class PaymentProcessingRouter:
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None,
                                            batch_size: int = 0,
-                                           pagination_last_item_retrieved: str = None):
+                                           pagination_last_item_id_retrieved: str = None):
             return await self._retrieve_payment_history_internal(background_tasks=background_tasks,
                                                                  authorization=authorization,
                                                                  store_access_token=store_access_token,
@@ -185,7 +185,7 @@ class PaymentProcessingRouter:
                                                                  session_id=session_id,
                                                                  response=response,
                                                                  limit=batch_size,
-                                                                 starting_after=pagination_last_item_retrieved)
+                                                                 starting_after=pagination_last_item_id_retrieved)
 
     """
     Creates a new checkout session.
@@ -662,6 +662,19 @@ class PaymentProcessingRouter:
 
         return { "update_payment_method_url": update_payment_method_url }
 
+    """
+    Retrieves the payment history for the current user (customer).
+
+    Arguments:
+    background_tasks – object for scheduling concurrent tasks.
+    authorization – the authorization cookie, if exists.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    session_id – the session_id cookie, if exists.
+    response – the response model with which to create the final response.
+    limit – the limit for the batch size to be returned.
+    starting_after – the id of the last payment that was retrieved (for pagination purposes).
+    """
     async def _retrieve_payment_history_internal(self,
                                                  background_tasks: BackgroundTasks,
                                                  authorization: str,
