@@ -82,7 +82,13 @@ class FakeStripeClient(StripeBaseClass):
         }
 
     def retrieve_subscription(self, subscription_id: str):
-        pass
+        return {
+            "items": {
+                "data": [{
+                    "id": FAKE_PAYMENT_METHOD_ID
+                }]
+            }
+        }
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return {
@@ -127,9 +133,9 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def update_customer_subscription_plan(self,
-                                     subscription_id: str,
-                                     product_id: str,
-                                     price_id: str):
+                                          subscription_id: str,
+                                          subscription_item_id: str,
+                                          price_id: str):
         pass
 
     def update_subscription_payment_method(self,

@@ -39,9 +39,7 @@ class PaymentSessionPayload(BaseModel):
     cancel_callback_url: str
 
 class UpdateSubscriptionPayload(BaseModel):
-    subscription_id: str
-    existing_product_id: str
-    new_price_id: str
+    new_price_tier_id: str
 
 class UpdatePaymentMethodPayload(BaseModel):
     success_callback_url: str
@@ -114,9 +112,7 @@ class PaymentProcessingRouter:
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_subscription_internal(authorization=authorization,
-                                                            subscription_id=payload.subscription_id,
-                                                            price_id=payload.new_price_id,
-                                                            product_id=payload.existing_product_id,
+                                                            price_id=payload.new_price_tier_id,
                                                             background_tasks=background_tasks,
                                                             response=response,
                                                             session_id=session_id,
@@ -128,11 +124,9 @@ class PaymentProcessingRouter:
                                       background_tasks: BackgroundTasks,
                                       store_access_token: Annotated[str | None, Header()],
                                       store_refresh_token: Annotated[str | None, Header()],
-                                      subscription_id: str = None,
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_subscription_internal(authorization=authorization,
-                                                            subscription_id=subscription_id,
                                                             background_tasks=background_tasks,
                                                             response=response,
                                                             session_id=session_id,
@@ -393,8 +387,7 @@ class PaymentProcessingRouter:
                                             store_access_token: str,
                                             store_refresh_token: str,
                                             session_id: str,
-                                            response: Response,
-                                            subscription_id: str):
+                                            response: Response):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
@@ -424,6 +417,14 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data.dict()['data'][0]['subscription_id']
+
             stripe_client = dependency_container.inject_stripe_client()
             stripe_client.delete_customer_subscription(subscription_id=subscription_id)
         except Exception as e:
@@ -456,8 +457,6 @@ class PaymentProcessingRouter:
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
     response – the response model with which to create the final response.
-    subscription_id – the subscription to be deleted.
-    product_id – the new product to be associated with the subscription.
     price_id – the new price_id to be associated with the subscription.
     """
     async def _update_subscription_internal(self,
@@ -467,8 +466,6 @@ class PaymentProcessingRouter:
                                             store_refresh_token: str,
                                             session_id: str,
                                             response: Response,
-                                            subscription_id: str,
-                                            product_id: str,
                                             price_id: str):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
@@ -499,10 +496,20 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': therapist_id,
+                                                   },
+                                                   table_name="subscription_status")
+            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data.dict()['data'][0]['subscription_id']
+
             stripe_client = dependency_container.inject_stripe_client()
+            subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
+            subscription_item_id = subscription_data["items"]["data"][0]["id"]
             stripe_client.update_customer_subscription_plan(subscription_id=subscription_id,
-                                                       product_id=product_id,
-                                                       price_id=price_id)
+                                                            subscription_item_id=subscription_item_id,
+                                                            price_id=price_id)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
@@ -972,11 +979,12 @@ class PaymentProcessingRouter:
                 "current_billing_period_end_date": current_billing_period_end_date,
                 "free_trial_active": is_trialing,
                 "free_trial_end_date": formatted_trial_end_date,
-                "recurrence": billing_interval
+                "recurrence": billing_interval,
+                "subscription_id": subscription.get('id')
             }
 
             # Free trial is ongoing, or subscription is active.
-            if subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES:
+            if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
                 try:
                     therapist_query = supabase_client.select(fields="*",
                                                              filters={

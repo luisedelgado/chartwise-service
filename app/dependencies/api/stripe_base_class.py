@@ -135,13 +135,13 @@ class StripeBaseClass(ABC):
 
     Arguments:
     subscription_id – the subscription ID to be updated.
-    product_id – the current product assigned to the subscription.
+    subscription_item_id – the unique identifier for a specific item within a subscription.
     price_id – the new price ID to be assigned to the subscription.
     """
     @abstractmethod
     def update_customer_subscription_plan(subscription_id: str,
-                                     product_id: str,
-                                     price_id: str):
+                                          subscription_item_id: str,
+                                          price_id: str):
         pass
 
     """

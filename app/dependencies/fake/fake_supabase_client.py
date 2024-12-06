@@ -93,6 +93,10 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if table_name == "subscription_status":
             return FakeSupabaseResult(data=[{
                 "customer_id": FAKE_USER_ID_TOKEN,
+                "subscription_id": self.FAKE_SESSION_NOTES_ID,
+                "data": [{
+                    "suscription_id": self.FAKE_SESSION_NOTES_ID
+                }]
             }])
         if table_name == "patients":
             return FakeSupabaseResult(data=[{

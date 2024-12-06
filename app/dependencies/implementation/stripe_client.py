@@ -82,10 +82,10 @@ class StripeClient(StripeBaseClass):
 
     def update_customer_subscription_plan(self,
                                           subscription_id: str,
-                                          product_id: str,
+                                          subscription_item_id: str,
                                           price_id: str):
-        return stripe.Subscription.modify(subscription_id,
-                                          items=[{"id": product_id, "price": price_id}])
+        stripe.Subscription.modify(subscription_id,
+                                   items=[{"id": subscription_item_id, "price": price_id}])
 
     def update_subscription_payment_method(self,
                                            subscription_id: str,

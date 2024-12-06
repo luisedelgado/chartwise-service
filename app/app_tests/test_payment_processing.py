@@ -144,13 +144,11 @@ class TestingHarnessPaymentProcessingRouter:
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
                                     })
         assert response.status_code == 401
 
     def test_delete_subscription_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -158,9 +156,6 @@ class TestingHarnessPaymentProcessingRouter:
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
                                     })
         assert response.status_code == 200
 
@@ -171,13 +166,13 @@ class TestingHarnessPaymentProcessingRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
-                                        "existing_product_id": FAKE_PRODUCT_ID,
-                                        "new_price_id": FAKE_PRICE_ID
+                                        "product_id": FAKE_PRODUCT_ID,
+                                        "new_price_tier_id": FAKE_PRICE_ID
                                     })
         assert response.status_code == 401
 
     def test_update_subscription_plan_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -187,9 +182,8 @@ class TestingHarnessPaymentProcessingRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "subscription_id": FAKE_SUBSCRIPTION_ID,
-                                        "existing_product_id": FAKE_PRODUCT_ID,
-                                        "new_price_id": FAKE_PRICE_ID
+                                        "product_id": FAKE_PRODUCT_ID,
+                                        "new_price_tier_id": FAKE_PRICE_ID
                                     })
         assert response.status_code == 200
 
