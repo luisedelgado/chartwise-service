@@ -972,58 +972,50 @@ class PaymentProcessingRouter:
             trial_end_date = None if not is_trialing else datetime.fromtimestamp(subscription['trial_end'])
             formatted_trial_end_date = None if not is_trialing else trial_end_date.strftime(DATE_FORMAT)
 
-            payload = {
-                "last_updated": now_timestamp,
-                "customer_id": subscription.get('customer'),
-                "therapist_id": therapist_id,
-                "current_billing_period_end_date": current_billing_period_end_date,
-                "free_trial_active": is_trialing,
-                "free_trial_end_date": formatted_trial_end_date,
-                "recurrence": billing_interval,
-                "subscription_id": subscription.get('id')
-            }
+            try:
+                therapist_query = supabase_client.select(fields="*",
+                                                        filters={ 'therapist_id': therapist_id },
+                                                        table_name="subscription_status")
+                therapist_query_data = therapist_query.dict()
+                therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
 
-            # Free trial is ongoing, or subscription is active.
-            if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
-                try:
-                    therapist_query = supabase_client.select(fields="*",
-                                                             filters={
-                                                                 'therapist_id': therapist_id
-                                                             },
-                                                             table_name="subscription_status")
-                    therapist_query_data = therapist_query.dict()
-                    if 0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']):
-                        current_tier = therapist_query_data['data'][0]['current_tier']
-                        therapist_already_subscribed = (current_tier == "basic" or current_tier == "premium")
-                    else:
-                        therapist_already_subscribed = False
+                product_id = subscription['items']['data'][0]['price']['product']
+                product_data = stripe_client.retrieve_product(product_id)
+                stripe_product_name = product_data['metadata']['product_name']
+                tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
 
-                    product_id = subscription['items']['data'][0]['price']['product']
-                    product_data = stripe_client.retrieve_product(product_id)
-                    stripe_product_name = product_data['metadata']['product_name']
-                    tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
-                    payload['current_tier'] = tier_name
-                    supabase_client.upsert(payload=payload,
-                                           table_name="subscription_status",
-                                           on_conflict="therapist_id")
+                payload = {
+                    "last_updated": now_timestamp,
+                    "customer_id": subscription.get('customer'),
+                    "therapist_id": therapist_id,
+                    "current_billing_period_end_date": current_billing_period_end_date,
+                    "free_trial_active": is_trialing,
+                    "free_trial_end_date": formatted_trial_end_date,
+                    "recurrence": billing_interval,
+                    "subscription_id": subscription.get('id'),
+                    "current_tier": tier_name
+                }
 
-                    if not therapist_already_subscribed and (tier_name == "basic" or tier_name == "premium"):
-                        # Therapist is entering a valid subscription status, let's send a welcome email
-                        await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
-                                                                              supabase_client=supabase_client)
-                except Exception as e:
-                    log_metadata_from_stripe_subscription_event(event=event,
-                                                                status=FAILED_RESULT,
-                                                                message=str(e),
-                                                                background_tasks=background_tasks)
-                    return
-            else:
-                # Subscription is not active. Restrict functionality
-                payload['current_tier'] = "not_active"
+                # Free trial is ongoing, or subscription is active.
+                if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
+                    payload['is_active'] = True
+                else:
+                    # Subscription is not active. Restrict functionality
+                    payload['is_active'] = False
+
                 supabase_client.upsert(payload=payload,
-                                    table_name="subscription_status",
-                                    on_conflict="therapist_id")
+                                       table_name="subscription_status",
+                                       on_conflict="therapist_id")
 
+                if not therapist_already_subscribed:
+                    # Therapist is entering a valid subscription status, let's send a welcome email
+                    await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
+                                                                          supabase_client=supabase_client)
+            except Exception as e:
+                log_metadata_from_stripe_subscription_event(event=event,
+                                                            status=FAILED_RESULT,
+                                                            message=str(e),
+                                                            background_tasks=background_tasks)
         elif event_type == 'customer.subscription.paused':
             # TODO: Send an automated email confirming the pause.
             log_metadata_from_stripe_subscription_event(event=event,
