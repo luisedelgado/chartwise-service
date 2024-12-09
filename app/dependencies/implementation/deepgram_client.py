@@ -25,7 +25,7 @@ class DeepgramClient(DeepgramBaseClass):
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
     async def diarize_audio(self, file_full_path: str) -> str:
-        if not use_monitoring_proxy():
+        if use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
