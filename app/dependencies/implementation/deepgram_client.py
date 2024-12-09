@@ -17,11 +17,15 @@ class DeepgramClient(DeepgramBaseClass):
 
     CONNECT_TIMEOUT = 300
     DIARIZATION_READ_TIMEOUT = 900
+    DIARIZATION_WRITE_TIMEOUT = 300
+    DIARIZATION_POOL_TIMEOUT = 300
     TRANSCRIPTION_READ_TIMEOUT = 120
+    TRANSCRIPTION_WRITE_TIMEOUT = 40
+    TRANSCRIPTION_POOL_TIMEOUT = 100
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
     async def diarize_audio(self, file_full_path: str) -> str:
-        if use_monitoring_proxy():
+        if not use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()
                 assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url param"
@@ -83,7 +87,10 @@ class DeepgramClient(DeepgramBaseClass):
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                               options,
-                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT, read=self.DIARIZATION_READ_TIMEOUT))
+                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT,
+                                                                                              read=self.DIARIZATION_READ_TIMEOUT,
+                                                                                              write=self.DIARIZATION_WRITE_TIMEOUT,
+                                                                                              pool=self.DIARIZATION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 utterances = json_response.get('results').get('utterances')
@@ -155,7 +162,10 @@ class DeepgramClient(DeepgramBaseClass):
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
                                                                               options,
-                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT, read=self.TRANSCRIPTION_READ_TIMEOUT))
+                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT,
+                                                                                              read=self.TRANSCRIPTION_READ_TIMEOUT,
+                                                                                              write=self.TRANSCRIPTION_WRITE_TIMEOUT,
+                                                                                              pool=self.TRANSCRIPTION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
