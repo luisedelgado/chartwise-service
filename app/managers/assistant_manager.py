@@ -164,7 +164,7 @@ class AssistantManager:
             therapist_id = report_query_data['therapist_id']
             current_session_text = report_query_data['notes_text']
             current_session_date = report_query_data['session_date']
-            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_session_date,
+            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_session_date,
                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
             session_date_changed = 'session_date' in filtered_body and filtered_body['session_date'] != current_session_date_formatted
@@ -230,7 +230,7 @@ class AssistantManager:
             session_date = delete_result_data['session_date']
 
             # Delete vector embeddings
-            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_date,
+            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_date,
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             background_tasks.add_task(self._delete_vectors_and_generate_insights,
                                       therapist_id,
@@ -773,7 +773,7 @@ class AssistantManager:
                 assert session_date is not None, "Received an invalid session date"
                 patient_last_session_date = session_date
             else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=patient_last_session_date,
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                 patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
                                                                                        first_date_format=datetime_handler.DATE_FORMAT,

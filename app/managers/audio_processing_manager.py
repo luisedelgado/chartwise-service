@@ -332,7 +332,7 @@ class AudioProcessingManager(MediaProcessingManager):
             if patient_last_session_date is None:
                 patient_last_session_date = session_date
             else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=patient_last_session_date,
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=patient_last_session_date,
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                 patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
                                                                                         first_date_format=datetime_handler.DATE_FORMAT,

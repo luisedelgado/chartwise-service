@@ -100,7 +100,7 @@ class ImageProcessingManager(MediaProcessingManager):
             patient_id = session_report_data['patient_id']
             session_notes_id = session_report_data['id']
             session_date = (None if 'session_date' not in session_report_data
-                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
+                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_data['session_date'],
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD))
 
             # If the textraction has already been stored in Supabase we can return early.
@@ -113,7 +113,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                                                   session_id=session_id,
                                                                                   session_notes_text=textraction)
 
-            formatted_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=session_report_data['session_date'],
+            formatted_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_data['session_date'],
                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             filtered_body = {
                 "id": session_notes_id,

@@ -54,9 +54,9 @@ def retrieve_most_recent_date(first_date: str,
 Returns a formatted version of the incoming date, for internal use.
 The valid format is considered to be %m-%d-%Y
 """
-def convert_to_date_format_mm_dd_yyyy(session_date: str, incoming_date_format: str) -> str:
+def convert_to_date_format_mm_dd_yyyy(incoming_date: str, incoming_date_format: str) -> str:
     try:
-        session_date_as_date = datetime.strptime(session_date, incoming_date_format)
+        session_date_as_date = datetime.strptime(incoming_date, incoming_date_format)
         return datetime.strftime(session_date_as_date, DATE_FORMAT)
     except:
         raise Exception("Something went wrong while formatting the incoming date.")

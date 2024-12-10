@@ -1,5 +1,6 @@
 import uuid
 
+from datetime import datetime
 from enum import Enum
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import (APIRouter,
@@ -75,9 +76,13 @@ class SecurityRouter:
         async def signin(credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                          background_tasks: BackgroundTasks,
                          response: Response,
-                         session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+                         store_access_token: Annotated[str | None, Header()] = None,
+                         store_refresh_token: Annotated[str | None, Header()] = None,
+                         session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signin_internal(credentials_data=credentials_data,
                                                background_tasks=background_tasks,
+                                               store_access_token=store_access_token,
+                                               store_refresh_token=store_refresh_token,
                                                response=response,
                                                session_id=session_id)
 
@@ -160,13 +165,20 @@ class SecurityRouter:
     credentials_data – the credentials data to be used for authentication.
     background_tasks – object for scheduling concurrent tasks.
     response – the response object to be used for creating the final response.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
     session_id – the id of the current user session.
     """
     async def _signin_internal(self,
                                credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                background_tasks: BackgroundTasks,
                                response: Response,
-                               session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+                               store_access_token: Annotated[str | None, Header()],
+                               store_refresh_token: Annotated[str | None, Header()],
+                               session_id: Annotated[Union[str, None], Cookie()]):
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
         try:
             if session_id is None:
                 session_id = uuid.uuid1()
@@ -189,6 +201,22 @@ class SecurityRouter:
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
+
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': user_id,
+                                                   },
+                                                   table_name="subscription_status")
+            customer_data_dict = customer_data.dict()
+            is_subscription_active = customer_data_dict['data'][0]['is_active']
+
+            # Determine if free trial is still active
+            free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+            free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+            is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+
             await dependency_container.inject_openai_client().clear_chat_history()
             log_api_response(background_tasks=background_tasks,
                              session_id=session_id,
@@ -196,7 +224,14 @@ class SecurityRouter:
                              http_status_code=status.HTTP_200_OK,
                              therapist_id=user_id,
                              method=post_api_method)
-            return auth_token
+
+            signin_data = {
+                "is_free_trial_active": is_free_trial_active,
+                "is_subscription_active": is_subscription_active
+            }
+            signin_data["token"] = auth_token.model_dump()
+
+            return signin_data
         except Exception as e:
             status_code = status.HTTP_401_UNAUTHORIZED
             description = str(e)
@@ -326,6 +361,8 @@ class SecurityRouter:
             # Because of this, the client may not have an auth cookie yet, so if it isn't present, we'll attempt authentication.
             credentials_data = OAuth2PasswordRequestForm(username=body.email, password=password)
             authorization_data = await self._signin_internal(credentials_data=credentials_data,
+                                                             store_access_token=store_access_token,
+                                                             store_refresh_token=store_refresh_token,
                                                              background_tasks=background_tasks,
                                                              response=response,
                                                              session_id=session_id)

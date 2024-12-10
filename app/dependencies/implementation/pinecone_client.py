@@ -326,7 +326,7 @@ class PineconeClient(PineconeBaseClass):
         # the ones that may have already been fetched.
         if session_dates_override is not None:
             for current_override in session_dates_override:
-                formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_override.session_date,
+                formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
                                                                                                      incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                 override_date_is_already_contained = any(
                     current_date.startswith(f"{formatted_session_date_override}")
@@ -338,7 +338,7 @@ class PineconeClient(PineconeBaseClass):
 
                 # Add vectors associated with the session date override since they haven't been retrieved yet.
                 session_date_override_vector_ids = []
-                list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(session_date=current_override.session_date,
+                list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
                                                                                            incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                 for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
                     session_date_override_vector_ids = list_ids
