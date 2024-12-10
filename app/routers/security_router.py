@@ -211,6 +211,7 @@ class SecurityRouter:
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
             is_subscription_active = customer_data_dict['data'][0]['is_active']
+            tier = customer_data_dict['data'][0]['current_tier']
 
             # Determine if free trial is still active
             free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
@@ -227,7 +228,8 @@ class SecurityRouter:
 
             signin_data = {
                 "is_free_trial_active": is_free_trial_active,
-                "is_subscription_active": is_subscription_active
+                "is_subscription_active": is_subscription_active,
+                "tier": tier
             }
             signin_data["token"] = auth_token.model_dump()
 

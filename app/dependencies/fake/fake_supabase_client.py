@@ -95,6 +95,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "customer_id": FAKE_USER_ID_TOKEN,
                 "subscription_id": self.FAKE_SESSION_NOTES_ID,
                 "free_trial_end_date": "2025-01-12",
+                "current_tier": "basic",
                 "is_active": True,
                 "data": [{
                     "suscription_id": self.FAKE_SESSION_NOTES_ID
