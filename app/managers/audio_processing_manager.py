@@ -49,18 +49,16 @@ class AudioProcessingManager(MediaProcessingManager):
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            # TODO: Uncomment when compressing works
-            # reduced_sample_rate_output_filepath: str = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
-            #                                                                                          input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
-            # reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
-            #                                                              output_filepath=reduced_sample_rate_output_filepath)
-            # if reduction_succeeded:
-            #     files_to_clean.append(reduced_sample_rate_output_filepath)
-            #     audio_filepath = reduced_sample_rate_output_filepath
-            # else:
-            #     audio_filepath = audio_copy_result.file_copy_full_path
+            reduced_sample_rate_output_filepath: str = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
+                                                                                                     input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
+            reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
+                                                                         output_filepath=reduced_sample_rate_output_filepath)
+            if reduction_succeeded:
+                files_to_clean.append(reduced_sample_rate_output_filepath)
+                audio_filepath = reduced_sample_rate_output_filepath
+            else:
+                audio_filepath = audio_copy_result.file_copy_full_path
 
-            audio_filepath = audio_copy_result.file_copy_full_path
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
 
             session_report_creation_response = supabase_client.insert(table_name="session_reports",
