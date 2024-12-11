@@ -77,6 +77,7 @@ class TestingHarnessSecurityRouter:
 
     def test_refresh_token_success(self):
         self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
@@ -89,7 +90,12 @@ class TestingHarnessSecurityRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     })
         assert response.status_code == 200
-        assert "authorization" in response.json()
+
+        response_json = response.json()
+        assert "token" in response_json
+        assert "is_free_trial_active" in response_json
+        assert "tier" in response_json
+        assert "is_subscription_active" in response_json
 
     def test_add_therapist_with_missing_store_tokens(self):
         response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,

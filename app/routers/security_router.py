@@ -92,7 +92,7 @@ class SecurityRouter:
                                      store_access_token: Annotated[str | None, Header()] = None,
                                      store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
-                                     session_id: Annotated[Union[str, None], Cookie()] = None) -> security.Token:
+                                     session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._refresh_auth_token_internal(authorization=authorization,
                                                            response=response,
                                                            background_tasks=background_tasks,
@@ -262,7 +262,7 @@ class SecurityRouter:
                                            response: Response,
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
-                                           session_id: Annotated[Union[str, None], Cookie()]) -> security.Token:
+                                           session_id: Annotated[Union[str, None], Cookie()]):
         put_api_method = API_METHOD_PUT
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
@@ -279,12 +279,35 @@ class SecurityRouter:
             user_id = supabase_client.get_current_user_id()
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
 
+            # Fetch customer data
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': user_id,
+                                                   },
+                                                   table_name="subscription_status")
+            customer_data_dict = customer_data.dict()
+            is_subscription_active = customer_data_dict['data'][0]['is_active']
+            tier = customer_data_dict['data'][0]['current_tier']
+
+            # Determine if free trial is still active
+            free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+            free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+            is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+
             log_api_response(background_tasks=background_tasks,
                              session_id=session_id,
                              therapist_id=user_id,
                              method=put_api_method,
                              endpoint_name=self.SESSION_REFRESH_ENDPOINT)
-            return token
+
+            token_refresh_data = {
+                "is_free_trial_active": is_free_trial_active,
+                "is_subscription_active": is_subscription_active,
+                "tier": tier
+            }
+            token_refresh_data["token"] = token.model_dump()
+
+            return token_refresh_data
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
