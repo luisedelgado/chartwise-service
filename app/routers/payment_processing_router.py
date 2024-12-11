@@ -426,7 +426,8 @@ class PaymentProcessingRouter:
             subscription_id = customer_data.dict()['data'][0]['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
-            stripe_client.delete_customer_subscription(subscription_id=subscription_id)
+            stripe_client.delete_customer_subscription(subscription_id=subscription_id,
+                                                       at_billing_period_end=True)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)

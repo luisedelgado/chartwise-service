@@ -76,9 +76,9 @@ class StripeClient(StripeBaseClass):
                                          limit=limit,
                                          starting_after=starting_after)
 
-    def delete_customer_subscription(self, subscription_id: str):
+    def delete_customer_subscription(self, subscription_id: str, at_billing_period_end: bool):
         return stripe.Subscription.modify(subscription_id,
-                                          cancel_at_period_end=True)
+                                          cancel_at_period_end=at_billing_period_end)
 
     def update_customer_subscription_plan(self,
                                           subscription_id: str,

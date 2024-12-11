@@ -634,6 +634,21 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            # Cancel Stripe subscription
+            customer_data = supabase_client.select(fields="*",
+                                                   filters={
+                                                       'therapist_id': user_id,
+                                                   },
+                                                   table_name="subscription_status")
+            customer_data_dict = customer_data.dict()
+            if len(customer_data_dict['data'] > 0):
+                subscription_id = customer_data.dict()['data'][0]['subscription_id']
+
+                stripe_client = dependency_container.inject_stripe_client()
+                stripe_client.delete_customer_subscription(subscription_id=subscription_id,
+                                                        at_billing_period_end=False)
+
+            # Delete data from all patients
             patients_response = supabase_client.select(fields="id",
                                                        filters={
                                                            "therapist_id": user_id
@@ -642,6 +657,10 @@ class SecurityRouter:
             patients_response_data = patients_response.dict()
             assert 'data' in patients_response_data, "Failed to retrieve therapist data for patients"
             patient_ids = patients_response_data['data']
+
+            # Delete vectors associated with therapist's patients
+            self._assistant_manager.delete_all_sessions_for_therapist(user_id=user_id,
+                                                                      patient_ids=patient_ids)
 
             # Delete therapist and all their patients (through cascading)
             delete_response = supabase_client.delete(table_name="therapists",
@@ -652,10 +671,6 @@ class SecurityRouter:
 
             # Remove the active session and clear Auth data from client storage.
             supabase_client.sign_out()
-
-            # Delete vectors associated with therapist's patients
-            self._assistant_manager.delete_all_sessions_for_therapist(user_id=user_id,
-                                                                      patient_ids=patient_ids)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
