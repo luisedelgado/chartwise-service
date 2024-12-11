@@ -641,7 +641,7 @@ class SecurityRouter:
                                                    },
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
-            if len(customer_data_dict['data'] > 0):
+            if len(customer_data_dict['data']) > 0:
                 subscription_id = customer_data.dict()['data'][0]['subscription_id']
 
                 stripe_client = dependency_container.inject_stripe_client()
