@@ -142,6 +142,16 @@ class StripeBaseClass(ABC):
         pass
 
     """
+    Attempts to resume a subscription that was previously scheduled for cancellation.
+
+    Arguments:
+    subscription_id – the subscription ID to be resumed.
+    """
+    @abstractmethod
+    def resume_cancelled_subscription(subscription_id: str):
+        pass
+
+    """
     Updates the subscription associated with the incoming id
 
     Arguments:

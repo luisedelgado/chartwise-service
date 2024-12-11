@@ -1,5 +1,6 @@
 import os
 
+from enum import Enum
 from datetime import datetime
 from fastapi import (APIRouter,
                      BackgroundTasks,
@@ -10,7 +11,7 @@ from fastapi import (APIRouter,
                      Response,
                      status)
 from pydantic import BaseModel
-from typing import Annotated, Union
+from typing import Annotated, Optional, Union
 
 from ..internal.utilities import datetime_handler
 from ..internal import security
@@ -38,8 +39,14 @@ class PaymentSessionPayload(BaseModel):
     success_callback_url: str
     cancel_callback_url: str
 
+class UpdateSubscriptionBehavior(Enum):
+    UNSPECIFIED = "unspecified"
+    CHANGE_TIER = "tier_change"
+    UNDO_CANCELLATION = "undo_cancellation"
+
 class UpdateSubscriptionPayload(BaseModel):
-    new_price_tier_id: str
+    behavior: UpdateSubscriptionBehavior
+    new_price_tier_id: Optional[str] = None
 
 class UpdatePaymentMethodPayload(BaseModel):
     success_callback_url: str
@@ -113,6 +120,7 @@ class PaymentProcessingRouter:
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_subscription_internal(authorization=authorization,
                                                             price_id=payload.new_price_tier_id,
+                                                            behavior=payload.behavior,
                                                             background_tasks=background_tasks,
                                                             response=response,
                                                             session_id=session_id,
@@ -457,6 +465,7 @@ class PaymentProcessingRouter:
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
     response – the response model with which to create the final response.
+    behavior – the update behavior to be invoked.
     price_id – the new price_id to be associated with the subscription.
     """
     async def _update_subscription_internal(self,
@@ -466,6 +475,7 @@ class PaymentProcessingRouter:
                                             store_refresh_token: str,
                                             session_id: str,
                                             response: Response,
+                                            behavior: UpdateSubscriptionBehavior,
                                             price_id: str):
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
@@ -496,6 +506,8 @@ class PaymentProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
+            assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
+
             customer_data = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': therapist_id,
@@ -506,10 +518,20 @@ class PaymentProcessingRouter:
 
             stripe_client = dependency_container.inject_stripe_client()
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
-            subscription_item_id = subscription_data["items"]["data"][0]["id"]
-            stripe_client.update_customer_subscription_plan(subscription_id=subscription_id,
-                                                            subscription_item_id=subscription_item_id,
-                                                            price_id=price_id)
+
+            if behavior == UpdateSubscriptionBehavior.CHANGE_TIER:
+                assert len(price_id or '') > 0, "Missing the new tier price ID parameter."
+                subscription_item_id = subscription_data["items"]["data"][0]["id"]
+                stripe_client.update_customer_subscription_plan(subscription_id=subscription_id,
+                                                                subscription_item_id=subscription_item_id,
+                                                                price_id=price_id)
+            elif behavior == UpdateSubscriptionBehavior.UNDO_CANCELLATION:
+                # Check if subscription is already in a canceled state
+                assert subscription_data['status'] != 'canceled', "The incoming subscription is already in a canceled state and cannot be resumed."
+                stripe_client.resume_cancelled_subscription(subscription_id=subscription_id)
+            else:
+                raise Exception("Untracked update behavior")
+
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
@@ -519,7 +541,7 @@ class PaymentProcessingRouter:
                       error_code=status_code,
                       description=message,
                       method=update_api_method)
-            raise HTTPException(detail="Subscription not found", status_code=status_code)
+            raise HTTPException(detail=message, status_code=status_code)
 
         log_api_response(background_tasks=background_tasks,
                          session_id=session_id,
@@ -527,7 +549,6 @@ class PaymentProcessingRouter:
                          endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                          http_status_code=status.HTTP_200_OK,
                          method=update_api_method)
-
         return {}
 
     async def _retrieve_product_catalog_internal(self,

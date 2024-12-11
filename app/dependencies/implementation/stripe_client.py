@@ -83,6 +83,10 @@ class StripeClient(StripeBaseClass):
     def delete_customer_subscription_immediately(self, subscription_id: str):
         return stripe.Subscription.cancel(subscription_id)
 
+    def resume_cancelled_subscription(self, subscription_id: str):
+        return stripe.Subscription.modify(subscription_id,
+                                          cancel_at_period_end=False)
+
     def update_customer_subscription_plan(self,
                                           subscription_id: str,
                                           subscription_item_id: str,

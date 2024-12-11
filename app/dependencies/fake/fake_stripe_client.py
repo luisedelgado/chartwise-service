@@ -135,6 +135,9 @@ class FakeStripeClient(StripeBaseClass):
     def delete_customer_subscription_immediately(self, subscription_id: str):
         pass
 
+    def resume_cancelled_subscription(self, subscription_id: str):
+        pass
+
     def update_customer_subscription_plan(self,
                                           subscription_id: str,
                                           subscription_item_id: str,

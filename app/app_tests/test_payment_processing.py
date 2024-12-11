@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
 from ..internal.dependency_container import dependency_container
 from ..managers.auth_manager import AuthManager
-from ..routers.payment_processing_router import PaymentProcessingRouter
+from ..routers.payment_processing_router import UpdateSubscriptionBehavior, PaymentProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator
 
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
@@ -166,10 +166,24 @@ class TestingHarnessPaymentProcessingRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "product_id": FAKE_PRODUCT_ID,
-                                        "new_price_tier_id": FAKE_PRICE_ID
+                                        "new_price_tier_id": FAKE_PRICE_ID,
+                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
                                     })
         assert response.status_code == 401
+
+    def test_update_subscription_upgrade_without_new_tier_price_id(self):
+        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },
+                                    json={
+                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
+                                    })
+        assert response.status_code == 417
 
     def test_update_subscription_plan_success(self):
         self.fake_supabase_user_client.select_returns_data = True
@@ -182,7 +196,7 @@ class TestingHarnessPaymentProcessingRouter:
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
                                     },
                                     json={
-                                        "product_id": FAKE_PRODUCT_ID,
+                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value,
                                         "new_price_tier_id": FAKE_PRICE_ID
                                     })
         assert response.status_code == 200
