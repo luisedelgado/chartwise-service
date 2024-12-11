@@ -210,13 +210,19 @@ class SecurityRouter:
                                                    },
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
-            is_subscription_active = customer_data_dict['data'][0]['is_active']
-            tier = customer_data_dict['data'][0]['current_tier']
 
-            # Determine if free trial is still active
-            free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
-            free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-            is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+            if len(customer_data_dict['data']) == 0:
+                is_subscription_active = False
+                is_free_trial_active = False
+                tier = None
+            else:
+                is_subscription_active = customer_data_dict['data'][0]['is_active']
+                tier = customer_data_dict['data'][0]['current_tier']
+
+                # Determine if free trial is still active
+                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+                free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+                is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
 
             await dependency_container.inject_openai_client().clear_chat_history()
             log_api_response(background_tasks=background_tasks,
@@ -286,13 +292,19 @@ class SecurityRouter:
                                                    },
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
-            is_subscription_active = customer_data_dict['data'][0]['is_active']
-            tier = customer_data_dict['data'][0]['current_tier']
 
-            # Determine if free trial is still active
-            free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
-            free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-            is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+            if len(customer_data_dict['data']) == 0:
+                is_subscription_active = False
+                is_free_trial_active = False
+                tier = None
+            else:
+                is_subscription_active = customer_data_dict['data'][0]['is_active']
+                tier = customer_data_dict['data'][0]['current_tier']
+
+                # Determine if free trial is still active
+                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+                free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+                is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
 
             log_api_response(background_tasks=background_tasks,
                              session_id=session_id,
