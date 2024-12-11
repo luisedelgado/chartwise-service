@@ -121,14 +121,24 @@ class StripeBaseClass(ABC):
         pass
 
     """
-    Deletes the subscription associated with the incoming id
+    Cancels the subscription associated with the incoming id while
+    leaving it active until the current billing period end.
 
     Arguments:
     subscription_id – the subscription ID to be deleted.
-    at_billing_period_end – a flag representing whether the subscription should remain active until the current billing period end.
     """
     @abstractmethod
-    def delete_customer_subscription(subscription_id: str, at_billing_period_end: bool):
+    def cancel_customer_subscription(subscription_id: str):
+        pass
+
+    """
+    Cancels and deletes a subscription immediately.
+
+    Arguments:
+    subscription_id – the subscription ID to be deleted.
+    """
+    @abstractmethod
+    def delete_customer_subscription_immediately(subscription_id: str):
         pass
 
     """

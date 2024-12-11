@@ -129,7 +129,10 @@ class FakeStripeClient(StripeBaseClass):
             ]
         }
 
-    def delete_customer_subscription(self, subscription_id: str, at_billing_period_end: bool):
+    def cancel_customer_subscription(self, subscription_id: str):
+        pass
+
+    def delete_customer_subscription_immediately(self, subscription_id: str):
         pass
 
     def update_customer_subscription_plan(self,

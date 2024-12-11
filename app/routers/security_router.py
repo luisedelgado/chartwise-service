@@ -645,8 +645,7 @@ class SecurityRouter:
                 subscription_id = customer_data.dict()['data'][0]['subscription_id']
 
                 stripe_client = dependency_container.inject_stripe_client()
-                stripe_client.delete_customer_subscription(subscription_id=subscription_id,
-                                                        at_billing_period_end=False)
+                stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
 
             # Delete data from all patients
             patients_response = supabase_client.select(fields="id",
