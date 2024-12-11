@@ -211,6 +211,7 @@ class SecurityRouter:
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
 
+            # Check if this user is already a customer, and has subscription history
             if len(customer_data_dict['data']) == 0:
                 is_subscription_active = False
                 is_free_trial_active = False
@@ -293,6 +294,7 @@ class SecurityRouter:
                                                    table_name="subscription_status")
             customer_data_dict = customer_data.dict()
 
+            # Check if this user is already a customer, and has subscription history
             if len(customer_data_dict['data']) == 0:
                 is_subscription_active = False
                 is_free_trial_active = False
