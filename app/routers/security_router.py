@@ -27,6 +27,7 @@ from ..internal.logging import (API_METHOD_DELETE,
                                 log_error)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 
@@ -179,7 +180,13 @@ class SecurityRouter:
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
+        post_api_method = API_METHOD_POST
+
         try:
+            user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
+                                                                 password=credentials_data.password)
+            assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
+
             if session_id is None:
                 session_id = uuid.uuid1()
                 response.set_cookie(key="session_id",
@@ -189,15 +196,10 @@ class SecurityRouter:
                                     secure=True,
                                     samesite="none")
 
-            post_api_method = API_METHOD_POST
             log_api_request(background_tasks=background_tasks,
                             session_id=session_id,
                             method=post_api_method,
                             endpoint_name=self.SIGNIN_ENDPOINT)
-
-            user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
-                                                                 password=credentials_data.password)
-            assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
@@ -216,6 +218,7 @@ class SecurityRouter:
                 is_subscription_active = False
                 is_free_trial_active = False
                 tier = None
+                reached_tier_usage_limit = None
             else:
                 is_subscription_active = customer_data_dict['data'][0]['is_active']
                 tier = customer_data_dict['data'][0]['current_tier']
@@ -224,6 +227,9 @@ class SecurityRouter:
                 free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
                 free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
                 is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+                reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
+                                                                                 therapist_id=user_id,
+                                                                                 supabase_client=supabase_client)
 
             await dependency_container.inject_openai_client().clear_chat_history()
             log_api_response(background_tasks=background_tasks,
@@ -234,9 +240,12 @@ class SecurityRouter:
                              method=post_api_method)
 
             signin_data = {
-                "is_free_trial_active": is_free_trial_active,
-                "is_subscription_active": is_subscription_active,
-                "tier": tier
+                "subscription_status" : {
+                    "is_free_trial_active": is_free_trial_active,
+                    "is_subscription_active": is_subscription_active,
+                    "tier": tier,
+                    "reached_tier_usage_limit": reached_tier_usage_limit
+                }
             }
             signin_data["token"] = auth_token.model_dump()
 
@@ -299,6 +308,7 @@ class SecurityRouter:
                 is_subscription_active = False
                 is_free_trial_active = False
                 tier = None
+                reached_tier_usage_limit = None
             else:
                 is_subscription_active = customer_data_dict['data'][0]['is_active']
                 tier = customer_data_dict['data'][0]['current_tier']
@@ -307,6 +317,9 @@ class SecurityRouter:
                 free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
                 free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
                 is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+                reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
+                                                                                 therapist_id=user_id,
+                                                                                 supabase_client=supabase_client)
 
             log_api_response(background_tasks=background_tasks,
                              session_id=session_id,
@@ -315,9 +328,12 @@ class SecurityRouter:
                              endpoint_name=self.SESSION_REFRESH_ENDPOINT)
 
             token_refresh_data = {
-                "is_free_trial_active": is_free_trial_active,
-                "is_subscription_active": is_subscription_active,
-                "tier": tier
+                "subscription_status" : {
+                    "is_free_trial_active": is_free_trial_active,
+                    "is_subscription_active": is_subscription_active,
+                    "tier": tier,
+                    "reached_tier_usage_limit": reached_tier_usage_limit
+                }
             }
             token_refresh_data["token"] = token.model_dump()
 

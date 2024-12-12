@@ -187,6 +187,29 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
         raise Exception("Untracked table name")
 
+    def select_within_range(self,
+                            fields: str,
+                            filters: dict,
+                            table_name: str,
+                            range_start: str,
+                            range_end: str,
+                            column_marker: str,
+                            limit: int = None):
+        if not self.select_returns_data:
+            return FakeSupabaseResult(data=[])
+
+        if table_name == "session_reports":
+            return FakeSupabaseResult(data=[{
+                "id": self.FAKE_SESSION_NOTES_ID,
+                "notes_mini_summary":"My fake mini summary",
+                "notes_text": "My fake notes text" if not self.session_notes_return_empty_notes_text else "",
+                "session_date": "2023-01-01",
+                "patient_id": self.FAKE_PATIENT_ID,
+                "therapist_id": self.FAKE_THERAPIST_ID,
+                "template": "free_form" if not self.session_notes_return_soap_notes else "soap",
+            }])
+        raise Exception("Untracked table name")
+
     def select_either_or_from_column(self,
                                      fields: str,
                                      possible_values: list,

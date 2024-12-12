@@ -61,6 +61,28 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Fetches data from a Supabase table based on the incoming params, fitting the provided range.
+
+    Arguments:
+    fields – the fields to be retrieved from a table.
+    table_name – the table to be queried.
+    filters – the set of filters to be applied to the table.
+    range_start – the starting point for the selection range.
+    range_end – the finish point for the selection range.
+    column_marker – the column to be used for calculating the range.
+    limit – the optional cap for count of results to be returned.
+    """
+    @abstractmethod
+    def select_within_range(fields: str,
+                            table_name: str,
+                            filters: dict,
+                            range_start: str,
+                            range_end: str,
+                            column_marker: str,
+                            limit: int = None):
+        pass
+
+    """
     Fetches data from a Supabase table based on the incoming params.
 
     Arguments:

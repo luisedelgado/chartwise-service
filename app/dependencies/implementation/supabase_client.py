@@ -78,6 +78,27 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def select_within_range(self,
+                            fields: str,
+                            filters: dict,
+                            table_name: str,
+                            range_start: str,
+                            range_end: str,
+                            column_marker: str,
+                            limit: int = None):
+        try:
+            select_operation = self.client.table(table_name).select(fields).gt(column_marker, range_start).lt(column_marker, range_end)
+
+            for key, value in filters.items():
+                select_operation = select_operation.eq(f"{key}", f"{value}")
+
+            if limit is not None:
+                select_operation.limit(limit)
+
+            return select_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
     def delete(self,
                filters: dict,
                table_name: str):

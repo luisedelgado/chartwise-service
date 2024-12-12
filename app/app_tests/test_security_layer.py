@@ -93,9 +93,7 @@ class TestingHarnessSecurityRouter:
 
         response_json = response.json()
         assert "token" in response_json
-        assert "is_free_trial_active" in response_json
-        assert "tier" in response_json
-        assert "is_subscription_active" in response_json
+        assert "subscription_status" in response_json
 
     def test_add_therapist_with_missing_store_tokens(self):
         response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
