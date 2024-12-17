@@ -1,9 +1,12 @@
 from abc import ABC
+from datetime import datetime
 from fastapi import BackgroundTasks
 
 from .assistant_manager import AssistantManager
 from .auth_manager import AuthManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
+from ..internal.schemas import SessionUploadStatus
+from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class MediaProcessingManager(ABC):
 
@@ -41,3 +44,16 @@ class MediaProcessingManager(ABC):
                                                },
                                                session_id=session_id,
                                                supabase_client=supabase_client)
+
+        if session_upload_status == SessionUploadStatus.SUCCESS.value:
+            # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
+            today = datetime.now().date()
+            today_formatted = today.strftime(DATE_TIME_FORMAT)
+            supabase_client.update(table_name="pending_audio_jobs",
+                                   filters={
+                                       "session_report_id": session_notes_id
+                                   },
+                                   payload={
+                                       "last_attempt_at_processing_date": today_formatted,
+                                       "successful_processing_date": today_formatted,
+                                   })

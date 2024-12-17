@@ -40,7 +40,34 @@ class AudioProcessingManager(MediaProcessingManager):
                                     diarize: bool = False,
                                     audio_file: UploadFile = File(...)) -> str:
         try:
-            session_report_id = None
+            # Upload initial attributes of session report, so client can mark it as 'processing'.
+            source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
+            session_report_creation_response = supabase_client.insert(table_name="session_reports",
+                                                                      payload={
+                                                                          "template": template.value,
+                                                                          "session_date": session_date,
+                                                                          "therapist_id": therapist_id,
+                                                                          "patient_id": patient_id,
+                                                                          "source": source,
+                                                                          "processing_status": SessionUploadStatus.PROCESSING.value
+                                                                      })
+            assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
+            session_report_id = session_report_creation_response.dict()['data'][0]['id']
+
+            # Upload raw file to Supabase storage until it's successfully processed to avoid any data loss.
+            storage_file_path = "".join([therapist_id,
+                                         "-",
+                                         session_report_id])
+            supabase_client.upload_audio_file(file_path=storage_file_path,
+                                              file_content=audio_file)
+
+            supabase_client.insert(table_name="pending_audio_jobs",
+                                   payload={
+                                       "session_report_id": session_report_id,
+                                       "storage_file_path": storage_file_path
+                                   })
+
+            # Reduce sample rate if possible, to attempt file processing on lighter version. 
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
             files_to_clean = audio_copy_result.file_copies
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
@@ -55,23 +82,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                          output_filepath=reduced_sample_rate_output_filepath)
             if reduction_succeeded:
                 files_to_clean.append(reduced_sample_rate_output_filepath)
-                audio_filepath = reduced_sample_rate_output_filepath
+                audio_copy_filepath = reduced_sample_rate_output_filepath
             else:
-                audio_filepath = audio_copy_result.file_copy_full_path
-
-            source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
-
-            session_report_creation_response = supabase_client.insert(table_name="session_reports",
-                                                                      payload={
-                                                                          "template": template.value,
-                                                                          "session_date": session_date,
-                                                                          "therapist_id": therapist_id,
-                                                                          "patient_id": patient_id,
-                                                                          "source": source,
-                                                                          "processing_status": SessionUploadStatus.PROCESSING.value
-                                                                      })
-            assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
-            session_report_id = session_report_creation_response.dict()['data'][0]['id']
+                audio_copy_filepath = audio_copy_result.file_copy_full_path
 
             if diarize:
                 background_tasks.add_task(self._diarize_audio_and_save,
@@ -85,7 +98,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                           patient_id,
                                           language_code,
                                           session_id,
-                                          audio_filepath,
+                                          audio_copy_filepath,
                                           template,
                                           files_to_clean)
             else:
@@ -99,7 +112,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                           therapist_id,
                                           language_code,
                                           session_id,
-                                          audio_filepath,
+                                          audio_copy_filepath,
                                           template,
                                           files_to_clean)
 

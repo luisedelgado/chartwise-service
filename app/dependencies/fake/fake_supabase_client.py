@@ -1,3 +1,4 @@
+from fastapi import File
 from pydantic import BaseModel
 
 from .fake_supabase_session import FakeSession
@@ -29,6 +30,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
+
+    def upload_audio_file(self,
+                          file_path: str,
+                          file_content: File):
+        pass
 
     def insert(self,
                payload: dict,

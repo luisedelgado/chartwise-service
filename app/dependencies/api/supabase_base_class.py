@@ -1,6 +1,19 @@
 from abc import ABC, abstractmethod
+from fastapi import File
 
 class SupabaseBaseClass(ABC):
+
+    """
+    Uploads an audio file to Supabase for further processing.
+
+    Arguments:
+    file_path – the file path to be used for the file.
+    file_content – the file to be uploaded.
+    """
+    @abstractmethod
+    def upload_audio_file(file_path: str,
+                          file_content: File):
+        pass
 
     """
     Inserts payload into a Supabase table.

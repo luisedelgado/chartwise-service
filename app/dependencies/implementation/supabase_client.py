@@ -1,11 +1,23 @@
+from fastapi import File
 from supabase import Client
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
 class SupabaseClient(SupabaseBaseClass):
 
+    SESSION_AUDIO_FILES_PROCESSING_PENDING = "session-audio-files-processing-pending"
+
     def __init__(self, client: Client):
         self.client = client
+
+    def upload_audio_file(self,
+                          file_path: str,
+                          file_content: File):
+        try:
+            self.client.storage.from_(self.SESSION_AUDIO_FILES_PROCESSING_PENDING).upload(path=file_path,
+                                                                                          file=file_content)
+        except Exception as e:
+            raise Exception(e)
 
     def insert(self,
                payload: dict,
