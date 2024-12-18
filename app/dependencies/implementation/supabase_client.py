@@ -11,11 +11,11 @@ class SupabaseClient(SupabaseBaseClass):
         self.client = client
 
     def upload_audio_file(self,
-                          file_path: str,
-                          file_content: File):
+                          storage_file_path: str,
+                          local_filename: str):
         try:
-            self.client.storage.from_(self.SESSION_AUDIO_FILES_PROCESSING_PENDING).upload(path=file_path,
-                                                                                          file=file_content)
+            self.client.storage.from_(self.SESSION_AUDIO_FILES_PROCESSING_PENDING).upload(path=storage_file_path,
+                                                                                          file=local_filename)
         except Exception as e:
             raise Exception(e)
 

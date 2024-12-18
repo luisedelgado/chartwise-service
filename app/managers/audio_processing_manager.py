@@ -39,6 +39,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                     environment: str,
                                     diarize: bool = False,
                                     audio_file: UploadFile = File(...)) -> str:
+        session_report_id = None
         try:
             # Upload initial attributes of session report, so client can mark it as 'processing'.
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
@@ -54,19 +55,6 @@ class AudioProcessingManager(MediaProcessingManager):
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
 
-            # Upload raw file to Supabase storage until it's successfully processed to avoid any data loss.
-            storage_file_path = "".join([therapist_id,
-                                         "-",
-                                         session_report_id])
-            supabase_client.upload_audio_file(file_path=storage_file_path,
-                                              file_content=audio_file)
-
-            supabase_client.insert(table_name="pending_audio_jobs",
-                                   payload={
-                                       "session_report_id": session_report_id,
-                                       "storage_file_path": storage_file_path
-                                   })
-
             # Reduce sample rate if possible, to attempt file processing on lighter version. 
             audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
             files_to_clean = audio_copy_result.file_copies
@@ -76,8 +64,8 @@ class AudioProcessingManager(MediaProcessingManager):
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            reduced_sample_rate_output_filepath: str = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
-                                                                                                     input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
+            reduced_sample_rate_output_filepath = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
+                                                                                                input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
             reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
                                                                          output_filepath=reduced_sample_rate_output_filepath)
             if reduction_succeeded:
@@ -86,6 +74,23 @@ class AudioProcessingManager(MediaProcessingManager):
             else:
                 audio_copy_filepath = audio_copy_result.file_copy_full_path
 
+            # Upload raw file to Supabase storage until it's successfully processed to avoid any data loss.
+            file_extension = os.path.splitext(audio_file.filename)[1].lower()
+            storage_file_path = "".join([therapist_id,
+                                         "-",
+                                         session_report_id,
+                                         file_extension])
+            supabase_client.upload_audio_file(storage_file_path=storage_file_path,
+                                              local_filename=audio_copy_filepath)
+
+            supabase_client.insert(table_name="pending_audio_jobs",
+                                   payload={
+                                       "session_report_id": session_report_id,
+                                       "therapist_id": therapist_id,
+                                       "storage_file_path": storage_file_path
+                                   })
+
+            # Attempt immediate processing.
             if diarize:
                 background_tasks.add_task(self._diarize_audio_and_save,
                                           session_report_id,

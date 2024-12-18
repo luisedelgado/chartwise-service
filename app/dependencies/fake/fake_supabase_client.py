@@ -32,8 +32,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
     session_upload_processing_status: str = None
 
     def upload_audio_file(self,
-                          file_path: str,
-                          file_content: File):
+                          storage_file_path: str,
+                          local_filename: str):
         pass
 
     def insert(self,
