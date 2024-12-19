@@ -67,6 +67,13 @@ def _move_file_between_buckets(source_bucket: str,
         print(f"Error during file move: {e}")
 
 def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
+    """
+    This function deletes completed audio jobs in a batch.
+    It iterates through each job in the batch and deletes the respective file from the storage bucket.
+
+    Arguments:
+        batch: A list of dictionaries, where each dictionary represents a completed audio job.
+    """
     supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for job in batch:
         job_dict = job.dict()
@@ -91,6 +98,14 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
         print(delete_operation)
 
 async def _process_pending_audio_job(job: dict) -> bool:
+    """
+    This function processes a single pending audio job.
+    It downloads the audio file, processes it, and then updates the respective session entry.
+    If processing is successful, the job is also marked as processed in the database.
+
+    Arguments:
+        job: A dictionary representing a pending audio job.
+    """
     local_temp_file = None
     try:
         supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
@@ -130,7 +145,7 @@ async def _process_pending_audio_job(job: dict) -> bool:
                                                     audio_file=local_temp_file,
                                                     diarize=is_diarization_job)
         return True
-    except Exception as e:
+    except Exception:
         return False
     finally:
         # Ensure the local temporary file is deleted
@@ -138,6 +153,14 @@ async def _process_pending_audio_job(job: dict) -> bool:
             os.remove(local_temp_file)
 
 async def _attempt_processing_job_batch(batch: list[dict]):
+    """
+    This function processes a batch of pending audio jobs.
+    It iterates through each job in the batch and attempts to process it.
+    If processing is successful, the job is marked as processed in the database.
+
+    Arguments:
+        batch: A list of dictionaries, where each dictionary represents a pending audio job.
+    """
     supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for job in batch:
         job_dict = job.dict()
@@ -154,6 +177,9 @@ async def _attempt_processing_job_batch(batch: list[dict]):
                                        file_path=job_dict["storage_filepath"])
 
 def purge_completed_audio_jobs():
+    """
+    This function purges completed audio jobs in batches of `BATCH_LIMIT` items.
+    """
     supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     offset = 0
 
@@ -178,6 +204,11 @@ def purge_completed_audio_jobs():
         _delete_completed_audio_jobs_in_batch(batch)
 
 async def process_pending_audio_jobs():
+    """
+    This function processes pending audio jobs in batches of `BATCH_LIMIT` items.
+    It fetches the first batch of items, processes them, and then fetches the next batch.
+    This process continues until there are no more items to process.
+    """
     supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     
     offset = 0
