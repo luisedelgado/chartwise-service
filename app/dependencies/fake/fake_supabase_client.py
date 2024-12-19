@@ -1,4 +1,3 @@
-from fastapi import File
 from pydantic import BaseModel
 
 from .fake_supabase_session import FakeSession

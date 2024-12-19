@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from fastapi import File
 
 class SupabaseBaseClass(ABC):
 
