@@ -1,4 +1,4 @@
-import os
+import os, time
 import uuid
 
 from datetime import datetime, timedelta
@@ -13,6 +13,7 @@ from app.managers.auth_manager import AuthManager
 
 BATCH_LIMIT = 10
 RETENTION_POLICY_DAYS = 7
+RETRY_ATTEMPTS = 3
 DIARIZATION_KEY = "diarization"
 TRANSCRIPTION_KEY = "transcription"
 SESSION_REPORTS_TABLE_NAME = "session_reports"
@@ -107,50 +108,58 @@ async def _process_pending_audio_job(job: dict) -> bool:
         job: A dictionary representing a pending audio job.
     """
     local_temp_file = None
-    try:
-        supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-        storage_filepath = job["storage_filepath"]
-        file_extension = os.path.splitext(storage_filepath)[1].lower()
-        local_temp_file = "".join(["temp_file", file_extension])
-        response = supabase_client.storage.from_(PENDING_AUDIO_JOBS_TABLE_NAME).download(storage_filepath)
+    for attempt_index in range(0, RETRY_ATTEMPTS):
+        try:
+            supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+            storage_filepath = job["storage_filepath"]
+            file_extension = os.path.splitext(storage_filepath)[1].lower()
+            local_temp_file = "".join(["temp_file", file_extension])
+            response = supabase_client.storage.from_(PENDING_AUDIO_JOBS_TABLE_NAME).download(storage_filepath)
 
-        assert response.status_code == 200, f"Failed to download file: {response.json()}"
+            assert response.status_code == 200, f"Failed to download file: {response.json()}"
 
-        # Save the file locally
-        with open(local_temp_file, "wb") as temp_file:
-            temp_file.write(response.content)
+            # Save the file locally
+            with open(local_temp_file, "wb") as temp_file:
+                temp_file.write(response.content)
 
-        therapist_query = supabase_client.from_(THERAPISTS_TABLE_NAME).select("*").eq(f"id", f"{job["therapist_id"]}").execute()
-        assert (0 != len((therapist_query).data)), "Something went wrong when querying the therapist data."
+            therapist_query = supabase_client.from_(THERAPISTS_TABLE_NAME).select("*").eq(f"id", f"{job["therapist_id"]}").execute()
+            assert (0 != len((therapist_query).data)), "Something went wrong when querying the therapist data."
 
-        therapist_query_dict = therapist_query.model_dump()['data'][0]
-        language_code = therapist_query_dict["language_preference"]
+            therapist_query_dict = therapist_query.model_dump()['data'][0]
+            language_code = therapist_query_dict["language_preference"]
 
-        session_report_query = supabase_client.from_(SESSION_REPORTS_TABLE_NAME).select("*").eq(f"id", f"{job["session_report_id"]}").execute()
-        assert (0 != len((session_report_query).data)), "Something went wrong when querying the session report."
+            session_report_query = supabase_client.from_(SESSION_REPORTS_TABLE_NAME).select("*").eq(f"id", f"{job["session_report_id"]}").execute()
+            assert (0 != len((session_report_query).data)), "Something went wrong when querying the session report."
 
-        session_report_query_dict = session_report_query.model_dump()['data'][0]
-        is_diarization_job = job["job_type"] == DIARIZATION_KEY
-        audio_processing_manager.transcribe_audio_file(background_tasks=BackgroundTasks(),
-                                                    auth_manager=auth_manager,
-                                                    assistant_manager=assistant_manager,
-                                                    supabase_client=supabase_client,
-                                                    template=session_report_query_dict["template"],
-                                                    therapist_id=job["therapist_id"],
-                                                    session_id=uuid.uuid4(),
-                                                    language_code=language_code,
-                                                    patient_id=session_report_query_dict["patient_id"],
-                                                    session_date=session_report_query_dict["session_date"],
-                                                    environment=job["environment"],
-                                                    audio_file=local_temp_file,
-                                                    diarize=is_diarization_job)
-        return True
-    except Exception:
-        return False
-    finally:
-        # Ensure the local temporary file is deleted
-        if os.path.exists(local_temp_file):
-            os.remove(local_temp_file)
+            session_report_query_dict = session_report_query.model_dump()['data'][0]
+            is_diarization_job = job["job_type"] == DIARIZATION_KEY
+            audio_processing_manager.transcribe_audio_file(background_tasks=BackgroundTasks(),
+                                                        auth_manager=auth_manager,
+                                                        assistant_manager=assistant_manager,
+                                                        supabase_client=supabase_client,
+                                                        template=session_report_query_dict["template"],
+                                                        therapist_id=job["therapist_id"],
+                                                        session_id=uuid.uuid4(),
+                                                        language_code=language_code,
+                                                        patient_id=session_report_query_dict["patient_id"],
+                                                        session_date=session_report_query_dict["session_date"],
+                                                        environment=job["environment"],
+                                                        audio_file=local_temp_file,
+                                                        diarize=is_diarization_job)
+            return True
+        except Exception:
+            pass
+        finally:
+            # Ensure the local temporary file is deleted
+            if os.path.exists(local_temp_file):
+                os.remove(local_temp_file)
+
+        # If the job failed, retry the job with an exponential backoff
+        backoff_in_minutes = min(5 ** attempt_index, 15)
+        time.sleep(backoff_in_minutes / 60)
+
+    # If the job failed after all retries, return False
+    return False
 
 async def _attempt_processing_job_batch(batch: list[dict]):
     """
