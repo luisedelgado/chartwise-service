@@ -16,6 +16,7 @@ RETENTION_POLICY_DAYS = 7
 RETRY_ATTEMPTS = 3
 DIARIZATION_KEY = "diarization"
 TRANSCRIPTION_KEY = "transcription"
+ENVIRONMENT_KEY = "environment"
 SESSION_REPORTS_TABLE_NAME = "session_reports"
 THERAPISTS_TABLE_NAME = "therapists"
 PENDING_AUDIO_JOBS_TABLE_NAME = "pending_audio_jobs"
@@ -192,7 +193,10 @@ def purge_completed_audio_jobs():
     supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     offset = 0
 
-    # Initial fetch
+    # Clean up job entries in Supabase table from non-prod environments, since those don't write to Supabase storage.
+    supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).delete().not_.is_(ENVIRONMENT_KEY, "prod").execute()
+
+    # Initial fetch for pending prod jobs
     response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).not_.is_(SUCCESSFUL_PROCESSING_DATE_KEY, "null").order(SUCCESSFUL_PROCESSING_DATE_KEY, desc=False).execute()
     batch = response.data
 
