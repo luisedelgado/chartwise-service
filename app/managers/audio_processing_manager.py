@@ -1,8 +1,9 @@
 import os
 
-from fastapi import (BackgroundTasks, File, UploadFile)
+from fastapi import (BackgroundTasks, UploadFile)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
+from typing import Union
 
 from .media_processing_manager import MediaProcessingManager
 from ..data_processing.diarization_cleaner import DiarizationCleaner
@@ -37,10 +38,43 @@ class AudioProcessingManager(MediaProcessingManager):
                                     patient_id: str,
                                     session_date: str,
                                     environment: str,
-                                    diarize: bool = False,
-                                    audio_file: UploadFile = File(...)) -> str:
+                                    audio_file: Union[UploadFile, str],
+                                    diarize: bool = False,) -> str:
         session_report_id = None
         try:
+            if isinstance(audio_file, str):
+                # `audio_file` is already expected to be the filepath `str` for the file copy.
+                files_to_clean = [audio_file]
+                file_extension = os.path.splitext(audio_file)[1].lower()
+                audio_copy_filepath = audio_file
+            else:
+                # Make local copy for further processing.
+                audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
+                files_to_clean = audio_copy_result.file_copies
+
+                if not os.path.exists(audio_copy_result.file_copy_full_path):
+                    await file_copiers.clean_up_files(files_to_clean)
+                    raise Exception("Something went wrong while processing the audio file.")
+
+                file_extension = os.path.splitext(audio_file.filename)[1].lower()
+
+                # Reduce sample rate if possible, to attempt file processing on lighter version.
+                reduced_sample_rate_output_filepath = get_output_filepath_for_sample_rate_reduction(
+                    input_file_directory=audio_copy_result.file_copy_directory,
+                    input_filename_without_ext=audio_copy_result.file_copy_name_without_ext
+                )
+
+                reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(
+                    input_filepath=audio_copy_result.file_copy_full_path,
+                    output_filepath=reduced_sample_rate_output_filepath
+                )
+
+                audio_copy_filepath = (
+                    reduced_sample_rate_output_filepath if reduction_succeeded else audio_copy_result.file_copy_full_path
+                )
+
+                files_to_clean.append(reduced_sample_rate_output_filepath)
+
             # Upload initial attributes of session report, so client can mark it as 'processing'.
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
             session_report_creation_response = supabase_client.insert(table_name="session_reports",
@@ -55,39 +89,21 @@ class AudioProcessingManager(MediaProcessingManager):
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
 
-            # Reduce sample rate if possible, to attempt file processing on lighter version. 
-            audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
-            files_to_clean = audio_copy_result.file_copies
-            source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
-
-            if not os.path.exists(audio_copy_result.file_copy_full_path):
-                await file_copiers.clean_up_files(files_to_clean)
-                raise Exception("Something went wrong while processing the image.")
-
-            reduced_sample_rate_output_filepath = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
-                                                                                                input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
-            reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
-                                                                         output_filepath=reduced_sample_rate_output_filepath)
-            if reduction_succeeded:
-                files_to_clean.append(reduced_sample_rate_output_filepath)
-                audio_copy_filepath = reduced_sample_rate_output_filepath
-            else:
-                audio_copy_filepath = audio_copy_result.file_copy_full_path
-
             # Upload raw file to Supabase storage until it's successfully processed to avoid any data loss.
-            file_extension = os.path.splitext(audio_file.filename)[1].lower()
-            storage_file_path = "".join([therapist_id,
+            storage_filepath = "".join([therapist_id,
                                          "-",
                                          session_report_id,
                                          file_extension])
-            supabase_client.upload_audio_file(storage_file_path=storage_file_path,
+            supabase_client.upload_audio_file(storage_filepath=storage_filepath,
                                               local_filename=audio_copy_filepath)
 
             supabase_client.insert(table_name="pending_audio_jobs",
                                    payload={
                                        "session_report_id": session_report_id,
                                        "therapist_id": therapist_id,
-                                       "storage_file_path": storage_file_path
+                                       "storage_filepath": storage_filepath,
+                                       "environment": environment,
+                                       "job_type": "transcription" if not diarize else "diarization",
                                    })
 
             # Attempt immediate processing.

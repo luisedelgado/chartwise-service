@@ -1,21 +1,27 @@
-from fastapi import File
+import os
+
 from supabase import Client
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
 class SupabaseClient(SupabaseBaseClass):
 
-    SESSION_AUDIO_FILES_PROCESSING_PENDING = "session-audio-files-processing-pending"
+    AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
 
     def __init__(self, client: Client):
         self.client = client
+        self.environment = os.environ.get("ENVIRONMENT")
 
     def upload_audio_file(self,
-                          storage_file_path: str,
+                          storage_filepath: str,
                           local_filename: str):
+        # We don't want to upload files to the bucket in a non-production environment
+        if self.environment != "prod":
+            return
+
         try:
-            self.client.storage.from_(self.SESSION_AUDIO_FILES_PROCESSING_PENDING).upload(path=storage_file_path,
-                                                                                          file=local_filename)
+            self.client.storage.from_(self.AUDIO_FILES_PROCESSING_PENDING_BUCKET).upload(path=storage_filepath,
+                                                                                         file=local_filename)
         except Exception as e:
             raise Exception(e)
 

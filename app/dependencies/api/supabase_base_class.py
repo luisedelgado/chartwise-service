@@ -7,11 +7,11 @@ class SupabaseBaseClass(ABC):
     Uploads an audio file to Supabase for further processing.
 
     Arguments:
-    storage_file_path – the file path to be used for storing the file.
+    storage_filepath – the file path to be used for storing the file.
     local_filename – the name of the (local) file to be uploaded.
     """
     @abstractmethod
-    def upload_audio_file(storage_file_path: str,
+    def upload_audio_file(storage_filepath: str,
                           local_filename: str):
         pass
 
