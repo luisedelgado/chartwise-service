@@ -30,6 +30,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
+    def delete_user(self, user_id: str):
+        pass
+
     def insert(self,
                payload: dict,
                table_name: str):

@@ -3,6 +3,16 @@ from abc import ABC, abstractmethod
 class SupabaseBaseClass(ABC):
 
     """
+    Deletes a user from the authentication schema.
+
+    Arguments:
+    user_id – the user id to be deleted.
+    """
+    @abstractmethod
+    def delete_user(user_id: str):
+        pass
+
+    """
     Inserts payload into a Supabase table.
 
     Arguments:

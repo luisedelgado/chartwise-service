@@ -429,7 +429,7 @@ class SecurityRouter:
                       error_code=status_code,
                       description=str(e),
                       method=post_api_method)
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise security.STORE_TOKENS_ERROR
 
         logs_request_description = "".join([
             "birthdate=\"",
@@ -689,6 +689,9 @@ class SecurityRouter:
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
+
+            # Delete user from Supabase's Auth schema
+            dependency_container.inject_supabase_client_factory().supabase_admin_client().delete_user(user_id)
 
             log_account_deletion(background_tasks=background_tasks, therapist_id=user_id)
             log_api_response(background_tasks=background_tasks,

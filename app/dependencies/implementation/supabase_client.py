@@ -4,8 +4,18 @@ from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
 class SupabaseClient(SupabaseBaseClass):
 
-    def __init__(self, client: Client):
+    def __init__(self, client: Client, is_admin: bool = False):
         self.client = client
+        self.is_admin = is_admin
+
+    def delete_user(self, user_id: str):
+        if not self.is_admin:
+            raise Exception("User is not an admin, cannot delete user")
+
+        try:
+            return self.client.auth.admin.delete_user(user_id)
+        except Exception as e:
+            raise Exception(e)
 
     def insert(self,
                payload: dict,
