@@ -3,7 +3,6 @@ import uuid
 
 from datetime import datetime, timedelta
 from fastapi import BackgroundTasks
-from supabase import Client
 
 from app.internal.dependency_container import dependency_container
 from app.internal.utilities.datetime_handler import DATE_FORMAT_YYYY_MM_DD
@@ -38,28 +37,29 @@ def _move_file_between_buckets(source_bucket: str,
     :param destination_bucket: The name of the destination bucket.
     :param file_path: Path to the file in the source bucket.
     """
-    supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
     try:
-        # Step 1: Download the file from the source bucket
         print("Downloading file from source bucket...")
-        response = supabase_client.storage.from_(source_bucket).download(file_path)
-        
+        response = supabase_client.download_file(source_bucket=source_bucket,
+                                                 storage_filepath=file_path)
+
         if response.status_code != 200:
             raise Exception(f"Failed to download file: {response.json()}")
 
         file_content = response.content
 
-        # Step 2: Upload the file to the destination bucket
         print("Uploading file to destination bucket...")
-        upload_response = supabase_client.storage.from_(destination_bucket).upload(file_path, file_content)
+        upload_response = supabase_client.upload_file(destination_bucket=destination_bucket,
+                                                      storage_filepath=file_path,
+                                                      local_filename=file_content)
 
         if upload_response.status_code not in [200, 204]:
             raise Exception(f"Failed to upload file: {upload_response.json()}")
 
-        # Step 3: Delete the file from the source bucket
         print("Deleting file from source bucket...")
-        delete_response = supabase_client.storage.from_(source_bucket).remove([file_path])
+        delete_response = supabase_client.delete_file(source_bucket=source_bucket,
+                                                      storage_filepath=file_path)
         
         if delete_response.status_code != 200:
             raise Exception(f"Failed to delete file: {delete_response.json()}")
@@ -76,7 +76,7 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
     Arguments:
         batch: A list of dictionaries, where each dictionary represents a completed audio job.
     """
-    supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for job in batch:
         job_dict = job.dict()
         succesful_processing_date = datetime.strptime(job[SUCCESSFUL_PROCESSING_DATE_KEY], DATE_FORMAT_YYYY_MM_DD)
@@ -89,15 +89,17 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
 
         # Delete the object
         job_file_path = job_dict["file_path"]
-        response = supabase_client.storage.from_(AUDIO_FILES_PROCESSING_COMPLETED_BUCKET).remove([job_file_path])
+        response = supabase_client.delete_file(source_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
+                                               storage_filepath=job_file_path)
 
         # Check response
         if response["error"]:
             print("Error deleting file:", response["error"])
             continue
 
-        delete_operation = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).delete().eq(f"id", job_dict["id"]).execute()
-        print(delete_operation)
+        delete_response = supabase_client.delete(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                                 filters={"id": job_dict["id"]})
+        print(delete_response)
 
 async def _process_pending_audio_job(job: dict) -> bool:
     """
@@ -111,11 +113,12 @@ async def _process_pending_audio_job(job: dict) -> bool:
     local_temp_file = None
     for attempt_index in range(0, RETRY_ATTEMPTS):
         try:
-            supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             storage_filepath = job["storage_filepath"]
             file_extension = os.path.splitext(storage_filepath)[1].lower()
             local_temp_file = "".join(["temp_file", file_extension])
-            response = supabase_client.storage.from_(PENDING_AUDIO_JOBS_TABLE_NAME).download(storage_filepath)
+            response = supabase_client.download_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                     storage_filepath=storage_filepath)
 
             assert response.status_code == 200, f"Failed to download file: {response.json()}"
 
@@ -123,13 +126,15 @@ async def _process_pending_audio_job(job: dict) -> bool:
             with open(local_temp_file, "wb") as temp_file:
                 temp_file.write(response.content)
 
-            therapist_query = supabase_client.from_(THERAPISTS_TABLE_NAME).select("*").eq(f"id", f"{job["therapist_id"]}").execute()
+            therapist_query = supabase_client.select(table_name=THERAPISTS_TABLE_NAME,
+                                                     filters={"id": job["therapist_id"]})
             assert (0 != len((therapist_query).data)), "Something went wrong when querying the therapist data."
 
             therapist_query_dict = therapist_query.model_dump()['data'][0]
             language_code = therapist_query_dict["language_preference"]
 
-            session_report_query = supabase_client.from_(SESSION_REPORTS_TABLE_NAME).select("*").eq(f"id", f"{job["session_report_id"]}").execute()
+            session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
+                                                          filters={"id": job["session_report_id"]})
             assert (0 != len((session_report_query).data)), "Something went wrong when querying the session report."
 
             session_report_query_dict = session_report_query.model_dump()['data'][0]
@@ -171,16 +176,18 @@ async def _attempt_processing_job_batch(batch: list[dict]):
     Arguments:
         batch: A list of dictionaries, where each dictionary represents a pending audio job.
     """
-    supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for job in batch:
         job_dict = job.dict()
         assert job_dict[SUCCESSFUL_PROCESSING_DATE_KEY] == None, "Job has already been processed."
 
         succeeded = await _process_pending_audio_job(job_dict)
         if succeeded:
-            supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).update({
-                SUCCESSFUL_PROCESSING_DATE_KEY: datetime.now().strftime(DATE_FORMAT_YYYY_MM_DD)
-            }).eq("id", f"{job["id"]}").execute()
+            supabase_client.update(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                   payload={
+                                       SUCCESSFUL_PROCESSING_DATE_KEY: datetime.now().strftime(DATE_FORMAT_YYYY_MM_DD)
+                                   },
+                                   filters={"id": job_dict["id"]})
 
             _move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
                                        destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
@@ -190,11 +197,14 @@ def purge_completed_audio_jobs():
     """
     This function purges completed audio jobs in batches of `BATCH_LIMIT` items.
     """
-    supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     offset = 0
 
     # Clean up job entries in Supabase table from non-prod environments, since those don't write to Supabase storage.
-    supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).delete().not_.is_(ENVIRONMENT_KEY, "prod").execute()
+    supabase_client.delete_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                        is_not_filters={
+                                            ENVIRONMENT_KEY: "prod"
+                                        })
 
     # Initial fetch for pending prod jobs
     response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).not_.is_(SUCCESSFUL_PROCESSING_DATE_KEY, "null").order(SUCCESSFUL_PROCESSING_DATE_KEY, desc=False).execute()
@@ -222,7 +232,7 @@ async def process_pending_audio_jobs():
     It fetches the first batch of items, processes them, and then fetches the next batch.
     This process continues until there are no more items to process.
     """
-    supabase_client: Client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     
     offset = 0
 

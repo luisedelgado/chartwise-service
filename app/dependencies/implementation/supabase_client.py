@@ -6,22 +6,45 @@ from ...dependencies.api.supabase_base_class import SupabaseBaseClass
 
 class SupabaseClient(SupabaseBaseClass):
 
-    AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
-
     def __init__(self, client: Client):
         self.client = client
         self.environment = os.environ.get("ENVIRONMENT")
 
-    def upload_audio_file(self,
-                          storage_filepath: str,
-                          local_filename: str):
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        # We don't want to delete files from the bucket in a non-production environment
+        if self.environment != "prod":
+            return None
+
+        try:
+            return self.client.storage.from_(source_bucket).remove([storage_filepath])
+        except Exception as e:
+            raise Exception(e)
+
+    def download_file(self,
+                      source_bucket: str,
+                      storage_filepath: str):
+        # We don't want to download files from the bucket in a non-production environment
+        if self.environment != "prod":
+            return None
+
+        try:
+            return self.client.storage.from_(source_bucket).download(storage_filepath)
+        except Exception as e:
+            raise Exception(e)
+
+    def upload_file(self,
+                    destination_bucket: str,
+                    storage_filepath: str,
+                    local_filename: str):
         # We don't want to upload files to the bucket in a non-production environment
         if self.environment != "prod":
             return
 
         try:
-            self.client.storage.from_(self.AUDIO_FILES_PROCESSING_PENDING_BUCKET).upload(path=storage_filepath,
-                                                                                         file=local_filename)
+            self.client.storage.from_(destination_bucket).upload(path=storage_filepath,
+                                                                 file=local_filename)
         except Exception as e:
             raise Exception(e)
 
@@ -125,6 +148,19 @@ class SupabaseClient(SupabaseBaseClass):
 
             for key, value in filters.items():
                 delete_operation = delete_operation.eq(f"{key}", f"{value}")
+
+            return delete_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
+    def delete_where_is_not(self,
+                            is_not_filters: dict,
+                            table_name: str):
+        try:
+            delete_operation = self.client.table(table_name).delete()
+
+            for key, value in is_not_filters.items():
+                delete_operation = delete_operation.not_.is_(f"{key}", f"{value}")
 
             return delete_operation.execute()
         except Exception as e:

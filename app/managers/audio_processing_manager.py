@@ -23,6 +23,7 @@ from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
 class AudioProcessingManager(MediaProcessingManager):
 
+    AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
     DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
     DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME = "diarization_chunks_grand_summary"
 
@@ -94,8 +95,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                          "-",
                                          session_report_id,
                                          file_extension])
-            supabase_client.upload_audio_file(storage_filepath=storage_filepath,
-                                              local_filename=audio_copy_filepath)
+            supabase_client.upload_file(destination_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                        storage_filepath=storage_filepath,
+                                        local_filename=audio_copy_filepath)
 
             supabase_client.insert(table_name="pending_audio_jobs",
                                    payload={

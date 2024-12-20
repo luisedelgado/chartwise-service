@@ -3,15 +3,42 @@ from abc import ABC, abstractmethod
 class SupabaseBaseClass(ABC):
 
     """
-    Uploads an audio file to Supabase for further processing.
+    Deletes a file from Supabase storage.
 
     Arguments:
+    source_bucket – the bucket from which the file should be deleted.
+    storage_filepath – the file path to be used for storing the file.
+    """
+    @abstractmethod
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        pass
+
+    """
+    Downloads a file from Supabase storage.
+
+    Arguments:
+    source_bucket – the bucket from where the file should be downloaded.
+    storage_filepath – the file path to be used for storing the file.
+    """
+    @abstractmethod
+    def download_file(source_bucket: str,
+                      storage_filepath: str):
+        pass
+
+    """
+    Uploads a file to Supabase for further processing.
+
+    Arguments:
+    destination_bucket – the bucket where the file should be uploaded to.
     storage_filepath – the file path to be used for storing the file.
     local_filename – the name of the (local) file to be uploaded.
     """
     @abstractmethod
-    def upload_audio_file(storage_filepath: str,
-                          local_filename: str):
+    def upload_file(destination_bucket: str,
+                    storage_filepath: str,
+                    local_filename: str):
         pass
 
     """
@@ -120,6 +147,18 @@ class SupabaseBaseClass(ABC):
     @abstractmethod
     def delete(filters: dict,
                table_name: str):
+        pass
+
+    """
+    Deletes from a table name based on the incoming params, applying a "where is not" logic to the filters.
+
+    Arguments:
+    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
+    table_name – the table name.
+    """
+    @abstractmethod
+    def delete_where_is_not(is_not_filters: dict,
+                            table_name: str):
         pass
 
     """

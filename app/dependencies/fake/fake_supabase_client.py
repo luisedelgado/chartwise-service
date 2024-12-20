@@ -30,9 +30,20 @@ class FakeSupabaseClient(SupabaseBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
-    def upload_audio_file(self,
-                          storage_filepath: str,
-                          local_filename: str):
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        pass
+
+    def download_file(self,
+                      source_bucket: str,
+                      storage_filepath: str):
+        pass
+
+    def upload_file(self,
+                    destination_bucket: str,
+                    storage_filepath: str,
+                    local_filename: str):
         pass
 
     def insert(self,
@@ -228,6 +239,15 @@ class FakeSupabaseClient(SupabaseBaseClass):
     def delete(self,
                filters: dict,
                table_name: str):
+        return FakeSupabaseResult(data=[{
+            "therapist_id": self.FAKE_THERAPIST_ID,
+            "patient_id": self.FAKE_PATIENT_ID,
+            "session_date": "2023-01-01",
+        }])
+
+    def delete_where_is_not(self,
+                            is_not_filters: dict,
+                            table_name: str):
         return FakeSupabaseResult(data=[{
             "therapist_id": self.FAKE_THERAPIST_ID,
             "patient_id": self.FAKE_PATIENT_ID,
