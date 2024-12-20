@@ -140,6 +140,26 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def select_batch_where_is_not(self,
+                                  table_name: str,
+                                  fields: str,
+                                  is_not_filters: dict,
+                                  range_start: int,
+                                  range_end: int,
+                                  order_ascending_column: str = None):
+        try:
+            select_operation = self.client.table(table_name).select(fields).range(range_start, range_end)
+
+            for key, value in is_not_filters.items():
+                select_operation = select_operation.not_.is_(f"{key}", f"{value}")
+
+            if order_ascending_column:
+                select_operation = select_operation.order(order_ascending_column, desc=False)
+
+            return select_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
     def delete(self,
                filters: dict,
                table_name: str):

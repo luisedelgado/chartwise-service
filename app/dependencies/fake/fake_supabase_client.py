@@ -226,6 +226,15 @@ class FakeSupabaseClient(SupabaseBaseClass):
             }])
         raise Exception("Untracked table name")
 
+    def select_batch_where_is_not(self,
+                                  table_name: str,
+                                  fields: str,
+                                  is_not_filters: dict,
+                                  range_start: int,
+                                  range_end: int,
+                                  order_ascending_column: str = None):
+        pass
+
     def select_either_or_from_column(self,
                                      fields: str,
                                      possible_values: list,

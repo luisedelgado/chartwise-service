@@ -207,7 +207,14 @@ def purge_completed_audio_jobs():
                                         })
 
     # Initial fetch for pending prod jobs
-    response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).not_.is_(SUCCESSFUL_PROCESSING_DATE_KEY, "null").order(SUCCESSFUL_PROCESSING_DATE_KEY, desc=False).execute()
+    response = supabase_client.select_batch_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                                         fields="*",
+                                                         is_not_filters={
+                                                             SUCCESSFUL_PROCESSING_DATE_KEY: "null"
+                                                         },
+                                                         batch_start=offset,
+                                                         batch_end=offset + BATCH_LIMIT - 1,
+                                                         order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
     batch = response.data
 
     # Continue fetching while the batch has exactly `BATCH_LIMIT` items
@@ -219,7 +226,14 @@ def purge_completed_audio_jobs():
         offset += BATCH_LIMIT
 
         # Fetch the next batch
-        response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).not_.is_(SUCCESSFUL_PROCESSING_DATE_KEY, "null").order(SUCCESSFUL_PROCESSING_DATE_KEY, desc=False).execute()
+        response = supabase_client.select_batch_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                                         fields="*",
+                                                         is_not_filters={
+                                                             SUCCESSFUL_PROCESSING_DATE_KEY: "null"
+                                                         },
+                                                         batch_start=offset,
+                                                         batch_end=offset + BATCH_LIMIT - 1,
+                                                         order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
         batch = response.data
 
     # Process the final batch if it has fewer than LIMIT items
@@ -237,7 +251,10 @@ async def process_pending_audio_jobs():
     offset = 0
 
     # Initial fetch
-    response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).execute()
+    response = supabase_client.select_batch_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                                         fields="*",
+                                                         batch_start=offset,
+                                                         batch_end=offset + BATCH_LIMIT - 1)
     batch = response.data
 
     # Continue fetching while the batch has exactly `BATCH_LIMIT` items
@@ -249,7 +266,10 @@ async def process_pending_audio_jobs():
         offset += BATCH_LIMIT
 
         # Fetch the next batch
-        response = supabase_client.table(PENDING_AUDIO_JOBS_TABLE_NAME).select("*").range(offset, offset + BATCH_LIMIT - 1).execute()
+        response = supabase_client.select_batch_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                                                         fields="*",
+                                                         batch_start=offset,
+                                                         batch_end=offset + BATCH_LIMIT - 1)
         batch = response.data
 
     # Process the final batch if it has fewer than LIMIT items

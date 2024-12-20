@@ -122,6 +122,28 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Fetches data from a Supabase table based on the incoming params, fitting the provided range.
+    Filters are used applying a "where is not" logic.
+
+    Arguments:
+    table_name – the table to be queried.
+    fields – the fields to be retrieved from a table.
+    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
+    batch_start – the starting point for the selection batch.
+    batch_end – the finish point for the selection batch.
+    order_ascending_column – optional flag by which the results are ordered ascendingly.
+    """
+    @abstractmethod
+    def select_batch_where_is_not(self,
+                                  table_name: str,
+                                  fields: str,
+                                  is_not_filters: dict,
+                                  batch_start: int,
+                                  batch_end: int,
+                                  order_ascending_column: str = None):
+        pass
+
+    """
     Fetches data from a Supabase table based on the incoming params.
 
     Arguments:
