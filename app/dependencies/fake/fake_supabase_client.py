@@ -230,8 +230,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
                                   table_name: str,
                                   fields: str,
                                   is_not_filters: dict,
-                                  range_start: int,
-                                  range_end: int,
+                                  batch_start: int,
+                                  batch_end: int,
                                   order_ascending_column: str = None):
         pass
 

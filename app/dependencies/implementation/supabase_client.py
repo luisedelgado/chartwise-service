@@ -144,14 +144,14 @@ class SupabaseClient(SupabaseBaseClass):
                                   table_name: str,
                                   fields: str,
                                   is_not_filters: dict,
-                                  range_start: int,
-                                  range_end: int,
+                                  batch_start: int,
+                                  batch_end: int,
                                   order_ascending_column: str = None):
         try:
-            select_operation = self.client.table(table_name).select(fields).range(range_start, range_end)
+            select_operation = self.client.table(table_name).select(fields).range(batch_start, batch_end)
 
             for key, value in is_not_filters.items():
-                select_operation = select_operation.not_.is_(f"{key}", f"{value}")
+                select_operation = select_operation.neq(f"{key}", f"{value}")
 
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)
@@ -180,7 +180,7 @@ class SupabaseClient(SupabaseBaseClass):
             delete_operation = self.client.table(table_name).delete()
 
             for key, value in is_not_filters.items():
-                delete_operation = delete_operation.not_.is_(f"{key}", f"{value}")
+                delete_operation = delete_operation.neq(f"{key}", f"{value}")
 
             return delete_operation.execute()
         except Exception as e:
