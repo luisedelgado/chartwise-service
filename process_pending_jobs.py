@@ -52,12 +52,10 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
 
         # Check response
         if 'error' in response:
-            print("Error deleting file:", response["error"])
             continue
 
-        delete_response = supabase_client.delete(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
-                                                 filters={"id": job["id"]})
-        print(delete_response)
+        supabase_client.delete(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
+                               filters={"id": job["id"]})
 
 async def _process_pending_audio_job(job: dict) -> bool:
     """
