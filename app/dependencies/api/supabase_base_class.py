@@ -42,6 +42,18 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Move a file from one Supabase bucket to another.
+
+    :param source_bucket: The name of the source bucket.
+    :param destination_bucket: The name of the destination bucket.
+    :param file_path: Path to the file in the source bucket.
+    """
+    def move_file_between_buckets(source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        pass
+
+    """
     Inserts payload into a Supabase table.
 
     Arguments:

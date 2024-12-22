@@ -27,47 +27,6 @@ assistant_manager = AssistantManager()
 audio_processing_manager = AudioProcessingManager()
 auth_manager = AuthManager()
 
-def _move_file_between_buckets(source_bucket: str,
-                               destination_bucket: str,
-                               file_path: str):
-    """
-    Move a file from one Supabase bucket to another.
-
-    :param source_bucket: The name of the source bucket.
-    :param destination_bucket: The name of the destination bucket.
-    :param file_path: Path to the file in the source bucket.
-    """
-    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-
-    try:
-        print("Downloading file from source bucket...")
-        response = supabase_client.download_file(source_bucket=source_bucket,
-                                                 storage_filepath=file_path)
-
-        if response.status_code != 200:
-            raise Exception(f"Failed to download file: {response.json()}")
-
-        file_content = response.content
-
-        print("Uploading file to destination bucket...")
-        upload_response = supabase_client.upload_file(destination_bucket=destination_bucket,
-                                                      storage_filepath=file_path,
-                                                      local_filename=file_content)
-
-        if upload_response.status_code not in [200, 204]:
-            raise Exception(f"Failed to upload file: {upload_response.json()}")
-
-        print("Deleting file from source bucket...")
-        delete_response = supabase_client.delete_file(source_bucket=source_bucket,
-                                                      storage_filepath=file_path)
-        
-        if delete_response.status_code != 200:
-            raise Exception(f"Failed to delete file: {delete_response.json()}")
-
-        print("File successfully moved!")
-    except Exception as e:
-        print(f"Error during file move: {e}")
-
 def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
     """
     This function deletes completed audio jobs in a batch.
@@ -92,7 +51,7 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
                                                storage_filepath=job_file_path)
 
         # Check response
-        if response["error"]:
+        if 'error' in response:
             print("Error deleting file:", response["error"])
             continue
 
@@ -187,9 +146,9 @@ async def _attempt_processing_job_batch(batch: list[dict]):
                                    },
                                    filters={"id": job["id"]})
 
-            _move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                       destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                       file_path=job["storage_filepath"])
+            supabase_client.move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                      destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
+                                                      file_path=job["storage_filepath"])
 
 def purge_completed_audio_jobs():
     """

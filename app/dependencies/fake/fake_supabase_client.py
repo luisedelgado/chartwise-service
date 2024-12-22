@@ -46,6 +46,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
                     local_filename: str):
         pass
 
+    def move_file_between_buckets(source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        pass
+
     def insert(self,
                payload: dict,
                table_name: str):

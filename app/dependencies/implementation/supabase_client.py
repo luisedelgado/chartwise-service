@@ -48,6 +48,27 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def move_file_between_buckets(self,
+                                  source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        # We don't want to upload files to the bucket in a non-production environment
+        if self.environment != "prod":
+            return
+
+        try:
+            download_response = self.download_file(source_bucket=source_bucket,
+                                                   storage_filepath=file_path)
+
+            self.upload_file(destination_bucket=destination_bucket,
+                             storage_filepath=file_path,
+                             local_filename=download_response.content)
+
+            self.delete_file(source_bucket=source_bucket,
+                             storage_filepath=file_path)
+        except Exception as e:
+            raise Exception(e)
+
     def insert(self,
                payload: dict,
                table_name: str):
