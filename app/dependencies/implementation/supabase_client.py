@@ -140,18 +140,18 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def select_batch_where_is_not(self,
-                                  table_name: str,
-                                  fields: str,
-                                  is_not_filters: dict,
-                                  batch_start: int,
-                                  batch_end: int,
-                                  order_ascending_column: str = None):
+    def select_batch_where_is_not_null(self,
+                                       table_name: str,
+                                       fields: str,
+                                       batch_start: int,
+                                       batch_end: int,
+                                       non_null_column: str = None,
+                                       order_ascending_column: str = None):
         try:
             select_operation = self.client.table(table_name).select(fields).range(batch_start, batch_end)
 
-            for key, value in is_not_filters.items():
-                select_operation = select_operation.neq(f"{key}", f"{value}")
+            if non_null_column is not None:
+                select_operation = select_operation.not_.is_(non_null_column, "null")
 
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)

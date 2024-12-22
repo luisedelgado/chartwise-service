@@ -134,13 +134,12 @@ class SupabaseBaseClass(ABC):
     order_ascending_column – optional flag by which the results are ordered ascendingly.
     """
     @abstractmethod
-    def select_batch_where_is_not(self,
-                                  table_name: str,
-                                  fields: str,
-                                  is_not_filters: dict,
-                                  batch_start: int,
-                                  batch_end: int,
-                                  order_ascending_column: str = None):
+    def select_batch_where_is_not_null(table_name: str,
+                                       fields: str,
+                                       batch_start: int,
+                                       batch_end: int,
+                                       non_null_column: str = None,
+                                       order_ascending_column: str = None):
         pass
 
     """
