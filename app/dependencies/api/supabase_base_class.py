@@ -97,22 +97,39 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
-    Fetches data from a Supabase table based on the incoming params, fitting the provided range.
-    Filters are used applying a "where is not" logic.
+    Fetches data from a Supabase table based on the incoming params, fitting the provided criteria.
 
     Arguments:
     table_name – the table to be queried.
     fields – the fields to be retrieved from a table.
+    non_null_column – the column that should not be null.
     limit – the limit for count of rows to be retrieved.
-    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
     order_ascending_column – optional flag by which the results are ordered ascendingly.
     """
     @abstractmethod
     def select_batch_where_is_not_null(table_name: str,
                                        fields: str,
+                                       non_null_column: str,
                                        limit: int = None,
-                                       non_null_column: str = None,
                                        order_ascending_column: str = None):
+        pass
+
+    """
+    Fetches data from a Supabase table based on the incoming params, fitting the provided criteria.
+
+    Arguments:
+    table_name – the table to be queried.
+    fields – the fields to be retrieved from a table.
+    null_column – the column that should not be null.
+    limit – the limit for count of rows to be retrieved.
+    order_ascending_column – optional flag by which the results are ordered ascendingly.
+    """
+    @abstractmethod
+    def select_batch_where_is_null(table_name: str,
+                                   fields: str,
+                                   null_column: str,
+                                   limit: int = None,
+                                   order_ascending_column: str = None):
         pass
 
     """

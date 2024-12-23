@@ -220,9 +220,17 @@ class FakeSupabaseClient(SupabaseBaseClass):
     def select_batch_where_is_not_null(self,
                                        table_name: str,
                                        fields: str,
+                                       non_null_column: str,
                                        limit: int = None,
-                                       non_null_column: str = None,
                                        order_ascending_column: str = None):
+        pass
+
+    def select_batch_where_is_null(self,
+                                   table_name: str,
+                                   fields: str,
+                                   null_column: str,
+                                   limit: int = None,
+                                   order_ascending_column: str = None):
         pass
 
     def select_either_or_from_column(self,
