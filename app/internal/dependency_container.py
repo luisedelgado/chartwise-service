@@ -51,7 +51,7 @@ class DependencyContainer:
         if self._supabase_client_factory is None:
             fake_admin_client: SupabaseBaseClass = FakeSupabaseClient()
             fake_user_client: SupabaseBaseClass = FakeSupabaseClient()
-            self._supabase_client_factory = FakeSupabaseClientFactory(fake_admin_client, fake_user_client) if self._testing_environment else SupabaseClientFactory()
+            self._supabase_client_factory = FakeSupabaseClientFactory(fake_admin_client, fake_user_client) if self._testing_environment else SupabaseClientFactory(environment=os.environ.get("ENVIRONMENT"))
         return self._supabase_client_factory
 
     def inject_stripe_client(self) -> StripeBaseClass:

@@ -43,6 +43,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                     audio_file: Union[UploadFile, str],
                                     diarize: bool = False,) -> str:
         session_report_id = None
+        files_to_clean = []
         try:
             if isinstance(audio_file, str):
                 # `audio_file` is already expected to be the filepath `str` for the file copy.
@@ -96,9 +97,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                          "-",
                                          session_report_id,
                                          file_extension])
-            supabase_client.upload_file(destination_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                        storage_filepath=storage_filepath,
-                                        content=audio_copy_filepath)
+            supabase_client.storage_client.upload_file(destination_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                       storage_filepath=storage_filepath,
+                                                       content=audio_copy_filepath)
 
             today = datetime.now().date()
             today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -164,6 +165,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              session_notes_id=session_report_id,
                                                              media_type=MediaType.AUDIO)
             raise Exception(e)
+        finally:
+            await file_copiers.clean_up_files(files_to_clean)
 
     # Private
 

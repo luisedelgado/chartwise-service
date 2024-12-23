@@ -69,8 +69,8 @@ async def _process_pending_audio_job(job: dict) -> bool:
             storage_filepath = job["storage_filepath"]
             file_extension = os.path.splitext(storage_filepath)[1].lower()
             local_temp_file = "".join(["temp_file", file_extension])
-            response = supabase_client.download_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                     storage_filepath=storage_filepath)
+            response = supabase_client.storage_client.download_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                                    storage_filepath=storage_filepath)
 
             assert response.status_code == 200, f"Failed to download file: {response.json()}"
 
@@ -140,9 +140,9 @@ async def _attempt_processing_job_batch(batch: list[dict]):
                                    },
                                    filters={"id": job["id"]})
 
-            supabase_client.move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                      destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                                      file_path=job["storage_filepath"])
+            supabase_client.storage_client.move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                                     destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
+                                                                     file_path=job["storage_filepath"])
 
 def purge_completed_audio_jobs():
     """

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from .fake_supabase_session import FakeSession
+from .fake_supabase_storage_client import FakeSupabaseStorageClient
 from ..api.supabase_base_class import SupabaseBaseClass
 
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
@@ -30,27 +31,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
-    def delete_file(self,
-                    source_bucket: str,
-                    storage_filepath: str):
-        pass
-
-    def download_file(self,
-                      source_bucket: str,
-                      storage_filepath: str):
-        pass
-
-    def upload_file(self,
-                    destination_bucket: str,
-                    storage_filepath: str,
-                    content: str | bytes):
-        pass
-
-    def move_file_between_buckets(self,
-                                  source_bucket: str,
-                                  destination_bucket: str,
-                                  file_path: str):
-        pass
+    def __init__(self):
+        self.storage_client = FakeSupabaseStorageClient()
 
     def delete_user(self, user_id: str):
         pass
