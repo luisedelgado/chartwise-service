@@ -165,8 +165,6 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              session_notes_id=session_report_id,
                                                              media_type=MediaType.AUDIO)
             raise Exception(e)
-        finally:
-            await file_copiers.clean_up_files(files_to_clean)
 
     # Private
 
