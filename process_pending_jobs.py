@@ -149,7 +149,6 @@ def purge_completed_audio_jobs():
     This function purges completed audio jobs in batches of `BATCH_LIMIT` items.
     """
     supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-    offset = 0
 
     # Clean up job entries in Supabase table from non-prod environments, since those don't write to Supabase storage.
     supabase_client.delete_where_is_not(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
@@ -161,8 +160,7 @@ def purge_completed_audio_jobs():
     response = supabase_client.select_batch_where_is_not_null(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                                               fields="*",
                                                               non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
-                                                              batch_start=offset,
-                                                              batch_end=offset + BATCH_LIMIT - 1,
+                                                              limit=BATCH_LIMIT,
                                                               order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
     batch = response.data
 
@@ -171,15 +169,11 @@ def purge_completed_audio_jobs():
         # Process the current batch
         _delete_completed_audio_jobs_in_batch(batch)
 
-        # Update offset
-        offset += BATCH_LIMIT
-
         # Fetch the next batch
         response = supabase_client.select_batch_where_is_not_null(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                                                   fields="*",
                                                                   non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
-                                                                  batch_start=offset,
-                                                                  batch_end=offset + BATCH_LIMIT - 1,
+                                                                  limit=BATCH_LIMIT,
                                                                   order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
         batch = response.data
 

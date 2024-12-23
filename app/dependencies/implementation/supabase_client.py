@@ -174,15 +174,17 @@ class SupabaseClient(SupabaseBaseClass):
     def select_batch_where_is_not_null(self,
                                        table_name: str,
                                        fields: str,
-                                       batch_start: int,
-                                       batch_end: int,
+                                       limit: int = None,
                                        non_null_column: str = None,
                                        order_ascending_column: str = None):
         try:
-            select_operation = self.client.table(table_name).select(fields).range(batch_start, batch_end)
+            select_operation = self.client.table(table_name).select(fields)
 
             if non_null_column is not None:
                 select_operation = select_operation.not_.is_(non_null_column, "null")
+
+            if limit is not None:
+                select_operation.limit(limit)
 
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)

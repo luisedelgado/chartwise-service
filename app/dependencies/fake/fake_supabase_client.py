@@ -238,8 +238,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     def select_batch_where_is_not_null(self,
                                        table_name: str,
                                        fields: str,
-                                       batch_start: int,
-                                       batch_end: int,
+                                       limit: int = None,
                                        non_null_column: str = None,
                                        order_ascending_column: str = None):
         pass

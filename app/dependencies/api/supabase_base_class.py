@@ -149,16 +149,14 @@ class SupabaseBaseClass(ABC):
     Arguments:
     table_name – the table to be queried.
     fields – the fields to be retrieved from a table.
+    limit – the limit for count of rows to be retrieved.
     is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
-    batch_start – the starting point for the selection batch.
-    batch_end – the finish point for the selection batch.
     order_ascending_column – optional flag by which the results are ordered ascendingly.
     """
     @abstractmethod
     def select_batch_where_is_not_null(table_name: str,
                                        fields: str,
-                                       batch_start: int,
-                                       batch_end: int,
+                                       limit: int = None,
                                        non_null_column: str = None,
                                        order_ascending_column: str = None):
         pass
