@@ -51,6 +51,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
                                   file_path: str):
         pass
 
+    def delete_user(self, user_id: str):
+        pass
+
     def insert(self,
                payload: dict,
                table_name: str):
