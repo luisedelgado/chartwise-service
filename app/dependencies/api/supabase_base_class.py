@@ -3,8 +3,58 @@ from abc import ABC, abstractmethod
 class SupabaseBaseClass(ABC):
 
     """
-    Deletes a user from the authentication schema.
+    Deletes a file from Supabase storage.
 
+    Arguments:
+    source_bucket – the bucket from which the file should be deleted.
+    storage_filepath – the file path to be used for storing the file.
+    """
+    @abstractmethod
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        pass
+
+    """
+    Downloads a file from Supabase storage.
+
+    Arguments:
+    source_bucket – the bucket from where the file should be downloaded.
+    storage_filepath – the file path to be used for storing the file.
+    """
+    @abstractmethod
+    def download_file(source_bucket: str,
+                      storage_filepath: str):
+        pass
+
+    """
+    Uploads a file to Supabase for further processing.
+
+    Arguments:
+    destination_bucket – the bucket where the file should be uploaded to.
+    storage_filepath – the file path to be used for storing the file.
+    content – the content to be uploaded in the form of bytes or a string filepath.
+    """
+    @abstractmethod
+    def upload_file(destination_bucket: str,
+                    storage_filepath: str,
+                    content: str | bytes):
+        pass
+
+    """
+    Move a file from one Supabase bucket to another.
+
+    :param source_bucket: The name of the source bucket.
+    :param destination_bucket: The name of the destination bucket.
+    :param file_path: Path to the file in the source bucket.
+    """
+    def move_file_between_buckets(source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        pass
+
+    """
+    Deletes a user from the authentication schema.
     Arguments:
     user_id – the user id to be deleted.
     """
@@ -93,6 +143,27 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
+    Fetches data from a Supabase table based on the incoming params, fitting the provided range.
+    Filters are used applying a "where is not" logic.
+
+    Arguments:
+    table_name – the table to be queried.
+    fields – the fields to be retrieved from a table.
+    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
+    batch_start – the starting point for the selection batch.
+    batch_end – the finish point for the selection batch.
+    order_ascending_column – optional flag by which the results are ordered ascendingly.
+    """
+    @abstractmethod
+    def select_batch_where_is_not_null(table_name: str,
+                                       fields: str,
+                                       batch_start: int,
+                                       batch_end: int,
+                                       non_null_column: str = None,
+                                       order_ascending_column: str = None):
+        pass
+
+    """
     Fetches data from a Supabase table based on the incoming params.
 
     Arguments:
@@ -118,6 +189,18 @@ class SupabaseBaseClass(ABC):
     @abstractmethod
     def delete(filters: dict,
                table_name: str):
+        pass
+
+    """
+    Deletes from a table name based on the incoming params, applying a "where is not" logic to the filters.
+
+    Arguments:
+    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
+    table_name – the table name.
+    """
+    @abstractmethod
+    def delete_where_is_not(is_not_filters: dict,
+                            table_name: str):
         pass
 
     """

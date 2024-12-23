@@ -30,6 +30,27 @@ class FakeSupabaseClient(SupabaseBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        pass
+
+    def download_file(self,
+                      source_bucket: str,
+                      storage_filepath: str):
+        pass
+
+    def upload_file(self,
+                    destination_bucket: str,
+                    storage_filepath: str,
+                    content: str | bytes):
+        pass
+
+    def move_file_between_buckets(source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        pass
+
     def delete_user(self, user_id: str):
         pass
 
@@ -213,6 +234,15 @@ class FakeSupabaseClient(SupabaseBaseClass):
             }])
         raise Exception("Untracked table name")
 
+    def select_batch_where_is_not_null(self,
+                                       table_name: str,
+                                       fields: str,
+                                       batch_start: int,
+                                       batch_end: int,
+                                       non_null_column: str = None,
+                                       order_ascending_column: str = None):
+        pass
+
     def select_either_or_from_column(self,
                                      fields: str,
                                      possible_values: list,
@@ -226,6 +256,15 @@ class FakeSupabaseClient(SupabaseBaseClass):
     def delete(self,
                filters: dict,
                table_name: str):
+        return FakeSupabaseResult(data=[{
+            "therapist_id": self.FAKE_THERAPIST_ID,
+            "patient_id": self.FAKE_PATIENT_ID,
+            "session_date": "2023-01-01",
+        }])
+
+    def delete_where_is_not(self,
+                            is_not_filters: dict,
+                            table_name: str):
         return FakeSupabaseResult(data=[{
             "therapist_id": self.FAKE_THERAPIST_ID,
             "patient_id": self.FAKE_PATIENT_ID,

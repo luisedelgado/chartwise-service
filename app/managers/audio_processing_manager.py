@@ -1,8 +1,10 @@
 import os
 
-from fastapi import (BackgroundTasks, File, UploadFile)
+from datetime import datetime
+from fastapi import (BackgroundTasks, UploadFile)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
+from typing import Union
 
 from .media_processing_manager import MediaProcessingManager
 from ..data_processing.diarization_cleaner import DiarizationCleaner
@@ -16,6 +18,7 @@ from ..internal.utilities.audio_file_utilities import (get_output_filepath_for_s
                                                        reduce_sample_rate_if_worthwhile)
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
+from ..managers.media_processing_manager import MediaType
 from ..vectors import data_cleaner
 
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
@@ -37,30 +40,45 @@ class AudioProcessingManager(MediaProcessingManager):
                                     patient_id: str,
                                     session_date: str,
                                     environment: str,
-                                    diarize: bool = False,
-                                    audio_file: UploadFile = File(...)) -> str:
+                                    audio_file: Union[UploadFile, str],
+                                    diarize: bool = False,) -> str:
+        session_report_id = None
         try:
-            session_report_id = None
-            audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
-            files_to_clean = audio_copy_result.file_copies
-            source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
-
-            if not os.path.exists(audio_copy_result.file_copy_full_path):
-                await file_copiers.clean_up_files(files_to_clean)
-                raise Exception("Something went wrong while processing the image.")
-
-            reduced_sample_rate_output_filepath: str = get_output_filepath_for_sample_rate_reduction(input_file_directory=audio_copy_result.file_copy_directory,
-                                                                                                     input_filename_without_ext=audio_copy_result.file_copy_name_without_ext)
-            reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(input_filepath=audio_copy_result.file_copy_full_path,
-                                                                         output_filepath=reduced_sample_rate_output_filepath)
-            if reduction_succeeded:
-                files_to_clean.append(reduced_sample_rate_output_filepath)
-                audio_filepath = reduced_sample_rate_output_filepath
+            if isinstance(audio_file, str):
+                # `audio_file` is already expected to be the filepath `str` for the file copy.
+                files_to_clean = [audio_file]
+                file_extension = os.path.splitext(audio_file)[1].lower()
+                audio_copy_filepath = audio_file
             else:
-                audio_filepath = audio_copy_result.file_copy_full_path
+                # Make local copy for further processing.
+                audio_copy_result: file_copiers.FileCopyResult = await file_copiers.make_file_copy(audio_file)
+                files_to_clean = audio_copy_result.file_copies
 
+                if not os.path.exists(audio_copy_result.file_copy_full_path):
+                    await file_copiers.clean_up_files(files_to_clean)
+                    raise Exception("Something went wrong while processing the audio file.")
+
+                file_extension = os.path.splitext(audio_file.filename)[1].lower()
+
+                # Reduce sample rate if possible, to attempt file processing on lighter version.
+                reduced_sample_rate_output_filepath = get_output_filepath_for_sample_rate_reduction(
+                    input_file_directory=audio_copy_result.file_copy_directory,
+                    input_filename_without_ext=audio_copy_result.file_copy_name_without_ext
+                )
+
+                reduction_succeeded: bool = reduce_sample_rate_if_worthwhile(
+                    input_filepath=audio_copy_result.file_copy_full_path,
+                    output_filepath=reduced_sample_rate_output_filepath
+                )
+
+                audio_copy_filepath = (
+                    reduced_sample_rate_output_filepath if reduction_succeeded else audio_copy_result.file_copy_full_path
+                )
+
+                files_to_clean.append(reduced_sample_rate_output_filepath)
+
+            # Upload initial attributes of session report, so client can mark it as 'processing'.
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
-
             session_report_creation_response = supabase_client.insert(table_name="session_reports",
                                                                       payload={
                                                                           "template": template.value,
@@ -73,6 +91,28 @@ class AudioProcessingManager(MediaProcessingManager):
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
 
+            # Upload raw file to Supabase storage until it's successfully processed to avoid any data loss.
+            storage_filepath = "".join([therapist_id,
+                                         "-",
+                                         session_report_id,
+                                         file_extension])
+            supabase_client.upload_file(destination_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                        storage_filepath=storage_filepath,
+                                        content=audio_copy_filepath)
+
+            today = datetime.now().date()
+            today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
+            supabase_client.insert(table_name="pending_audio_jobs",
+                                   payload={
+                                       "session_report_id": session_report_id,
+                                       "therapist_id": therapist_id,
+                                       "storage_filepath": storage_filepath,
+                                       "last_attempt_at_processing_date": today_formatted,
+                                       "environment": environment,
+                                       "job_type": "transcription" if not diarize else "diarization",
+                                   })
+
+            # Attempt immediate processing.
             if diarize:
                 background_tasks.add_task(self._diarize_audio_and_save,
                                           session_report_id,
@@ -85,9 +125,10 @@ class AudioProcessingManager(MediaProcessingManager):
                                           patient_id,
                                           language_code,
                                           session_id,
-                                          audio_filepath,
+                                          audio_copy_filepath,
                                           template,
-                                          files_to_clean)
+                                          files_to_clean,
+                                          storage_filepath)
             else:
                 background_tasks.add_task(self._transcribe_audio_and_save,
                                           session_report_id,
@@ -99,9 +140,10 @@ class AudioProcessingManager(MediaProcessingManager):
                                           therapist_id,
                                           language_code,
                                           session_id,
-                                          audio_filepath,
+                                          audio_copy_filepath,
                                           template,
-                                          files_to_clean)
+                                          files_to_clean,
+                                          storage_filepath)
 
             background_tasks.add_task(self._update_patient_metrics_after_processing_transcription_session,
                                       patient_id,
@@ -119,7 +161,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              session_id=session_id,
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
-                                                             session_notes_id=session_report_id)
+                                                             session_notes_id=session_report_id,
+                                                             media_type=MediaType.AUDIO)
             raise Exception(e)
 
     # Private
@@ -137,7 +180,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                       session_id: str,
                                       audio_filepath: str,
                                       template: SessionNotesTemplate,
-                                      files_to_clean: list):
+                                      files_to_clean: list,
+                                      storage_filepath: str):
         try:
             diarization = await dependency_container.inject_deepgram_client().diarize_audio(file_full_path=audio_filepath)
             update_body = {
@@ -160,7 +204,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
-                                                         session_notes_id=session_report_id)
+                                                         session_notes_id=session_report_id,
+                                                         media_type=MediaType.AUDIO)
             raise Exception(e)
 
         # Generate summary for diarization
@@ -231,7 +276,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
-                                                         session_notes_id=session_report_id)
+                                                         session_notes_id=session_report_id,
+                                                         media_type=MediaType.AUDIO,
+                                                         storage_filepath=storage_filepath)
         except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -241,7 +288,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
-                                                         session_notes_id=session_report_id)
+                                                         session_notes_id=session_report_id,
+                                                         media_type=MediaType.AUDIO)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
@@ -258,7 +306,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                          session_id: str,
                                          audio_filepath: str,
                                          template: SessionNotesTemplate,
-                                         files_to_clean: list):
+                                         files_to_clean: list,
+                                         storage_filepath: str):
         try:
             transcription = await dependency_container.inject_deepgram_client().transcribe_audio(file_full_path=audio_filepath)
             if template == SessionNotesTemplate.SOAP:
@@ -288,7 +337,9 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
-                                                         session_notes_id=session_report_id)
+                                                         session_notes_id=session_report_id,
+                                                         media_type=MediaType.AUDIO,
+                                                         storage_filepath=storage_filepath)
         except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -298,7 +349,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
-                                                         session_notes_id=session_report_id)
+                                                         session_notes_id=session_report_id,
+                                                         media_type=MediaType.AUDIO)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)

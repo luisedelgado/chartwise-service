@@ -30,6 +30,12 @@
               }
             ],
             "justMyCode": true
+        },
+        {
+            "name": "Process Pending Jobs (script)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/process_pending_jobs.py"
         }
     ]
 }

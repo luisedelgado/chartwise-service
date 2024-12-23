@@ -1,3 +1,5 @@
+import os
+
 from supabase import Client
 
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
@@ -7,6 +9,66 @@ class SupabaseClient(SupabaseBaseClass):
     def __init__(self, client: Client, is_admin: bool = False):
         self.client = client
         self.is_admin = is_admin
+        self.environment = os.environ.get("ENVIRONMENT")
+
+    def delete_file(self,
+                    source_bucket: str,
+                    storage_filepath: str):
+        # We don't want to delete files from the bucket in a non-production environment
+        if self.environment != "prod":
+            return None
+
+        try:
+            return self.client.storage.from_(source_bucket).remove([storage_filepath])
+        except Exception as e:
+            raise Exception(e)
+
+    def download_file(self,
+                      source_bucket: str,
+                      storage_filepath: str):
+        # We don't want to download files from the bucket in a non-production environment
+        if self.environment != "prod":
+            return None
+
+        try:
+            return self.client.storage.from_(source_bucket).download(storage_filepath)
+        except Exception as e:
+            raise Exception(e)
+
+    def upload_file(self,
+                    destination_bucket: str,
+                    storage_filepath: str,
+                    content: str | bytes):
+        # We don't want to upload files to the bucket in a non-production environment
+        if self.environment != "prod":
+            return
+
+        try:
+            self.client.storage.from_(destination_bucket).upload(path=storage_filepath,
+                                                                 file=content)
+        except Exception as e:
+            raise Exception(e)
+
+    def move_file_between_buckets(self,
+                                  source_bucket: str,
+                                  destination_bucket: str,
+                                  file_path: str):
+        # We don't want to upload files to the bucket in a non-production environment
+        if self.environment != "prod":
+            return
+
+        try:
+            download_response = self.download_file(source_bucket=source_bucket,
+                                                   storage_filepath=file_path)
+
+            self.upload_file(destination_bucket=destination_bucket,
+                             storage_filepath=file_path,
+                             content=download_response)
+
+            self.delete_file(source_bucket=source_bucket,
+                             storage_filepath=file_path)
+        except Exception as e:
+            raise Exception(e)
 
     def delete_user(self, user_id: str):
         if not self.is_admin:
@@ -109,6 +171,26 @@ class SupabaseClient(SupabaseBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def select_batch_where_is_not_null(self,
+                                       table_name: str,
+                                       fields: str,
+                                       batch_start: int,
+                                       batch_end: int,
+                                       non_null_column: str = None,
+                                       order_ascending_column: str = None):
+        try:
+            select_operation = self.client.table(table_name).select(fields).range(batch_start, batch_end)
+
+            if non_null_column is not None:
+                select_operation = select_operation.not_.is_(non_null_column, "null")
+
+            if order_ascending_column:
+                select_operation = select_operation.order(order_ascending_column, desc=False)
+
+            return select_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
     def delete(self,
                filters: dict,
                table_name: str):
@@ -117,6 +199,19 @@ class SupabaseClient(SupabaseBaseClass):
 
             for key, value in filters.items():
                 delete_operation = delete_operation.eq(f"{key}", f"{value}")
+
+            return delete_operation.execute()
+        except Exception as e:
+            raise Exception(e)
+
+    def delete_where_is_not(self,
+                            is_not_filters: dict,
+                            table_name: str):
+        try:
+            delete_operation = self.client.table(table_name).delete()
+
+            for key, value in is_not_filters.items():
+                delete_operation = delete_operation.neq(f"{key}", f"{value}")
 
             return delete_operation.execute()
         except Exception as e:

@@ -91,4 +91,5 @@ files – the set of files to be cleaned up
 """
 async def clean_up_files(files):
     for file in files:
-        os.remove(file)
+        if os.path.exists(file):
+            os.remove(file)

@@ -13,6 +13,7 @@ from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
 from ..managers.auth_manager import AuthManager
+from ..managers.media_processing_manager import MediaType
 
 MAX_RETRIES = 5
 RETRY_DELAY = 3  # Delay in seconds
@@ -140,7 +141,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
-                                                         session_notes_id=session_notes_id)
+                                                         session_notes_id=session_notes_id,
+                                                         media_type=MediaType.IMAGE)
 
         except HTTPException as e:
             # We want to synchronously log the failed processing status to avoid execution
@@ -154,7 +156,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                                              session_id=session_id,
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
-                                                             session_notes_id=session_notes_id)
+                                                             session_notes_id=session_notes_id,
+                                                             media_type=MediaType.IMAGE)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
@@ -168,5 +171,6 @@ class ImageProcessingManager(MediaProcessingManager):
                                                             session_id=session_id,
                                                             supabase_client=supabase_client,
                                                             session_upload_status=SessionUploadStatus.FAILED.value,
-                                                            session_notes_id=session_notes_id)
+                                                            session_notes_id=session_notes_id,
+                                                            media_type=MediaType.IMAGE)
             raise Exception(e)
