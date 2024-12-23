@@ -188,14 +188,12 @@ async def process_pending_audio_jobs():
     This process continues until there are no more items to process.
     """
     supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-    
-    offset = 0
 
     # Initial fetch
     response = supabase_client.select_batch_where_is_not_null(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                                               fields="*",
-                                                              batch_start=offset,
-                                                              batch_end=offset + BATCH_LIMIT - 1)
+                                                              non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
+                                                              limit=BATCH_LIMIT)
     batch = response.data
 
     # Continue fetching while the batch has exactly `BATCH_LIMIT` items
@@ -203,14 +201,11 @@ async def process_pending_audio_jobs():
         # Process the current batch
         await _attempt_processing_job_batch(batch)
 
-        # Update offset
-        offset += BATCH_LIMIT
-
         # Fetch the next batch
         response = supabase_client.select_batch_where_is_not_null(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                                                   fields="*",
-                                                                  batch_start=offset,
-                                                                  batch_end=offset + BATCH_LIMIT - 1)
+                                                                  non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
+                                                                  limit=BATCH_LIMIT)
         batch = response.data
 
     # Process the final batch if it has fewer than LIMIT items
