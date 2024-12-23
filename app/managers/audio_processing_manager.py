@@ -1,5 +1,6 @@
 import os
 
+from datetime import datetime
 from fastapi import (BackgroundTasks, UploadFile)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
@@ -97,13 +98,16 @@ class AudioProcessingManager(MediaProcessingManager):
                                          file_extension])
             supabase_client.upload_file(destination_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
                                         storage_filepath=storage_filepath,
-                                        local_filename=audio_copy_filepath)
+                                        content=audio_copy_filepath)
 
+            today = datetime.now().date()
+            today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
             supabase_client.insert(table_name="pending_audio_jobs",
                                    payload={
                                        "session_report_id": session_report_id,
                                        "therapist_id": therapist_id,
                                        "storage_filepath": storage_filepath,
+                                       "last_attempt_at_processing_date": today_formatted,
                                        "environment": environment,
                                        "job_type": "transcription" if not diarize else "diarization",
                                    })

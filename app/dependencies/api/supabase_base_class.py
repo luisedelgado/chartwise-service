@@ -33,12 +33,12 @@ class SupabaseBaseClass(ABC):
     Arguments:
     destination_bucket – the bucket where the file should be uploaded to.
     storage_filepath – the file path to be used for storing the file.
-    local_filename – the name of the (local) file to be uploaded.
+    content – the content to be uploaded in the form of bytes or a string filepath.
     """
     @abstractmethod
     def upload_file(destination_bucket: str,
                     storage_filepath: str,
-                    local_filename: str):
+                    content: str | bytes):
         pass
 
     """

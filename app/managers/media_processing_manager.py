@@ -75,5 +75,5 @@ class MediaProcessingManager(ABC):
         if media_type == MediaType.AUDIO:
             # Move the file from the processing pending bucket to the processing completed bucket.
             supabase_client.move_file_between_buckets(source_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                        destination_bucket=self.AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                                        file_path=storage_filepath)
+                                                      destination_bucket=self.AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
+                                                      file_path=storage_filepath)

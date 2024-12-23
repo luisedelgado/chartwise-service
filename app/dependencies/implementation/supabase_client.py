@@ -37,14 +37,14 @@ class SupabaseClient(SupabaseBaseClass):
     def upload_file(self,
                     destination_bucket: str,
                     storage_filepath: str,
-                    local_filename: str):
+                    content: str | bytes):
         # We don't want to upload files to the bucket in a non-production environment
         if self.environment != "prod":
             return
 
         try:
             self.client.storage.from_(destination_bucket).upload(path=storage_filepath,
-                                                                 file=local_filename)
+                                                                 file=content)
         except Exception as e:
             raise Exception(e)
 
@@ -62,7 +62,7 @@ class SupabaseClient(SupabaseBaseClass):
 
             self.upload_file(destination_bucket=destination_bucket,
                              storage_filepath=file_path,
-                             local_filename=download_response.content)
+                             content=download_response)
 
             self.delete_file(source_bucket=source_bucket,
                              storage_filepath=file_path)
