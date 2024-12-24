@@ -241,8 +241,21 @@ if __name__ == "__main__":
     start_timestamp = datetime.now().timestamp()
     start_timestamp_formatted = datetime.fromtimestamp(start_timestamp).strftime(DATE_TIME_FORMAT)
 
-    purge_completed_audio_jobs()
-    asyncio.run(process_pending_audio_jobs())
+    try:
+        purge_completed_audio_jobs()
+        purge_completed_audio_jobs_success = True
+        purge_completed_audio_jobs_exception = None
+    except Exception as e:
+        purge_completed_audio_jobs_success = False
+        purge_completed_audio_jobs_exception = str(e)
+
+    try:
+        asyncio.run(process_pending_audio_jobs())
+        process_pending_audio_jobs_success = True
+        process_pending_audio_jobs_success_exception = None
+    except Exception as e:
+        process_pending_audio_jobs_result = False
+        process_pending_audio_jobs_success_exception = str(e)
 
     for file in files_to_delete:
         if os.path.exists(file):
@@ -251,12 +264,14 @@ if __name__ == "__main__":
     end_timestamp = datetime.now().timestamp()
     end_timestamp_formatted = datetime.fromtimestamp(end_timestamp).strftime(DATE_TIME_FORMAT)
 
-    dependency_container.inject_supabase_client_factory().supabase_admin_client().upsert(table_name="script_scheduling",
-                                                                                         on_conflict="script_name",
+    status = "success" if purge_completed_audio_jobs_success and process_pending_audio_jobs_success else "failed"
+    dependency_container.inject_supabase_client_factory().supabase_admin_client().insert(table_name="pending_audio_jobs_script_schedule",
                                                                                          payload={
-                                                                                                "script_name": os.path.basename(__file__),
-                                                                                                "last_run_start": start_timestamp_formatted,
-                                                                                                "last_run_end": end_timestamp_formatted
+                                                                                                "run_start": start_timestamp_formatted,
+                                                                                                "run_end": end_timestamp_formatted,
+                                                                                                "result": status,
+                                                                                                "process_pending_audio_jobs_exception": process_pending_audio_jobs_success_exception,
+                                                                                                "purge_completed_audio_jobs_exception": purge_completed_audio_jobs_exception
                                                                                          })
 
     sys.exit()
