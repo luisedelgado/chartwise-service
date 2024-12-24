@@ -7,7 +7,8 @@ from fastapi import BackgroundTasks
 from app.dependencies.api.templates import SessionNotesTemplate
 from app.internal.dependency_container import dependency_container
 from app.internal.utilities.datetime_handler import (convert_to_date_format_mm_dd_yyyy,
-                                                     DATE_FORMAT_YYYY_MM_DD)
+                                                     DATE_FORMAT_YYYY_MM_DD,
+                                                     DATE_TIME_FORMAT)
 from app.managers.assistant_manager import AssistantManager
 from app.managers.audio_processing_manager import AudioProcessingManager
 from app.managers.auth_manager import AuthManager
@@ -237,11 +238,25 @@ async def process_pending_audio_jobs():
     await background_tasks_container.wait_for_all()
 
 if __name__ == "__main__":
+    start_timestamp = datetime.now().timestamp()
+    start_timestamp_formatted = datetime.fromtimestamp(start_timestamp).strftime(DATE_TIME_FORMAT)
+
     purge_completed_audio_jobs()
     asyncio.run(process_pending_audio_jobs())
 
     for file in files_to_delete:
         if os.path.exists(file):
             os.remove(file)
+
+    end_timestamp = datetime.now().timestamp()
+    end_timestamp_formatted = datetime.fromtimestamp(end_timestamp).strftime(DATE_TIME_FORMAT)
+
+    dependency_container.inject_supabase_client_factory().supabase_admin_client().upsert(table_name="script_scheduling",
+                                                                                         on_conflict="script_name",
+                                                                                         payload={
+                                                                                                "script_name": os.path.basename(__file__),
+                                                                                                "last_run_start": start_timestamp_formatted,
+                                                                                                "last_run_end": end_timestamp_formatted
+                                                                                         })
 
     sys.exit()
