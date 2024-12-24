@@ -65,8 +65,8 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
 
         # Delete the object
         job_file_path = job["storage_filepath"]
-        supabase_client.delete_file(source_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                    storage_filepath=job_file_path)
+        supabase_client.storage_client.delete_file(source_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
+                                                   storage_filepath=job_file_path)
 
         supabase_client.delete(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                filters={"id": job["id"]})
