@@ -363,10 +363,10 @@ class AudioProcessingManager(MediaProcessingManager):
         try:
             # Fetch last session date
             patient_query = supabase_client.select(fields="*",
-                                                filters={
-                                                    'id': patient_id
-                                                },
-                                                table_name="patients")
+                                                   filters={
+                                                      'id': patient_id
+                                                   },
+                                                   table_name="patients")
             assert (0 != len((patient_query).data)), "Did not find any data for the patient"
 
             patient_query_data = patient_query.dict()['data']
@@ -388,9 +388,9 @@ class AudioProcessingManager(MediaProcessingManager):
                 formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=patient_last_session_date,
                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                 patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
-                                                                                        first_date_format=datetime_handler.DATE_FORMAT,
-                                                                                        second_date=formatted_date,
-                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
+                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
+                                                                                       second_date=formatted_date,
+                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
             supabase_client.update(table_name="patients",
                                     payload={
                                         "last_session_date": patient_last_session_date,

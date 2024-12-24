@@ -6,7 +6,8 @@ from fastapi import BackgroundTasks
 
 from app.dependencies.api.templates import SessionNotesTemplate
 from app.internal.dependency_container import dependency_container
-from app.internal.utilities.datetime_handler import DATE_FORMAT_YYYY_MM_DD
+from app.internal.utilities.datetime_handler import (convert_to_date_format_mm_dd_yyyy,
+                                                     DATE_FORMAT_YYYY_MM_DD)
 from app.managers.assistant_manager import AssistantManager
 from app.managers.audio_processing_manager import AudioProcessingManager
 from app.managers.auth_manager import AuthManager
@@ -24,9 +25,24 @@ AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
 AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
 SUCCESSFUL_PROCESSING_DATE_KEY = "successful_processing_date"
 
+class BackgroundTasksContainer:
+    def __init__(self):
+        self.tasks = []
+
+    def add_task(self, func, *args, **kwargs):
+        task = asyncio.create_task(func(*args, **kwargs))
+        self.tasks.append(task)
+
+    async def wait_for_all(self):
+        """Wait for all background tasks to finish."""
+        if self.tasks:
+            await asyncio.gather(*self.tasks)
+
 assistant_manager = AssistantManager()
 audio_processing_manager = AudioProcessingManager()
 auth_manager = AuthManager()
+background_tasks_container = BackgroundTasksContainer()
+files_to_delete = []
 
 def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
     """
@@ -54,7 +70,7 @@ def _delete_completed_audio_jobs_in_batch(batch: list[dict]):
         supabase_client.delete(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
                                filters={"id": job["id"]})
 
-async def _process_pending_audio_job(job: dict) -> bool:
+async def _process_pending_audio_job(job: dict):
     """
     This function processes a single pending audio job.
     It downloads the audio file, processes it, and then updates the respective session entry.
@@ -77,6 +93,7 @@ async def _process_pending_audio_job(job: dict) -> bool:
             with open(local_temp_file, "wb") as temp_file:
                 temp_file.write(response)
 
+            files_to_delete.append(local_temp_file)
             therapist_query = supabase_client.select(table_name=THERAPISTS_TABLE_NAME,
                                                      fields="*",
                                                      filters={"id": job["therapist_id"]})
@@ -85,40 +102,54 @@ async def _process_pending_audio_job(job: dict) -> bool:
             therapist_query_dict = therapist_query.model_dump()['data'][0]
             language_code = therapist_query_dict["language_preference"]
 
+            old_session_report_id = job["session_report_id"]
+            old_storage_filepath = job["storage_filepath"]
             session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
                                                           fields="*",
-                                                          filters={"id": job["session_report_id"]})
+                                                          filters={"id": old_session_report_id})
             assert (0 != len((session_report_query).data)), "Something went wrong when querying the session report."
 
             session_report_query_dict = session_report_query.model_dump()['data'][0]
             is_diarization_job = job["job_type"] == DIARIZATION_KEY
-            await audio_processing_manager.transcribe_audio_file(background_tasks=BackgroundTasks(),
-                                                                 auth_manager=auth_manager,
-                                                                 assistant_manager=assistant_manager,
-                                                                 supabase_client=supabase_client,
-                                                                 template=SessionNotesTemplate(session_report_query_dict["template"]),
-                                                                 therapist_id=job["therapist_id"],
-                                                                 session_id=uuid.uuid4(),
-                                                                 language_code=language_code,
-                                                                 patient_id=session_report_query_dict["patient_id"],
-                                                                 session_date=session_report_query_dict["session_date"],
-                                                                 environment=job["environment"],
-                                                                 audio_file=local_temp_file,
-                                                                 diarize=is_diarization_job)
-            return True
+
+            background_tasks = BackgroundTasks()
+            background_tasks_container.add_task(background_tasks)
+
+            formatted_session_date = convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_query_dict["session_date"],
+                                                                       incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
+            new_session_report_id = await audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
+                                                                                         auth_manager=auth_manager,
+                                                                                         assistant_manager=assistant_manager,
+                                                                                         supabase_client=supabase_client,
+                                                                                         template=SessionNotesTemplate(session_report_query_dict["template"]),
+                                                                                         therapist_id=job["therapist_id"],
+                                                                                         session_id=uuid.uuid4(),
+                                                                                         language_code=language_code,
+                                                                                         patient_id=session_report_query_dict["patient_id"],
+                                                                                         session_date=formatted_session_date,
+                                                                                         environment=job["environment"],
+                                                                                         audio_file=local_temp_file,
+                                                                                         diarize=is_diarization_job)
+
+            new_session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
+                                                              fields="*",
+                                                              filters={"id": new_session_report_id})
+            assert (0 != len((new_session_report_query).data)), "Did not find a valid session report."
+            assert new_session_report_query.dict()['data'][0]['processing_status'] != "failed", "Processing failed."
+
+            # Processing succeeded. Delete the old session report entry, as well as the backing file.
+            supabase_client.storage_client.delete_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                       storage_filepath=old_storage_filepath)
+            supabase_client.delete(table_name=SESSION_REPORTS_TABLE_NAME,
+                                   filters={"id": old_session_report_id})
+            return
+
         except Exception as e:
             pass
-        finally:
-            # Ensure the local temporary file is deleted
-            if os.path.exists(local_temp_file):
-                os.remove(local_temp_file)
 
         # If the job failed, retry the job with an exponential backoff
         backoff_in_minutes = min(5 ** attempt_index, 15)
         time.sleep(backoff_in_minutes / 60)
-
-    # If the job failed after all retries, return False
-    return False
 
 async def _attempt_processing_job_batch(batch: list[dict]):
     """
@@ -129,21 +160,10 @@ async def _attempt_processing_job_batch(batch: list[dict]):
     Arguments:
         batch: A list of dictionaries, where each dictionary represents a pending audio job.
     """
-    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for job in batch:
         assert job[SUCCESSFUL_PROCESSING_DATE_KEY] == None, "Job has already been processed."
 
-        succeeded = await _process_pending_audio_job(job)
-        if succeeded:
-            supabase_client.update(table_name=PENDING_AUDIO_JOBS_TABLE_NAME,
-                                   payload={
-                                       SUCCESSFUL_PROCESSING_DATE_KEY: datetime.now().strftime(DATE_FORMAT_YYYY_MM_DD)
-                                   },
-                                   filters={"id": job["id"]})
-
-            supabase_client.storage_client.move_file_between_buckets(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                                     destination_bucket=AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                                                     file_path=job["storage_filepath"])
+        await _process_pending_audio_job(job)
 
 def purge_completed_audio_jobs():
     """
@@ -213,8 +233,15 @@ async def process_pending_audio_jobs():
     if batch:
         await _attempt_processing_job_batch(batch)
 
+    # Wait for all background tasks to finish to ensure all processing is complete
+    await background_tasks_container.wait_for_all()
+
 if __name__ == "__main__":
     purge_completed_audio_jobs()
     asyncio.run(process_pending_audio_jobs())
+
+    for file in files_to_delete:
+        if os.path.exists(file):
+            os.remove(file)
 
     sys.exit()
