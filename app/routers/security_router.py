@@ -42,7 +42,6 @@ class SignupPayload(BaseModel):
     first_name: str
     last_name: str
     birth_date: Optional[str] = None
-    login_mechanism: LoginMechanism
     language_preference: str
     gender: Optional[Gender] = None
 
@@ -434,8 +433,6 @@ class SecurityRouter:
         logs_request_description = "".join([
             "birthdate=\"",
             f"{body.birth_date or ''}\";",
-            "login_mechanism=\"",
-            f"{body.login_mechanism or ''}\";",
             "language_preference=\"",
             f"{body.language_preference or ''}\";",
             "gender=\"",
@@ -467,7 +464,6 @@ class SecurityRouter:
         try:
             body = body.dict(exclude_unset=True)
 
-            assert body['login_mechanism'] != LoginMechanism.UNDEFINED, '''Invalid parameter 'undefined' for login_mechanism.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"

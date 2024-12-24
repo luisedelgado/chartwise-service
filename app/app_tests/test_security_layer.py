@@ -104,7 +104,6 @@ class TestingHarnessSecurityRouter:
                                        "first_name": "foo",
                                        "last_name": "bar",
                                        "birth_date": "01/01/2000",
-                                       "login_mechanism": "internal",
                                        "language_preference": "es-419",
                                        "gender": "male"
                                    }
@@ -128,7 +127,6 @@ class TestingHarnessSecurityRouter:
                                        "first_name": "foo",
                                        "last_name": "bar",
                                        "birth_date": "01/01/2000",
-                                       "login_mechanism": "internal",
                                        "language_preference": "es-419",
                                        "gender": "male"
                                    }
@@ -155,7 +153,6 @@ class TestingHarnessSecurityRouter:
                                        "first_name": "foo",
                                        "last_name": "bar",
                                        "birth_date": "01/01/2000",
-                                       "login_mechanism": "internal",
                                        "language_preference": "brbrbrbrbr",
                                        "gender": "male"
                                    }
@@ -182,38 +179,10 @@ class TestingHarnessSecurityRouter:
                                        "first_name": "foo",
                                        "last_name": "bar",
                                        "birth_date": "01/01/2000",
-                                       "login_mechanism": "internal",
                                        "language_preference": "es-419",
                                        "gender": "undefined"
                                    }
                                 })
-        assert response.status_code == 400
-
-    def test_add_therapist_with_valid_credentials_but_undefined_login_mechanism(self):
-        self.fake_supabase_admin_client.return_authenticated_session = True
-        self.fake_supabase_user_client.select_returns_data = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
-                               cookies={
-                                   "authorization": self.auth_cookie
-                               },
-                               headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
-                               },
-                               json={
-                                   "password": "fake_password",
-                                   "body": {
-                                       "email": "foo@foo.com",
-                                       "first_name": "foo",
-                                       "last_name": "bar",
-                                       "birth_date": "01/01/2000",
-                                       "login_mechanism": "undefined",
-                                       "language_preference": "es-419",
-                                       "gender": "male"
-                                   }
-                               })
         assert response.status_code == 400
 
     def test_add_therapist_without_previous_auth_cookie_success(self):
@@ -233,7 +202,6 @@ class TestingHarnessSecurityRouter:
                                     "first_name": "foo",
                                     "last_name": "bar",
                                     "birth_date": "01-01-2000",
-                                    "login_mechanism": "internal",
                                     "language_preference": "es-419",
                                     "gender": "male"
                                 }
@@ -260,7 +228,6 @@ class TestingHarnessSecurityRouter:
                                     "first_name": "foo",
                                     "last_name": "bar",
                                     "birth_date": "01-01-2000",
-                                    "login_mechanism": "internal",
                                     "language_preference": "es-419",
                                     "gender": "male"
                                 }
