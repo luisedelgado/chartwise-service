@@ -1,0 +1,6 @@
+app = 'chartwise-process-pending-jobs'
+primary_region = 'mia'
+
+[build]
+  dockerfile = "scripts/pending_audio_jobs_script.Dockerfile"
+  context = "."

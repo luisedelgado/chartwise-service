@@ -22,5 +22,22 @@ services:
           memory: "2g"
     restart: always  # Ensure the service is restarted on failure
 
+  pending_audio_jobs_script:
+    build:
+      context: .
+      dockerfile: scripts/pending_audio_jobs_script.Dockerfile
+    environment:
+      PYTHONUNBUFFERED: "True"
+      APP_HOME: "/app"
+    env_file:
+      - .env
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512m"
+
 # Running command:
 # docker-compose up --build
