@@ -38,6 +38,11 @@ class ResendClient(ResendBaseClass):
         except Exception as e:
             raise Exception(e)
 
+    def send_eng_team_internal_email(self,
+                                     subject: str,
+                                     body: str):
+        ...
+
     # Private
 
     """

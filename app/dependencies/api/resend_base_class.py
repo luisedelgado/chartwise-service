@@ -15,3 +15,15 @@ class ResendBaseClass(ABC):
                                             language_code: str,
                                             to_address: str):
         pass
+
+    """
+    Sends an internal notification email to our engineering team.
+
+    Arguments:
+    subject – the email subject.
+    body – the email body.
+    """
+    @abstractmethod
+    def send_eng_team_internal_email(subject: str,
+                                     body: str):
+        pass

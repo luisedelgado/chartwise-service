@@ -7,3 +7,8 @@ class FakeResendClient(ResendBaseClass):
                                             language_code: str,
                                             to_address: str):
         pass
+
+    def send_eng_team_internal_email(self,
+                                     subject: str,
+                                     body: str):
+        pass
