@@ -241,6 +241,24 @@ if __name__ == "__main__":
     start_timestamp = datetime.now().timestamp()
     start_timestamp_formatted = datetime.fromtimestamp(start_timestamp).strftime(DATE_TIME_FORMAT)
 
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+    script_schedule_query = supabase_client.select(table_name="pending_audio_jobs_script_schedule",
+                                                   fields="*",
+                                                   filters={},
+                                                   limit=1,
+                                                   order_desc_column="run_start")
+    script_schedule_query_dict = script_schedule_query.model_dump()['data']
+
+    if (len(script_schedule_query_dict) > 0):
+        last_run_datetime = datetime.fromisoformat(script_schedule_query_dict[0]['run_start'])
+        now_datetime = datetime.now(last_run_datetime.tzinfo)
+
+        # Check if the script has already ran today, if so, exit.
+        try:
+            assert last_run_datetime.date() < now_datetime.date()
+        except Exception:
+            sys.exit()
+
     try:
         purge_completed_audio_jobs()
         purge_completed_audio_jobs_success = True
@@ -265,13 +283,13 @@ if __name__ == "__main__":
     end_timestamp_formatted = datetime.fromtimestamp(end_timestamp).strftime(DATE_TIME_FORMAT)
 
     status = "success" if purge_completed_audio_jobs_success and process_pending_audio_jobs_success else "failed"
-    dependency_container.inject_supabase_client_factory().supabase_admin_client().insert(table_name="pending_audio_jobs_script_schedule",
-                                                                                         payload={
-                                                                                                "run_start": start_timestamp_formatted,
-                                                                                                "run_end": end_timestamp_formatted,
-                                                                                                "result": status,
-                                                                                                "process_pending_audio_jobs_exception": process_pending_audio_jobs_success_exception,
-                                                                                                "purge_completed_audio_jobs_exception": purge_completed_audio_jobs_exception
-                                                                                         })
+    supabase_client.insert(table_name="pending_audio_jobs_script_schedule",
+                           payload={
+                               "run_start": start_timestamp_formatted,
+                               "run_end": end_timestamp_formatted,
+                               "result": status,
+                               "process_pending_audio_jobs_exception": process_pending_audio_jobs_success_exception,
+                               "purge_completed_audio_jobs_exception": purge_completed_audio_jobs_exception
+                           })
 
     sys.exit()

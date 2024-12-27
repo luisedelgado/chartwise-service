@@ -19,4 +19,4 @@ COPY app/ ./app/
 COPY scripts/process_pending_jobs.py ./
 
 # Set the command to run the script
-CMD ["python", "process_pending_jobs.py"]
+CMD ["python3", "process_pending_jobs.py"]
