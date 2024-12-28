@@ -32,7 +32,7 @@ from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
+from ..managers.email_manager import EmailManager, InternalAlertCategory, InternalAlert
 
 class PaymentSessionPayload(BaseModel):
     price_id: str
@@ -882,7 +882,13 @@ class PaymentProcessingRouter:
                     product = stripe_client.retrieve_product(product_id)
                     stripe_client.attach_payment_intent_metadata(payment_intent_id=latest_invoice.get("payment_intent"),
                                                                  metadata=product.get("metadata", {}))
-                except Exception:
+                except Exception as e:
+                    internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
+                                                   description="(checkout.session.completed) Failed to attach product metadata to payment intent.",
+                                                   session_id=session_id,
+                                                   exception=e)
+                    self._email_manager.send_internal_eng_alert(alert=internal_alert,
+                                                                therapist_id=therapist_id)
                     pass
 
             log_payment_event(background_tasks=background_tasks,
@@ -979,10 +985,14 @@ class PaymentProcessingRouter:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
 
+            subscription_metadata = subscription.get('metadata', {})
+
             try:
-                therapist_id = (subscription.get('metadata', {})).get('therapist_id', None)
+                therapist_id = subscription_metadata.get('therapist_id', None)
+                session_id = subscription_metadata.get('session_id', None)
             except Exception as e:
                 therapist_id = None
+                session_id = None
 
             billing_interval = subscription['items']['data'][0]['plan']['interval']
             current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
@@ -995,8 +1005,8 @@ class PaymentProcessingRouter:
 
             try:
                 therapist_query = supabase_client.select(fields="*",
-                                                        filters={ 'therapist_id': therapist_id },
-                                                        table_name="subscription_status")
+                                                         filters={ 'therapist_id': therapist_id },
+                                                         table_name="subscription_status")
                 therapist_query_data = therapist_query.dict()
                 therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
 
@@ -1033,6 +1043,13 @@ class PaymentProcessingRouter:
                     await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
                                                                           supabase_client=supabase_client)
             except Exception as e:
+                internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
+                                               description="(customer.subscription.updated) Failure caught in subscription update.",
+                                               session_id=session_id,
+                                               exception=e)
+                self._email_manager.send_internal_eng_alert(alert=internal_alert,
+                                                            therapist_id=therapist_id)
+
                 log_metadata_from_stripe_subscription_event(event=event,
                                                             status=FAILED_RESULT,
                                                             message=str(e),
@@ -1053,19 +1070,45 @@ class PaymentProcessingRouter:
             setup_intent = event["data"]["object"]
             payment_method_id = setup_intent["payment_method"]
             customer_id = setup_intent["customer"]
+            therapist_id = None
+
+            try:
+                # Fetch corresponding therapist ID
+                customer_data = supabase_client.select(fields="*",
+                                                    filters={
+                                                        'customer_id': customer_id,
+                                                    },
+                                                    table_name="subscription_status")
+                assert (0 != len(customer_data.data)), "No therapist data found for incoming customer ID."
+                therapist_id = customer_data.dict()['data'][0]['therapist_id']
+            except Exception as e:
+                internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
+                                               description=("(setup_intent.succeeded) Failed to retrieve a therapist ID for the incoming customer ID."),
+                                               exception=e)
+                self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                pass
 
             # Update the default payment method for the subscription
             subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id)
             for subscription in subscriptions:
                 try:
                     stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
-                                                                    payment_method_id=payment_method_id)
+                                                                     payment_method_id=payment_method_id)
 
                     log_metadata_from_stripe_subscription_event(event=event,
                                                                 status=SUCCESS_RESULT,
                                                                 background_tasks=background_tasks)
-                except Exception:
-                    # Failed to update a subscription's payment method. Failing silently.
+                except Exception as e:
+                    # Failed to update a subscription's payment method. Trigger internal alert, and fail silently.
+                    internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
+                                                   description=("(setup_intent.succeeded) This failure usually is related to not "
+                                                                "being able to update a subscription's payment method. "
+                                                                "Please take a look to get a better understanding of the customer's journey."
+                                                                f"\n- Subscription ID: {subscription_id}"),
+                                                   exception=e)
+                    self._email_manager.send_internal_eng_alert(alert=internal_alert,
+                                                                therapist_id=therapist_id)
+
                     pass
 
         else:

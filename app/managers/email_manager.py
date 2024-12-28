@@ -9,9 +9,9 @@ class InternalAlertCategory(Enum):
 
 class InternalAlert:
     def __init__(self,
-                 session_id: str,
                  category: InternalAlertCategory,
                  description: str,
+                 session_id: str = None,
                  exception: Exception = None):
         self.session_id = session_id
         self.category = category
@@ -50,7 +50,7 @@ class EmailManager:
 
     async def send_internal_eng_alert(self,
                                       alert: InternalAlert,
-                                      therapist_id: str):
+                                      therapist_id: str = None):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
 
@@ -59,6 +59,7 @@ class EmailManager:
             else:
                 raise Exception("Unrecognized alert category")
 
+            therapist_id = therapist_id if therapist_id is not None else "N/A"
             body = self.ALERT_DETAILS.format(therapist_id=therapist_id,
                                              session_id=alert.session_id) + "\n"
             body += alert.description

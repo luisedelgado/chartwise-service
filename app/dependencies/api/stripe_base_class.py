@@ -166,6 +166,18 @@ class StripeBaseClass(ABC):
         pass
 
     """
+    Updates the subscription's associated payment method
+
+    Arguments:
+    subscription_id – the subscription ID to be updated.
+    payment_method_id – the new payment method ID to be linked to the subscription.
+    """
+    @abstractmethod
+    def update_subscription_payment_method(subscription_id: str,
+                                           payment_method_id: str):
+        pass
+
+    """
     Retrieves the product catalog.
     """
     @abstractmethod
