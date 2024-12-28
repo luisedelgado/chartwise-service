@@ -8,10 +8,13 @@ from ..api.resend_base_class import ResendBaseClass
 
 class ResendClient(ResendBaseClass):
 
+    LUIS_CHARTWISE_EMAIL = "luis@chartwise.ai"
+
     def __init__(self):
         resend.api_key = os.environ.get('RESEND_API_KEY')
         env = Environment(loader=FileSystemLoader("app/internal/email_templates"))
         self.welcome_template = env.get_template("welcome.html")
+        self.internal_eng_alert_template = env.get_template("internal_eng_alert.html")
 
     def send_new_subscription_welcome_email(self,
                                             user_first_name: str,
@@ -41,7 +44,15 @@ class ResendClient(ResendBaseClass):
     def send_eng_team_internal_email(self,
                                      subject: str,
                                      body: str):
-        ...
+        try:
+            from_address = "ChartWise Engineering <engineering@chartwise.ai>"
+            html_content = self.internal_eng_alert_template.render(alert_content=body)
+            self._send_email(from_address=from_address,
+                             to_addresses=[self.LUIS_CHARTWISE_EMAIL],
+                             subject=subject,
+                             html=html_content)
+        except Exception as e:
+            raise Exception(e)
 
     # Private
 
