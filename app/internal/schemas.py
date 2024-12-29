@@ -11,3 +11,7 @@ class SessionUploadStatus(Enum):
     PROCESSING = "processing"
     SUCCESS = "success"
     FAILED = "failed"
+
+class MediaType(Enum):
+    IMAGE = "image"
+    AUDIO = "audio"

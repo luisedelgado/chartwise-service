@@ -194,6 +194,7 @@ class ImageProcessingRouter:
                                                                  session_id=session_id,
                                                                  environment=self._environment,
                                                                  language_code=language_code,
+                                                                 therapist_id=therapist_id,
                                                                  background_tasks=background_tasks,
                                                                  supabase_client=supabase_client,
                                                                  auth_manager=self._auth_manager,

@@ -5,18 +5,19 @@ from fastapi import BackgroundTasks
 
 from .assistant_manager import AssistantManager
 from .auth_manager import AuthManager
+from .email_manager import EmailManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..internal.schemas import SessionUploadStatus
+from ..internal.internal_alert import MediaJobProcessingAlert
+from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
-
-class MediaType(Enum):
-    IMAGE = "image"
-    AUDIO = "audio"
 
 class MediaProcessingManager(ABC):
 
     AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
     AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
+
+    def __init__(self):
+        self._email_manager = EmailManager()
 
     """
     Updates the incoming session's processing status.
@@ -32,6 +33,7 @@ class MediaProcessingManager(ABC):
     session_upload_status – the session upload status.
     session_notes_id – the id of the session to be updated.
     media_type – the type of media that was processed.
+    therapist_id – the therapist id.
     storage_filepath – the storage filepath where the backing file is stored in Supabase.
     """
     async def _update_session_processing_status(self,
@@ -45,6 +47,7 @@ class MediaProcessingManager(ABC):
                                                 session_upload_status: str,
                                                 session_notes_id: str,
                                                 media_type: MediaType,
+                                                therapist_id: str,
                                                 storage_filepath: str = None):
         await assistant_manager.update_session(language_code=language_code,
                                                environment=environment,
@@ -58,6 +61,13 @@ class MediaProcessingManager(ABC):
                                                supabase_client=supabase_client)
 
         if session_upload_status != SessionUploadStatus.SUCCESS.value:
+            internal_alert = MediaJobProcessingAlert(description="Failed to process a media job. It will automatically be picked-up by daily job for retry",
+                                                     media_type=media_type,
+                                                     session_id=session_id,
+                                                     session_report_id=session_notes_id,
+                                                     storage_filepath=storage_filepath,
+                                                     therapist_id=therapist_id)
+            await self._email_manager.send_internal_eng_alert(alert=internal_alert)
             return
 
         # Update tracking row from `pending_audio_jobs` table to reflect successful processing.

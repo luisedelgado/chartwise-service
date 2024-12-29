@@ -1,8 +1,12 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from ..internal.schemas import MediaType
+
 class InternalAlertCategory(Enum):
     PAYMENTS_ACTIVITY = "payments activity"
+    AUDIO_JOB_PROCESSING = "audio job processing"
+    IMAGE_JOB_PROCESSING = "image job processing"
 
 class InternalAlert(ABC):
     @abstractmethod
@@ -33,3 +37,20 @@ class PaymentsActivityAlert(InternalAlert):
         self.customer_id = customer_id
         self.payment_method_id = payment_method_id
         self.category = InternalAlertCategory.PAYMENTS_ACTIVITY
+
+class MediaJobProcessingAlert(InternalAlert):
+    def __init__(self,
+                 description: str,
+                 media_type: MediaType,
+                 session_id: str = None,
+                 exception: Exception = None,
+                 therapist_id: str = None,
+                 storage_filepath: str = None,
+                 session_report_id: str = None):
+        super().__init__(description=description,
+                         therapist_id=therapist_id,
+                         session_id=session_id,
+                         exception=exception)
+        self.storage_filepath = storage_filepath
+        self.session_report_id = session_report_id
+        self.category = InternalAlertCategory.AUDIO_JOB_PROCESSING if media_type == MediaType.AUDIO else InternalAlertCategory.IMAGE_JOB_PROCESSING

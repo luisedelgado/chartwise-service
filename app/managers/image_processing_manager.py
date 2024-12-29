@@ -8,12 +8,11 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
 from ..internal.logging import log_textraction_event
-from ..internal.schemas import SessionUploadStatus
+from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
 from ..managers.auth_manager import AuthManager
-from ..managers.media_processing_manager import MediaType
 
 MAX_RETRIES = 5
 RETRY_DELAY = 3  # Delay in seconds
@@ -64,6 +63,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                   session_id: str,
                                   environment: str,
                                   language_code: str,
+                                  therapist_id: str,
                                   background_tasks: BackgroundTasks,
                                   supabase_client: SupabaseBaseClass,
                                   auth_manager: AuthManager,
@@ -114,13 +114,11 @@ class ImageProcessingManager(MediaProcessingManager):
                                                                                   session_id=session_id,
                                                                                   session_notes_text=textraction)
 
-            formatted_session_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_data['session_date'],
-                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             filtered_body = {
                 "id": session_notes_id,
                 "patient_id": patient_id,
                 "notes_text": textraction,
-                "session_date": formatted_session_date,
+                "session_date": session_date,
                 "source": SessionNotesSource.NOTES_IMAGE,
                 "therapist_id": therapist_id
             }
@@ -142,6 +140,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_notes_id,
+                                                         therapist_id=therapist_id,
                                                          media_type=MediaType.IMAGE)
 
         except HTTPException as e:
@@ -154,6 +153,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                              background_tasks=background_tasks,
                                                              auth_manager=auth_manager,
                                                              session_id=session_id,
+                                                             therapist_id=therapist_id,
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
                                                              session_notes_id=session_notes_id,
@@ -169,6 +169,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                             background_tasks=background_tasks,
                                                             auth_manager=auth_manager,
                                                             session_id=session_id,
+                                                            therapist_id=therapist_id,
                                                             supabase_client=supabase_client,
                                                             session_upload_status=SessionUploadStatus.FAILED.value,
                                                             session_notes_id=session_notes_id,

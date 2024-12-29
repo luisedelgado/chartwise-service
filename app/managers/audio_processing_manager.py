@@ -12,13 +12,12 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
 from ..internal.logging import log_error
-from ..internal.schemas import SessionUploadStatus
+from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..internal.utilities.audio_file_utilities import (get_output_filepath_for_sample_rate_reduction,
                                                        reduce_sample_rate_if_worthwhile)
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
-from ..managers.media_processing_manager import MediaType
 from ..vectors import data_cleaner
 
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
@@ -159,6 +158,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              environment=environment,
                                                              background_tasks=background_tasks,
                                                              auth_manager=auth_manager,
+                                                             therapist_id=therapist_id,
                                                              session_id=session_id,
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
@@ -202,6 +202,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
+                                                         therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
@@ -274,6 +275,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
+                                                         therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
@@ -286,6 +288,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          environment=environment,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
+                                                         therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
@@ -336,6 +339,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
+                                                         therapist_id=therapist_id,
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id,
@@ -345,6 +349,7 @@ class AudioProcessingManager(MediaProcessingManager):
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
                                                          environment=environment,
+                                                         therapist_id=therapist_id,
                                                          background_tasks=background_tasks,
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
