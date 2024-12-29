@@ -48,7 +48,7 @@ class EmailManager:
                 payment_method_id = alert.payment_method_id if alert.payment_method_id is not None else "N/A"
                 activity_details = self.PAYMENTS_ACTIVITY_DETAILS.format(subscription_id=subscription_id,
                                                                          customer_id=customer_id,
-                                                                         payment_method_id=payment_method_id),
+                                                                         payment_method_id=payment_method_id)
             else:
                 raise Exception("Unrecognized alert category")
 

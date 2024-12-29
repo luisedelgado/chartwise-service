@@ -1081,6 +1081,7 @@ class PaymentProcessingRouter:
 
             try:
                 # Fetch corresponding therapist ID
+                supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
                 customer_data = supabase_client.select(fields="*",
                                                        filters={
                                                            'customer_id': customer_id,
