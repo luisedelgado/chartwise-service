@@ -6,12 +6,15 @@ from fastapi import BackgroundTasks
 
 from app.dependencies.api.templates import SessionNotesTemplate
 from app.internal.dependency_container import dependency_container
+from app.internal.internal_alert import MediaJobProcessingAlert
+from app.internal.schemas import MediaType
 from app.internal.utilities.datetime_handler import (convert_to_date_format_mm_dd_yyyy,
                                                      DATE_FORMAT_YYYY_MM_DD,
                                                      DATE_TIME_FORMAT)
 from app.managers.assistant_manager import AssistantManager
 from app.managers.audio_processing_manager import AudioProcessingManager
 from app.managers.auth_manager import AuthManager
+from app.managers.email_manager import EmailManager
 
 BATCH_LIMIT = 10
 RETENTION_POLICY_DAYS = 7
@@ -42,6 +45,7 @@ class BackgroundTasksContainer:
 assistant_manager = AssistantManager()
 audio_processing_manager = AudioProcessingManager()
 auth_manager = AuthManager()
+email_manager = EmailManager()
 background_tasks_container = BackgroundTasksContainer()
 files_to_delete = []
 
@@ -81,9 +85,9 @@ async def _process_pending_audio_job(job: dict):
         job: A dictionary representing a pending audio job.
     """
     local_temp_file = None
+    supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for attempt_index in range(0, RETRY_ATTEMPTS):
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             storage_filepath = job["storage_filepath"]
             file_extension = os.path.splitext(storage_filepath)[1].lower()
             local_temp_file = "".join(["temp_file", file_extension])
@@ -146,6 +150,21 @@ async def _process_pending_audio_job(job: dict):
             return
 
         except Exception as e:
+            processing_retry_count = (1 + job["processing_retry_count"])
+            supabase_client.update(payload={
+                                       "processing_retry_count": processing_retry_count
+                                   },
+                                   filters={
+                                       "id": job["id"],
+                                   },
+                                   table_name="pending_audio_jobs")
+            alert = MediaJobProcessingAlert(description=f"Failed to process pending audio job with ID #{job["id"]} in daily script.",
+                                            media_type=MediaType.AUDIO,
+                                            exception=e,
+                                            therapist_id=job["therapist_id"],
+                                            storage_filepath=job["storage_filepath"],
+                                            session_report_id=job["session_report_id"])
+            await email_manager.send_internal_eng_alert(alert)
             pass
 
         # If the job failed, retry the job with an exponential backoff
