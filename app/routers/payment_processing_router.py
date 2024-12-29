@@ -16,6 +16,7 @@ from typing import Annotated, Optional, Union
 from ..internal.utilities import datetime_handler
 from ..internal import security
 from ..internal.dependency_container import dependency_container, StripeBaseClass
+from ..internal.internal_alert import PaymentsActivityAlert
 from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_GET,
                                 API_METHOD_POST,
@@ -32,7 +33,7 @@ from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager, InternalAlertCategory, InternalAlert
+from ..managers.email_manager import EmailManager
 
 class PaymentSessionPayload(BaseModel):
     price_id: str
@@ -861,6 +862,7 @@ class PaymentProcessingRouter:
         if event_type == 'checkout.session.completed':
             checkout_session = event['data']['object']
             subscription_id = checkout_session.get('subscription')
+            customer_id = checkout_session.get('customer')
             metadata = checkout_session.get('metadata', {})
             therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
             session_id = None if 'session_id' not in metadata else metadata['session_id']
@@ -883,12 +885,13 @@ class PaymentProcessingRouter:
                     stripe_client.attach_payment_intent_metadata(payment_intent_id=latest_invoice.get("payment_intent"),
                                                                  metadata=product.get("metadata", {}))
                 except Exception as e:
-                    internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
-                                                   description="(checkout.session.completed) Failed to attach product metadata to payment intent.",
-                                                   session_id=session_id,
-                                                   exception=e)
-                    self._email_manager.send_internal_eng_alert(alert=internal_alert,
-                                                                therapist_id=therapist_id)
+                    internal_alert = PaymentsActivityAlert(description="(checkout.session.completed) Failed to attach product metadata to payment intent.",
+                                                           session_id=session_id,
+                                                           exception=e,
+                                                           therapist_id=therapist_id,
+                                                           subscription_id=subscription_id,
+                                                           customer_id=customer_id)
+                    await self._email_manager.send_internal_eng_alert(alert=internal_alert)
                     pass
 
             log_payment_event(background_tasks=background_tasks,
@@ -982,6 +985,8 @@ class PaymentProcessingRouter:
             # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
 
             subscription = event['data']['object']
+            subscription_id = subscription.get('id')
+            customer_id = subscription.get('customer')
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
 
@@ -990,9 +995,10 @@ class PaymentProcessingRouter:
             try:
                 therapist_id = subscription_metadata.get('therapist_id', None)
                 session_id = subscription_metadata.get('session_id', None)
-            except Exception as e:
-                therapist_id = None
-                session_id = None
+
+                assert len(therapist_id or None) > 0, "Did not find a therapist ID in the subscription metadata."
+            except Exception:
+                return
 
             billing_interval = subscription['items']['data'][0]['plan']['interval']
             current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
@@ -1023,7 +1029,7 @@ class PaymentProcessingRouter:
                     "free_trial_active": is_trialing,
                     "free_trial_end_date": formatted_trial_end_date,
                     "recurrence": billing_interval,
-                    "subscription_id": subscription.get('id'),
+                    "subscription_id": subscription_id,
                     "current_tier": tier_name
                 }
 
@@ -1043,12 +1049,13 @@ class PaymentProcessingRouter:
                     await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
                                                                           supabase_client=supabase_client)
             except Exception as e:
-                internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
-                                               description="(customer.subscription.updated) Failure caught in subscription update.",
-                                               session_id=session_id,
-                                               exception=e)
-                self._email_manager.send_internal_eng_alert(alert=internal_alert,
-                                                            therapist_id=therapist_id)
+                internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
+                                                       session_id=session_id,
+                                                       therapist_id=therapist_id,
+                                                       exception=e,
+                                                       subscription_id=subscription_id,
+                                                       customer_id=customer_id)
+                await self._email_manager.send_internal_eng_alert(alert=internal_alert)
 
                 log_metadata_from_stripe_subscription_event(event=event,
                                                             status=FAILED_RESULT,
@@ -1075,17 +1082,18 @@ class PaymentProcessingRouter:
             try:
                 # Fetch corresponding therapist ID
                 customer_data = supabase_client.select(fields="*",
-                                                    filters={
-                                                        'customer_id': customer_id,
-                                                    },
-                                                    table_name="subscription_status")
+                                                       filters={
+                                                           'customer_id': customer_id,
+                                                       },
+                                                       table_name="subscription_status")
                 assert (0 != len(customer_data.data)), "No therapist data found for incoming customer ID."
                 therapist_id = customer_data.dict()['data'][0]['therapist_id']
             except Exception as e:
-                internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
-                                               description=("(setup_intent.succeeded) Failed to retrieve a therapist ID for the incoming customer ID."),
-                                               exception=e)
-                self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) Failed to retrieve a therapist ID for the incoming customer ID."),
+                                                       exception=e,
+                                                       payment_method_id=payment_method_id,
+                                                       customer_id=customer_id)
+                await self._email_manager.send_internal_eng_alert(alert=internal_alert)
                 pass
 
             # Update the default payment method for the subscription
@@ -1094,22 +1102,17 @@ class PaymentProcessingRouter:
                 try:
                     stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
                                                                      payment_method_id=payment_method_id)
-
-                    log_metadata_from_stripe_subscription_event(event=event,
-                                                                status=SUCCESS_RESULT,
-                                                                background_tasks=background_tasks)
                 except Exception as e:
                     # Failed to update a subscription's payment method. Trigger internal alert, and fail silently.
-                    internal_alert = InternalAlert(category=InternalAlertCategory.PAYMENTS,
-                                                   description=("(setup_intent.succeeded) This failure usually is related to not "
-                                                                "being able to update a subscription's payment method. "
-                                                                "Please take a look to get a better understanding of the customer's journey."
-                                                                f"\n- Subscription ID: {subscription_id}"),
-                                                   exception=e)
-                    self._email_manager.send_internal_eng_alert(alert=internal_alert,
-                                                                therapist_id=therapist_id)
-
-                    pass
+                    internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) This failure usually is related to not "
+                                                                        "being able to update a subscription's payment method. "
+                                                                        "Please take a look to get a better understanding of the customer's journey."),
+                                                           exception=e,
+                                                           therapist_id=therapist_id,
+                                                           subscription_id=subscription.get('id', None),
+                                                           payment_method_id=payment_method_id,
+                                                           customer_id=customer_id)
+                    await self._email_manager.send_internal_eng_alert(alert=internal_alert)
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")

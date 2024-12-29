@@ -1,4 +1,5 @@
 from ..api.resend_base_class import ResendBaseClass
+from ...internal.internal_alert import InternalAlertCategory
 
 class FakeResendClient(ResendBaseClass):
 
@@ -8,7 +9,8 @@ class FakeResendClient(ResendBaseClass):
                                             to_address: str):
         pass
 
-    def send_eng_team_internal_email(self,
-                                     subject: str,
-                                     body: str):
+    def send_eng_team_internal_alert_email(self,
+                                           subject: str,
+                                           body: str,
+                                           alert_category: InternalAlertCategory):
         pass

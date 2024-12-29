@@ -5,6 +5,7 @@ import resend
 from jinja2 import Environment, FileSystemLoader
 
 from ..api.resend_base_class import ResendBaseClass
+from ...internal.internal_alert import InternalAlertCategory
 
 class ResendClient(ResendBaseClass):
 
@@ -41,12 +42,14 @@ class ResendClient(ResendBaseClass):
         except Exception as e:
             raise Exception(e)
 
-    def send_eng_team_internal_email(self,
-                                     subject: str,
-                                     body: str):
+    def send_eng_team_internal_alert_email(self,
+                                           subject: str,
+                                           body: str,
+                                           alert_category: InternalAlertCategory):
         try:
             from_address = "ChartWise Engineering <engineering@chartwise.ai>"
-            html_content = self.internal_eng_alert_template.render(alert_content=body)
+            html_content = self.internal_eng_alert_template.render(problem_area=alert_category.value,
+                                                                   alert_content=body)
             self._send_email(from_address=from_address,
                              to_addresses=[self.LUIS_CHARTWISE_EMAIL],
                              subject=subject,

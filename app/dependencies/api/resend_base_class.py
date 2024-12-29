@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from ...internal.internal_alert import InternalAlertCategory
+
 class ResendBaseClass(ABC):
 
     """
@@ -22,8 +24,11 @@ class ResendBaseClass(ABC):
     Arguments:
     subject – the email subject.
     body – the email body.
+    alert_category – the alert category.
     """
     @abstractmethod
-    def send_eng_team_internal_email(subject: str,
-                                     body: str):
+    def send_eng_team_internal_alert_email(self,
+                                           subject: str,
+                                           body: str,
+                                           alert_category: InternalAlertCategory):
         pass

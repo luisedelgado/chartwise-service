@@ -1,31 +1,16 @@
-from enum import Enum
-
 from ..internal.dependency_container import (dependency_container,
                                              ResendBaseClass,
                                              SupabaseBaseClass)
-
-class InternalAlertCategory(Enum):
-    PAYMENTS = "payments"
-
-class InternalAlert:
-    def __init__(self,
-                 category: InternalAlertCategory,
-                 description: str,
-                 session_id: str = None,
-                 exception: Exception = None):
-        self.session_id = session_id
-        self.category = category
-        self.description = description
-        self.exception = exception
+from ..internal.internal_alert import InternalAlert, InternalAlertCategory, PaymentsActivityAlert
 
 class EmailManager:
 
-    PAYMENT_ALERT_HEADER = ("This is an automated alert from ChartWise's monitoring system "
-                            "indicating a potential issue related to payments activity "
-                            "that requires immediate attention. "
-                            "Below are the specific details of the detected issue:\n\n")
-
-    ALERT_DETAILS = ("• Therapist ID: {therapist_id}\n• Session ID: {session_id}\n")
+    ALERT_SUBJECT = "ChartWise Engineering Alert 🚨"
+    SESSION_DATA_DETAILS = ("<li><b>Therapist ID:</b> {therapist_id}</li>"
+                             "<li><b>Session ID:</b> {session_id}</li>")
+    PAYMENTS_ACTIVITY_DETAILS = ("<li><b>Subscription ID:</b> {subscription_id}</li>"
+                                 "<li><b>Customer ID:</b> {customer_id}</li>"
+                                 "<li><b>Payment Method ID:</b> {payment_method_id}</li>")
 
     async def send_new_user_welcome_email(self,
                                           therapist_id: str,
@@ -49,25 +34,36 @@ class EmailManager:
             raise Exception(e)
 
     async def send_internal_eng_alert(self,
-                                      alert: InternalAlert,
-                                      therapist_id: str = None):
+                                      alert: InternalAlert):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
+            therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
 
-            if alert.category == InternalAlertCategory.PAYMENTS:
-                subject = self.PAYMENT_ALERT_HEADER
+            assert hasattr(alert, "category")
+
+            if alert.category == InternalAlertCategory.PAYMENTS_ACTIVITY:
+                alert: PaymentsActivityAlert = alert
+                subscription_id = alert.subscription_id if alert.subscription_id is not None else "N/A"
+                customer_id = alert.customer_id if alert.customer_id is not None else "N/A"
+                payment_method_id = alert.payment_method_id if alert.payment_method_id is not None else "N/A"
+                activity_details = self.PAYMENTS_ACTIVITY_DETAILS.format(subscription_id=subscription_id,
+                                                                         customer_id=customer_id,
+                                                                         payment_method_id=payment_method_id),
             else:
                 raise Exception("Unrecognized alert category")
 
-            therapist_id = therapist_id if therapist_id is not None else "N/A"
-            body = self.ALERT_DETAILS.format(therapist_id=therapist_id,
-                                             session_id=alert.session_id) + "\n"
-            body += alert.description
+            body = "".join([
+                "<ul>",
+                self.SESSION_DATA_DETAILS.format(therapist_id=therapist_id,
+                                                 session_id=alert.session_id),
+                activity_details,
+                "</ul>",
+                f"<p>{alert.description}</p>",
+                "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
+            ])
 
-            if alert.exception is not None:
-                body += f"\n\nThe following exception was raised: {str(alert.exception)}"
-
-            resend_client.send_eng_team_internal_email(subject=subject,
-                                                       body=body)
+            resend_client.send_eng_team_internal_alert_email(subject=self.ALERT_SUBJECT,
+                                                             body=body,
+                                                             alert_category=alert.category)
         except Exception as e:
             raise Exception(e)
