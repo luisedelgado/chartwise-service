@@ -1,7 +1,11 @@
 from ..internal.dependency_container import (dependency_container,
                                              ResendBaseClass,
                                              SupabaseBaseClass)
-from ..internal.internal_alert import InternalAlert, InternalAlertCategory, PaymentsActivityAlert
+from ..internal.internal_alert import (InternalAlert,
+                                       InternalAlertCategory,
+                                       MediaJobProcessingAlert,
+                                       PaymentsActivityAlert)
+from ..internal.schemas import MediaType
 
 class EmailManager:
 
@@ -11,6 +15,9 @@ class EmailManager:
     PAYMENTS_ACTIVITY_DETAILS = ("<li><b>Subscription ID:</b> {subscription_id}</li>"
                                  "<li><b>Customer ID:</b> {customer_id}</li>"
                                  "<li><b>Payment Method ID:</b> {payment_method_id}</li>")
+    MEDIA_JOB_ACTIVITY_DETAILS = ("<li><b>Media Type:</b> {media_type}</li>"
+                                  "<li><b>Session Report ID:</b> {session_report_id}</li>"
+                                  "<li><b>Storage Filepath:</b> {storage_filepath}</li>")
 
     async def send_new_user_welcome_email(self,
                                           therapist_id: str,
@@ -49,6 +56,15 @@ class EmailManager:
                 activity_details = self.PAYMENTS_ACTIVITY_DETAILS.format(subscription_id=subscription_id,
                                                                          customer_id=customer_id,
                                                                          payment_method_id=payment_method_id)
+            elif (alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING
+                  or alert.category == InternalAlertCategory.IMAGE_JOB_PROCESSING):
+                alert: MediaJobProcessingAlert = alert
+                media_type = MediaType.AUDIO.value if alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING else MediaType.IMAGE.value
+                session_report_id = alert.session_report_id if alert.session_report_id is not None else "N/A"
+                storage_filepath = alert.storage_filepath if alert.storage_filepath is not None else "N/A"
+                activity_details = self.MEDIA_JOB_ACTIVITY_DETAILS.format(media_type=media_type,
+                                                                          session_report_id=session_report_id,
+                                                                          storage_filepath=storage_filepath)
             else:
                 raise Exception("Unrecognized alert category")
 
