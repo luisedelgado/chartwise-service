@@ -158,7 +158,7 @@ async def _process_pending_audio_job(job: dict):
                                        "id": job["id"],
                                    },
                                    table_name="pending_audio_jobs")
-            alert = MediaJobProcessingAlert(description=f"Failed to process pending audio job with ID #{job["id"]} in daily script.",
+            alert = MediaJobProcessingAlert(description=f"Failed to process pending audio job with ID <b>{job["id"]}</b> in daily script.",
                                             media_type=MediaType.AUDIO,
                                             exception=e,
                                             therapist_id=job["therapist_id"],
