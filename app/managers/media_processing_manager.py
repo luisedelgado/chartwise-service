@@ -67,7 +67,7 @@ class MediaProcessingManager(ABC):
                                                      session_report_id=session_notes_id,
                                                      storage_filepath=storage_filepath,
                                                      therapist_id=therapist_id)
-            await self._email_manager.send_internal_eng_alert(alert=internal_alert)
+            await self._email_manager.send_engineering_alert(alert=internal_alert)
             return
 
         # Update tracking row from `pending_audio_jobs` table to reflect successful processing.

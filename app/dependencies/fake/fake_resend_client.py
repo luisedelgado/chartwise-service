@@ -14,3 +14,9 @@ class FakeResendClient(ResendBaseClass):
                                            body: str,
                                            alert_category: InternalAlertCategory):
         pass
+
+    def send_customer_relations_alert_email(self,
+                                            subject: str,
+                                            body: str,
+                                            alert_category: InternalAlertCategory):
+        pass

@@ -16,7 +16,7 @@ from typing import Annotated, Optional, Union
 from ..internal.utilities import datetime_handler
 from ..internal import security
 from ..internal.dependency_container import dependency_container, StripeBaseClass
-from ..internal.internal_alert import PaymentsActivityAlert
+from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
 from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_GET,
                                 API_METHOD_POST,
@@ -63,6 +63,8 @@ class PaymentProcessingRouter:
     PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
+    CHARTWISE_PROD_URL = "api.chartwise.ai"
+    CHARTWISE_STAGING_URL = "chartwise-staging-service.fly.dev"
 
     def __init__(self, environment: str):
         self._environment = environment
@@ -808,10 +810,19 @@ class PaymentProcessingRouter:
     async def _capture_payment_event_internal(self,
                                               request: Request,
                                               background_tasks: BackgroundTasks):
+        environment = os.environ.get('ENVIRONMENT')
+        host = request.headers.get("Host")
+
+        if environment == "dev" and "localhost" not in host:
+            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
+        elif environment == "staging" and self.CHARTWISE_STAGING_URL not in host:
+            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
+        elif environment == "prod" and self.CHARTWISE_PROD_URL not in host:
+            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
+
         stripe_client = dependency_container.inject_stripe_client()
 
         try:
-            environment = os.environ.get('ENVIRONMENT')
             if environment == "prod":
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
             elif environment == "staging":
@@ -891,7 +902,7 @@ class PaymentProcessingRouter:
                                                            therapist_id=therapist_id,
                                                            subscription_id=subscription_id,
                                                            customer_id=customer_id)
-                    await self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                    await self._email_manager.send_engineering_alert(alert=internal_alert)
                     pass
 
             log_payment_event(background_tasks=background_tasks,
@@ -1048,6 +1059,25 @@ class PaymentProcessingRouter:
                     # Therapist is entering a valid subscription status, let's send a welcome email
                     await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
                                                                           supabase_client=supabase_client)
+
+                    therapist_query = supabase_client.select(fields="*",
+                                                             filters={ 'id': therapist_id },
+                                                             table_name="therapists")
+                    therapist_query_data = therapist_query.dict()
+                    assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
+
+                    therapist_data = therapist_query_data['data'][0]
+                    alert_description = (f"Customer has just entered an active subscription state for the first time. "
+                                         "Consider reaching out directly for a more personal welcome note.")
+                    therapist_name = "".join([therapist_data['first_name'],
+                                              " ",
+                                              therapist_data['last_name']])
+                    alert = CustomerRelationsAlert(description=alert_description,
+                                                   session_id=session_id,
+                                                   therapist_id=therapist_id,
+                                                   therapist_name=therapist_name,
+                                                   therapist_email=therapist_data['email'])
+                    await self._email_manager.send_customer_relations_alert(alert)
             except Exception as e:
                 internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
                                                        session_id=session_id,
@@ -1055,7 +1085,7 @@ class PaymentProcessingRouter:
                                                        exception=e,
                                                        subscription_id=subscription_id,
                                                        customer_id=customer_id)
-                await self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                await self._email_manager.send_engineering_alert(alert=internal_alert)
 
                 log_metadata_from_stripe_subscription_event(event=event,
                                                             status=FAILED_RESULT,
@@ -1094,7 +1124,7 @@ class PaymentProcessingRouter:
                                                        exception=e,
                                                        payment_method_id=payment_method_id,
                                                        customer_id=customer_id)
-                await self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                await self._email_manager.send_engineering_alert(alert=internal_alert)
                 pass
 
             # Update the default payment method for the subscription
@@ -1113,7 +1143,7 @@ class PaymentProcessingRouter:
                                                            subscription_id=subscription.get('id', None),
                                                            payment_method_id=payment_method_id,
                                                            customer_id=customer_id)
-                    await self._email_manager.send_internal_eng_alert(alert=internal_alert)
+                    await self._email_manager.send_engineering_alert(alert=internal_alert)
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")

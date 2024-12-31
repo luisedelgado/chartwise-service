@@ -16,6 +16,7 @@ class ResendClient(ResendBaseClass):
         env = Environment(loader=FileSystemLoader("app/internal/email_templates"))
         self.welcome_template = env.get_template("welcome.html")
         self.internal_eng_alert_template = env.get_template("internal_eng_alert.html")
+        self.customer_relations_alert_template = env.get_template("customer_relations_alert.html")
 
     def send_new_subscription_welcome_email(self,
                                             user_first_name: str,
@@ -50,6 +51,21 @@ class ResendClient(ResendBaseClass):
             from_address = "ChartWise Engineering <engineering@chartwise.ai>"
             html_content = self.internal_eng_alert_template.render(problem_area=alert_category.value,
                                                                    alert_content=body)
+            self._send_email(from_address=from_address,
+                             to_addresses=[self.LUIS_CHARTWISE_EMAIL],
+                             subject=subject,
+                             html=html_content)
+        except Exception as e:
+            raise Exception(e)
+
+    def send_customer_relations_alert_email(self,
+                                            subject: str,
+                                            body: str,
+                                            alert_category: InternalAlertCategory):
+        try:
+            from_address = "ChartWise Customer Relations <customer_relations@chartwise.ai>"
+            html_content = self.customer_relations_alert_template.render(problem_area=alert_category.value,
+                                                                         alert_content=body)
             self._send_email(from_address=from_address,
                              to_addresses=[self.LUIS_CHARTWISE_EMAIL],
                              subject=subject,

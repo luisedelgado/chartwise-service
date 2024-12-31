@@ -7,6 +7,7 @@ class InternalAlertCategory(Enum):
     PAYMENTS_ACTIVITY = "payments activity"
     AUDIO_JOB_PROCESSING = "audio job processing"
     IMAGE_JOB_PROCESSING = "image job processing"
+    CUSTOMER_RELATIONS = "customer relations"
 
 class InternalAlert(ABC):
     @abstractmethod
@@ -54,3 +55,19 @@ class MediaJobProcessingAlert(InternalAlert):
         self.storage_filepath = storage_filepath
         self.session_report_id = session_report_id
         self.category = InternalAlertCategory.AUDIO_JOB_PROCESSING if media_type == MediaType.AUDIO else InternalAlertCategory.IMAGE_JOB_PROCESSING
+
+class CustomerRelationsAlert(InternalAlert):
+    def __init__(self,
+                 description: str,
+                 session_id: str = None,
+                 exception: Exception = None,
+                 therapist_id: str = None,
+                 therapist_name: str = None,
+                 therapist_email: str = None):
+        super().__init__(description=description,
+                         therapist_id=therapist_id,
+                         session_id=session_id,
+                         exception=exception)
+        self.category = InternalAlertCategory.CUSTOMER_RELATIONS
+        self.therapist_name = therapist_name
+        self.therapist_email = therapist_email

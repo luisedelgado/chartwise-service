@@ -32,3 +32,17 @@ class ResendBaseClass(ABC):
                                            body: str,
                                            alert_category: InternalAlertCategory):
         pass
+
+    """
+    Sends an internal notification email regarding customer relations.
+
+    Arguments:
+    subject – the email subject.
+    body – the email body.
+    alert_category – the alert category.
+    """
+    @abstractmethod
+    def send_customer_relations_alert_email(subject: str,
+                                            body: str,
+                                            alert_category: InternalAlertCategory):
+        pass

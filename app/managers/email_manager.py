@@ -1,7 +1,8 @@
 from ..internal.dependency_container import (dependency_container,
                                              ResendBaseClass,
                                              SupabaseBaseClass)
-from ..internal.internal_alert import (InternalAlert,
+from ..internal.internal_alert import (CustomerRelationsAlert,
+                                       InternalAlert,
                                        InternalAlertCategory,
                                        MediaJobProcessingAlert,
                                        PaymentsActivityAlert)
@@ -9,7 +10,8 @@ from ..internal.schemas import MediaType
 
 class EmailManager:
 
-    ALERT_SUBJECT = "ChartWise Engineering Alert 🚨"
+    ENGINEERING_ALERT_SUBJECT = "ChartWise Engineering Alert 🚨"
+    CUSTOMER_RELATIONS_ALERT_SUBJECT = "ChartWise Customer Alert 🔔"
     SESSION_DATA_DETAILS = ("<li><b>Therapist ID:</b> {therapist_id}</li>"
                              "<li><b>Session ID:</b> {session_id}</li>")
     PAYMENTS_ACTIVITY_DETAILS = ("<li><b>Subscription ID:</b> {subscription_id}</li>"
@@ -18,16 +20,18 @@ class EmailManager:
     MEDIA_JOB_ACTIVITY_DETAILS = ("<li><b>Media Type:</b> {media_type}</li>"
                                   "<li><b>Session Report ID:</b> {session_report_id}</li>"
                                   "<li><b>Storage Filepath:</b> {storage_filepath}</li>")
+    CUSTOMER_RELATIONS_ACTIVITY_DETAILS = ("<li><b>Therapist Email:</b> {therapist_email}</li>"
+                                           "<li><b>Therapist Name:</b> {therapist_name}</li>")
 
     async def send_new_user_welcome_email(self,
                                           therapist_id: str,
                                           supabase_client: SupabaseBaseClass):
         try:
             therapist_query = supabase_client.select(fields="*",
-                                                        filters={
-                                                            "id": therapist_id
-                                                        },
-                                                        table_name="therapists")
+                                                     filters={
+                                                         "id": therapist_id
+                                                     },
+                                                     table_name="therapists")
             therapist_response_data = therapist_query.dict()['data'][0]
             therapist_first_name = therapist_response_data['first_name']
             language_code = therapist_response_data['language_preference']
@@ -40,8 +44,7 @@ class EmailManager:
         except Exception as e:
             raise Exception(e)
 
-    async def send_internal_eng_alert(self,
-                                      alert: InternalAlert):
+    async def send_engineering_alert(self, alert: InternalAlert):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
@@ -69,17 +72,48 @@ class EmailManager:
                 raise Exception("Unrecognized alert category")
 
             body = "".join([
+                f"<b>{alert.description}</b>",
                 "<ul>",
                 self.SESSION_DATA_DETAILS.format(therapist_id=therapist_id,
                                                  session_id=alert.session_id),
                 activity_details,
                 "</ul>",
-                f"<p>{alert.description}</p>",
                 "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
             ])
 
-            resend_client.send_eng_team_internal_alert_email(subject=self.ALERT_SUBJECT,
+            resend_client.send_eng_team_internal_alert_email(subject=self.ENGINEERING_ALERT_SUBJECT,
                                                              body=body,
                                                              alert_category=alert.category)
+        except Exception as e:
+            raise Exception(e)
+
+    async def send_customer_relations_alert(self, alert: InternalAlert):
+        try:
+            resend_client: ResendBaseClass = dependency_container.inject_resend_client()
+            therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
+
+            assert hasattr(alert, "category") and alert.category == InternalAlertCategory.CUSTOMER_RELATIONS
+
+            alert: CustomerRelationsAlert = alert
+
+            therapist_email = alert.therapist_email if alert.therapist_email is not None else "N/A"
+            therapist_name = alert.therapist_name if alert.therapist_name is not None else "N/A"
+
+            activity_details = self.CUSTOMER_RELATIONS_ACTIVITY_DETAILS.format(therapist_email=therapist_email,
+                                                                               therapist_name=therapist_name)
+
+            body = "".join([
+                f"<b>{alert.description}</b>",
+                "<ul>",
+                self.SESSION_DATA_DETAILS.format(therapist_id=therapist_id,
+                                                 session_id=alert.session_id),
+                activity_details,
+                "</ul>",
+                "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
+            ])
+
+            resend_client.send_customer_relations_alert_email(subject=self.CUSTOMER_RELATIONS_ALERT_SUBJECT,
+                                                              body=body,
+                                                              alert_category=alert.category)
         except Exception as e:
             raise Exception(e)

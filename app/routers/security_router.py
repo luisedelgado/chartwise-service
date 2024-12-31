@@ -17,6 +17,7 @@ from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
 from ..internal import security
+from ..internal.internal_alert import CustomerRelationsAlert
 from ..internal.dependency_container import dependency_container
 from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_POST,
@@ -30,6 +31,7 @@ from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 
 class LoginMechanism(Enum):
     UNDEFINED = "undefined"
@@ -65,6 +67,7 @@ class SecurityRouter:
     def __init__(self):
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
+        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -481,6 +484,17 @@ class SecurityRouter:
 
             supabase_client.insert(payload=payload, table_name="therapists")
 
+            alert_description = (f"New customer has just signed up for ChartWise.")
+            therapist_name = "".join([payload['first_name'],
+                                      " ",
+                                      payload['last_name']])
+            alert = CustomerRelationsAlert(description=alert_description,
+                                           session_id=session_id,
+                                           therapist_id=user_id,
+                                           therapist_email=payload['email'],
+                                           therapist_name=therapist_name)
+            await self._email_manager.send_customer_relations_alert(alert)
+
             log_api_response(background_tasks=background_tasks,
                              therapist_id=user_id,
                              session_id=session_id,
@@ -680,7 +694,21 @@ class SecurityRouter:
                                                      filters={
                                                          'id': user_id
                                                      })
-            assert len(delete_response.dict()['data']) > 0, "No therapist found with the incoming id"
+            delete_response_dict = delete_response.dict()['data']
+            assert len(delete_response_dict) > 0, "No therapist found with the incoming id"
+
+            therapist_email = delete_response_dict[0]['email']
+            alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
+                                 "has canceled their subscription, and deleted all their account data.")
+            therapist_name = "".join([delete_response_dict[0]['first_name'],
+                                      " ",
+                                      delete_response_dict[0]['last_name']])
+            alert = CustomerRelationsAlert(description=alert_description,
+                                           session_id=session_id,
+                                           therapist_id=user_id,
+                                           therapist_email=therapist_email,
+                                           therapist_name=therapist_name)
+            await self._email_manager.send_customer_relations_alert(alert)
 
             # Remove the active session and clear Auth data from client storage.
             supabase_client.sign_out()

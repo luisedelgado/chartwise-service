@@ -164,7 +164,7 @@ async def _process_pending_audio_job(job: dict):
                                             therapist_id=job["therapist_id"],
                                             storage_filepath=job["storage_filepath"],
                                             session_report_id=job["session_report_id"])
-            await email_manager.send_internal_eng_alert(alert)
+            await email_manager.send_engineering_alert(alert)
             pass
 
         # If the job failed, retry the job with an exponential backoff
