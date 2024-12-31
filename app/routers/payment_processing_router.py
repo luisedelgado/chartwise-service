@@ -813,7 +813,7 @@ class PaymentProcessingRouter:
         environment = os.environ.get('ENVIRONMENT')
         host = request.headers.get("Host")
 
-        if environment == "dev" and "localhost" not in host:
+        if environment == "dev" and "testserver" not in host:
             raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
         elif environment == "staging" and self.CHARTWISE_STAGING_URL not in host:
             raise HTTPException(status_code=403, detail="Invalid environment for this webhook")

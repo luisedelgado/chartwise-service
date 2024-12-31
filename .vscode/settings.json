@@ -1,8 +1,10 @@
 {
     "git.ignoreLimitWarning": true,
     "python.testing.pytestArgs": [
-        "app"
+        "--rootdir", "app/app_tests"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.defaultInterpreterPath": ".venv/bin/python"
 }

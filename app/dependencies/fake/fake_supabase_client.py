@@ -248,6 +248,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
                table_name: str):
         return FakeSupabaseResult(data=[{
             "therapist_id": self.FAKE_THERAPIST_ID,
+            "first_name": "Pepito",
+            "last_name": "Perez",
+            "email": "foo@bar.com",
             "patient_id": self.FAKE_PATIENT_ID,
             "session_date": "2023-01-01",
         }])
