@@ -63,8 +63,6 @@ class PaymentProcessingRouter:
     PRODUCT_CATALOG = "/v1/product-catalog"
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
-    CHARTWISE_PROD_URL = "api.chartwise.ai"
-    CHARTWISE_STAGING_URL = "chartwise-staging-service.fly.dev"
 
     def __init__(self, environment: str):
         self._environment = environment
@@ -810,25 +808,16 @@ class PaymentProcessingRouter:
     async def _capture_payment_event_internal(self,
                                               request: Request,
                                               background_tasks: BackgroundTasks):
-        environment = os.environ.get('ENVIRONMENT')
-        host = request.headers.get("Host")
-
-        if environment == "dev" and "testserver" not in host:
-            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
-        elif environment == "staging" and self.CHARTWISE_STAGING_URL not in host:
-            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
-        elif environment == "prod" and self.CHARTWISE_PROD_URL not in host:
-            raise HTTPException(status_code=403, detail="Invalid environment for this webhook")
-
         stripe_client = dependency_container.inject_stripe_client()
+        host_header = request.headers.get("Host")
 
         try:
-            if environment == "prod":
-                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
-            elif environment == "staging":
-                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
+            # True if redirecting traffic from Stripe's CLI
+            is_local_debugging = "localhost" in host_header or "127.0.0.1" in host_header
+            if is_local_debugging:
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
             else:
-                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEV")
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_LIVE")
 
             payload = await request.body()
             sig_header = request.headers.get("stripe-signature")
