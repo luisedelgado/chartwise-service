@@ -810,11 +810,16 @@ class PaymentProcessingRouter:
                                               background_tasks: BackgroundTasks):
         stripe_client = dependency_container.inject_stripe_client()
         host_header = request.headers.get("Host")
+        request_is_from_local_debugging = "localhost" in host_header
+        is_dev_environment = os.environ.get("ENVIRONMENT") == "dev"
 
         try:
-            # True if redirecting traffic from Stripe's CLI
-            is_local_debugging = "localhost" in host_header or "127.0.0.1" in host_header
-            if is_local_debugging:
+            # If the request was fired from localhost, and it's our prod webhook handling it,
+            # we should exit early to let localhost handle it directly.
+            if request_is_from_local_debugging and not is_dev_environment:
+                return {}
+
+            if is_dev_environment:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
             else:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_LIVE")
