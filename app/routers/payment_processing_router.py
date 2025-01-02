@@ -809,13 +809,17 @@ class PaymentProcessingRouter:
                                               request: Request,
                                               background_tasks: BackgroundTasks):
         stripe_client = dependency_container.inject_stripe_client()
-        is_dev_environment = os.environ.get("ENVIRONMENT") == "dev"
+        environment = os.environ.get("ENVIRONMENT")
 
         try:
-            if is_dev_environment:
+            if environment == "dev":
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
+            elif environment == "staging":
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
+            elif environment == "prod":
+                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
             else:
-                webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_LIVE")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid environment")
 
             payload = await request.body()
             sig_header = request.headers.get("stripe-signature")
@@ -823,8 +827,8 @@ class PaymentProcessingRouter:
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
 
-            if not is_dev_environment and event["livemode"] is False:
-                # Prevent production from processing test events
+            if environment != "dev" and event["livemode"] is False:
+                # Prevent non-dev from processing test events
                 raise HTTPException(
                     status_code=403, detail="Test mode events are not allowed in production."
                 )
