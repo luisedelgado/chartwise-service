@@ -827,22 +827,10 @@ class PaymentProcessingRouter:
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
 
-            # Prevent production from processing test events
-            if environment == "prod" and event["livemode"] is False:
-                raise HTTPException(
-                    status_code=403, detail="Test mode events are not allowed in production."
-                )
-
             # In the staging environment, block requests from localhost
             if environment == "staging" and request.client.host in ["localhost", "127.0.0.1"]:
                 raise HTTPException(
                     status_code=403, detail="Webhooks from localhost are not allowed in staging."
-                )
-
-            # In the staging environment, block requests with live events
-            if environment == "staging" and event["livemode"] is True:
-                raise HTTPException(
-                    status_code=403, detail="Webhooks from non-prod environments are not allowed to handle live events."
                 )
         except ValueError:
             # Invalid payload
