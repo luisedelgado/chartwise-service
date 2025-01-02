@@ -166,6 +166,18 @@ class StripeBaseClass(ABC):
         pass
 
     """
+    Attaches an incoming payment method to the given customer.
+
+    Arguments:
+    customer_id – the customer ID to be updated.
+    payment_method_id – the new payment method ID to be linked to the customer.
+    """
+    @abstractmethod
+    def attach_customer_payment_method(customer_id: str,
+                                       payment_method_id: str):
+        pass
+
+    """
     Updates the subscription's associated payment method
 
     Arguments:

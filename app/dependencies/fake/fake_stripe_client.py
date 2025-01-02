@@ -144,6 +144,11 @@ class FakeStripeClient(StripeBaseClass):
                                           price_id: str):
         pass
 
+    def attach_customer_payment_method(self,
+                                       customer_id: str,
+                                       payment_method_id: str):
+        pass
+
     def update_subscription_payment_method(self,
                                            subscription_id: str,
                                            payment_method_id: str):

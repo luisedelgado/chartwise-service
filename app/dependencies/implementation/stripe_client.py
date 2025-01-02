@@ -94,6 +94,12 @@ class StripeClient(StripeBaseClass):
         stripe.Subscription.modify(subscription_id,
                                    items=[{"id": subscription_item_id, "price": price_id}])
 
+    def attach_customer_payment_method(self,
+                                       customer_id: str,
+                                       payment_method_id: str):
+        stripe.PaymentMethod.attach(payment_method=payment_method_id,
+                                    customer=customer_id)
+
     def update_subscription_payment_method(self,
                                            subscription_id: str,
                                            payment_method_id: str):

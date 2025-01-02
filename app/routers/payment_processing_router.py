@@ -809,16 +809,9 @@ class PaymentProcessingRouter:
                                               request: Request,
                                               background_tasks: BackgroundTasks):
         stripe_client = dependency_container.inject_stripe_client()
-        host_header = request.headers.get("Host")
-        request_is_from_local_debugging = "localhost" in host_header
         is_dev_environment = os.environ.get("ENVIRONMENT") == "dev"
 
         try:
-            # If the request was fired from localhost, and it's our prod webhook handling it,
-            # we should exit early to let localhost handle it directly.
-            if request_is_from_local_debugging and not is_dev_environment:
-                return {}
-
             if is_dev_environment:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
             else:
@@ -829,6 +822,12 @@ class PaymentProcessingRouter:
             event = stripe_client.construct_webhook_event(payload=payload,
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
+
+            if not is_dev_environment and event["livemode"] is False:
+                # Prevent production from processing test events
+                raise HTTPException(
+                    status_code=403, detail="Test mode events are not allowed in production."
+                )
         except ValueError:
             # Invalid payload
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
@@ -889,14 +888,7 @@ class PaymentProcessingRouter:
                     product = stripe_client.retrieve_product(product_id)
                     stripe_client.attach_payment_intent_metadata(payment_intent_id=latest_invoice.get("payment_intent"),
                                                                  metadata=product.get("metadata", {}))
-                except Exception as e:
-                    internal_alert = PaymentsActivityAlert(description="(checkout.session.completed) Failed to attach product metadata to payment intent.",
-                                                           session_id=session_id,
-                                                           exception=e,
-                                                           therapist_id=therapist_id,
-                                                           subscription_id=subscription_id,
-                                                           customer_id=customer_id)
-                    await self._email_manager.send_engineering_alert(alert=internal_alert)
+                except Exception:
                     pass
 
             log_payment_event(background_tasks=background_tasks,
@@ -1100,8 +1092,13 @@ class PaymentProcessingRouter:
         elif event_type == 'setup_intent.succeeded':
             setup_intent = event["data"]["object"]
             payment_method_id = setup_intent["payment_method"]
-            customer_id = setup_intent["customer"]
             therapist_id = None
+            customer_id = setup_intent["customer"]
+
+            # If the customer ID hasn't been set, we can't proceed.
+            # Let's wait for subsequent invocation of this path.
+            if customer_id is None:
+                return
 
             try:
                 # Fetch corresponding therapist ID
@@ -1113,13 +1110,12 @@ class PaymentProcessingRouter:
                                                        table_name="subscription_status")
                 assert (0 != len(customer_data.data)), "No therapist data found for incoming customer ID."
                 therapist_id = customer_data.dict()['data'][0]['therapist_id']
-            except Exception as e:
-                internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) Failed to retrieve a therapist ID for the incoming customer ID."),
-                                                       exception=e,
-                                                       payment_method_id=payment_method_id,
-                                                       customer_id=customer_id)
-                await self._email_manager.send_engineering_alert(alert=internal_alert)
+            except Exception:
                 pass
+
+            # Attach the payment method to the customer
+            stripe_client.attach_customer_payment_method(customer_id=customer_id,
+                                                         payment_method_id=payment_method_id)
 
             # Update the default payment method for the subscription
             subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id)
@@ -1128,16 +1124,17 @@ class PaymentProcessingRouter:
                     stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
                                                                      payment_method_id=payment_method_id)
                 except Exception as e:
-                    # Failed to update a subscription's payment method. Trigger internal alert, and fail silently.
-                    internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) This failure usually is related to not "
-                                                                        "being able to update a subscription's payment method. "
-                                                                        "Please take a look to get a better understanding of the customer's journey."),
-                                                           exception=e,
-                                                           therapist_id=therapist_id,
-                                                           subscription_id=subscription.get('id', None),
-                                                           payment_method_id=payment_method_id,
-                                                           customer_id=customer_id)
-                    await self._email_manager.send_engineering_alert(alert=internal_alert)
+                    if therapist_id is not None:
+                        # Failed to update a subscription's payment method. Trigger internal alert, and fail silently.
+                        internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) This failure usually is related to not "
+                                                                            "being able to update a subscription's payment method. "
+                                                                            "Please take a look to get a better understanding of the customer's journey."),
+                                                            exception=e,
+                                                            therapist_id=therapist_id,
+                                                            subscription_id=subscription.get('id', None),
+                                                            payment_method_id=payment_method_id,
+                                                            customer_id=customer_id)
+                        await self._email_manager.send_engineering_alert(alert=internal_alert)
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
