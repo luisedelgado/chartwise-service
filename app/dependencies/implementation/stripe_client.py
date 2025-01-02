@@ -9,6 +9,7 @@ class StripeClient(StripeBaseClass):
 
     def __init__(self):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
+        self.environment = os.environ.get("ENVIRONMENT")
 
     def generate_checkout_session(self,
                                   session_id: str,
@@ -18,12 +19,19 @@ class StripeClient(StripeBaseClass):
                                   cancel_url: str,
                                   is_new_customer: bool) -> str | None:
         try:
+            global_metadata = {
+                'session_id': str(session_id),
+                'therapist_id': str(therapist_id),
+                'environment': self.environment
+            }
+
             if is_new_customer:
                 subscription_data = {
-                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS
+                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS,
+                    'metadata': global_metadata
                 }
             else:
-                subscription_data = {}
+                subscription_data = {'metadata': global_metadata}
 
             checkout_session = stripe.checkout.Session.create(
                 success_url=success_url,
@@ -34,10 +42,7 @@ class StripeClient(StripeBaseClass):
                     'quantity': 1
                 }],
                 subscription_data=subscription_data,
-                 metadata={
-                    'session_id': str(session_id),
-                    'therapist_id': str(therapist_id)
-                }
+                metadata=global_metadata
             )
             return checkout_session['url']
         except Exception as e:

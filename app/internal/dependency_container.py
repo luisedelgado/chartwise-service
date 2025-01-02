@@ -61,7 +61,7 @@ class DependencyContainer:
 
     def inject_resend_client(self) -> ResendBaseClass:
         if self._resend_client is None:
-            self._resend_client = FakeResendClient() if self._testing_environment else ResendClient()
+            self._resend_client = FakeResendClient() if (os.environ.get("ENVIRONMENT") != "prod") else ResendClient()
         return self._resend_client
 
 dependency_container = DependencyContainer()

@@ -838,6 +838,12 @@ class PaymentProcessingRouter:
                 raise HTTPException(
                     status_code=403, detail="Webhooks from localhost are not allowed in staging."
                 )
+
+            # In the staging environment, block requests with live events
+            if environment == "staging" and event["livemode"] is True:
+                raise HTTPException(
+                    status_code=403, detail="Webhooks from non-prod environments are not allowed to handle live events."
+                )
         except ValueError:
             # Invalid payload
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
