@@ -982,105 +982,13 @@ class PaymentProcessingRouter:
                                                    status=FAILED_RESULT,
                                                    metadata=invoice.get("metadata", {}),
                                                    background_tasks=background_tasks)
+        elif event_type == 'customer.subscription.created':
+            await self._handle_subscription_upsert(subscription_upsert_event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'customer.subscription.updated':
             # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
-
-            subscription = event['data']['object']
-            subscription_id = subscription.get('id')
-            customer_id = subscription.get('customer')
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-
-            subscription_metadata = subscription.get('metadata', {})
-
-            try:
-                therapist_id = subscription_metadata.get('therapist_id', None)
-                session_id = subscription_metadata.get('session_id', None)
-
-                assert len(therapist_id or None) > 0, "Did not find a therapist ID in the subscription metadata."
-            except Exception:
-                return
-
-            billing_interval = subscription['items']['data'][0]['plan']['interval']
-            current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
-            current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
-
-            # Get trial information (either current free trial or their already finished one)
-            is_trialing = subscription['status'] == 'trialing'
-            trial_end_date = None if not is_trialing else datetime.fromtimestamp(subscription['trial_end'])
-            formatted_trial_end_date = None if not is_trialing else trial_end_date.strftime(DATE_FORMAT)
-
-            try:
-                therapist_query = supabase_client.select(fields="*",
-                                                         filters={ 'therapist_id': therapist_id },
-                                                         table_name="subscription_status")
-                therapist_query_data = therapist_query.dict()
-                therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
-
-                product_id = subscription['items']['data'][0]['price']['product']
-                product_data = stripe_client.retrieve_product(product_id)
-                stripe_product_name = product_data['metadata']['product_name']
-                tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
-
-                payload = {
-                    "last_updated": now_timestamp,
-                    "customer_id": subscription.get('customer'),
-                    "therapist_id": therapist_id,
-                    "current_billing_period_end_date": current_billing_period_end_date,
-                    "free_trial_active": is_trialing,
-                    "free_trial_end_date": formatted_trial_end_date,
-                    "recurrence": billing_interval,
-                    "subscription_id": subscription_id,
-                    "current_tier": tier_name
-                }
-
-                # Free trial is ongoing, or subscription is active.
-                if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
-                    payload['is_active'] = True
-                else:
-                    # Subscription is not active. Restrict functionality
-                    payload['is_active'] = False
-
-                supabase_client.upsert(payload=payload,
-                                       table_name="subscription_status",
-                                       on_conflict="therapist_id")
-
-                if not therapist_already_subscribed:
-                    # Therapist is entering a valid subscription status, let's send a welcome email
-                    await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
-                                                                          supabase_client=supabase_client)
-
-                    therapist_query = supabase_client.select(fields="*",
-                                                             filters={ 'id': therapist_id },
-                                                             table_name="therapists")
-                    therapist_query_data = therapist_query.dict()
-                    assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
-
-                    therapist_data = therapist_query_data['data'][0]
-                    alert_description = (f"Customer has just entered an active subscription state for the first time. "
-                                         "Consider reaching out directly for a more personal welcome note.")
-                    therapist_name = "".join([therapist_data['first_name'],
-                                              " ",
-                                              therapist_data['last_name']])
-                    alert = CustomerRelationsAlert(description=alert_description,
-                                                   session_id=session_id,
-                                                   therapist_id=therapist_id,
-                                                   therapist_name=therapist_name,
-                                                   therapist_email=therapist_data['email'])
-                    await self._email_manager.send_customer_relations_alert(alert)
-            except Exception as e:
-                internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
-                                                       session_id=session_id,
-                                                       therapist_id=therapist_id,
-                                                       exception=e,
-                                                       subscription_id=subscription_id,
-                                                       customer_id=customer_id)
-                await self._email_manager.send_engineering_alert(alert=internal_alert)
-
-                log_metadata_from_stripe_subscription_event(event=event,
-                                                            status=FAILED_RESULT,
-                                                            message=str(e),
-                                                            background_tasks=background_tasks)
+            await self._handle_subscription_upsert(subscription_upsert_event=event,
+                                                   background_tasks=background_tasks)
         elif event_type == 'customer.subscription.paused':
             # TODO: Send an automated email confirming the pause.
             log_metadata_from_stripe_subscription_event(event=event,
@@ -1142,3 +1050,106 @@ class PaymentProcessingRouter:
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
+
+    # Private
+
+    async def _handle_subscription_upsert(self,
+                                          subscription_upsert_event: dict,
+                                          background_tasks: BackgroundTasks):
+        stripe_client = dependency_container.inject_stripe_client()
+        subscription = subscription_upsert_event['data']['object']
+        subscription_id = subscription.get('id')
+        customer_id = subscription.get('customer')
+        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+
+        subscription_metadata = subscription.get('metadata', {})
+
+        try:
+            therapist_id = subscription_metadata.get('therapist_id', None)
+            session_id = subscription_metadata.get('session_id', None)
+
+            assert len(therapist_id or None) > 0, "Did not find a therapist ID in the subscription metadata."
+        except Exception:
+            return
+
+        billing_interval = subscription['items']['data'][0]['plan']['interval']
+        current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
+        current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
+
+        # Get trial information (either current free trial or their already finished one)
+        is_trialing = subscription['status'] == 'trialing'
+        trial_end_date = None if not is_trialing else datetime.fromtimestamp(subscription['trial_end'])
+        formatted_trial_end_date = None if not is_trialing else trial_end_date.strftime(DATE_FORMAT)
+
+        try:
+            therapist_query = supabase_client.select(fields="*",
+                                                        filters={ 'therapist_id': therapist_id },
+                                                        table_name="subscription_status")
+            therapist_query_data = therapist_query.dict()
+            therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
+
+            product_id = subscription['items']['data'][0]['price']['product']
+            product_data = stripe_client.retrieve_product(product_id)
+            stripe_product_name = product_data['metadata']['product_name']
+            tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
+
+            payload = {
+                "last_updated": now_timestamp,
+                "customer_id": subscription.get('customer'),
+                "therapist_id": therapist_id,
+                "current_billing_period_end_date": current_billing_period_end_date,
+                "free_trial_active": is_trialing,
+                "free_trial_end_date": formatted_trial_end_date,
+                "recurrence": billing_interval,
+                "subscription_id": subscription_id,
+                "current_tier": tier_name
+            }
+
+            # Free trial is ongoing, or subscription is active.
+            if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
+                payload['is_active'] = True
+            else:
+                # Subscription is not active. Restrict functionality
+                payload['is_active'] = False
+
+            supabase_client.upsert(payload=payload,
+                                    table_name="subscription_status",
+                                    on_conflict="therapist_id")
+
+            if not therapist_already_subscribed:
+                # Therapist is entering a valid subscription status, let's send a welcome email
+                await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
+                                                                        supabase_client=supabase_client)
+
+                therapist_query = supabase_client.select(fields="*",
+                                                            filters={ 'id': therapist_id },
+                                                            table_name="therapists")
+                therapist_query_data = therapist_query.dict()
+                assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
+
+                therapist_data = therapist_query_data['data'][0]
+                alert_description = (f"Customer has just entered an active subscription state for the first time. "
+                                        "Consider reaching out directly for a more personal welcome note.")
+                therapist_name = "".join([therapist_data['first_name'],
+                                            " ",
+                                            therapist_data['last_name']])
+                alert = CustomerRelationsAlert(description=alert_description,
+                                                session_id=session_id,
+                                                therapist_id=therapist_id,
+                                                therapist_name=therapist_name,
+                                                therapist_email=therapist_data['email'])
+                await self._email_manager.send_customer_relations_alert(alert)
+        except Exception as e:
+            internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
+                                                    session_id=session_id,
+                                                    therapist_id=therapist_id,
+                                                    exception=e,
+                                                    subscription_id=subscription_id,
+                                                    customer_id=customer_id)
+            await self._email_manager.send_engineering_alert(alert=internal_alert)
+
+            log_metadata_from_stripe_subscription_event(event=subscription_upsert_event,
+                                                        status=FAILED_RESULT,
+                                                        message=str(e),
+                                                        background_tasks=background_tasks)
