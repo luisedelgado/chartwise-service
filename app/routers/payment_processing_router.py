@@ -827,10 +827,16 @@ class PaymentProcessingRouter:
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
 
-            if environment != "dev" and event["livemode"] is False:
-                # Prevent non-dev from processing test events
+            # Prevent production from processing test events
+            if environment == "prod" and event["livemode"] is False:
                 raise HTTPException(
                     status_code=403, detail="Test mode events are not allowed in production."
+                )
+
+            # In the staging environment, block requests from localhost
+            if environment == "staging" and request.client.host in ["localhost", "127.0.0.1"]:
+                raise HTTPException(
+                    status_code=403, detail="Webhooks from localhost are not allowed in staging."
                 )
         except ValueError:
             # Invalid payload
@@ -840,7 +846,7 @@ class PaymentProcessingRouter:
             if stripe_client.is_signature_verification_error(e=e):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
             else:
-                raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Expectation failed")
+                raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail=str(e))
 
         try:
             await self._handle_stripe_event(event=event,
