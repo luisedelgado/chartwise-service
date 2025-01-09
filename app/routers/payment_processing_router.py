@@ -1056,13 +1056,7 @@ class PaymentProcessingRouter:
     async def _handle_subscription_upsert(self,
                                           subscription_upsert_event: dict,
                                           background_tasks: BackgroundTasks):
-        stripe_client = dependency_container.inject_stripe_client()
         subscription = subscription_upsert_event['data']['object']
-        subscription_id = subscription.get('id')
-        customer_id = subscription.get('customer')
-        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-        now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-
         subscription_metadata = subscription.get('metadata', {})
 
         try:
@@ -1073,14 +1067,8 @@ class PaymentProcessingRouter:
         except Exception:
             return
 
-        billing_interval = subscription['items']['data'][0]['plan']['interval']
-        current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
-        current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
-
-        # Get trial information (either current free trial or their already finished one)
-        is_trialing = subscription['status'] == 'trialing'
-        trial_end_date = None if not is_trialing else datetime.fromtimestamp(subscription['trial_end'])
-        formatted_trial_end_date = None if not is_trialing else trial_end_date.strftime(DATE_FORMAT)
+        stripe_client = dependency_container.inject_stripe_client()
+        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
         try:
             therapist_query = supabase_client.select(fields="*",
@@ -1089,25 +1077,36 @@ class PaymentProcessingRouter:
             therapist_query_data = therapist_query.dict()
             therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
 
+            # Get customer data
+            billing_interval = subscription['items']['data'][0]['plan']['interval']
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
+            current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
+            customer_id = subscription.get('customer')
+            subscription_id = subscription.get('id')
             product_id = subscription['items']['data'][0]['price']['product']
             product_data = stripe_client.retrieve_product(product_id)
             stripe_product_name = product_data['metadata']['product_name']
             tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
+            is_trialing = subscription['status'] == 'trialing'
+            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
 
             payload = {
                 "last_updated": now_timestamp,
-                "customer_id": subscription.get('customer'),
+                "customer_id": customer_id,
                 "therapist_id": therapist_id,
                 "current_billing_period_end_date": current_billing_period_end_date,
                 "free_trial_active": is_trialing,
-                "free_trial_end_date": formatted_trial_end_date,
                 "recurrence": billing_interval,
                 "subscription_id": subscription_id,
                 "current_tier": tier_name
             }
 
-            # Free trial is ongoing, or subscription is active.
+            if is_trialing:
+                trial_end_date = datetime.fromtimestamp(subscription['trial_end'])
+                payload["free_trial_end_date"] = trial_end_date.strftime(DATE_FORMAT)
+
             if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
+                # Free trial is ongoing, or subscription is active.
                 payload['is_active'] = True
             else:
                 # Subscription is not active. Restrict functionality

@@ -319,8 +319,13 @@ class SecurityRouter:
 
                 # Determine if free trial is still active
                 free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
-                free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-                is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+
+                if free_trial_end_date is not None:
+                    free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+                    is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+                else:
+                    is_free_trial_active = False
+
                 reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
                                                                                  therapist_id=user_id,
                                                                                  supabase_client=supabase_client)
