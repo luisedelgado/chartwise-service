@@ -377,8 +377,8 @@ class SecurityRouter:
                                session_id: Annotated[Union[str, None], Cookie()]):
         user_id = None
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(refresh_token=store_access_token,
-                                                                                                         access_token=store_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
         except Exception:
             pass
