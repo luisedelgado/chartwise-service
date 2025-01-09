@@ -25,13 +25,13 @@ class InfluxClient(InfluxBaseClass):
 
     def log_api_request(self,
                         background_tasks: BackgroundTasks,
-                        environment: str,
+                        endpoint_name: str,
                         method: str,
                         **kwargs):
         point = (
             Point("api_requests")
             .tag("endpoint_name", endpoint_name)
-            .tag("environment", environment)
+            .tag("environment", self.environment)
             .tag("method", method)
             .field("request_count", 1)
         )
@@ -41,5 +41,4 @@ class InfluxClient(InfluxBaseClass):
             if value is not None:
                 point.tag(tag, str(value))
 
-        self.client.write(database=self.API_REQUESTS_BUCKET,
-                          record=point)
+        background_tasks.add_task(self.client.write, point, self.API_REQUESTS_BUCKET)

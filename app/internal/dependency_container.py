@@ -20,7 +20,8 @@ from ..dependencies.implementation.supabase_client_factory import SupabaseFactor
 
 class DependencyContainer:
     def __init__(self):
-        self._testing_environment = (os.environ.get("ENVIRONMENT") == "testing")
+        self._environment = os.environ.get("ENVIRONMENT")
+        self._testing_environment = (self._environment == "testing")
         self._openai_client = None
         self._pinecone_client = None
         self._docupanda_client = None
@@ -69,7 +70,7 @@ class DependencyContainer:
 
     def inject_influx_client(self) -> InfluxBaseClass:
         if self._influx_client is None:
-            self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient()
+            self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient(environment=self._environment)
         return self._influx_client
 
 dependency_container = DependencyContainer()
