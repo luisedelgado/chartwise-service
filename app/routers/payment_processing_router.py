@@ -827,8 +827,8 @@ class PaymentProcessingRouter:
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
 
-            # In the staging environment, block requests from localhost
-            if environment == "staging" and request.client.host in ["localhost", "127.0.0.1"]:
+            # In deployed environments, block requests from localhost
+            if environment in ["staging", "prod"] and request.client.host in ["localhost", "127.0.0.1"]:
                 raise HTTPException(
                     status_code=403, detail="Webhooks from localhost are not allowed in staging."
                 )
