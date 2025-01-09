@@ -3,6 +3,7 @@ import os
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
 from ..dependencies.fake.fake_docupanda_client import FakeDocupandaClient
+from ..dependencies.fake.fake_influx_client import FakeInfluxClient
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_resend_client import FakeResendClient
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
@@ -10,6 +11,7 @@ from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient, Supabas
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..dependencies.implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
 from ..dependencies.implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
+from ..dependencies.implementation.influx_client import InfluxBaseClass, InfluxClient
 from ..dependencies.implementation.openai_client import OpenAIBaseClass, OpenAIClient
 from ..dependencies.implementation.pinecone_client import PineconeBaseClass, PineconeClient
 from ..dependencies.implementation.resend_client import ResendBaseClass, ResendClient
@@ -26,6 +28,7 @@ class DependencyContainer:
         self._supabase_client_factory = None
         self._stripe_client = None
         self._resend_client = None
+        self._influx_client = None
 
     def inject_deepgram_client(self) -> DeepgramBaseClass:
         if self._deepgram_client is None:
@@ -63,5 +66,10 @@ class DependencyContainer:
         if self._resend_client is None:
             self._resend_client = FakeResendClient() if (os.environ.get("ENVIRONMENT") != "prod") else ResendClient()
         return self._resend_client
+
+    def inject_influx_client(self) -> InfluxBaseClass:
+        if self._influx_client is None:
+            self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient()
+        return self._influx_client
 
 dependency_container = DependencyContainer()
