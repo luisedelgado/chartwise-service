@@ -13,11 +13,8 @@ from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 class AuthManager:
 
     ENVIRONMENT = os.environ.get("ENVIRONMENT")
-    APP_COOKIE_DOMAIN = (
-        "chartwise.ai" if ENVIRONMENT == "prod"
-        else "staging.chartwise.ai" if ENVIRONMENT == "staging"
-        else None
-    )
+    APP_COOKIE_DOMAIN = ("chartwise.ai" if os.environ.get("ENVIRONMENT") == "prod"
+                         else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 120
