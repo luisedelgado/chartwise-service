@@ -19,12 +19,12 @@ from pydantic import BaseModel
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import (API_METHOD_DELETE,
-                                API_METHOD_POST,
-                                API_METHOD_PUT,
-                                log_account_deletion,
-                                log_api_response,
-                                log_error)
+from ..internal.logging.logging import (API_METHOD_DELETE,
+                                        API_METHOD_POST,
+                                        API_METHOD_PUT,
+                                        log_account_deletion,
+                                        log_api_response,
+                                        log_error)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit

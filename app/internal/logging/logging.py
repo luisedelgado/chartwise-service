@@ -2,7 +2,7 @@ import os
 
 from fastapi import BackgroundTasks
 
-from ..internal.dependency_container import dependency_container
+from ...internal.dependency_container import dependency_container
 
 API_METHOD_POST = "POST"
 API_METHOD_PUT = "PUT"

@@ -5,7 +5,7 @@ from portkey_ai import Portkey
 from typing import Tuple
 
 from ..api.docupanda_base_class import DocupandaBaseClass
-from ...internal.monitoring_proxy import use_monitoring_proxy
+from ...internal.logging.monitoring_proxy import use_monitoring_proxy
 
 class DocupandaClient(DocupandaBaseClass):
 

@@ -13,10 +13,10 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import (API_METHOD_POST,
-                                log_api_request,
-                                log_api_response,
-                                log_error)
+from ..internal.logging.logging import (API_METHOD_POST,
+                                        log_api_request,
+                                        log_api_response,
+                                        log_error)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager

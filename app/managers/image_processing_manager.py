@@ -7,7 +7,7 @@ from .media_processing_manager import MediaProcessingManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import log_textraction_event
+from ..internal.logging.logging import log_textraction_event
 from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,

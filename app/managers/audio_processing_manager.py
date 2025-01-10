@@ -11,7 +11,7 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal.dependency_container import dependency_container
-from ..internal.logging import log_error
+from ..internal.logging.logging import log_error
 from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..internal.utilities.audio_file_utilities import (get_output_filepath_for_sample_rate_reduction,

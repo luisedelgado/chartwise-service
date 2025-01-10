@@ -17,18 +17,18 @@ from ..internal.utilities import datetime_handler
 from ..internal import security
 from ..internal.dependency_container import dependency_container, StripeBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
-from ..internal.logging import (API_METHOD_DELETE,
-                                API_METHOD_GET,
-                                API_METHOD_POST,
-                                API_METHOD_PUT,
-                                FAILED_RESULT,
-                                log_api_request,
-                                log_api_response,
-                                log_payment_event,
-                                log_metadata_from_stripe_invoice_event,
-                                log_metadata_from_stripe_subscription_event,
-                                log_error,
-                                SUCCESS_RESULT,)
+from ..internal.logging.logging import (API_METHOD_DELETE,
+                                        API_METHOD_GET,
+                                        API_METHOD_POST,
+                                        API_METHOD_PUT,
+                                        FAILED_RESULT,
+                                        log_api_request,
+                                        log_api_response,
+                                        log_payment_event,
+                                        log_metadata_from_stripe_invoice_event,
+                                        log_metadata_from_stripe_subscription_event,
+                                        log_error,
+                                        SUCCESS_RESULT,)
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT

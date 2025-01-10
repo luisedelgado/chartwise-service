@@ -12,7 +12,7 @@ from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
-from ..internal.logging import log_error
+from ..internal.logging.logging import log_error
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
