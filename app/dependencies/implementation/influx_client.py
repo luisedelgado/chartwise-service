@@ -1,5 +1,6 @@
 import os
 
+from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from influxdb_client_3 import InfluxDBClient3, Point, write_client_options, WriteOptions
 from influxdb_client_3.write_client.client.write_api import WriteType
@@ -38,6 +39,7 @@ class InfluxClient(InfluxBaseClass):
             .tag("environment", self.environment)
             .tag("method", method)
             .field("request_count", 1)
+            .time(datetime.now(timezone.utc).isoformat())
         )
 
         for tag in self._optional_tags:
