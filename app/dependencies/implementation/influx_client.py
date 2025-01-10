@@ -1,7 +1,8 @@
 import os
 
 from fastapi import BackgroundTasks
-from influxdb_client_3 import InfluxDBClient3, Point
+from influxdb_client_3 import InfluxDBClient3, Point, write_client_options, WriteOptions
+from influxdb_client_3.write_client.client.write_api import WriteType
 
 from ..api.influx_base_class import InfluxBaseClass
 
@@ -19,12 +20,14 @@ class InfluxClient(InfluxBaseClass):
         token = os.environ.get("INFLUXDB_TOKEN")
         host = os.environ.get("INFLUXDB_HOST")
 
-        org = "".join(["chartwise-", environment])
-        self.client = InfluxDBClient3(host=host, token=token, org=org)
+        write_client_opts = write_client_options(write_options=WriteOptions(write_type=WriteType.asynchronous),)
+        self.client = InfluxDBClient3(host=host,
+                                      token=token,
+                                      org="".join(["chartwise-", environment]),
+                                      write_client_options=write_client_opts)
         self.environment = environment
 
     def log_api_request(self,
-                        background_tasks: BackgroundTasks,
                         endpoint_name: str,
                         method: str,
                         **kwargs):
@@ -41,10 +44,9 @@ class InfluxClient(InfluxBaseClass):
             if value is not None:
                 point.tag(tag, str(value))
 
-        background_tasks.add_task(self.client.write, point, self.API_REQUESTS_BUCKET)
+        self.client.write(record=point, database=self.API_REQUESTS_BUCKET)
 
     def log_api_response(self,
-                         background_tasks: BackgroundTasks,
                          endpoint_name: str,
                          method: str,
                          response_time: float,
@@ -62,4 +64,4 @@ class InfluxClient(InfluxBaseClass):
             if value is not None:
                 point.tag(tag, str(value))
 
-        background_tasks.add_task(self.client.write, point, self.API_RESPONSES_BUCKET)
+        self.client.write(record=point, database=self.API_RESPONSES_BUCKET)

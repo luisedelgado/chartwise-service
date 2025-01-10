@@ -1,6 +1,5 @@
 import time
 
-from fastapi import BackgroundTasks
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -21,13 +20,9 @@ class TimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = time.perf_counter()
 
-        background_tasks = BackgroundTasks()
-        request.state.background_tasks = background_tasks
         request_url_path = request.url.path
-
         if request_url_path not in self.IRRELEVANT_PATHS:
-            self.influx_client.log_api_request(background_tasks=background_tasks,
-                                               endpoint_name=request_url_path,
+            self.influx_client.log_api_request(endpoint_name=request_url_path,
                                                method=request.method,
                                                session_id=request.cookies.get("session_id"))
 
@@ -39,8 +34,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
         response_time = (end_time - start_time) * 1000
 
         if request_url_path not in self.IRRELEVANT_PATHS:
-            self.influx_client.log_api_response(background_tasks=background_tasks,
-                                                endpoint_name=request_url_path,
+            self.influx_client.log_api_response(endpoint_name=request_url_path,
                                                 method=request.method,
                                                 response_time=response_time,
                                                 status_code=response.status_code,
