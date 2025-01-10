@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..managers.auth_manager import AuthManager
 from ..routers.audio_processing_router import AudioProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..internal.schemas import SessionUploadStatus
 from ..managers.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter

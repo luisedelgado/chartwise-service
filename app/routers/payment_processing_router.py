@@ -15,7 +15,7 @@ from typing import Annotated, Optional, Union
 
 from ..internal.utilities import datetime_handler
 from ..internal import security
-from ..internal.dependency_container import dependency_container, StripeBaseClass
+from ..dependencies.dependency_container import dependency_container, StripeBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
 from ..internal.logging.logging import (API_METHOD_DELETE,
                                         API_METHOD_GET,

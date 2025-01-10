@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import BackgroundTasks
 
 from app.dependencies.api.templates import SessionNotesTemplate
-from app.internal.dependency_container import dependency_container
+from app.dependencies.dependency_container import dependency_container
 from app.internal.internal_alert import MediaJobProcessingAlert
 from app.internal.schemas import MediaType
 from app.internal.utilities.datetime_handler import (convert_to_date_format_mm_dd_yyyy,

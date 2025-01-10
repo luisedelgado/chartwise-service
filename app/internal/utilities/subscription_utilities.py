@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from .datetime_handler import DATE_FORMAT
-from ..dependency_container import SupabaseBaseClass
+from ...dependencies.dependency_container import SupabaseBaseClass
 
 NUM_SESSIONS_IN_BASIC_PLAN = 20
 

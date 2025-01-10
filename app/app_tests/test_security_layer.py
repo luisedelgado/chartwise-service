@@ -6,7 +6,7 @@ from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..managers.auth_manager import AuthManager
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator

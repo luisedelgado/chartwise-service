@@ -13,7 +13,7 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal import security
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..internal.logging.logging import (API_METHOD_POST,
                                         log_api_request,
                                         log_api_response,

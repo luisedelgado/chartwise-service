@@ -1,22 +1,22 @@
 import os
 
-from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
-from ..dependencies.fake.fake_deepgram_client import FakeDeepgramClient
-from ..dependencies.fake.fake_docupanda_client import FakeDocupandaClient
-from ..dependencies.fake.fake_influx_client import FakeInfluxClient
-from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
-from ..dependencies.fake.fake_resend_client import FakeResendClient
-from ..dependencies.fake.fake_stripe_client import FakeStripeClient
-from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient, SupabaseBaseClass
-from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
-from ..dependencies.implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
-from ..dependencies.implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
-from ..dependencies.implementation.influx_client import InfluxBaseClass, InfluxClient
-from ..dependencies.implementation.openai_client import OpenAIBaseClass, OpenAIClient
-from ..dependencies.implementation.pinecone_client import PineconeBaseClass, PineconeClient
-from ..dependencies.implementation.resend_client import ResendBaseClass, ResendClient
-from ..dependencies.implementation.stripe_client import StripeBaseClass, StripeClient
-from ..dependencies.implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
+from .fake.fake_async_openai import FakeAsyncOpenAI
+from .fake.fake_deepgram_client import FakeDeepgramClient
+from .fake.fake_docupanda_client import FakeDocupandaClient
+from .fake.fake_influx_client import FakeInfluxClient
+from .fake.fake_pinecone_client import FakePineconeClient
+from .fake.fake_resend_client import FakeResendClient
+from .fake.fake_stripe_client import FakeStripeClient
+from .fake.fake_supabase_client import FakeSupabaseClient, SupabaseBaseClass
+from .fake.fake_supabase_client_factory import FakeSupabaseClientFactory
+from .implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
+from .implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
+from .implementation.influx_client import InfluxBaseClass, InfluxClient
+from .implementation.openai_client import OpenAIBaseClass, OpenAIClient
+from .implementation.pinecone_client import PineconeBaseClass, PineconeClient
+from .implementation.resend_client import ResendBaseClass, ResendClient
+from .implementation.stripe_client import StripeBaseClass, StripeClient
+from .implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
 
 class DependencyContainer:
     def __init__(self):

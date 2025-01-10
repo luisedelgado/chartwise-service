@@ -1,4 +1,4 @@
-from ..internal.dependency_container import (dependency_container,
+from ..dependencies.dependency_container import (dependency_container,
                                              ResendBaseClass,
                                              SupabaseBaseClass)
 from ..internal.internal_alert import (CustomerRelationsAlert,

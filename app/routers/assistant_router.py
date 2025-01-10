@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Annotated, AsyncIterable, Union
 
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security

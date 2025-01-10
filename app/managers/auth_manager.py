@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from typing import Tuple
 
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..internal.security import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 

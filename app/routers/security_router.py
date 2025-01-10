@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..internal.logging.logging import (API_METHOD_DELETE,
                                         API_METHOD_POST,
                                         API_METHOD_PUT,

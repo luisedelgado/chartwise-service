@@ -3,7 +3,7 @@ import tiktoken
 from datetime import datetime
 from typing import AsyncIterable
 
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass

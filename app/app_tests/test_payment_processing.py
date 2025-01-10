@@ -3,7 +3,7 @@ import os
 from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..managers.auth_manager import AuthManager
 from ..routers.payment_processing_router import UpdateSubscriptionBehavior, PaymentProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator

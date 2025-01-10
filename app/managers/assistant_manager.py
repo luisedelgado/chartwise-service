@@ -7,7 +7,7 @@ from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from typing import AsyncIterable, Optional
 
-from ..internal.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
