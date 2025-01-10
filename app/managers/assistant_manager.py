@@ -12,7 +12,7 @@ from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
-from ..internal.logging.logging import log_error
+from ..internal.logging.logging import log_error, API_METHOD_GET
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
@@ -380,11 +380,9 @@ class AssistantManager:
             raise Exception(e)
 
     async def query_session(self,
-                            auth_manager: AuthManager,
                             query: AssistantQuery,
                             therapist_id: str,
                             session_id: str,
-                            api_method: str,
                             environment: str,
                             supabase_client: SupabaseBaseClass) -> AsyncIterable[str]:
         try:
@@ -435,7 +433,7 @@ class AssistantManager:
                                                                    query_input=query.text,
                                                                    response_language_code=language_code,
                                                                    session_id=session_id,
-                                                                   method=api_method,
+                                                                   method=API_METHOD_GET,
                                                                    environment=environment,
                                                                    session_date_override=session_date_override):
                 yield part

@@ -4,6 +4,7 @@ from fastapi import (APIRouter,
                      Cookie,
                      Header,
                      HTTPException,
+                     Request,
                      Response,
                      status)
 from fastapi.responses import StreamingResponse
@@ -14,12 +15,7 @@ from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
-from ..internal.logging.logging import (API_METHOD_DELETE,
-                                        API_METHOD_POST,
-                                        API_METHOD_PUT,
-                                        log_api_request,
-                                        log_api_response,
-                                        log_error)
+from ..internal.logging.logging import log_error
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
@@ -57,6 +53,7 @@ class AssistantRouter:
     def _register_routes(self):
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def insert_new_session(insert_payload: SessionNotesInsert,
+                                     request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
                                      store_access_token: Annotated[str | None, Header()] = None,
@@ -67,6 +64,7 @@ class AssistantRouter:
             return await self._insert_new_session_internal(body=insert_payload,
                                                            client_timezone_identifier=client_timezone_identifier,
                                                            background_tasks=background_tasks,
+                                                           request=request,
                                                            response=response,
                                                            store_access_token=store_access_token,
                                                            store_refresh_token=store_refresh_token,
@@ -75,6 +73,7 @@ class AssistantRouter:
 
         @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_session(update_payload: SessionNotesUpdate,
+                                 request: Request,
                                  response: Response,
                                  background_tasks: BackgroundTasks,
                                  client_timezone_identifier: Annotated[str, Body()] = None,
@@ -85,6 +84,7 @@ class AssistantRouter:
             return await self._update_session_internal(body=update_payload,
                                                        client_timezone_identifier=client_timezone_identifier,
                                                        response=response,
+                                                       request=request,
                                                        background_tasks=background_tasks,
                                                        store_access_token=store_access_token,
                                                        store_refresh_token=store_refresh_token,
@@ -93,6 +93,7 @@ class AssistantRouter:
 
         @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_session(response: Response,
+                                 request: Request,
                                  background_tasks: BackgroundTasks,
                                  session_report_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
@@ -101,6 +102,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_session_internal(session_report_id=session_report_id,
                                                        background_tasks=background_tasks,
+                                                       request=request,
                                                        response=response,
                                                        store_access_token=store_access_token,
                                                        store_refresh_token=store_refresh_token,
@@ -109,12 +111,15 @@ class AssistantRouter:
 
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
+                                          request: Request,
                                           response: Response,
                                           background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+            request.state.session_id = session_id
+            request.state.patient_id = query.patient_id
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -125,6 +130,7 @@ class AssistantRouter:
                 supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                              refresh_token=store_refresh_token)
                 therapist_id = supabase_client.get_current_user_id()
+                request.state.therapist_id = therapist_id
                 await self._auth_manager.refresh_session(user_id=therapist_id,
                                                          response=response)
             except Exception as e:
@@ -134,8 +140,7 @@ class AssistantRouter:
                           endpoint_name=self.QUERIES_ENDPOINT,
                           patient_id=query.patient_id,
                           error_code=status_code,
-                          description=str(e),
-                          method=API_METHOD_POST)
+                          description=str(e))
                 raise security.STORE_TOKENS_ERROR
 
             try:
@@ -153,6 +158,7 @@ class AssistantRouter:
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
+                              request: Request,
                               background_tasks: BackgroundTasks,
                               body: PatientInsertPayload,
                               store_access_token: Annotated[str | None, Header()] = None,
@@ -160,6 +166,7 @@ class AssistantRouter:
                               authorization: Annotated[Union[str, None], Cookie()] = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(response=response,
+                                                    request=request,
                                                     background_tasks=background_tasks,
                                                     body=body,
                                                     store_access_token=store_access_token,
@@ -169,6 +176,7 @@ class AssistantRouter:
 
         @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_patient(response: Response,
+                                 request: Request,
                                  background_tasks: BackgroundTasks,
                                  body: PatientUpdatePayload,
                                  store_access_token: Annotated[str | None, Header()] = None,
@@ -176,6 +184,7 @@ class AssistantRouter:
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(response=response,
+                                                       request=request,
                                                        body=body,
                                                        background_tasks=background_tasks,
                                                        store_access_token=store_access_token,
@@ -184,14 +193,16 @@ class AssistantRouter:
                                                        session_id=session_id)
 
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_patient(response: Response,
+        async def delete_patient(request: Request,
+                                 response: Response,
                                  background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
                                  store_refresh_token: Annotated[str | None, Header()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_patient_internal(response=response,
+            return await self._delete_patient_internal(request=request,
+                                                       response=response,
                                                        background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        store_access_token=store_access_token,
@@ -200,14 +211,16 @@ class AssistantRouter:
                                                        session_id=session_id)
 
         @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def transform_session_with_template(response: Response,
+        async def transform_session_with_template(request: Request,
+                                                  response: Response,
                                                   background_tasks: BackgroundTasks,
                                                   body: TemplatePayload,
                                                   store_access_token: Annotated[str | None, Header()] = None,
                                                   store_refresh_token: Annotated[str | None, Header()] = None,
                                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._transform_session_with_template_internal(response=response,
+            return await self._transform_session_with_template_internal(request=request,
+                                                                        response=response,
                                                                         background_tasks=background_tasks,
                                                                         session_notes_text=body.session_notes_text,
                                                                         template=body.template,
@@ -222,6 +235,7 @@ class AssistantRouter:
     Arguments:
     body – the incoming request json body.
     client_timezone_identifier – the client's timezone identifier.
+    request – the request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     store_access_token – the store access token.
@@ -232,29 +246,26 @@ class AssistantRouter:
     async def _insert_new_session_internal(self,
                                            body: SessionNotesInsert,
                                            client_timezone_identifier: str,
+                                           request: Request,
                                            response: Response,
                                            background_tasks: BackgroundTasks,
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
                                            authorization: Annotated[Union[str, None], Cookie()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = body.patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        patient_id=body.patient_id,
-                        endpoint_name=self.SESSIONS_ENDPOINT,
-                        method=post_api_method,)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -264,8 +275,7 @@ class AssistantRouter:
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
                       patient_id=body.patient_id,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -280,7 +290,7 @@ class AssistantRouter:
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
-            session_notes_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
+            session_report_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
                                                                                       environment=self._environment,
                                                                                       auth_manager=self._auth_manager,
                                                                                       patient_id=body['patient_id'],
@@ -291,16 +301,8 @@ class AssistantRouter:
                                                                                       session_id=session_id,
                                                                                       therapist_id=therapist_id,
                                                                                       supabase_client=supabase_client)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             patient_id=body['patient_id'],
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-
-            return {"session_report_id": session_notes_id}
+            request.state.session_report_id = session_report_id
+            return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
@@ -309,8 +311,7 @@ class AssistantRouter:
                       patient_id=body['patient_id'],
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -320,6 +321,7 @@ class AssistantRouter:
     Arguments:
     body – the incoming request body.
     client_timezone_identifier – the client's timezone identifier.
+    request – the request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     store_access_token – the store access token.
@@ -330,29 +332,26 @@ class AssistantRouter:
     async def _update_session_internal(self,
                                        body: SessionNotesUpdate,
                                        client_timezone_identifier: str,
+                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        store_access_token: Annotated[str | None, Header()],
                                        store_refresh_token: Annotated[str | None, Header()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.session_report_id = body.id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        put_api_method = API_METHOD_PUT
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        session_report_id=body.id,
-                        endpoint_name=self.SESSIONS_ENDPOINT,
-                        method=put_api_method)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -362,8 +361,7 @@ class AssistantRouter:
                       session_report_id=body.id,
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=put_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -385,14 +383,6 @@ class AssistantRouter:
                                                          filtered_body=body,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             session_report_id=body['id'],
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=put_api_method)
-
             return {}
         except Exception as e:
             description = str(e)
@@ -402,8 +392,7 @@ class AssistantRouter:
                       session_report_id=body['id'],
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=put_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -412,6 +401,7 @@ class AssistantRouter:
 
     Arguments:
     session_report_id – the id for the incoming session report.
+    request – the request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     store_access_token – the store access token.
@@ -421,29 +411,26 @@ class AssistantRouter:
     """
     async def _delete_session_internal(self,
                                        session_report_id: str,
+                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        store_access_token: Annotated[str | None, Header()],
                                        store_refresh_token: Annotated[str | None, Header()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.session_report_id = session_report_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        delete_api_method = API_METHOD_DELETE
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        session_report_id=session_report_id,
-                        endpoint_name=self.SESSIONS_ENDPOINT,
-                        method=delete_api_method)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -453,8 +440,7 @@ class AssistantRouter:
                       session_report_id=session_report_id,
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=delete_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -468,8 +454,7 @@ class AssistantRouter:
                       session_report_id=session_report_id,
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=delete_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -483,15 +468,6 @@ class AssistantRouter:
                                                          therapist_id=therapist_id,
                                                          session_report_id=session_report_id,
                                                          supabase_client=supabase_client)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             description=f"session_report_id: {session_report_id}",
-                             endpoint_name=self.SESSIONS_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=delete_api_method)
-
             return {}
         except Exception as e:
             description = str(e)
@@ -500,8 +476,7 @@ class AssistantRouter:
                       session_id=session_id,
                       endpoint_name=self.SESSIONS_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=delete_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -523,31 +498,13 @@ class AssistantRouter:
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        therapist_id=therapist_id,
-                        patient_id=query.patient_id,
-                        endpoint_name=self.QUERIES_ENDPOINT,
-                        method=post_api_method)
-
         try:
-            async for part in self._assistant_manager.query_session(auth_manager=self._auth_manager,
-                                                                    query=query,
+            async for part in self._assistant_manager.query_session(query=query,
                                                                     session_id=session_id,
-                                                                    api_method=post_api_method,
                                                                     therapist_id=therapist_id,
                                                                     environment=self._environment,
                                                                     supabase_client=supabase_client):
                 yield part
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             patient_id=query.patient_id,
-                             endpoint_name=self.QUERIES_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
         except Exception as e:
             yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id,
                                                                                   supabase_client=supabase_client))
@@ -556,13 +513,13 @@ class AssistantRouter:
                       patient_id=query.patient_id,
                       endpoint_name=self.QUERIES_ENDPOINT,
                       error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
 
     """
     Adds a patient.
 
     Arguments:
+    request – the request object.
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
@@ -572,6 +529,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _add_patient_internal(self,
+                                    request: Request,
                                     response: Response,
                                     background_tasks: BackgroundTasks,
                                     body: PatientInsertPayload,
@@ -579,31 +537,18 @@ class AssistantRouter:
                                     store_refresh_token: Annotated[str | None, Header()],
                                     authorization: Annotated[Union[str, None], Cookie()],
                                     session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        description = "".join([
-            "birthdate=\"",
-            f"{body.birth_date or ''}\";",
-            "gender=\"",
-            f"{body.gender or ''}\";",
-            "consentment_channel=\"",
-            f"{body.consentment_channel}\""
-        ])
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        description = description,
-                        endpoint_name=self.PATIENTS_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -612,8 +557,7 @@ class AssistantRouter:
                       session_id=session_id,
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -631,15 +575,7 @@ class AssistantRouter:
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
                                                                    supabase_client=supabase_client)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             method=post_api_method,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             therapist_id=therapist_id,
-                             patient_id=patient_id,
-                             http_status_code=status.HTTP_200_OK)
-
+            request.state.patient_id = patient_id
             return {"patient_id": patient_id}
         except Exception as e:
             description = str(e)
@@ -649,8 +585,7 @@ class AssistantRouter:
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       error_code=status_code,
                       therapist_id=therapist_id,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -658,6 +593,7 @@ class AssistantRouter:
     Updates a patient.
 
     Arguments:
+    request – the request object.
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
     body – the body associated with the request.
@@ -667,6 +603,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _update_patient_internal(self,
+                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        body: PatientUpdatePayload,
@@ -674,32 +611,19 @@ class AssistantRouter:
                                        store_refresh_token: Annotated[str | None, Header()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = body.id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        put_api_method = API_METHOD_PUT
-        description = "".join([
-            "birthdate=\"",
-            f"{body.birth_date or ''}\";",
-            "gender=\"",
-            f"{body.gender or ''}\";",
-            "consentment_channel=\"",
-            f"{body.consentment_channel}\""
-        ])
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        description=description,
-                        method=put_api_method,
-                        endpoint_name=self.PATIENTS_ENDPOINT,
-                        patient_id=body.id)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -709,8 +633,7 @@ class AssistantRouter:
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       error_code=status_code,
                       patient_id=body.id,
-                      description=str(e),
-                      method=put_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -727,14 +650,6 @@ class AssistantRouter:
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
                                                          supabase_client=supabase_client)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             method=put_api_method,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             therapist_id=therapist_id,
-                             patient_id=body['id'],
-                             http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
@@ -744,8 +659,7 @@ class AssistantRouter:
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       error_code=status_code,
                       patient_id=body['id'],
-                      description=description,
-                      method=put_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -753,6 +667,7 @@ class AssistantRouter:
     Deletes a patient.
 
     Arguments:
+    request – the request object.
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
@@ -762,6 +677,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _delete_patient_internal(self,
+                                       request: Request,
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        patient_id: str,
@@ -769,23 +685,19 @@ class AssistantRouter:
                                        store_refresh_token: Annotated[str | None, Header()],
                                        authorization: Annotated[Union[str, None], Cookie()],
                                        session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        delete_api_method = API_METHOD_DELETE
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=delete_api_method,
-                        endpoint_name=self.PATIENTS_ENDPOINT,
-                        patient_id=patient_id,)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -795,8 +707,7 @@ class AssistantRouter:
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       patient_id=patient_id,
                       error_code=status_code,
-                      description=str(e),
-                      method=delete_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -820,14 +731,6 @@ class AssistantRouter:
 
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
                                                                 patient_id=patient_id)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             method=delete_api_method,
-                             endpoint_name=self.PATIENTS_ENDPOINT,
-                             therapist_id=therapist_id,
-                             description=f"patient_id: {patient_id}",
-                             http_status_code=status.HTTP_200_OK)
             return {}
         except Exception as e:
             description = str(e)
@@ -837,8 +740,7 @@ class AssistantRouter:
                       endpoint_name=self.PATIENTS_ENDPOINT,
                       error_code=status_code,
                       therapist_id=therapist_id,
-                      description=description,
-                      method=delete_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -846,6 +748,7 @@ class AssistantRouter:
     Adapts an incoming set of session notes into the SOAP format and returns the result.
 
     Arguments:
+    request – the request object.
     response – the response model used for the final response that will be returned.
     background_tasks – object for scheduling concurrent tasks.
     session_notes_text – the session notes to be adapted into SOAP.
@@ -856,6 +759,7 @@ class AssistantRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _transform_session_with_template_internal(self,
+                                                        request: Request,
                                                         response: Response,
                                                         background_tasks: BackgroundTasks,
                                                         session_notes_text: str,
@@ -864,22 +768,19 @@ class AssistantRouter:
                                                         store_refresh_token: Annotated[str | None, Header()],
                                                         authorization: Annotated[Union[str, None], Cookie()],
                                                         session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.notes_template = template.value
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        endpoint_name=self.TEMPLATES_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -888,8 +789,7 @@ class AssistantRouter:
                       session_id=session_id,
                       endpoint_name=self.TEMPLATES_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -901,13 +801,6 @@ class AssistantRouter:
                                                                                    therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.TEMPLATES_ENDPOINT,
-                             therapist_id=therapist_id,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-
             return {"soap_notes": soap_notes}
         except Exception as e:
             description = str(e)
@@ -916,7 +809,6 @@ class AssistantRouter:
                       session_id=session_id,
                       endpoint_name=self.TEMPLATES_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)

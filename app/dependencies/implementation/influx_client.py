@@ -14,7 +14,8 @@ class InfluxClient(InfluxBaseClass):
                       "session_id",
                       "session_report_id",
                       "status_code",
-                      "therapist_id"]
+                      "therapist_id",
+                      "notes_template"]
 
     def __init__(self, environment: str):
         token = os.environ.get("INFLUXDB_TOKEN")

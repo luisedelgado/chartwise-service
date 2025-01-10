@@ -5,6 +5,7 @@ from fastapi import (APIRouter,
                      Form,
                      Header,
                      HTTPException,
+                     Request,
                      Response,
                      status,
                      UploadFile)
@@ -13,10 +14,7 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import (API_METHOD_POST,
-                                        log_api_request,
-                                        log_api_response,
-                                        log_error)
+from ..internal.logging.logging import log_error
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
@@ -41,7 +39,8 @@ class AudioProcessingRouter:
     """
     def _register_routes(self):
         @self.router.post(self.NOTES_TRANSCRIPTION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def transcribe_session_notes(response: Response,
+        async def transcribe_session_notes(request: Request,
+                                           response: Response,
                                            background_tasks: BackgroundTasks,
                                            template: Annotated[SessionNotesTemplate, Form()],
                                            patient_id: Annotated[str, Form()],
@@ -52,7 +51,8 @@ class AudioProcessingRouter:
                                            audio_file: UploadFile = File(...),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._transcribe_session_notes_internal(response=response,
+            return await self._transcribe_session_notes_internal(request=request,
+                                                                 response=response,
                                                                  background_tasks=background_tasks,
                                                                  template=template,
                                                                  patient_id=patient_id,
@@ -65,7 +65,8 @@ class AudioProcessingRouter:
                                                                  session_id=session_id)
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def diarize_session(response: Response,
+        async def diarize_session(request: Request,
+                                  response: Response,
                                   background_tasks: BackgroundTasks,
                                   template: Annotated[SessionNotesTemplate, Form()],
                                   patient_id: Annotated[str, Form()],
@@ -76,7 +77,8 @@ class AudioProcessingRouter:
                                   audio_file: UploadFile = File(...),
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._diarize_session_internal(response=response,
+            return await self._diarize_session_internal(request=request,
+                                                        response=response,
                                                         background_tasks=background_tasks,
                                                         template=template,
                                                         patient_id=patient_id,
@@ -92,6 +94,7 @@ class AudioProcessingRouter:
     Returns the transcription created from the incoming audio file.
 
     Arguments:
+    request – the response object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     template – the template to be used for generating the output.
@@ -105,6 +108,7 @@ class AudioProcessingRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _transcribe_session_notes_internal(self,
+                                                 request: Request,
                                                  response: Response,
                                                  background_tasks: BackgroundTasks,
                                                  template: Annotated[SessionNotesTemplate, Form()],
@@ -116,32 +120,19 @@ class AudioProcessingRouter:
                                                  store_refresh_token: Annotated[str | None, Header()],
                                                  authorization: Annotated[Union[str, None], Cookie()],
                                                  session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        description = "".join([
-            "template=\"",
-            f"{template.value or ''}\";",
-            "session_date=\"",
-            f"{session_date or ''}\";",
-            "client_timezone=\"",
-            f"{client_timezone_identifier or ''}\""
-        ])
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        description=description,
-                        patient_id=patient_id,
-                        endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -151,7 +142,6 @@ class AudioProcessingRouter:
                       endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                       error_code=status_code,
                       description=str(e),
-                      method=post_api_method,
                       patient_id=patient_id)
             raise security.STORE_TOKENS_ERROR
 
@@ -176,13 +166,7 @@ class AudioProcessingRouter:
                                                                                            environment=self._environment,
                                                                                            language_code=language_code)
 
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-
+            request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
@@ -191,14 +175,14 @@ class AudioProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
     Returns the transcription created from the incoming audio file.
 
     Arguments:
+    request – the request object.
     response – the response model with which to create the final response.
     background_tasks – object for scheduling concurrent tasks.
     template – the template to be used for generating the output.
@@ -212,6 +196,7 @@ class AudioProcessingRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _diarize_session_internal(self,
+                                        request: Request,
                                         response: Response,
                                         background_tasks: BackgroundTasks,
                                         template: Annotated[SessionNotesTemplate, Form()],
@@ -223,32 +208,19 @@ class AudioProcessingRouter:
                                         store_refresh_token: Annotated[str | None, Header()],
                                         authorization: Annotated[Union[str, None], Cookie()],
                                         session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        description = "".join([
-            "template=\"",
-            f"{template.value or ''}\";",
-            "session_date=\"",
-            f"{session_date or ''}\";",
-            "client_timezone=\"",
-            f"{client_timezone_identifier or ''}\""
-        ])
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        description=description,
-                        patient_id=patient_id,
-                        endpoint_name=self.DIARIZATION_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -257,8 +229,7 @@ class AudioProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.DIARIZATION_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -276,8 +247,7 @@ class AudioProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.DIARIZATION_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
@@ -294,14 +264,7 @@ class AudioProcessingRouter:
                                                                                            environment=self._environment,
                                                                                            language_code=language_code,
                                                                                            diarize=True)
-
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=therapist_id,
-                             endpoint_name=self.DIARIZATION_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-
+            request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
@@ -310,6 +273,5 @@ class AudioProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.DIARIZATION_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code, detail=description)
