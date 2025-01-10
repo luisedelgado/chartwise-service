@@ -23,7 +23,6 @@ from ..internal.logging import (API_METHOD_DELETE,
                                 API_METHOD_POST,
                                 API_METHOD_PUT,
                                 log_account_deletion,
-                                log_api_request,
                                 log_api_response,
                                 log_error)
 from ..internal.schemas import Gender
@@ -184,6 +183,7 @@ class SecurityRouter:
 
         post_api_method = API_METHOD_POST
 
+        influx_client = dependency_container.inject_influx_client()
         try:
             user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
                                                                  password=credentials_data.password)
@@ -198,10 +198,10 @@ class SecurityRouter:
                                     secure=True,
                                     samesite="none")
 
-            log_api_request(background_tasks=background_tasks,
-                            session_id=session_id,
-                            method=post_api_method,
-                            endpoint_name=self.SIGNIN_ENDPOINT)
+            influx_client.log_api_request(background_tasks=background_tasks,
+                                          endpoint_name=self.SIGNIN_ENDPOINT,
+                                          method=post_api_method,
+                                          session_id=session_id)
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
@@ -284,14 +284,15 @@ class SecurityRouter:
                                            store_refresh_token: Annotated[str | None, Header()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
         put_api_method = API_METHOD_PUT
+        influx_client = dependency_container.inject_influx_client()
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise security.AUTH_TOKEN_EXPIRED_ERROR
 
-            log_api_request(background_tasks=background_tasks,
-                            session_id=session_id,
-                            method=put_api_method,
-                            endpoint_name=self.SESSION_REFRESH_ENDPOINT)
+            influx_client.log_api_request(background_tasks=background_tasks,
+                                          endpoint_name=self.SESSION_REFRESH_ENDPOINT,
+                                          method=put_api_method,
+                                          session_id=session_id)
 
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
@@ -449,11 +450,12 @@ class SecurityRouter:
             f"{body.gender or ''}\""
         ])
 
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        description=logs_request_description,
-                        method=post_api_method,
-                        endpoint_name=self.SIGNUP_ENDPOINT)
+        influx_client = dependency_container.inject_influx_client()
+        influx_client.log_api_request(background_tasks=background_tasks,
+                                      endpoint_name=self.SIGNUP_ENDPOINT,
+                                      description=logs_request_description,
+                                      method=post_api_method,
+                                      session_id=session_id)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -559,11 +561,13 @@ class SecurityRouter:
             "gender=\"",
             f"{body.gender or ''}\""
         ])
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=put_api_method,
-                        description=description,
-                        endpoint_name=self.ACCOUNT_ENDPOINT)
+
+        influx_client = dependency_container.inject_influx_client()
+        influx_client.log_api_request(background_tasks=background_tasks,
+                                      endpoint_name=self.ACCOUNT_ENDPOINT,
+                                      description=description,
+                                      method=put_api_method,
+                                      session_id=session_id)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -645,10 +649,12 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         delete_api_method = API_METHOD_DELETE
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=delete_api_method,
-                        endpoint_name=self.ACCOUNT_ENDPOINT)
+        influx_client = dependency_container.inject_influx_client()
+        influx_client.log_api_request(background_tasks=background_tasks,
+                                      endpoint_name=self.ACCOUNT_ENDPOINT,
+                                      description=description,
+                                      method=delete_api_method,
+                                      session_id=session_id)
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -750,11 +756,12 @@ class SecurityRouter:
                                                 session_id: Annotated[Union[str, None], Cookie()]):
         try:
             post_api_method = API_METHOD_POST
-            log_api_request(background_tasks=background_tasks,
-                            session_id=session_id,
-                            therapist_id=user_id,
-                            method=post_api_method,
-                            endpoint_name=self.LOGOUT_ENDPOINT)
+            influx_client = dependency_container.inject_influx_client()
+            influx_client.log_api_request(background_tasks=background_tasks,
+                                          endpoint_name=self.LOGOUT_ENDPOINT,
+                                          therapist_id=user_id,
+                                          method=post_api_method,
+                                          session_id=session_id)
             log_api_response(background_tasks=background_tasks,
                              session_id=session_id,
                              therapist_id=user_id,
