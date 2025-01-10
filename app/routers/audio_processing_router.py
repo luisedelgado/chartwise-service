@@ -14,7 +14,6 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import log_error
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
@@ -137,12 +136,12 @@ class AudioProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e),
-                      patient_id=patient_id)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  patient_id=patient_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -171,11 +170,11 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.NOTES_TRANSCRIPTION_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
     """
@@ -225,11 +224,11 @@ class AudioProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.DIARIZATION_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -243,11 +242,11 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.DIARIZATION_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
@@ -269,9 +268,9 @@ class AudioProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.DIARIZATION_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code, detail=description)
