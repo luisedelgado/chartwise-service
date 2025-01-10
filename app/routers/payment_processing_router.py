@@ -17,13 +17,7 @@ from ..internal.utilities import datetime_handler
 from ..internal import security
 from ..dependencies.dependency_container import dependency_container, StripeBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
-from ..internal.logging.logging import (API_METHOD_DELETE,
-                                        API_METHOD_GET,
-                                        API_METHOD_POST,
-                                        API_METHOD_PUT,
-                                        FAILED_RESULT,
-                                        log_api_request,
-                                        log_api_response,
+from ..internal.logging.logging import (FAILED_RESULT,
                                         log_payment_event,
                                         log_metadata_from_stripe_invoice_event,
                                         log_metadata_from_stripe_subscription_event,
@@ -76,7 +70,8 @@ class PaymentProcessingRouter:
     """
     def _register_routes(self):
         @self.router.post(self.CHECKOUT_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def create_checkout_session(response: Response,
+        async def create_checkout_session(request: Request,
+                                          response: Response,
                                           payload: PaymentSessionPayload,
                                           background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()],
@@ -86,6 +81,7 @@ class PaymentProcessingRouter:
             return await self._create_checkout_session_internal(authorization=authorization,
                                                                 payload=payload,
                                                                 background_tasks=background_tasks,
+                                                                request=request,
                                                                 response=response,
                                                                 session_id=session_id,
                                                                 store_access_token=store_access_token,
@@ -99,6 +95,7 @@ class PaymentProcessingRouter:
 
         @self.router.get(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_subscriptions(response: Response,
+                                         request: Request,
                                          background_tasks: BackgroundTasks,
                                          store_access_token: Annotated[str | None, Header()],
                                          store_refresh_token: Annotated[str | None, Header()],
@@ -106,6 +103,7 @@ class PaymentProcessingRouter:
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_subscriptions_internal(authorization=authorization,
                                                                background_tasks=background_tasks,
+                                                               request=request,
                                                                response=response,
                                                                session_id=session_id,
                                                                store_access_token=store_access_token,
@@ -114,6 +112,7 @@ class PaymentProcessingRouter:
         @self.router.put(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_subscription(payload: UpdateSubscriptionPayload,
                                       response: Response,
+                                      request: Request,
                                       background_tasks: BackgroundTasks,
                                       store_access_token: Annotated[str | None, Header()],
                                       store_refresh_token: Annotated[str | None, Header()],
@@ -123,6 +122,7 @@ class PaymentProcessingRouter:
                                                             price_id=payload.new_price_tier_id,
                                                             behavior=payload.behavior,
                                                             background_tasks=background_tasks,
+                                                            request=request,
                                                             response=response,
                                                             session_id=session_id,
                                                             store_access_token=store_access_token,
@@ -130,6 +130,7 @@ class PaymentProcessingRouter:
 
         @self.router.delete(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_subscription(response: Response,
+                                      request: Request,
                                       background_tasks: BackgroundTasks,
                                       store_access_token: Annotated[str | None, Header()],
                                       store_refresh_token: Annotated[str | None, Header()],
@@ -137,13 +138,15 @@ class PaymentProcessingRouter:
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_subscription_internal(authorization=authorization,
                                                             background_tasks=background_tasks,
+                                                            request=request,
                                                             response=response,
                                                             session_id=session_id,
                                                             store_access_token=store_access_token,
                                                             store_refresh_token=store_refresh_token)
 
         @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
-        async def retrieve_product_catalog(response: Response,
+        async def retrieve_product_catalog(request: Request,
+                                           response: Response,
                                            background_tasks: BackgroundTasks,
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
@@ -151,13 +154,15 @@ class PaymentProcessingRouter:
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_product_catalog_internal(authorization=authorization,
                                                                  background_tasks=background_tasks,
+                                                                 request=request,
                                                                  response=response,
                                                                  session_id=session_id,
                                                                  store_access_token=store_access_token,
                                                                  store_refresh_token=store_refresh_token)
 
         @self.router.post(self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def create_update_payment_method_session(response: Response,
+        async def create_update_payment_method_session(request: Request,
+                                                       response: Response,
                                                        payload: UpdatePaymentMethodPayload,
                                                        background_tasks: BackgroundTasks,
                                                        store_access_token: Annotated[str | None, Header()],
@@ -166,6 +171,7 @@ class PaymentProcessingRouter:
                                                        session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_update_payment_method_session_internal(authorization=authorization,
                                                                              background_tasks=background_tasks,
+                                                                             request=request,
                                                                              response=response,
                                                                              session_id=session_id,
                                                                              payload=payload,
@@ -173,7 +179,8 @@ class PaymentProcessingRouter:
                                                                              store_refresh_token=store_refresh_token)
 
         @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def retrieve_payment_history(response: Response,
+        async def retrieve_payment_history(request: Request,
+                                           response: Response,
                                            background_tasks: BackgroundTasks,
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
@@ -186,6 +193,7 @@ class PaymentProcessingRouter:
                                                                  store_access_token=store_access_token,
                                                                  store_refresh_token=store_refresh_token,
                                                                  session_id=session_id,
+                                                                 request=request,
                                                                  response=response,
                                                                  limit=batch_size,
                                                                  starting_after=pagination_last_item_id_retrieved)
@@ -199,6 +207,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     payload – the incoming request's payload.
     """
@@ -208,34 +217,29 @@ class PaymentProcessingRouter:
                                                 store_access_token: str,
                                                 store_refresh_token: str,
                                                 session_id: str,
+                                                request: Request,
                                                 response: Response,
                                                 payload: PaymentSessionPayload):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        endpoint_name=self.CHECKOUT_SESSION_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id, response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             log_error(background_tasks=background_tasks,
                       session_id=session_id,
                       endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -261,16 +265,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=post_api_method)
+                      description=message)
             raise HTTPException(detail=message, status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=post_api_method)
 
         return {"payment_session_url": payment_session_url}
 
@@ -283,6 +279,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     """
     async def _retrieve_subscriptions_internal(self,
@@ -291,23 +288,20 @@ class PaymentProcessingRouter:
                                                store_access_token: str,
                                                store_refresh_token: str,
                                                session_id: str,
+                                               request: Request,
                                                response: Response):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=post_api_method,
-                        endpoint_name=self.SUBSCRIPTIONS_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -316,8 +310,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -365,16 +358,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=post_api_method)
+                      description=message)
             raise HTTPException(detail=message, status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=post_api_method)
 
         return {"subscriptions": filtered_data}
 
@@ -387,6 +372,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     subscription_id – the subscription to be deleted.
     """
@@ -396,23 +382,20 @@ class PaymentProcessingRouter:
                                             store_access_token: str,
                                             store_refresh_token: str,
                                             session_id: str,
+                                            request: Request,
                                             response: Response):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        delete_api_method = API_METHOD_DELETE
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=delete_api_method,
-                        endpoint_name=self.SUBSCRIPTIONS_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -421,8 +404,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=delete_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -443,16 +425,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=delete_api_method)
+                      description=message)
             raise HTTPException(detail="Subscription not found", status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=delete_api_method)
 
         return {}
 
@@ -465,6 +439,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     behavior – the update behavior to be invoked.
     price_id – the new price_id to be associated with the subscription.
@@ -475,25 +450,22 @@ class PaymentProcessingRouter:
                                             store_access_token: str,
                                             store_refresh_token: str,
                                             session_id: str,
+                                            request: Request,
                                             response: Response,
                                             behavior: UpdateSubscriptionBehavior,
                                             price_id: str):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        update_api_method = API_METHOD_PUT
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=update_api_method,
-                        endpoint_name=self.SUBSCRIPTIONS_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -502,8 +474,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=update_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -540,16 +511,9 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=update_api_method)
+                      description=message)
             raise HTTPException(detail=message, status_code=status_code)
 
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=update_api_method)
         return {}
 
     async def _retrieve_product_catalog_internal(self,
@@ -558,23 +522,20 @@ class PaymentProcessingRouter:
                                                  store_access_token: str,
                                                  store_refresh_token: str,
                                                  session_id: str,
+                                                 request: Request,
                                                  response: Response):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        get_api_method = API_METHOD_GET
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=get_api_method,
-                        endpoint_name=self.PRODUCT_CATALOG)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -583,8 +544,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.PRODUCT_CATALOG,
                       error_code=status_code,
-                      description=str(e),
-                      method=get_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -597,16 +557,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.PRODUCT_CATALOG,
                       error_code=status_code,
-                      description=message,
-                      method=get_api_method)
+                      description=message)
             raise HTTPException(detail="Subscription not found", status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.PRODUCT_CATALOG,
-                         http_status_code=status.HTTP_200_OK,
-                         method=get_api_method)
 
         return {"catalog": response}
 
@@ -619,6 +571,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     payload – the JSON payload containing the update data.
     """
@@ -628,24 +581,21 @@ class PaymentProcessingRouter:
                                                              store_access_token: str,
                                                              store_refresh_token: str,
                                                              session_id: str,
+                                                             request: Request,
                                                              response: Response,
                                                              payload: UpdatePaymentMethodPayload):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        put_api_method = API_METHOD_PUT
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=put_api_method,
-                        endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -654,8 +604,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=put_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -678,16 +627,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=put_api_method)
+                      description=message)
             raise HTTPException(detail=message, status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=put_api_method)
 
         return { "update_payment_method_url": update_payment_method_url }
 
@@ -700,6 +641,7 @@ class PaymentProcessingRouter:
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     session_id – the session_id cookie, if exists.
+    request – the request object.
     response – the response model with which to create the final response.
     limit – the limit for the batch size to be returned.
     starting_after – the id of the last payment that was retrieved (for pagination purposes).
@@ -710,25 +652,22 @@ class PaymentProcessingRouter:
                                                  store_access_token: str,
                                                  store_refresh_token: str,
                                                  session_id: str,
+                                                 request: Request,
                                                  response: Response,
                                                  limit: int,
                                                  starting_after: str | None):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        get_api_method = API_METHOD_GET
-        log_api_request(background_tasks=background_tasks,
-                        session_id=session_id,
-                        method=get_api_method,
-                        endpoint_name=self.PAYMENT_HISTORY_ENDPOINT)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
             await self._auth_manager.refresh_session(user_id=therapist_id,
                                                      response=response)
         except Exception as e:
@@ -737,8 +676,7 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=get_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -785,16 +723,8 @@ class PaymentProcessingRouter:
                       session_id=session_id,
                       endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
                       error_code=status_code,
-                      description=message,
-                      method=get_api_method)
+                      description=message)
             raise HTTPException(detail=message, status_code=status_code)
-
-        log_api_response(background_tasks=background_tasks,
-                         session_id=session_id,
-                         therapist_id=therapist_id,
-                         endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
-                         http_status_code=status.HTTP_200_OK,
-                         method=get_api_method)
 
         return {"payments": successful_payments}
 
