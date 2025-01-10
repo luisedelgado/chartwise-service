@@ -14,3 +14,11 @@ class FakeInfluxClient(InfluxBaseClass):
                          response_time: float,
                          **kwargs):
         pass
+
+    def log_error(self,
+                  endpoint_name: str,
+                  method: str,
+                  error_code: int,
+                  description: str,
+                  **kwargs):
+        pass

@@ -25,10 +25,27 @@ class InfluxBaseClass(ABC):
         Logs data about an API response.
 
         Arguments:
-        background_tasks – object for scheduling background tasks.
         endpoint_name – the name of the endpoint.
         method – the api method.
         response_time – the response time.
+        kwargs – the set of optional parameters to be sent into the method.
+        """
+        pass
+
+    @abstractmethod
+    def log_error(endpoint_name: str,
+                  method: str,
+                  error_code: int,
+                  description: str,
+                  **kwargs):
+        """
+        Logs data about an API error.
+
+        Arguments:
+        endpoint_name – the name of the endpoint.
+        method – the api method.
+        error_code – the error code.
+        description – the error description.
         kwargs – the set of optional parameters to be sent into the method.
         """
         pass

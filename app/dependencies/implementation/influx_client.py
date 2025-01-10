@@ -1,7 +1,6 @@
 import os
 
 from datetime import datetime, timezone
-from fastapi import BackgroundTasks
 from influxdb_client_3 import InfluxDBClient3, Point, write_client_options, WriteOptions
 from influxdb_client_3.write_client.client.write_api import WriteType
 
@@ -11,6 +10,7 @@ class InfluxClient(InfluxBaseClass):
 
     API_REQUESTS_BUCKET = "api_requests"
     API_RESPONSES_BUCKET = "api_responses"
+    API_ERRORS_BUCKET = "errors"
     _optional_tags = ["patient_id",
                       "session_id",
                       "session_report_id",
@@ -68,3 +68,25 @@ class InfluxClient(InfluxBaseClass):
                 point.tag(tag, str(value))
 
         self.client.write(record=point, database=self.API_RESPONSES_BUCKET)
+
+    def log_error(self,
+                  endpoint_name: str,
+                  method: str,
+                  error_code: int,
+                  description: str,
+                  **kwargs):
+        point = (
+            Point(self.API_RESPONSES_BUCKET)
+            .tag("endpoint_name", endpoint_name)
+            .tag("environment", self.environment)
+            .tag("method", method)
+            .tag("error_code", error_code)
+            .field("description", description)
+        )
+
+        for tag in self._optional_tags:
+            value = kwargs.get(tag)
+            if value is not None:
+                point.tag(tag, str(value))
+
+        self.client.write(record=point, database=self.API_ERRORS_BUCKET)
