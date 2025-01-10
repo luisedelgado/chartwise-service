@@ -10,6 +10,7 @@ from fastapi import (APIRouter,
                      Depends,
                      Header,
                      HTTPException,
+                     Request,
                      Response,
                      status,)
 from langcodes import Language
@@ -19,11 +20,9 @@ from pydantic import BaseModel
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import (API_METHOD_DELETE,
-                                        API_METHOD_POST,
+from ..internal.logging.logging import (API_METHOD_POST,
                                         API_METHOD_PUT,
                                         log_account_deletion,
-                                        log_api_response,
                                         log_error)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
@@ -78,6 +77,7 @@ class SecurityRouter:
         async def signin(credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                          background_tasks: BackgroundTasks,
                          response: Response,
+                         request: Request,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -85,17 +85,20 @@ class SecurityRouter:
                                                background_tasks=background_tasks,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
+                                               request=request,
                                                response=response,
                                                session_id=session_id)
 
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def refresh_auth_token(response: Response,
+        async def refresh_auth_token(request: Request,
+                                     response: Response,
                                      background_tasks: BackgroundTasks,
                                      store_access_token: Annotated[str | None, Header()] = None,
                                      store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._refresh_auth_token_internal(authorization=authorization,
+                                                           request=request,
                                                            response=response,
                                                            background_tasks=background_tasks,
                                                            store_access_token=store_access_token,
@@ -103,12 +106,14 @@ class SecurityRouter:
                                                            session_id=session_id)
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def logout(response: Response,
+        async def logout(request: Request,
+                         response: Response,
                          background_tasks: BackgroundTasks,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._logout_internal(response=response,
+            return await self._logout_internal(request=request,
+                                               response=response,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
                                                background_tasks=background_tasks,
@@ -116,6 +121,7 @@ class SecurityRouter:
 
         @self.router.post(self.SIGNUP_ENDPOINT, tags=[self.ROUTER_TAG])
         async def signup(body: SignupPayload,
+                         request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
                          password: Annotated[str, Body()] = None,
@@ -124,6 +130,7 @@ class SecurityRouter:
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signup_internal(body=body,
                                                password=password,
+                                               request=request,
                                                response=response,
                                                background_tasks=background_tasks,
                                                store_access_token=store_access_token,
@@ -131,14 +138,16 @@ class SecurityRouter:
                                                session_id=session_id)
 
         @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def update_account_data(response: Response,
+        async def update_account_data(request: Request,
+                                      response: Response,
                                       background_tasks: BackgroundTasks,
                                       body: TherapistUpdatePayload,
                                       store_access_token: Annotated[str | None, Header()] = None,
                                       store_refresh_token: Annotated[str | None, Header()] = None,
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._update_account_data_internal(response=response,
+            return await self._update_account_data_internal(request=request,
+                                                            response=response,
                                                             background_tasks=background_tasks,
                                                             body=body,
                                                             store_access_token=store_access_token,
@@ -147,13 +156,15 @@ class SecurityRouter:
                                                             session_id=session_id)
 
         @self.router.delete(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_all_account_data(response: Response,
+        async def delete_all_account_data(request: Request,
+                                          response: Response,
                                           background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_all_account_data_internal(response=response,
+            return await self._delete_all_account_data_internal(request=request,
+                                                                response=response,
                                                                 background_tasks=background_tasks,
                                                                 store_access_token=store_access_token,
                                                                 store_refresh_token=store_refresh_token,
@@ -166,6 +177,7 @@ class SecurityRouter:
     Arguments:
     credentials_data – the credentials data to be used for authentication.
     background_tasks – object for scheduling concurrent tasks.
+    request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -174,34 +186,30 @@ class SecurityRouter:
     async def _signin_internal(self,
                                credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                background_tasks: BackgroundTasks,
+                               request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
                                store_refresh_token: Annotated[str | None, Header()],
                                session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        post_api_method = API_METHOD_POST
-
-        influx_client = dependency_container.inject_influx_client()
         try:
             user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
                                                                  password=credentials_data.password)
+            request.state.therapist_id = user_id
             assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
             if session_id is None:
                 session_id = uuid.uuid1()
+                request.state.session_id = session_id
                 response.set_cookie(key="session_id",
                                     value=session_id,
                                     domain=self._auth_manager.APP_COOKIE_DOMAIN,
                                     httponly=True,
                                     secure=True,
                                     samesite="none")
-
-            influx_client.log_api_request(background_tasks=background_tasks,
-                                          endpoint_name=self.SIGNIN_ENDPOINT,
-                                          method=post_api_method,
-                                          session_id=session_id)
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
@@ -239,12 +247,6 @@ class SecurityRouter:
                                                                                  supabase_client=supabase_client)
 
             await dependency_container.inject_openai_client().clear_chat_history()
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             endpoint_name=self.SIGNIN_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             therapist_id=user_id,
-                             method=post_api_method)
 
             signin_data = {
                 "subscription_status" : {
@@ -264,8 +266,7 @@ class SecurityRouter:
                       session_id=session_id,
                       endpoint_name=self.SIGNIN_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+                      description=description)
             raise HTTPException(detail=description, status_code=status_code)
 
     """
@@ -274,6 +275,7 @@ class SecurityRouter:
     Arguments:
     authorization – the authorization cookie, if exists.
     background_tasks – object for scheduling concurrent tasks.
+    request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -282,25 +284,23 @@ class SecurityRouter:
     async def _refresh_auth_token_internal(self,
                                            authorization: Annotated[Union[str, None], Cookie()],
                                            background_tasks: BackgroundTasks,
+                                           request: Request,
                                            response: Response,
                                            store_access_token: Annotated[str | None, Header()],
                                            store_refresh_token: Annotated[str | None, Header()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         put_api_method = API_METHOD_PUT
-        influx_client = dependency_container.inject_influx_client()
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise security.AUTH_TOKEN_EXPIRED_ERROR
-
-            influx_client.log_api_request(background_tasks=background_tasks,
-                                          endpoint_name=self.SESSION_REFRESH_ENDPOINT,
-                                          method=put_api_method,
-                                          session_id=session_id)
 
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
 
             user_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = user_id
+
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
 
             # Fetch customer data
@@ -334,12 +334,6 @@ class SecurityRouter:
                                                                                  therapist_id=user_id,
                                                                                  supabase_client=supabase_client)
 
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=user_id,
-                             method=put_api_method,
-                             endpoint_name=self.SESSION_REFRESH_ENDPOINT)
-
             token_refresh_data = {
                 "subscription_status" : {
                     "is_free_trial_active": is_free_trial_active,
@@ -367,6 +361,7 @@ class SecurityRouter:
     Logs out the user.
 
     Arguments:
+    request – the request object.
     response – the object to be used for constructing the final response.
     background_tasks – object for scheduling concurrent tasks.
     store_access_token – the store access token.
@@ -374,11 +369,13 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _logout_internal(self,
+                               request: Request,
                                response: Response,
                                background_tasks: BackgroundTasks,
                                store_access_token: Annotated[str | None, Header()],
                                store_refresh_token: Annotated[str | None, Header()],
                                session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         user_id = None
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -387,14 +384,9 @@ class SecurityRouter:
         except Exception:
             pass
 
+        request.state.therapist_id = user_id
         self._auth_manager.logout(response)
         background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
-
-        if user_id is not None:
-            background_tasks.add_task(self._schedule_logout_activity_logging,
-                                      background_tasks,
-                                      user_id,
-                                      session_id)
         return {}
 
     """
@@ -404,7 +396,8 @@ class SecurityRouter:
     body – the body associated with the request.
     password – the password associated with the new account.
     background_tasks – object for scheduling concurrent tasks.
-    response – the response model to be used for creating the final response.
+    request – the request object.
+    response – the response object to be used for creating the final response.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
     authorization – the authorization cookie, if exists.
@@ -414,10 +407,12 @@ class SecurityRouter:
                                body: SignupPayload,
                                password: str,
                                background_tasks: BackgroundTasks,
+                               request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
                                store_refresh_token: Annotated[str | None, Header()],
                                session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
@@ -432,6 +427,7 @@ class SecurityRouter:
                                                              store_access_token=store_access_token,
                                                              store_refresh_token=store_refresh_token,
                                                              background_tasks=background_tasks,
+                                                             request=request,
                                                              response=response,
                                                              session_id=session_id)
         except Exception as e:
@@ -444,16 +440,11 @@ class SecurityRouter:
                       method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
-        influx_client = dependency_container.inject_influx_client()
-        influx_client.log_api_request(background_tasks=background_tasks,
-                                      endpoint_name=self.SIGNUP_ENDPOINT,
-                                      method=post_api_method,
-                                      session_id=session_id)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      response=response)
         except Exception as e:
@@ -495,13 +486,6 @@ class SecurityRouter:
                                            therapist_name=therapist_name)
             await self._email_manager.send_customer_relations_alert(alert)
 
-            log_api_response(background_tasks=background_tasks,
-                             therapist_id=user_id,
-                             session_id=session_id,
-                             endpoint_name=self.SIGNUP_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-
             response_payload = {
                 "therapist_id": user_id
             }
@@ -524,6 +508,7 @@ class SecurityRouter:
 
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
+    request – the request object.
     response – the object to be used for constructing the final response.
     body – the body associated with the request.
     store_access_token – the store access token.
@@ -533,29 +518,25 @@ class SecurityRouter:
     """
     async def _update_account_data_internal(self,
                                             background_tasks: BackgroundTasks,
+                                            request: Request,
                                             response: Response,
                                             body: TherapistUpdatePayload,
                                             store_access_token: Annotated[str | None, Header()],
                                             store_refresh_token: Annotated[str | None, Header()],
                                             authorization: Annotated[Union[str, None], Cookie()],
                                             session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        put_api_method = API_METHOD_PUT
-        influx_client = dependency_container.inject_influx_client()
-        influx_client.log_api_request(background_tasks=background_tasks,
-                                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                                      method=put_api_method,
-                                      session_id=session_id)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      response=response)
         except Exception as e:
@@ -564,8 +545,7 @@ class SecurityRouter:
                       session_id=session_id,
                       endpoint_name=self.ACCOUNT_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=put_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -587,13 +567,6 @@ class SecurityRouter:
                                                          'id': user_id
                                                      })
             assert (0 != len((update_response).data)), "Update operation could not be completed."
-
-            log_api_response(background_tasks=background_tasks,
-                             therapist_id=user_id,
-                             session_id=session_id,
-                             endpoint_name=self.ACCOUNT_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=put_api_method)
             return {}
         except Exception as e:
             description = str(e)
@@ -602,8 +575,7 @@ class SecurityRouter:
                       session_id=session_id,
                       endpoint_name=self.ACCOUNT_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=put_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -612,6 +584,7 @@ class SecurityRouter:
 
     Arguments:
     background_tasks – object for scheduling concurrent tasks.
+    request – the request object.
     response – the object to be used for constructing the final response.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -620,28 +593,24 @@ class SecurityRouter:
     """
     async def _delete_all_account_data_internal(self,
                                                 background_tasks: BackgroundTasks,
+                                                request: Request,
                                                 response: Response,
                                                 store_access_token: Annotated[str | None, Header()],
                                                 store_refresh_token: Annotated[str | None, Header()],
                                                 authorization: Annotated[Union[str, None], Cookie()],
                                                 session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
-        delete_api_method = API_METHOD_DELETE
-        influx_client = dependency_container.inject_influx_client()
-        influx_client.log_api_request(background_tasks=background_tasks,
-                                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                                      method=delete_api_method,
-                                      session_id=session_id)
-
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(user_id=user_id,
                                                      response=response)
         except Exception as e:
@@ -650,8 +619,7 @@ class SecurityRouter:
                       session_id=session_id,
                       endpoint_name=self.ACCOUNT_ENDPOINT,
                       error_code=status_code,
-                      description=str(e),
-                      method=delete_api_method)
+                      description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -713,12 +681,6 @@ class SecurityRouter:
             dependency_container.inject_supabase_client_factory().supabase_admin_client().delete_user(user_id)
 
             log_account_deletion(background_tasks=background_tasks, therapist_id=user_id)
-            log_api_response(background_tasks=background_tasks,
-                             description=f"user_id: {user_id}",
-                             session_id=session_id,
-                             endpoint_name=self.ACCOUNT_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=delete_api_method)
             return {}
         except Exception as e:
             description = str(e)
@@ -727,29 +689,6 @@ class SecurityRouter:
                       session_id=session_id,
                       endpoint_name=self.ACCOUNT_ENDPOINT,
                       error_code=status_code,
-                      description=description,
-                      method=delete_api_method)
+                      description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-
-    async def _schedule_logout_activity_logging(self,
-                                                background_tasks: BackgroundTasks,
-                                                user_id: str,
-                                                session_id: Annotated[Union[str, None], Cookie()]):
-        try:
-            post_api_method = API_METHOD_POST
-            influx_client = dependency_container.inject_influx_client()
-            influx_client.log_api_request(background_tasks=background_tasks,
-                                          endpoint_name=self.LOGOUT_ENDPOINT,
-                                          therapist_id=user_id,
-                                          method=post_api_method,
-                                          session_id=session_id)
-            log_api_response(background_tasks=background_tasks,
-                             session_id=session_id,
-                             therapist_id=user_id,
-                             endpoint_name=self.LOGOUT_ENDPOINT,
-                             http_status_code=status.HTTP_200_OK,
-                             method=post_api_method)
-        except Exception:
-            #Fail silently since there's no need to throw
-            pass

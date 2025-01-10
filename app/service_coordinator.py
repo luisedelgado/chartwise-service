@@ -1,6 +1,8 @@
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from .internal.logging.logging_middleware import TimingMiddleware
+
 class EndpointServiceCoordinator:
 
     origins = [
@@ -21,6 +23,7 @@ class EndpointServiceCoordinator:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        self.app.add_middleware(TimingMiddleware)
         self.environment = environment
 
         try:
