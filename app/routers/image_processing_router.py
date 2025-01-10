@@ -15,7 +15,6 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal import security
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import log_error
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
@@ -111,12 +110,12 @@ class ImageProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e),
-                      patient_id=patient_id)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  patient_id=patient_id,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -128,11 +127,11 @@ class ImageProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             description = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
@@ -156,11 +155,11 @@ class ImageProcessingRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.TEXT_EXTRACTION_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code, detail=description)
 
     async def _process_textraction(self,

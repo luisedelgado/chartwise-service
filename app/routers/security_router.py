@@ -22,8 +22,7 @@ from ..internal.internal_alert import CustomerRelationsAlert
 from ..dependencies.dependency_container import dependency_container
 from ..internal.logging.logging import (API_METHOD_POST,
                                         API_METHOD_PUT,
-                                        log_account_deletion,
-                                        log_error)
+                                        log_account_deletion)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
@@ -262,11 +261,11 @@ class SecurityRouter:
         except Exception as e:
             status_code = status.HTTP_401_UNAUTHORIZED
             description = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SIGNIN_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(detail=description, status_code=status_code)
 
     """
@@ -348,12 +347,11 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SESSION_REFRESH_ENDPOINT,
-                      error_code=status_code,
-                      description=description,
-                      method=put_api_method)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -432,12 +430,11 @@ class SecurityRouter:
                                                              session_id=session_id)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SIGNUP_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -449,12 +446,11 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SIGNUP_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e),
-                      method=post_api_method)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -494,12 +490,11 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SIGNUP_ENDPOINT,
-                      error_code=status_code,
-                      description=description,
-                      method=post_api_method)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -541,11 +536,11 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -571,11 +566,11 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -615,11 +610,11 @@ class SecurityRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e))
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -685,10 +680,10 @@ class SecurityRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.ACCOUNT_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  session_id=session_id,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
