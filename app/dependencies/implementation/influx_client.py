@@ -17,7 +17,7 @@ class InfluxClient(InfluxBaseClass):
 
     def __init__(self, environment: str):
         token = os.environ.get("INFLUXDB_TOKEN")
-        host = "https://us-east-1-1.aws.cloud2.influxdata.com"
+        host = os.environ.get("INFLUXDB_HOST")
 
         org = "".join(["chartwise-", environment])
         self.client = InfluxDBClient3(host=host, token=token, org=org)
@@ -29,7 +29,7 @@ class InfluxClient(InfluxBaseClass):
                         method: str,
                         **kwargs):
         point = (
-            Point("api_requests")
+            Point(self.API_REQUESTS_BUCKET)
             .tag("endpoint_name", endpoint_name)
             .tag("environment", self.environment)
             .tag("method", method)
@@ -42,3 +42,24 @@ class InfluxClient(InfluxBaseClass):
                 point.tag(tag, str(value))
 
         background_tasks.add_task(self.client.write, point, self.API_REQUESTS_BUCKET)
+
+    def log_api_response(self,
+                         background_tasks: BackgroundTasks,
+                         endpoint_name: str,
+                         method: str,
+                         response_time: float,
+                         **kwargs):
+        point = (
+            Point(self.API_RESPONSES_BUCKET)
+            .tag("endpoint_name", endpoint_name)
+            .tag("environment", self.environment)
+            .tag("method", method)
+            .field("response_time", response_time)
+        )
+
+        for tag in self._optional_tags:
+            value = kwargs.get(tag)
+            if value is not None:
+                point.tag(tag, str(value))
+
+        background_tasks.add_task(self.client.write, point, self.API_RESPONSES_BUCKET)

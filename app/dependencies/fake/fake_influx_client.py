@@ -10,3 +10,11 @@ class FakeInfluxClient(InfluxBaseClass):
                         method: str,
                         **kwargs):
         pass
+
+    def log_api_response(self,
+                         background_tasks: BackgroundTasks,
+                         endpoint_name: str,
+                         method: str,
+                         response_time: float,
+                         **kwargs):
+        pass

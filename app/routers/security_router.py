@@ -444,19 +444,9 @@ class SecurityRouter:
                       method=post_api_method)
             raise security.STORE_TOKENS_ERROR
 
-        logs_request_description = "".join([
-            "birthdate=\"",
-            f"{body.birth_date or ''}\";",
-            "language_preference=\"",
-            f"{body.language_preference or ''}\";",
-            "gender=\"",
-            f"{body.gender or ''}\""
-        ])
-
         influx_client = dependency_container.inject_influx_client()
         influx_client.log_api_request(background_tasks=background_tasks,
                                       endpoint_name=self.SIGNUP_ENDPOINT,
-                                      description=logs_request_description,
                                       method=post_api_method,
                                       session_id=session_id)
 
@@ -556,19 +546,9 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         put_api_method = API_METHOD_PUT
-        description = "".join([
-            "birthdate=\"",
-            f"{body.birth_date or ''}\";",
-            "language_preference=\"",
-            f"{body.language_preference or ''}\";",
-            "gender=\"",
-            f"{body.gender or ''}\""
-        ])
-
         influx_client = dependency_container.inject_influx_client()
         influx_client.log_api_request(background_tasks=background_tasks,
                                       endpoint_name=self.ACCOUNT_ENDPOINT,
-                                      description=description,
                                       method=put_api_method,
                                       session_id=session_id)
 
@@ -655,7 +635,6 @@ class SecurityRouter:
         influx_client = dependency_container.inject_influx_client()
         influx_client.log_api_request(background_tasks=background_tasks,
                                       endpoint_name=self.ACCOUNT_ENDPOINT,
-                                      description=description,
                                       method=delete_api_method,
                                       session_id=session_id)
 
