@@ -28,11 +28,15 @@ class InfluxClient(InfluxBaseClass):
                                       org="".join(["chartwise-", environment]),
                                       write_client_options=write_client_opts)
         self.environment = environment
+        self.is_prod_environment = environment == "prod"
 
     def log_api_request(self,
                         endpoint_name: str,
                         method: str,
                         **kwargs):
+        if not self.is_prod_environment:
+            return
+
         point = (
             Point(self.API_REQUESTS_BUCKET)
             .tag("endpoint_name", endpoint_name)
@@ -54,6 +58,9 @@ class InfluxClient(InfluxBaseClass):
                          method: str,
                          response_time: float,
                          **kwargs):
+        if not self.is_prod_environment:
+            return
+
         point = (
             Point(self.API_RESPONSES_BUCKET)
             .tag("endpoint_name", endpoint_name)
@@ -75,6 +82,9 @@ class InfluxClient(InfluxBaseClass):
                   error_code: int,
                   description: str,
                   **kwargs):
+        if not self.is_prod_environment:
+            return
+
         point = (
             Point(self.API_ERRORS_BUCKET)
             .tag("endpoint_name", endpoint_name)
