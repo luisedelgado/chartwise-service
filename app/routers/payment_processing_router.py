@@ -975,7 +975,7 @@ class PaymentProcessingRouter:
                                                             subscription_id=subscription.get('id', None),
                                                             payment_method_id=payment_method_id,
                                                             customer_id=customer_id)
-                        await self._email_manager.send_engineering_alert(alert=internal_alert)
+                        await self._email_manager.send_internal_alert(alert=internal_alert)
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
@@ -1075,7 +1075,7 @@ class PaymentProcessingRouter:
                                                     exception=e,
                                                     subscription_id=subscription_id,
                                                     customer_id=customer_id)
-            await self._email_manager.send_engineering_alert(alert=internal_alert)
+            await self._email_manager.send_internal_alert(alert=internal_alert)
 
             log_metadata_from_stripe_subscription_event(event=subscription_upsert_event,
                                                         status=FAILED_RESULT,

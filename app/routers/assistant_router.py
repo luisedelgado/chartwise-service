@@ -26,6 +26,7 @@ from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource,
                                           SessionNotesUpdate)
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 
 class TemplatePayload(BaseModel):
     session_notes_text: str
@@ -43,6 +44,7 @@ class AssistantRouter:
         self._environment = environment
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
+        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -287,16 +289,17 @@ class AssistantRouter:
 
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             session_report_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
-                                                                                      environment=self._environment,
-                                                                                      auth_manager=self._auth_manager,
-                                                                                      patient_id=body['patient_id'],
-                                                                                      notes_text=body['notes_text'],
-                                                                                      session_date=body['session_date'],
-                                                                                      source=SessionNotesSource.MANUAL_INPUT,
-                                                                                      background_tasks=background_tasks,
-                                                                                      session_id=session_id,
-                                                                                      therapist_id=therapist_id,
-                                                                                      supabase_client=supabase_client)
+                                                                                       environment=self._environment,
+                                                                                       auth_manager=self._auth_manager,
+                                                                                       patient_id=body['patient_id'],
+                                                                                       notes_text=body['notes_text'],
+                                                                                       session_date=body['session_date'],
+                                                                                       source=SessionNotesSource.MANUAL_INPUT,
+                                                                                       background_tasks=background_tasks,
+                                                                                       session_id=session_id,
+                                                                                       therapist_id=therapist_id,
+                                                                                       supabase_client=supabase_client,
+                                                                                       email_manager=self._email_manager)
             request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
         except Exception as e:
@@ -378,7 +381,8 @@ class AssistantRouter:
                                                          auth_manager=self._auth_manager,
                                                          filtered_body=body,
                                                          session_id=session_id,
-                                                         supabase_client=supabase_client)
+                                                         supabase_client=supabase_client,
+                                                         email_manager=self._email_manager)
             return {}
         except Exception as e:
             description = str(e)
@@ -457,7 +461,7 @@ class AssistantRouter:
         try:
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
             await self._assistant_manager.delete_session(language_code=language_code,
-                                                         auth_manager=self._auth_manager,
+                                                         email_manager=self._email_manager,
                                                          environment=self._environment,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
@@ -569,7 +573,8 @@ class AssistantRouter:
                                                                    filtered_body=body,
                                                                    therapist_id=therapist_id,
                                                                    session_id=session_id,
-                                                                   supabase_client=supabase_client)
+                                                                   supabase_client=supabase_client,
+                                                                   email_manager=self._email_manager)
             request.state.patient_id = patient_id
             return {"patient_id": patient_id}
         except Exception as e:

@@ -8,11 +8,11 @@ from pydantic import BaseModel
 from typing import AsyncIterable, Optional
 
 from ..dependencies.dependency_container import dependency_container
-from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
-from ..internal.logging.logging import log_error, API_METHOD_GET
+from ..managers.email_manager import EmailManager
+from ..internal.internal_alert import EngineeringAlert
 from ..internal.schemas import Gender, SessionUploadStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
@@ -104,6 +104,7 @@ class AssistantManager:
                                        session_id: str,
                                        therapist_id: str,
                                        supabase_client: SupabaseBaseClass,
+                                       email_manager: EmailManager,
                                        diarization: str = None) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
@@ -138,7 +139,8 @@ class AssistantManager:
                                       environment,
                                       background_tasks,
                                       auth_manager,
-                                      supabase_client)
+                                      supabase_client,
+                                      email_manager)
             return session_notes_id
         except Exception as e:
             raise Exception(e)
@@ -150,7 +152,8 @@ class AssistantManager:
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
-                             supabase_client: SupabaseBaseClass):
+                             supabase_client: SupabaseBaseClass,
+                             email_manager: EmailManager):
         try:
             session_notes_id = filtered_body['id']
             report_query = supabase_client.select(fields="*",
@@ -202,13 +205,14 @@ class AssistantManager:
                                           environment,
                                           background_tasks,
                                           auth_manager,
-                                          supabase_client)
+                                          supabase_client,
+                                          email_manager)
         except Exception as e:
             raise Exception(e)
 
     async def delete_session(self,
                              language_code: str,
-                             auth_manager: AuthManager,
+                             email_manager: EmailManager,
                              environment: str,
                              session_id: str,
                              background_tasks: BackgroundTasks,
@@ -240,7 +244,7 @@ class AssistantManager:
                                       language_code,
                                       environment,
                                       background_tasks,
-                                      auth_manager,
+                                      email_manager,
                                       supabase_client)
         except Exception as e:
             raise Exception(e)
@@ -251,7 +255,8 @@ class AssistantManager:
                           filtered_body: dict,
                           therapist_id: str,
                           session_id: str,
-                          supabase_client: SupabaseBaseClass) -> str:
+                          supabase_client: SupabaseBaseClass,
+                          email_manager: EmailManager) -> str:
         try:
             payload = {"therapist_id": therapist_id}
             for key, value in filtered_body.items():
@@ -272,25 +277,25 @@ class AssistantManager:
                                           self.chartwise_assistant.summarize_chunk)
 
             # Load default question suggestions in a background thread
-            self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
-                                                                    language_code=language_code,
-                                                                    patient_id=patient_id,
-                                                                    therapist_id=therapist_id,
-                                                                    background_tasks=background_tasks,
-                                                                    session_id=session_id)
+            await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
+                                                                          language_code=language_code,
+                                                                          patient_id=patient_id,
+                                                                          therapist_id=therapist_id,
+                                                                          email_manager=email_manager,
+                                                                          session_id=session_id)
 
             # Load default pre-session tray
             has_preexisting_history = ('pre_existing_history' in filtered_body)
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
-            self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
-                                                                patient_id=patient_id,
-                                                                therapist_id=therapist_id,
-                                                                background_tasks=background_tasks,
-                                                                session_id=session_id,
-                                                                supabase_client=supabase_client,
-                                                                has_preexisting_history=has_preexisting_history,
-                                                                patient_first_name=filtered_body['first_name'],
-                                                                patient_gender=gender)
+            await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
+                                                                      patient_id=patient_id,
+                                                                      therapist_id=therapist_id,
+                                                                      email_manager=email_manager,
+                                                                      session_id=session_id,
+                                                                      supabase_client=supabase_client,
+                                                                      has_preexisting_history=has_preexisting_history,
+                                                                      patient_first_name=filtered_body['first_name'],
+                                                                      patient_gender=gender)
             return patient_id
         except Exception as e:
             raise Exception(e)
@@ -433,7 +438,6 @@ class AssistantManager:
                                                                    query_input=query.text,
                                                                    response_language_code=language_code,
                                                                    session_id=session_id,
-                                                                   method=API_METHOD_GET,
                                                                    environment=environment,
                                                                    session_date_override=session_date_override):
                 yield part
@@ -447,7 +451,8 @@ class AssistantManager:
                                           background_tasks: BackgroundTasks,
                                           environment: str,
                                           session_id: str,
-                                          supabase_client: SupabaseBaseClass):
+                                          supabase_client: SupabaseBaseClass,
+                                          email_manager: EmailManager):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    table_name="patients",
@@ -500,20 +505,21 @@ class AssistantManager:
                                        },
                                        table_name="patient_question_suggestions")
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the question suggestions failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def update_presession_tray(self,
-                                     background_tasks: BackgroundTasks,
                                      therapist_id: str,
                                      patient_id: str,
                                      environment: str,
                                      session_id: str,
-                                     supabase_client: SupabaseBaseClass):
+                                     supabase_client: SupabaseBaseClass,
+                                     email_manager: EmailManager):
         try:
             patient_query = supabase_client.select(fields="*",
                                                    filters={
@@ -578,11 +584,12 @@ class AssistantManager:
                                        },
                                        table_name="patient_briefings")
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the presession tray failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the presession tray failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def update_patient_recent_topics(self,
@@ -591,7 +598,7 @@ class AssistantManager:
                                            patient_id: str,
                                            environment: str,
                                            session_id: str,
-                                           background_tasks: BackgroundTasks,
+                                           email_manager: EmailManager,
                                            supabase_client: SupabaseBaseClass):
         try:
             patient_query = supabase_client.select(fields="*",
@@ -658,16 +665,17 @@ class AssistantManager:
                                        },
                                        table_name="patient_topics")
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the recent topics failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the recent topics failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def generate_attendance_insights(self,
                                            language_code: str,
-                                           background_tasks: BackgroundTasks,
+                                           email_manager: EmailManager,
                                            therapist_id: str,
                                            patient_id: str,
                                            session_id: str,
@@ -724,11 +732,12 @@ class AssistantManager:
                                        table_name="patient_attendance")
 
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the attendance insights failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def update_patient_metrics_after_session_report_operation(self,
@@ -736,7 +745,7 @@ class AssistantManager:
                                                                     patient_id: str,
                                                                     therapist_id: str,
                                                                     session_id: str,
-                                                                    background_tasks: BackgroundTasks,
+                                                                    email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
                                                                     session_date: str = None):
         try:
@@ -787,11 +796,12 @@ class AssistantManager:
                                        'id': patient_id
                                    })
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     def default_streaming_error_message(self,
@@ -826,7 +836,8 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass):
+                                                    supabase_client: SupabaseBaseClass,
+                                                    email_manager: EmailManager):
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -838,7 +849,8 @@ class AssistantManager:
                                                                environment=environment,
                                                                background_tasks=background_tasks,
                                                                supabase_client=supabase_client,
-                                                               patient_id=patient_id)
+                                                               patient_id=patient_id,
+                                                               email_manager=email_manager)
 
         await dependency_container.inject_pinecone_client().insert_session_vectors(session_id=session_id,
                                                                                    user_id=therapist_id,
@@ -855,7 +867,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
-                                                                         background_tasks=background_tasks,
+                                                                         email_manager=email_manager,
                                                                          operation=SessionCrudOperation.INSERT_COMPLETED,
                                                                          session_date=session_date)
 
@@ -864,10 +876,10 @@ class AssistantManager:
                                   background_tasks,
                                   therapist_id,
                                   patient_id,
-                                  auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client)
+                                  supabase_client,
+                                  email_manager)
 
     async def _update_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
@@ -881,7 +893,8 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass):
+                                                    supabase_client: SupabaseBaseClass,
+                                                    email_manager: EmailManager):
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
@@ -893,7 +906,8 @@ class AssistantManager:
                                                                environment=environment,
                                                                background_tasks=background_tasks,
                                                                supabase_client=supabase_client,
-                                                               patient_id=patient_id)
+                                                               patient_id=patient_id,
+                                                               email_manager=email_manager)
 
         await dependency_container.inject_pinecone_client().update_session_vectors(session_id=session_id,
                                                                                    user_id=therapist_id,
@@ -911,7 +925,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
-                                                                         background_tasks=background_tasks,
+                                                                         email_manager=email_manager,
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
                                                                          session_date=new_session_date)
 
@@ -920,10 +934,10 @@ class AssistantManager:
                                   background_tasks,
                                   therapist_id,
                                   patient_id,
-                                  auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client)
+                                  supabase_client,
+                                  email_manager)
 
     async def _delete_vectors_and_generate_insights(self,
                                                     therapist_id: str,
@@ -933,7 +947,7 @@ class AssistantManager:
                                                     language_code: str,
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
-                                                    auth_manager: AuthManager,
+                                                    email_manager: EmailManager,
                                                     supabase_client: SupabaseBaseClass):
         dependency_container.inject_pinecone_client().delete_session_vectors(user_id=therapist_id,
                                                                           patient_id=patient_id,
@@ -945,7 +959,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
-                                                                         background_tasks=background_tasks,
+                                                                         email_manager=email_manager,
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
                                                                          session_date=None)
 
@@ -954,20 +968,20 @@ class AssistantManager:
                                   background_tasks,
                                   therapist_id,
                                   patient_id,
-                                  auth_manager,
                                   environment,
                                   session_id,
-                                  supabase_client)
+                                  supabase_client,
+                                  email_manager)
 
     async def _generate_metrics_and_insights(self,
                                              language_code: str,
                                              background_tasks: BackgroundTasks,
                                              therapist_id: str,
                                              patient_id: str,
-                                             auth_manager: AuthManager,
                                              environment: str,
                                              session_id: str,
-                                             supabase_client: SupabaseBaseClass):
+                                             supabase_client: SupabaseBaseClass,
+                                             email_manager: EmailManager):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
@@ -985,16 +999,16 @@ class AssistantManager:
                                                 patient_id=patient_id,
                                                 environment=environment,
                                                 session_id=session_id,
-                                                background_tasks=background_tasks,
+                                                email_manager=email_manager,
                                                 supabase_client=supabase_client)
 
         # Update this patient's presession tray for future fetches.
-        await self.update_presession_tray(background_tasks=background_tasks,
-                                          therapist_id=therapist_id,
+        await self.update_presession_tray(therapist_id=therapist_id,
                                           patient_id=patient_id,
                                           environment=environment,
                                           session_id=session_id,
-                                          supabase_client=supabase_client)
+                                          supabase_client=supabase_client,
+                                          email_manager=email_manager)
 
         # Update this patient's question suggestions for future fetches.
         await self.update_question_suggestions(language_code=language_code,
@@ -1003,11 +1017,12 @@ class AssistantManager:
                                                background_tasks=background_tasks,
                                                environment=environment,
                                                session_id=session_id,
-                                               supabase_client=supabase_client)
+                                               supabase_client=supabase_client,
+                                               email_manager=email_manager)
 
         # Update attendance insights
         await self.generate_attendance_insights(language_code=language_code,
-                                                background_tasks=background_tasks,
+                                                email_manager=email_manager,
                                                 therapist_id=therapist_id,
                                                 patient_id=patient_id,
                                                 session_id=session_id,
@@ -1030,13 +1045,13 @@ class AssistantManager:
         else:
             raise Exception("Unsupported language code")
 
-    def _load_default_question_suggestions_for_new_patient(self,
-                                                           supabase_client: SupabaseBaseClass,
-                                                           language_code: str,
-                                                           patient_id: str,
-                                                           therapist_id: str,
-                                                           background_tasks: BackgroundTasks,
-                                                           session_id: str):
+    async def _load_default_question_suggestions_for_new_patient(self,
+                                                                 supabase_client: SupabaseBaseClass,
+                                                                 language_code: str,
+                                                                 patient_id: str,
+                                                                 therapist_id: str,
+                                                                 email_manager: EmailManager,
+                                                                 session_id: str):
         try:
             # Insert default question suggestions for patient without any session data
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
@@ -1057,23 +1072,24 @@ class AssistantManager:
                                        "questions": eval(json.dumps(response_dict, ensure_ascii=False))
                                        })
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Updating the default question suggestions failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Updating the default question suggestions failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
-    def _load_default_pre_session_tray_for_new_patient(self,
-                                                       language_code: str,
-                                                       patient_id: str,
-                                                       therapist_id: str,
-                                                       background_tasks: BackgroundTasks,
-                                                       session_id: str,
-                                                       supabase_client: SupabaseBaseClass,
-                                                       has_preexisting_history: bool,
-                                                       patient_first_name: str,
-                                                       patient_gender: str = None):
+    async def _load_default_pre_session_tray_for_new_patient(self,
+                                                             language_code: str,
+                                                             patient_id: str,
+                                                             therapist_id: str,
+                                                             email_manager: EmailManager,
+                                                             session_id: str,
+                                                             supabase_client: SupabaseBaseClass,
+                                                             has_preexisting_history: bool,
+                                                             patient_first_name: str,
+                                                             patient_gender: str = None):
         try:
             therapist_data_query = supabase_client.select(table_name="therapists",
                                                           fields="first_name",
@@ -1124,11 +1140,12 @@ class AssistantManager:
                                         "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
                                     })
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description="Loading the default pre-session tray failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
+            eng_alert = EngineeringAlert(description="Loading the default pre-session tray failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id,
+                                         patient_id=patient_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def _update_session_notes_with_mini_summary(self,
@@ -1141,7 +1158,8 @@ class AssistantManager:
                                                       environment: str,
                                                       background_tasks: BackgroundTasks,
                                                       supabase_client: SupabaseBaseClass,
-                                                      patient_id: str):
+                                                      patient_id: str,
+                                                      email_manager: EmailManager):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
                                                                                       therapist_id=therapist_id,
@@ -1157,10 +1175,12 @@ class AssistantManager:
                                           "notes_mini_summary": mini_summary
                                       },
                                       session_id=session_id,
-                                      supabase_client=supabase_client)
+                                      supabase_client=supabase_client,
+                                      email_manager=email_manager)
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description=f"Updating session report {session_notes_id} with a mini summary failed",
-                      session_id=session_id,
-                      therapist_id=therapist_id)
+            eng_alert = EngineeringAlert(description=f"Updating session report {session_notes_id} with a mini summary failed",
+                                         session_id=session_id,
+                                         exception=e,
+                                         therapist_id=therapist_id)
+            await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)

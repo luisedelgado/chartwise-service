@@ -11,13 +11,13 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import log_error
 from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..internal.utilities.audio_file_utilities import (get_output_filepath_for_sample_rate_reduction,
                                                        reduce_sample_rate_if_worthwhile)
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 from ..vectors import data_cleaner
 
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
@@ -40,7 +40,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                     session_date: str,
                                     environment: str,
                                     audio_file: Union[UploadFile, str],
-                                    diarize: bool = False,) -> str:
+                                    email_manager: EmailManager,
+                                    diarize: bool) -> str:
         session_report_id = None
         files_to_clean = []
         try:
@@ -128,7 +129,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                           audio_copy_filepath,
                                           template,
                                           files_to_clean,
-                                          storage_filepath)
+                                          storage_filepath,
+                                          email_manager)
             else:
                 background_tasks.add_task(self._transcribe_audio_and_save,
                                           session_report_id,
@@ -143,7 +145,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                           audio_copy_filepath,
                                           template,
                                           files_to_clean,
-                                          storage_filepath)
+                                          storage_filepath,
+                                          email_manager)
 
             background_tasks.add_task(self._update_patient_metrics_after_processing_transcription_session,
                                       patient_id,
@@ -163,7 +166,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
                                                              session_notes_id=session_report_id,
-                                                             media_type=MediaType.AUDIO)
+                                                             media_type=MediaType.AUDIO,
+                                                             email_manager=email_manager)
             raise Exception(e)
 
     # Private
@@ -182,7 +186,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                       audio_filepath: str,
                                       template: SessionNotesTemplate,
                                       files_to_clean: list,
-                                      storage_filepath: str):
+                                      storage_filepath: str,
+                                      email_manager: EmailManager):
         try:
             diarization = await dependency_container.inject_deepgram_client().diarize_audio(file_full_path=audio_filepath)
             update_body = {
@@ -195,7 +200,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_body,
                                                    session_id=session_id,
-                                                   supabase_client=supabase_client)
+                                                   supabase_client=supabase_client,
+                                                   email_manager=email_manager)
         except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -207,7 +213,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
-                                                         media_type=MediaType.AUDIO)
+                                                         media_type=MediaType.AUDIO,
+                                                         email_manager=email_manager)
             raise Exception(e)
 
         # Generate summary for diarization
@@ -268,7 +275,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_summary_body,
                                                    session_id=session_id,
-                                                   supabase_client=supabase_client)
+                                                   supabase_client=supabase_client,
+                                                   email_manager=email_manager)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -281,7 +289,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
-                                                         storage_filepath=storage_filepath)
+                                                         storage_filepath=storage_filepath,
+                                                         email_manager=email_manager)
         except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -293,7 +302,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
-                                                         media_type=MediaType.AUDIO)
+                                                         media_type=MediaType.AUDIO,
+                                                         email_manager=email_manager)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
@@ -311,7 +321,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                          audio_filepath: str,
                                          template: SessionNotesTemplate,
                                          files_to_clean: list,
-                                         storage_filepath: str):
+                                         storage_filepath: str,
+                                         email_manager: EmailManager):
         try:
             transcription = await dependency_container.inject_deepgram_client().transcribe_audio(file_full_path=audio_filepath)
             if template == SessionNotesTemplate.SOAP:
@@ -331,7 +342,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                    auth_manager=auth_manager,
                                                    filtered_body=update_body,
                                                    session_id=session_id,
-                                                   supabase_client=supabase_client)
+                                                   supabase_client=supabase_client,
+                                                   email_manager=email_manager)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -344,7 +356,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
-                                                         storage_filepath=storage_filepath)
+                                                         storage_filepath=storage_filepath,
+                                                         email_manager=email_manager)
         except Exception as e:
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -356,7 +369,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          supabase_client=supabase_client,
                                                          session_upload_status=SessionUploadStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
-                                                         media_type=MediaType.AUDIO)
+                                                         media_type=MediaType.AUDIO,
+                                                         email_manager=email_manager)
             raise Exception(e)
         finally:
             await file_copiers.clean_up_files(files_to_clean)
@@ -471,9 +485,4 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                               expects_json_response=False)
             return grand_summary
         except Exception as e:
-            log_error(background_tasks=background_tasks,
-                      description=str(e),
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      patient_id=patient_id)
             raise Exception(e)

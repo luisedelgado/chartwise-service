@@ -18,6 +18,7 @@ from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 
 class AudioProcessingRouter:
 
@@ -30,6 +31,7 @@ class AudioProcessingRouter:
             self._auth_manager = AuthManager()
             self._assistant_manager = AssistantManager()
             self._audio_processing_manager = AudioProcessingManager()
+            self._email_manager = EmailManager()
             self.router = APIRouter()
             self._register_routes()
 
@@ -163,7 +165,9 @@ class AudioProcessingRouter:
                                                                                            session_date=session_date,
                                                                                            patient_id=patient_id,
                                                                                            environment=self._environment,
-                                                                                           language_code=language_code)
+                                                                                           language_code=language_code,
+                                                                                           diarize=False,
+                                                                                           email_manager=self._email_manager)
 
             request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
@@ -262,7 +266,8 @@ class AudioProcessingRouter:
                                                                                            audio_file=audio_file,
                                                                                            environment=self._environment,
                                                                                            language_code=language_code,
-                                                                                           diarize=True)
+                                                                                           diarize=True,
+                                                                                           email_manager=self._email_manager)
             request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
         except Exception as e:

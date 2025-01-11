@@ -13,6 +13,7 @@ from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
 from ..managers.auth_manager import AuthManager
+from ..managers.email_manager import EmailManager
 
 MAX_RETRIES = 5
 RETRY_DELAY = 3  # Delay in seconds
@@ -67,7 +68,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                   background_tasks: BackgroundTasks,
                                   supabase_client: SupabaseBaseClass,
                                   auth_manager: AuthManager,
-                                  assistant_manager: AssistantManager) -> str:
+                                  assistant_manager: AssistantManager,
+                                  email_manager: EmailManager) -> str:
         try:
             session_notes_id = None
 
@@ -129,7 +131,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                                    auth_manager=auth_manager,
                                                    filtered_body=filtered_body,
                                                    session_id=session_id,
-                                                   supabase_client=supabase_client)
+                                                   supabase_client=supabase_client,
+                                                   email_manager=email_manager)
 
             await self._update_session_processing_status(assistant_manager=assistant_manager,
                                                          language_code=language_code,
@@ -141,7 +144,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                                          session_upload_status=SessionUploadStatus.SUCCESS.value,
                                                          session_notes_id=session_notes_id,
                                                          therapist_id=therapist_id,
-                                                         media_type=MediaType.IMAGE)
+                                                         media_type=MediaType.IMAGE,
+                                                         email_manager=email_manager)
 
         except HTTPException as e:
             # We want to synchronously log the failed processing status to avoid execution
@@ -157,7 +161,8 @@ class ImageProcessingManager(MediaProcessingManager):
                                                              supabase_client=supabase_client,
                                                              session_upload_status=SessionUploadStatus.FAILED.value,
                                                              session_notes_id=session_notes_id,
-                                                             media_type=MediaType.IMAGE)
+                                                             media_type=MediaType.IMAGE,
+                                                             email_manager=email_manager)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
@@ -173,5 +178,6 @@ class ImageProcessingManager(MediaProcessingManager):
                                                             supabase_client=supabase_client,
                                                             session_upload_status=SessionUploadStatus.FAILED.value,
                                                             session_notes_id=session_notes_id,
-                                                            media_type=MediaType.IMAGE)
+                                                            media_type=MediaType.IMAGE,
+                                                            email_manager=email_manager)
             raise Exception(e)

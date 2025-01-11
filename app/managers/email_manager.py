@@ -44,7 +44,7 @@ class EmailManager:
         except Exception as e:
             raise Exception(e)
 
-    async def send_engineering_alert(self, alert: InternalAlert):
+    async def send_internal_alert(self, alert: InternalAlert):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"

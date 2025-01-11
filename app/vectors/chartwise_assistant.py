@@ -41,7 +41,6 @@ class ChartWiseAssistant:
     query_input – the user input for the query.
     response_language_code – the language code to be used in the response.
     session_id – the session id.
-    method – the API method that was invoked.
     environment – the current running environment.
     session_date_override – the optional override for including date-specific vectors.
     """
@@ -53,7 +52,6 @@ class ChartWiseAssistant:
                           query_input: str,
                           response_language_code: str,
                           session_id: str,
-                          method: str,
                           environment: str,
                           session_date_override: PineconeQuerySessionDateOverride = None) -> AsyncIterable[str]:
         try:
@@ -65,7 +63,6 @@ class ChartWiseAssistant:
                 "language_code": response_language_code,
                 "session_id": str(session_id),
                 "action": QUERY_ACTON_NAME,
-                "method": method,
             }
 
             # If the user is now querying another patient, let's clear any chat history.

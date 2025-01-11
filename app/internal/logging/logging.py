@@ -12,45 +12,6 @@ SUCCESS_RESULT = "success"
 FAILED_RESULT = "failed"
 
 """
-Logs an error that happened during an API invocation.
-
-Arguments:
-background_tasks – object for scheduling concurrent tasks.
-kwargs – the set of associated optional args.
-"""
-def log_error(background_tasks: BackgroundTasks, **kwargs):
-    # We don't want to log if we're in staging or dev
-    environment = os.environ.get("ENVIRONMENT").lower()
-    if environment != "prod":
-        return
-
-    session_id = None if "session_id" not in kwargs else kwargs["session_id"]
-    therapist_id = None if "therapist_id" not in kwargs else kwargs["therapist_id"]
-    patient_id = None if "patient_id" not in kwargs else kwargs["patient_id"]
-    endpoint_name = None if "endpoint_name" not in kwargs else kwargs["endpoint_name"]
-    error_code = None if "error_code" not in kwargs else kwargs["error_code"]
-    description = None if "description" not in kwargs else kwargs["description"]
-    method = None if "method" not in kwargs else kwargs["method"]
-    session_report_id = None if "session_report_id" not in kwargs else kwargs["session_report_id"]
-
-    try:
-        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-        background_tasks.add_task(supabase_client.insert,
-                                    {
-                                        "session_id": str(session_id),
-                                        "therapist_id": therapist_id,
-                                        "patient_id": patient_id,
-                                        "endpoint_name": endpoint_name,
-                                        "error_code": error_code,
-                                        "description": description,
-                                        "method": method,
-                                        "session_report_id": session_report_id,
-                                    },
-                                    "error_logs")
-    except Exception as e:
-        print(f"Silently failing when trying to log response - Error: {str(e)}")
-
-"""
 Logs an event associated with a textraction operation.
 
 Arguments:

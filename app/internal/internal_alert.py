@@ -8,6 +8,7 @@ class InternalAlertCategory(Enum):
     AUDIO_JOB_PROCESSING = "audio job processing"
     IMAGE_JOB_PROCESSING = "image job processing"
     CUSTOMER_RELATIONS = "customer relations"
+    ENGINEERING_ALERT = "engineering"
 
 class InternalAlert(ABC):
     @abstractmethod
@@ -71,3 +72,17 @@ class CustomerRelationsAlert(InternalAlert):
         self.category = InternalAlertCategory.CUSTOMER_RELATIONS
         self.therapist_name = therapist_name
         self.therapist_email = therapist_email
+
+class EngineeringAlert(InternalAlert):
+    def __init__(self,
+                 description: str,
+                 session_id: str = None,
+                 exception: Exception = None,
+                 therapist_id: str = None,
+                 patient_id: str = None):
+        super().__init__(description=description,
+                         therapist_id=therapist_id,
+                         session_id=session_id,
+                         exception=exception)
+        self.patient_id = patient_id
+        self.category = InternalAlertCategory.ENGINEERING_ALERT

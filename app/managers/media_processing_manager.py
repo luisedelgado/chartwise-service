@@ -34,6 +34,7 @@ class MediaProcessingManager(ABC):
     session_notes_id – the id of the session to be updated.
     media_type – the type of media that was processed.
     therapist_id – the therapist id.
+    email_manager – the email manager object.
     storage_filepath – the storage filepath where the backing file is stored in Supabase.
     """
     async def _update_session_processing_status(self,
@@ -48,6 +49,7 @@ class MediaProcessingManager(ABC):
                                                 session_notes_id: str,
                                                 media_type: MediaType,
                                                 therapist_id: str,
+                                                email_manager: EmailManager,
                                                 storage_filepath: str = None):
         await assistant_manager.update_session(language_code=language_code,
                                                environment=environment,
@@ -58,7 +60,8 @@ class MediaProcessingManager(ABC):
                                                    "processing_status": session_upload_status
                                                },
                                                session_id=session_id,
-                                               supabase_client=supabase_client)
+                                               supabase_client=supabase_client,
+                                               email_manager=email_manager)
 
         if session_upload_status != SessionUploadStatus.SUCCESS.value:
             internal_alert = MediaJobProcessingAlert(description="Failed to process a media job. It will automatically be picked-up by daily job for retry",
@@ -67,7 +70,7 @@ class MediaProcessingManager(ABC):
                                                      session_report_id=session_notes_id,
                                                      storage_filepath=storage_filepath,
                                                      therapist_id=therapist_id)
-            await self._email_manager.send_engineering_alert(alert=internal_alert)
+            await self._email_manager.send_internal_alert(alert=internal_alert)
             return
 
         # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
