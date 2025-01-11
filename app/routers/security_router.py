@@ -2,12 +2,10 @@ import uuid
 
 from datetime import datetime
 from enum import Enum
-from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Body,
                      Cookie,
-                     Depends,
                      Header,
                      HTTPException,
                      Request,
@@ -19,7 +17,7 @@ from pydantic import BaseModel
 
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container, SupabaseBaseClass
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
@@ -27,11 +25,8 @@ from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 
-class LoginMechanism(Enum):
-    UNDEFINED = "undefined"
-    GOOGLE = "google"
-    FACEBOOK = "facebook"
-    INTERNAL = "internal"
+class SignInRequest(BaseModel):
+    email: str
 
 class SignupPayload(BaseModel):
     email: str
@@ -70,13 +65,13 @@ class SecurityRouter:
     """
     def _register_routes(self):
         @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def signin(credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        async def signin(signin_data: SignInRequest,
                          response: Response,
                          request: Request,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._signin_internal(credentials_data=credentials_data,
+            return await self._signin_internal(email=signin_data.email,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
                                                request=request,
@@ -115,12 +110,10 @@ class SecurityRouter:
         async def signup(body: SignupPayload,
                          request: Request,
                          response: Response,
-                         password: Annotated[str, Body()] = None,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signup_internal(body=body,
-                                               password=password,
                                                request=request,
                                                response=response,
                                                store_access_token=store_access_token,
@@ -163,7 +156,7 @@ class SecurityRouter:
     Returns an oauth token to be used for invoking the endpoints.
 
     Arguments:
-    credentials_data – the credentials data to be used for authentication.
+    email – the email to be used against the authentication process.
     request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
@@ -171,7 +164,7 @@ class SecurityRouter:
     session_id – the id of the current user session.
     """
     async def _signin_internal(self,
-                               credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+                               email: Annotated[str, Body()],
                                request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
@@ -182,8 +175,14 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            user_id = self._auth_manager.authenticate_store_user(username=credentials_data.username,
-                                                                 password=credentials_data.password)
+            supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                                            refresh_token=store_refresh_token)
+            user_details = supabase_client.get_user().dict()
+            token_email = user_details['user']['email']
+
+            assert token_email == email, "Email received does not match the store tokens."
+
+            user_id = user_details['user']['id']
             request.state.therapist_id = user_id
             assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
@@ -199,9 +198,6 @@ class SecurityRouter:
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
-
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
             customer_data = supabase_client.select(fields="*",
                                                    filters={
                                                        'therapist_id': user_id,
@@ -386,7 +382,6 @@ class SecurityRouter:
     """
     async def _signup_internal(self,
                                body: SignupPayload,
-                               password: str,
                                request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
@@ -400,8 +395,7 @@ class SecurityRouter:
             # This endpoint is allowed to be invoked in a user's zero journey when creating an account.
             # The flow is to first add the user to the auth table, and then this codepath adds them to the therapists' table.
             # Because of this, the client may not have an auth cookie yet, so if it isn't present, we'll attempt authentication.
-            credentials_data = OAuth2PasswordRequestForm(username=body.email, password=password)
-            authorization_data = await self._signin_internal(credentials_data=credentials_data,
+            authorization_data = await self._signin_internal(email=body.email,
                                                              store_access_token=store_access_token,
                                                              store_refresh_token=store_refresh_token,
                                                              request=request,

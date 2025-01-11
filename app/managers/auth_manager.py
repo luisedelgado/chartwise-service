@@ -25,16 +25,6 @@ class AuthManager:
 
     # Authentication
 
-    def authenticate_store_user(self,
-                                username: str,
-                                password: str) -> bool:
-        try:
-            supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-            user_id = supabase_client.sign_in(email=username, password=password)
-            return user_id
-        except Exception as e:
-            raise Exception(str(e))
-
     def create_auth_token(self, user_id: str) -> Tuple[str, str]:
         if not user_id:
             raise HTTPException(

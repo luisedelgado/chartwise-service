@@ -42,22 +42,22 @@ class TestingHarnessSecurityRouter:
 
     def test_login_for_token_unauthenticated(self):
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                               data={
-                                   "username": "g",
-                                   "password": "g"
+                               json={
+                                   "email": "test@test.com",
                                })
         assert response.status_code == 401
 
     def test_login_for_token_authenticated_success(self):
         self.fake_supabase_admin_client.return_authenticated_session = True
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                                    data={
-                                        "username": "g",
-                                        "password": "g"
+                                    json={
+                                        "email": "foo@foo.com"
                                     },
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
@@ -98,19 +98,18 @@ class TestingHarnessSecurityRouter:
     def test_add_therapist_with_missing_store_tokens(self):
         response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
                                json={
-                                   "password": "fake_password",
-                                   "body": {
-                                       "email": "foo@foo.com",
-                                       "first_name": "foo",
-                                       "last_name": "bar",
-                                       "birth_date": "01/01/2000",
-                                       "language_preference": "es-419",
-                                       "gender": "male"
-                                   }
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01/01/2000",
+                                    "language_preference": "es-419",
+                                    "gender": "male"
                                })
         assert response.status_code == 401
 
     def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
@@ -121,19 +120,18 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
-                                   "password": "fake_password",
-                                   "body": {
-                                       "email": "foo@foo.com",
-                                       "first_name": "foo",
-                                       "last_name": "bar",
-                                       "birth_date": "01/01/2000",
-                                       "language_preference": "es-419",
-                                       "gender": "male"
-                                   }
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01/01/2000",
+                                    "language_preference": "es-419",
+                                    "gender": "male"
                                })
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -147,19 +145,18 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                json={
-                                   "password": "fake_password",
-                                   "body": {
-                                       "email": "foo@foo.com",
-                                       "first_name": "foo",
-                                       "last_name": "bar",
-                                       "birth_date": "01/01/2000",
-                                       "language_preference": "brbrbrbrbr",
-                                       "gender": "male"
-                                   }
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01/01/2000",
+                                    "language_preference": "brbrbrbrbr",
+                                    "gender": "male"
                                })
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_gender_format(self):
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -173,19 +170,18 @@ class TestingHarnessSecurityRouter:
                                     "store-refresh-token": FAKE_REFRESH_TOKEN
                                 },
                                 json={
-                                   "password": "fake_password",
-                                   "body": {
-                                       "email": "foo@foo.com",
-                                       "first_name": "foo",
-                                       "last_name": "bar",
-                                       "birth_date": "01/01/2000",
-                                       "language_preference": "es-419",
-                                       "gender": "undefined"
-                                   }
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01/01/2000",
+                                    "language_preference": "es-419",
+                                    "gender": "undefined"
                                 })
         assert response.status_code == 400
 
     def test_add_therapist_without_previous_auth_cookie_success(self):
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -196,15 +192,12 @@ class TestingHarnessSecurityRouter:
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
-                                "password": "fake_password",
-                                "body": {
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01-01-2000",
-                                    "language_preference": "es-419",
-                                    "gender": "male"
-                                }
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_preference": "es-419",
+                                "gender": "male"
                             })
         assert response.status_code == 200
         response_json = response.json()
@@ -212,6 +205,8 @@ class TestingHarnessSecurityRouter:
         assert response_json["token"] is not None
 
     def test_add_therapist_with_existing_auth_cookie_success(self):
+        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
+        self.fake_supabase_user_client.user_authentication_id = "e"
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -222,15 +217,12 @@ class TestingHarnessSecurityRouter:
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             json={
-                                "password": "fake_password",
-                                "body": {
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01-01-2000",
-                                    "language_preference": "es-419",
-                                    "gender": "male"
-                                }
+                                "email": "foo@foo.com",
+                                "first_name": "foo",
+                                "last_name": "bar",
+                                "birth_date": "01-01-2000",
+                                "language_preference": "es-419",
+                                "gender": "male"
                             })
         assert response.status_code == 200
         response_json = response.json()

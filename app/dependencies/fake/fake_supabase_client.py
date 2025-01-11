@@ -27,6 +27,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     session_notes_return_soap_notes = False
     patient_query_returns_preexisting_history = False
     user_authentication_id = None
+    user_authentication_email = None
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
@@ -266,7 +267,8 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
     def get_user(self):
         return FakeSupabaseUser(user={
-            'id': self.user_authentication_id
+            'id': self.user_authentication_id,
+            'email': self.user_authentication_email
         })
 
     def get_current_user_id(self) -> str:
@@ -280,12 +282,3 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
     def sign_out(self):
         pass
-
-    def sign_in(self, email: str, password: str) -> dict:
-        if not self.return_authenticated_session:
-            return {}
-        return {
-            "user": {
-                "id": FAKE_USER_ID_TOKEN
-            }
-        }
