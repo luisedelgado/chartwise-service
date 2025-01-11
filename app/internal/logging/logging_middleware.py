@@ -51,6 +51,6 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
     def get_location_data(ip_address) -> dict:
         base_url = os.environ.get("IPSTACK_URL")
-        response = requests.get(f"{base_url}{ip_address}?access_key={os.environ.get("IPSTACK_API_KEY")}")
+        response = requests.get(f"{base_url}{ip_address}?access_key={os.environ.get('IPSTACK_API_KEY')}")
         data = response.json()
         return data
