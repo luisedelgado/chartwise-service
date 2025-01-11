@@ -7,7 +7,7 @@ from .media_processing_manager import MediaProcessingManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import log_textraction_event
+from ..internal.internal_alert import MediaJobProcessingAlert
 from ..internal.schemas import MediaType, SessionUploadStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
@@ -80,12 +80,11 @@ class ImageProcessingManager(MediaProcessingManager):
                     if attempt < MAX_RETRIES - 1:
                         await asyncio.sleep(RETRY_DELAY)
                     else:
-                        log_textraction_event(background_tasks=background_tasks,
-                                              therapist_id=therapist_id,
-                                              session_id=session_id,
-                                              job_id=document_id,
-                                              error_code=status.HTTP_408_REQUEST_TIMEOUT,
-                                              description=f"Textraction with job id {document_id} is still processing after maximum retries")
+                        alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                                                        media_type=MediaType.IMAGE,
+                                                        therapist_id=therapist_id,
+                                                        session_id=session_id)
+                        await email_manager.send_internal_alert(alert)
                         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Textraction is still processing after maximum retries")
                 else:
                     # Got successful response

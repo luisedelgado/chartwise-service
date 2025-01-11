@@ -20,9 +20,6 @@ from pydantic import BaseModel
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
 from ..dependencies.dependency_container import dependency_container
-from ..internal.logging.logging import (API_METHOD_POST,
-                                        API_METHOD_PUT,
-                                        log_account_deletion)
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
@@ -658,8 +655,6 @@ class SecurityRouter:
 
             # Delete user from Supabase's Auth schema
             dependency_container.inject_supabase_client_factory().supabase_admin_client().delete_user(user_id)
-
-            log_account_deletion(background_tasks=background_tasks, therapist_id=user_id)
             return {}
         except Exception as e:
             description = str(e)

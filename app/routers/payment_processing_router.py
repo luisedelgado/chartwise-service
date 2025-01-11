@@ -17,11 +17,6 @@ from ..internal.utilities import datetime_handler
 from ..internal import security
 from ..dependencies.dependency_container import dependency_container, StripeBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
-from ..internal.logging.logging import (FAILED_RESULT,
-                                        log_payment_event,
-                                        log_metadata_from_stripe_invoice_event,
-                                        log_metadata_from_stripe_subscription_event,
-                                        SUCCESS_RESULT,)
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
@@ -802,7 +797,6 @@ class PaymentProcessingRouter:
             customer_id = checkout_session.get('customer')
             metadata = checkout_session.get('metadata', {})
             therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
-            session_id = None if 'session_id' not in metadata else metadata['session_id']
 
             if subscription_id:
                 # Update the subscription with metadata
@@ -824,15 +818,6 @@ class PaymentProcessingRouter:
                 except Exception:
                     pass
 
-            log_payment_event(background_tasks=background_tasks,
-                              event_name=event_type,
-                              invoice_id=checkout_session.get('invoice'),
-                              customer_id=checkout_session.get('customer'),
-                              subscription_id=subscription_id,
-                              therapist_id=therapist_id,
-                              status=SUCCESS_RESULT,
-                              session_id=session_id)
-
         elif event_type == 'invoice.created':
             invoice = event['data']['object']
             subscription_id = invoice.get('subscription')
@@ -845,11 +830,6 @@ class PaymentProcessingRouter:
                 invoice_metadata = subscription.get('metadata', {})
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
                                                       metadata=invoice_metadata)
-
-            log_metadata_from_stripe_invoice_event(event=event,
-                                                   status=SUCCESS_RESULT,
-                                                   metadata=invoice_metadata,
-                                                   background_tasks=background_tasks)
 
         elif event_type == 'invoice.updated':
             invoice = event['data']['object']
@@ -864,10 +844,6 @@ class PaymentProcessingRouter:
                 stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
                                                       metadata=invoice_metadata)
 
-            log_metadata_from_stripe_invoice_event(event=event,
-                                                   status=SUCCESS_RESULT,
-                                                   metadata=invoice_metadata,
-                                                   background_tasks=background_tasks)
         elif event_type == 'invoice.payment_succeeded':
             # TODO: Send ChartWise receipt to user.
             invoice = event['data']['object']
@@ -891,26 +867,16 @@ class PaymentProcessingRouter:
             except:
                 pass
 
-            log_metadata_from_stripe_invoice_event(event=event,
-                                                   status=SUCCESS_RESULT,
-                                                   metadata=invoice.get("metadata", {}),
-                                                   background_tasks=background_tasks)
         elif event_type == 'invoice.upcoming':
             # TODO: Notify Customers of Upcoming Charge
             invoice = event['data']['object']
-            log_metadata_from_stripe_invoice_event(event=event,
-                                                   status=SUCCESS_RESULT,
-                                                   metadata=invoice.get("metadata", {}),
-                                                   background_tasks=background_tasks)
+
         elif event_type == 'invoice.payment_failed':
             # The payment failed or the customer does not have a valid payment method.
             # The subscription becomes past_due. Notify your customer and send them to the
             # customer portal to update their payment information.
             invoice = event['data']['object']
-            log_metadata_from_stripe_invoice_event(event=event,
-                                                   status=FAILED_RESULT,
-                                                   metadata=invoice.get("metadata", {}),
-                                                   background_tasks=background_tasks)
+
         elif event_type == 'customer.subscription.created':
             await self._handle_subscription_upsert(subscription_upsert_event=event,
                                                    background_tasks=background_tasks)
@@ -920,15 +886,12 @@ class PaymentProcessingRouter:
                                                    background_tasks=background_tasks)
         elif event_type == 'customer.subscription.paused':
             # TODO: Send an automated email confirming the pause.
-            log_metadata_from_stripe_subscription_event(event=event,
-                                                        status=SUCCESS_RESULT,
-                                                        background_tasks=background_tasks)
+            pass
+
         elif event_type == 'customer.subscription.deleted':
             # TODO: Send an automated email confirming the cancellation, offering a reactivation discount,
             # or sharing helpful info about resuming their subscription in the future.
-            log_metadata_from_stripe_subscription_event(event=event,
-                                                        status=SUCCESS_RESULT,
-                                                        background_tasks=background_tasks)
+            pass
 
         elif event_type == 'setup_intent.succeeded':
             setup_intent = event["data"]["object"]
@@ -1076,8 +1039,3 @@ class PaymentProcessingRouter:
                                                     subscription_id=subscription_id,
                                                     customer_id=customer_id)
             await self._email_manager.send_internal_alert(alert=internal_alert)
-
-            log_metadata_from_stripe_subscription_event(event=subscription_upsert_event,
-                                                        status=FAILED_RESULT,
-                                                        message=str(e),
-                                                        background_tasks=background_tasks)
