@@ -76,7 +76,7 @@ class InfluxClient(InfluxBaseClass):
                   description: str,
                   **kwargs):
         point = (
-            Point(self.API_RESPONSES_BUCKET)
+            Point(self.API_ERRORS_BUCKET)
             .tag("endpoint_name", endpoint_name)
             .tag("environment", self.environment)
             .tag("method", method)
