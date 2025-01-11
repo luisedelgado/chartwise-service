@@ -15,7 +15,6 @@ from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
-from ..internal.logging.logging import log_error
 from ..internal.schemas import Gender
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
@@ -113,7 +112,6 @@ class AssistantRouter:
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
                                           response: Response,
-                                          background_tasks: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -135,12 +133,12 @@ class AssistantRouter:
                                                          response=response)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-                log_error(background_tasks=background_tasks,
-                          session_id=session_id,
-                          endpoint_name=self.QUERIES_ENDPOINT,
-                          patient_id=query.patient_id,
-                          error_code=status_code,
-                          description=str(e))
+                dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      patient_id=query.patient_id,
+                                                                      error_code=status_code,
+                                                                      description=str(e),
+                                                                      session_id=session_id)
                 raise security.STORE_TOKENS_ERROR
 
             try:
@@ -148,7 +146,7 @@ class AssistantRouter:
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
-                                                                                background_tasks=background_tasks,
+                                                                                request=request,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
                                                                                 session_id=session_id),
@@ -195,7 +193,6 @@ class AssistantRouter:
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_patient(request: Request,
                                  response: Response,
-                                 background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
                                  store_refresh_token: Annotated[str | None, Header()] = None,
@@ -203,7 +200,6 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(request=request,
                                                        response=response,
-                                                       background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        store_access_token=store_access_token,
                                                        store_refresh_token=store_refresh_token,
@@ -270,12 +266,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      patient_id=body.patient_id,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      patient_id=body.patient_id,
+                                                                      error_code=status_code,
+                                                                      description=str(e),
+                                                                      session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -306,12 +302,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      patient_id=body['patient_id'],
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      patient_id=body['patient_id'],
+                                                                      error_code=status_code,
+                                                                      description=description,
+                                                                      session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -356,12 +352,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      session_report_id=body.id,
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      session_report_id=body.id,
+                                                                      error_code=status_code,
+                                                                      description=str(e),
+                                                                      session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -387,12 +383,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      session_report_id=body['id'],
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      session_report_id=body['id'],
+                                                                      error_code=status_code,
+                                                                      description=description,
+                                                                      session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -435,12 +431,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      session_report_id=session_report_id,
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      session_report_id=session_report_id,
+                                                                      error_code=status_code,
+                                                                      description=str(e),
+                                                                      session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -448,13 +444,13 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      therapist_id=therapist_id,
-                      session_report_id=session_report_id,
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                      method=request.method,
+                                                                      therapist_id=therapist_id,
+                                                                      session_report_id=session_report_id,
+                                                                      error_code=status_code,
+                                                                      description=description,
+                                                                      session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -472,11 +468,11 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SESSIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -485,15 +481,14 @@ class AssistantRouter:
     Returns the query response.
 
     Arguments:
-    background_tasks – object for scheduling concurrent tasks.
+    request – the request object.
     query – the query that will be executed.
     therapist_id – the therapist id associated with the query.
     supabase_client – the supabase client to be used internally.
-    language_code – the language code associated with the request.
     session_id – the session_id cookie, if exists.
     """
     async def _execute_assistant_query_internal(self,
-                                                background_tasks: BackgroundTasks,
+                                                request: Request,
                                                 query: AssistantQuery,
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
@@ -508,12 +503,12 @@ class AssistantRouter:
         except Exception as e:
             yield ("\n" + self._assistant_manager.default_streaming_error_message(user_id=therapist_id,
                                                                                   supabase_client=supabase_client))
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      patient_id=query.patient_id,
-                      endpoint_name=self.QUERIES_ENDPOINT,
-                      error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  patient_id=query.patient_id,
+                                                                  error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
+                                                                  description=str(e),
+                                                                  session_id=session_id)
 
     """
     Adds a patient.
@@ -553,11 +548,11 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -580,12 +575,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      error_code=status_code,
-                      therapist_id=therapist_id,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -628,12 +623,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      error_code=status_code,
-                      patient_id=body.id,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  patient_id=body.id,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -654,12 +649,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      error_code=status_code,
-                      patient_id=body['id'],
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  patient_id=body['id'],
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -669,7 +664,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
-    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -679,7 +673,6 @@ class AssistantRouter:
     async def _delete_patient_internal(self,
                                        request: Request,
                                        response: Response,
-                                       background_tasks: BackgroundTasks,
                                        patient_id: str,
                                        store_access_token: Annotated[str | None, Header()],
                                        store_refresh_token: Annotated[str | None, Header()],
@@ -702,12 +695,12 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      patient_id=patient_id,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  patient_id=patient_id,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -735,12 +728,12 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PATIENTS_ENDPOINT,
-                      error_code=status_code,
-                      therapist_id=therapist_id,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
@@ -785,11 +778,11 @@ class AssistantRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.TEMPLATES_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -805,10 +798,10 @@ class AssistantRouter:
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.TEMPLATES_ENDPOINT,
-                      error_code=status_code,
-                      description=description)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)

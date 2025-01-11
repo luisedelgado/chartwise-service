@@ -74,14 +74,12 @@ class SecurityRouter:
     def _register_routes(self):
         @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.ROUTER_TAG])
         async def signin(credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                         background_tasks: BackgroundTasks,
                          response: Response,
                          request: Request,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signin_internal(credentials_data=credentials_data,
-                                               background_tasks=background_tasks,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
                                                request=request,
@@ -91,7 +89,6 @@ class SecurityRouter:
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
-                                     background_tasks: BackgroundTasks,
                                      store_access_token: Annotated[str | None, Header()] = None,
                                      store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -99,7 +96,6 @@ class SecurityRouter:
             return await self._refresh_auth_token_internal(authorization=authorization,
                                                            request=request,
                                                            response=response,
-                                                           background_tasks=background_tasks,
                                                            store_access_token=store_access_token,
                                                            store_refresh_token=store_refresh_token,
                                                            session_id=session_id)
@@ -122,7 +118,6 @@ class SecurityRouter:
         async def signup(body: SignupPayload,
                          request: Request,
                          response: Response,
-                         background_tasks: BackgroundTasks,
                          password: Annotated[str, Body()] = None,
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
@@ -131,7 +126,6 @@ class SecurityRouter:
                                                password=password,
                                                request=request,
                                                response=response,
-                                               background_tasks=background_tasks,
                                                store_access_token=store_access_token,
                                                store_refresh_token=store_refresh_token,
                                                session_id=session_id)
@@ -139,7 +133,6 @@ class SecurityRouter:
         @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_account_data(request: Request,
                                       response: Response,
-                                      background_tasks: BackgroundTasks,
                                       body: TherapistUpdatePayload,
                                       store_access_token: Annotated[str | None, Header()] = None,
                                       store_refresh_token: Annotated[str | None, Header()] = None,
@@ -147,7 +140,6 @@ class SecurityRouter:
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_account_data_internal(request=request,
                                                             response=response,
-                                                            background_tasks=background_tasks,
                                                             body=body,
                                                             store_access_token=store_access_token,
                                                             store_refresh_token=store_refresh_token,
@@ -175,7 +167,6 @@ class SecurityRouter:
 
     Arguments:
     credentials_data – the credentials data to be used for authentication.
-    background_tasks – object for scheduling concurrent tasks.
     request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
@@ -184,7 +175,6 @@ class SecurityRouter:
     """
     async def _signin_internal(self,
                                credentials_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                               background_tasks: BackgroundTasks,
                                request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
@@ -273,7 +263,6 @@ class SecurityRouter:
 
     Arguments:
     authorization – the authorization cookie, if exists.
-    background_tasks – object for scheduling concurrent tasks.
     request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
@@ -282,7 +271,6 @@ class SecurityRouter:
     """
     async def _refresh_auth_token_internal(self,
                                            authorization: Annotated[Union[str, None], Cookie()],
-                                           background_tasks: BackgroundTasks,
                                            request: Request,
                                            response: Response,
                                            store_access_token: Annotated[str | None, Header()],
@@ -393,7 +381,6 @@ class SecurityRouter:
     Arguments:
     body – the body associated with the request.
     password – the password associated with the new account.
-    background_tasks – object for scheduling concurrent tasks.
     request – the request object.
     response – the response object to be used for creating the final response.
     store_access_token – the store access token.
@@ -404,7 +391,6 @@ class SecurityRouter:
     async def _signup_internal(self,
                                body: SignupPayload,
                                password: str,
-                               background_tasks: BackgroundTasks,
                                request: Request,
                                response: Response,
                                store_access_token: Annotated[str | None, Header()],
@@ -424,7 +410,6 @@ class SecurityRouter:
             authorization_data = await self._signin_internal(credentials_data=credentials_data,
                                                              store_access_token=store_access_token,
                                                              store_refresh_token=store_refresh_token,
-                                                             background_tasks=background_tasks,
                                                              request=request,
                                                              response=response,
                                                              session_id=session_id)
@@ -512,7 +497,6 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _update_account_data_internal(self,
-                                            background_tasks: BackgroundTasks,
                                             request: Request,
                                             response: Response,
                                             body: TherapistUpdatePayload,
