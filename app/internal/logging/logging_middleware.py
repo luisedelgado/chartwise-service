@@ -1,3 +1,5 @@
+import os
+import requests
 import time
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -44,3 +46,11 @@ class TimingMiddleware(BaseHTTPMiddleware):
                                                 therapist_id=getattr(request.state, self.THERAPIST_ID_KEY, None))
 
         return response
+
+    # Private
+
+    def get_location_data(ip_address) -> dict:
+        base_url = os.environ.get("IPSTACK_URL")
+        response = requests.get(f"{base_url}{ip_address}?access_key={os.environ.get("IPSTACK_API_KEY")}")
+        data = response.json()
+        return data
