@@ -21,7 +21,6 @@ from ..internal.logging.logging import (FAILED_RESULT,
                                         log_payment_event,
                                         log_metadata_from_stripe_invoice_event,
                                         log_metadata_from_stripe_subscription_event,
-                                        log_error,
                                         SUCCESS_RESULT,)
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
@@ -235,11 +234,11 @@ class PaymentProcessingRouter:
             await self._auth_manager.refresh_session(user_id=therapist_id, response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -261,11 +260,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.CHECKOUT_SESSION_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"payment_session_url": payment_session_url}
@@ -306,11 +305,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -354,11 +353,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"subscriptions": filtered_data}
@@ -400,11 +399,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -421,11 +420,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail="Subscription not found", status_code=status_code)
 
         return {}
@@ -470,11 +469,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -507,11 +506,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.SUBSCRIPTIONS_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail=message, status_code=status_code)
 
         return {}
@@ -540,11 +539,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PRODUCT_CATALOG,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -553,11 +552,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PRODUCT_CATALOG,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail="Subscription not found", status_code=status_code)
 
         return {"catalog": response}
@@ -600,11 +599,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -623,11 +622,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail=message, status_code=status_code)
 
         return { "update_payment_method_url": update_payment_method_url }
@@ -672,11 +671,11 @@ class PaymentProcessingRouter:
                                                      response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
-                      error_code=status_code,
-                      description=str(e))
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -719,11 +718,11 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            log_error(background_tasks=background_tasks,
-                      session_id=session_id,
-                      endpoint_name=self.PAYMENT_HISTORY_ENDPOINT,
-                      error_code=status_code,
-                      description=message)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=message,
+                                                                  session_id=session_id)
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"payments": successful_payments}
