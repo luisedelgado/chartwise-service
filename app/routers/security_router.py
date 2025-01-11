@@ -274,7 +274,6 @@ class SecurityRouter:
                                            store_refresh_token: Annotated[str | None, Header()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
-        put_api_method = API_METHOD_PUT
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise security.AUTH_TOKEN_EXPIRED_ERROR
@@ -396,8 +395,6 @@ class SecurityRouter:
         request.state.session_id = session_id
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
-
-        post_api_method = API_METHOD_POST
 
         try:
             # This endpoint is allowed to be invoked in a user's zero journey when creating an account.
