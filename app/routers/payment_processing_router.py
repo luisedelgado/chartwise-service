@@ -966,8 +966,7 @@ class PaymentProcessingRouter:
             therapist_query = supabase_client.select(fields="*",
                                                         filters={ 'therapist_id': therapist_id },
                                                         table_name="subscription_status")
-            therapist_query_data = therapist_query.dict()
-            therapist_already_subscribed = (0 != len(therapist_query_data) and 0 != len(therapist_query_data['data']))
+            welcome_email_sent = (0 != len((therapist_query).data)) and not (therapist_query.dict()['data'][0]['welcome_email_sent'])
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -1008,10 +1007,19 @@ class PaymentProcessingRouter:
                                     table_name="subscription_status",
                                     on_conflict="therapist_id")
 
-            if not therapist_already_subscribed:
+            if not welcome_email_sent:
                 # Therapist is entering a valid subscription status, let's send a welcome email
                 await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
-                                                                        supabase_client=supabase_client)
+                                                                      supabase_client=supabase_client)
+
+                # Update our records so that we know we've done the first outreach.
+                supabase_client.update(table_name="subscription_status",
+                                       payload={
+                                           "welcome_email_sent": True
+                                       },
+                                       filters={
+                                           "therapist_id": therapist_id
+                                       })
 
                 therapist_query = supabase_client.select(fields="*",
                                                             filters={ 'id': therapist_id },
