@@ -1,5 +1,5 @@
 import hashlib, os, uuid
-import tiktoken
+import tiktoken, torch
 
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -8,8 +8,8 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
-from sentence_transformers import CrossEncoder
 from starlette.concurrency import run_in_threadpool
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from typing import Callable
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
@@ -23,10 +23,14 @@ class PineconeClient(PineconeBaseClass):
     NUM_INDEXES = 20
     RERANK_TOP_N = 6
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
+    MAX_CHUNK_SIZE = 512
 
     def __init__(self):
         self._pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-        self._reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        self.tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-electra-base')
+        self.model = AutoModelForSequenceClassification.from_pretrained('cross-encoder/ms-marco-electra-base')
+        self.device = torch.device("cpu")
+        self.model.to(self.device)
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -295,12 +299,9 @@ class PineconeClient(PineconeBaseClass):
 
         # Check if caller wants us to rerank vectors
         if rerank_vectors:
-            # Pair query with each retrieved note, and score each pairing
-            doc_query_pairings = [(query_input, doc['chunk_summary']) for doc in retrieved_docs]
-            scores = self._reranker.predict(doc_query_pairings)
-
-            # Rerank retrieved notes by score
-            reranked_documents = [doc for _, doc in sorted(zip(scores, retrieved_docs), key=lambda x: x[0], reverse=True)]
+            reranked_documents = self.rerank_docs(query_input=query_input,
+                                                  retrieved_docs=retrieved_docs,
+                                                  batch_size=query_top_k)
 
             reranked_context = ""
             dates_contained = []
@@ -411,6 +412,33 @@ class PineconeClient(PineconeBaseClass):
         return (False, None)
 
     # Private
+
+    def rerank_docs(self,
+                    query_input: str,
+                    retrieved_docs: list,
+                    batch_size: int) -> list:
+        # Create pairs using only the chunk_summary for ranking
+        pairs = [[query_input, doc['chunk_summary']] for doc in retrieved_docs]
+        scores = []
+
+        # Process in batches
+        for i in range(0, len(pairs), batch_size):
+            batch = pairs[i:i + batch_size]
+            inputs = self.tokenizer(
+                batch,
+                padding=True,
+                truncation=True,
+                return_tensors='pt',
+                max_length=self.MAX_CHUNK_SIZE
+            ).to(self.device)
+
+            with torch.no_grad():
+                batch_scores = self.model(**inputs).logits.squeeze(-1)
+                scores.extend(batch_scores.cpu().numpy())
+
+        # Sort the original objects based on scores
+        doc_score_pairs = list(zip(retrieved_docs, scores))
+        return [doc for doc, _ in sorted(doc_score_pairs, key=lambda x: x[1], reverse=True)]
 
     def _get_namespace(self,
                        user_id: str,
