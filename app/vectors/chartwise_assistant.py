@@ -92,13 +92,13 @@ class ChartWiseAssistant:
                                                                                 expects_json_response=False)
 
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
-                                                                                                user_id=user_id,
-                                                                                                patient_id=patient_id,
-                                                                                                openai_client=openai_client,
-                                                                                                query_top_k=10,
-                                                                                                rerank_top_n=3,
-                                                                                                session_id=session_id,
-                                                                                                session_dates_override=[session_date_override])
+                                                                                                   user_id=user_id,
+                                                                                                   patient_id=patient_id,
+                                                                                                   openai_client=openai_client,
+                                                                                                   query_top_k=10,
+                                                                                                   rerank_top_n=3,
+                                                                                                   session_id=session_id,
+                                                                                                   session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
 

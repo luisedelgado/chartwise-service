@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 from openai.types import Completion
 from portkey_ai import Portkey
 
-from ...internal.logging.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
+from ...internal.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
 from ...internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...vectors.message_templates import PromptCrafter, PromptScenario

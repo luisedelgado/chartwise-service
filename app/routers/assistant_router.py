@@ -131,8 +131,6 @@ class AssistantRouter:
                                                                                                              refresh_token=store_refresh_token)
                 therapist_id = supabase_client.get_current_user_id()
                 request.state.therapist_id = therapist_id
-                await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                         response=response)
             except Exception as e:
                 status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
                 dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,

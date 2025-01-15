@@ -8,7 +8,7 @@ from deepgram import (
 from fastapi import HTTPException, status
 from httpx import Timeout
 
-from ...internal.logging.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
+from ...internal.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
 from ..api.deepgram_base_class import DeepgramBaseClass
 from ...data_processing.diarization_cleaner import DiarizationCleaner
 from ...internal.utilities import general_utilities
