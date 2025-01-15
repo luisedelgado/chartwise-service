@@ -134,8 +134,7 @@ class PineconeBaseClass(ABC):
     user_id – the user id associated with the context.
     patient_id – the patient id associated with the context.
     query_top_k – the top k results that should be retrieved from the vector store.
-    rerank_top_n – the top n results that should be returned after reranking vectors.
-    session_id – the session id.
+    rerank_vectors – flag for determining whether vectors should get reranked.
     include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
     session_date_override – the optional override for including session-date-specific vectors.
     """
@@ -145,8 +144,7 @@ class PineconeBaseClass(ABC):
                                        user_id: str,
                                        patient_id: str,
                                        query_top_k: int,
-                                       rerank_top_n: int,
-                                       session_id: str,
+                                       rerank_vectors: bool,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         pass

@@ -13,7 +13,6 @@ class PromptScenario(Enum):
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
     REFORMULATE_QUERY = "reformulate_query"
-    RERANKING = "reranking"
     SESSION_MINI_SUMMARY = "session_mini_summary"
     SOAP_TEMPLATE = "soap_template"
     TOPICS = "recent_topics"
@@ -73,11 +72,6 @@ class PromptCrafter:
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
             session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
             return self._create_session_mini_summary_user_message(session_notes=session_notes)
-        elif scenario == PromptScenario.RERANKING:
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            context = None if 'context' not in kwargs else kwargs['context']
-            return self._create_reranking_user_message(query_input=query_input,
-                                                       context=context)
         elif scenario == PromptScenario.REFORMULATE_QUERY:
             query_input = None if 'query_input' not in kwargs else kwargs['query_input']
             chat_history = None if 'chat_history' not in kwargs else kwargs['chat_history']
@@ -149,9 +143,6 @@ class PromptCrafter:
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._create_session_mini_summary_system_message(language_code=language_code)
-        elif scenario == PromptScenario.RERANKING:
-            top_n = None if 'top_n' not in kwargs else kwargs['top_n']
-            return self._create_reranking_system_message(top_n=top_n)
         elif scenario == PromptScenario.REFORMULATE_QUERY:
             return self._create_reformulate_query_system_message()
         elif scenario == PromptScenario.TOPICS_INSIGHTS:
@@ -465,40 +456,6 @@ class PromptCrafter:
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return (f"Summarize the following session notes:\n\n{session_notes}")
-        except Exception as e:
-            raise Exception(e)
-
-    # Reranking
-
-    def _create_reranking_system_message(self, top_n: int):
-        try:
-            assert top_n > 0, "Error while building user message: top_n should be bigger than 0"
-            return (
-                "A mental health practitioner is using our Practice Management Platform to ask questions about a patient. "
-                "The available information about the patient's session history consists of the practitioner's own session notes. "
-                "These session notes have been divided into chunks.\n\nYou will receive:\n\n"
-                "1. The practitioner's question.\n2. A set of chunked session notes.\n\n"
-                "Your task is to:\n\n1. Rerank the chunked documents based on their relevance to the practitioner's question.\n"
-                "2. Ensure that the most relevant documents are ranked highest.\n\n"
-                f"The top {top_n} documents will be used to answer the question, so they must contain all the necessary information to provide a comprehensive response.\n\n"
-                "Return a JSON object with a single key, 'reranked_documents', written in English, and the array of reranked documents as its value. "
-                "Each document object should have two keys titled 'session_date' and 'chunk_summary', each with their respective value from the context you were given. "
-                "For the `session_date` use date format mm-dd-yyyy (i.e: 10-24-2020). "
-                "It is very important that the documents' contents remain written in the language in which they were originally written.\n"
-                r'Example output: {"reranked_documents": [{"session_date": "10-24-2022", "chunk_summary": "Umeko was born and raised in Venezuela."}, {"session_date": "02-24-2021", "chunk_summary": "Umeko had his first girlfriend when he was 17 years old."}, {"session_date": "06-24-2020", "chunk_summary": "Umeko enjoys soccer."}]}'
-            )
-        except Exception as e:
-            raise Exception(e)
-
-    def _create_reranking_user_message(self, query_input: str, context: str):
-        try:
-            assert len(context or '') > 0, "Missing context param for building user message"
-            assert len(query_input or '') > 0, "Missing query_input param for building user message"
-            return (
-                f"We have provided the chunked documents below.\n---------------------\n{context}\n---------------------\n"
-                f"\nGiven this information and the input question below, please rerank the chunked documents based on their relevance to the practitioner's question."
-                f"\n\nInput question: {query_input}"
-            )
         except Exception as e:
             raise Exception(e)
 

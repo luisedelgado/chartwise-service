@@ -6,7 +6,6 @@ class OpenAIBaseClass(ABC):
 
     LLM_MODEL = "gpt-4o-mini"
     EMBEDDING_MODEL = "text-embedding-3-small"
-    RERANK_ACTION_NAME = "rerank_vectors"
     GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
     chat_history: list[BaseMessage] = []
 
@@ -74,22 +73,4 @@ class OpenAIBaseClass(ABC):
     """
     @abstractmethod
     async def create_embeddings(text: str):
-        pass
-
-    """
-    Reranks documents based on similarity to the input query.
-
-    Arguments:
-    documents – the set of documents to be reranked.
-    top_n – the top n documents that should be returned after reranking.
-    query_input – the input query.
-    session_id – the session id.
-    user_id – the user id.
-    """
-    @abstractmethod
-    async def rerank_documents(documents: list,
-                               top_n: int,
-                               query_input: str,
-                               session_id: str,
-                               user_id: str):
         pass

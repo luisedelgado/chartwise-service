@@ -8,6 +8,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Index, PineconeApiException
 from pinecone.exceptions import NotFoundException
 from pinecone.grpc import PineconeGRPC
+from sentence_transformers import CrossEncoder
 from starlette.concurrency import run_in_threadpool
 from typing import Callable
 
@@ -20,10 +21,12 @@ from ...vectors import data_cleaner
 class PineconeClient(PineconeBaseClass):
 
     NUM_INDEXES = 20
+    RERANK_TOP_N = 6
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
 
     def __init__(self):
-        self.pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        self._pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
+        self._reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -36,7 +39,7 @@ class PineconeClient(PineconeBaseClass):
                                      therapy_session_date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
-            index = self.pc.Index(bucket_index)
+            index = self._pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
             namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
 
@@ -92,7 +95,7 @@ class PineconeClient(PineconeBaseClass):
                                                  summarize_chunk: Callable):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
-            index = self.pc.Index(bucket_index)
+            index = self._pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
 
             enc = tiktoken.get_encoding("o200k_base")
@@ -141,7 +144,7 @@ class PineconeClient(PineconeBaseClass):
                                date: str = None):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
-            index = self.pc.Index(bucket_index)
+            index = self._pc.Index(bucket_index)
 
             namespace = self._get_namespace(user_id=user_id,
                                             patient_id=patient_id)
@@ -167,7 +170,7 @@ class PineconeClient(PineconeBaseClass):
                                            patient_id: str):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
-            index = self.pc.Index(bucket_index)
+            index = self._pc.Index(bucket_index)
 
             namespace = self._get_namespace(user_id=user_id,
                                             patient_id=patient_id)
@@ -246,15 +249,14 @@ class PineconeClient(PineconeBaseClass):
                                        user_id: str,
                                        patient_id: str,
                                        query_top_k: int,
-                                       rerank_top_n: int,
-                                       session_id: str,
+                                       rerank_vectors: bool,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
         missing_session_data_error = ("There's no data from patient sessions. "
                                       "They may have not gone through their first session since the practitioner added them to the platform. ")
 
         bucket_index = self._get_bucket_for_user(user_id)
-        index = self.pc.Index(bucket_index)
+        index = self._pc.Index(bucket_index)
         namespace = self._get_namespace(user_id=user_id,
                                         patient_id=patient_id)
 
@@ -288,24 +290,21 @@ class PineconeClient(PineconeBaseClass):
             retrieved_docs = []
             for match in query_matches:
                 metadata = match['metadata']
-                session_date = "".join(["`session_date` = ",f"{metadata['session_date']}\n"])
-                chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
-                session_full_context = "".join([session_date,
-                                                chunk_summary,
-                                                "\n"])
-                retrieved_docs.append({"id": match['id'], "text": session_full_context})
+                retrieved_docs.append({"session_date": metadata['session_date'],
+                                       "chunk_summary": metadata['chunk_summary']})
 
-        # Check if caller wants us to rerank any vectors
-        if rerank_top_n > 0:
-            reranked_response_results = await openai_client.rerank_documents(documents=retrieved_docs,
-                                                                             top_n=rerank_top_n,
-                                                                             query_input=query_input,
-                                                                             session_id=session_id,
-                                                                             user_id=user_id)
+        # Check if caller wants us to rerank vectors
+        if rerank_vectors:
+            # Pair query with each retrieved note, and score each pairing
+            doc_query_pairings = [(query_input, doc['chunk_summary']) for doc in retrieved_docs]
+            scores = self._reranker.predict(doc_query_pairings)
+
+            # Rerank retrieved notes by score
+            reranked_documents = [doc for _, doc in sorted(zip(scores, retrieved_docs), key=lambda x: x[0], reverse=True)]
+
             reranked_context = ""
-            reranked_documents = reranked_response_results['reranked_documents']
             dates_contained = []
-            for doc in reranked_documents:
+            for doc in reranked_documents[:self.RERANK_TOP_N]:
                 dates_contained.append(doc['session_date'])
                 formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
                                                                                          incoming_date_format=datetime_handler.DATE_FORMAT)

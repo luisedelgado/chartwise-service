@@ -96,8 +96,7 @@ class ChartWiseAssistant:
                                                                                                    patient_id=patient_id,
                                                                                                    openai_client=openai_client,
                                                                                                    query_top_k=10,
-                                                                                                   rerank_top_n=3,
-                                                                                                   session_id=session_id,
+                                                                                                   rerank_vectors=True,
                                                                                                    session_dates_override=[session_date_override])
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
@@ -151,13 +150,12 @@ class ChartWiseAssistant:
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
-                                                                                                user_id=user_id,
-                                                                                                patient_id=patient_id,
-                                                                                                openai_client=openai_client,
-                                                                                                query_top_k=0,
-                                                                                                rerank_top_n=0,
-                                                                                                session_id=session_id,
-                                                                                                session_dates_override=session_dates_override)
+                                                                                                   user_id=user_id,
+                                                                                                   patient_id=patient_id,
+                                                                                                   openai_client=openai_client,
+                                                                                                   query_top_k=0,
+                                                                                                   rerank_vectors=False,
+                                                                                                   session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.PRESESSION_BRIEFING,
@@ -231,13 +229,12 @@ class ChartWiseAssistant:
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
-                                                                                                user_id=user_id,
-                                                                                                patient_id=patient_id,
-                                                                                                openai_client=openai_client,
-                                                                                                query_top_k=0,
-                                                                                                rerank_top_n=0,
-                                                                                                session_id=session_id,
-                                                                                                session_dates_override=session_dates_override)
+                                                                                                   user_id=user_id,
+                                                                                                   patient_id=patient_id,
+                                                                                                   openai_client=openai_client,
+                                                                                                   query_top_k=0,
+                                                                                                   rerank_vectors=False,
+                                                                                                   session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUESTION_SUGGESTIONS,
@@ -307,14 +304,13 @@ class ChartWiseAssistant:
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
-                                                                                                user_id=user_id,
-                                                                                                patient_id=patient_id,
-                                                                                                openai_client=openai_client,
-                                                                                                query_top_k=0,
-                                                                                                rerank_top_n=0,
-                                                                                                session_id=session_id,
-                                                                                                include_preexisting_history=False,
-                                                                                                session_dates_override=session_dates_override)
+                                                                                                   user_id=user_id,
+                                                                                                   patient_id=patient_id,
+                                                                                                   openai_client=openai_client,
+                                                                                                   query_top_k=0,
+                                                                                                   rerank_vectors=False,
+                                                                                                   include_preexisting_history=False,
+                                                                                                   session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS,
@@ -386,14 +382,13 @@ class ChartWiseAssistant:
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(query_input=query_input,
-                                                                                                user_id=user_id,
-                                                                                                patient_id=patient_id,
-                                                                                                openai_client=openai_client,
-                                                                                                query_top_k=0,
-                                                                                                rerank_top_n=0,
-                                                                                                session_id=session_id,
-                                                                                                include_preexisting_history=False,
-                                                                                                session_dates_override=session_dates_override)
+                                                                                                   user_id=user_id,
+                                                                                                   patient_id=patient_id,
+                                                                                                   openai_client=openai_client,
+                                                                                                   query_top_k=0,
+                                                                                                   rerank_vectors=False,
+                                                                                                   include_preexisting_history=False,
+                                                                                                   session_dates_override=session_dates_override)
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.TOPICS_INSIGHTS,

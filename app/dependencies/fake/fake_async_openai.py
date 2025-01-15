@@ -105,14 +105,6 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
                                 text: str):
         return [""]
 
-    async def rerank_documents(self,
-                               documents: list,
-                               top_n: int,
-                               query_input: str,
-                               session_id: str,
-                               user_id: str):
-        pass
-
     @property
     def chat(self):
         return self._chat
