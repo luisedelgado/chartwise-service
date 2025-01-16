@@ -1,7 +1,6 @@
-import os
-import requests
 import time
 
+from datetime import datetime, timedelta
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -14,14 +13,22 @@ class TimingMiddleware(BaseHTTPMiddleware):
     SESSION_REPORT_ID_KEY = "session_report_id"
     PATIENT_ID_KEY = "patient_id"
     THERAPIST_ID_KEY = "therapist_id"
+    THIRTY_MIN_IN_SECONDS = 1800
+    THIRTY_MIN_IDLE_THRESHOLD = timedelta(seconds=THIRTY_MIN_IN_SECONDS)
 
     def __init__(self, app):
         super().__init__(app)
+        self.last_request_time = None
         self.influx_client = dependency_container.inject_influx_client()
 
     async def dispatch(self, request: Request, call_next):
-        start_time = time.perf_counter()
+        # Detect stale data, and clear if needed
+        if self.last_request_time is not None and (datetime.now() - self.last_request_time) > self.THIRTY_MIN_IDLE_THRESHOLD:
+            print("Clearing stale data.")
+            await dependency_container.inject_openai_client().clear_chat_history()
+        self.last_request_time = datetime.now()
 
+        start_time = time.perf_counter()
         request_url_path = request.url.path
         if request_url_path not in self.IRRELEVANT_PATHS:
             self.influx_client.log_api_request(endpoint_name=request_url_path,
