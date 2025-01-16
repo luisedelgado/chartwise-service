@@ -95,7 +95,7 @@ class ChartWiseAssistant:
                                                                                                    user_id=user_id,
                                                                                                    patient_id=patient_id,
                                                                                                    openai_client=openai_client,
-                                                                                                   query_top_k=10,
+                                                                                                   query_top_k=6,
                                                                                                    rerank_vectors=True,
                                                                                                    session_dates_override=[session_date_override])
 
