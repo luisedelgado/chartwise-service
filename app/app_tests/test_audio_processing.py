@@ -78,6 +78,8 @@ class TestingHarnessAudioProcessingRouter:
         dependency_container._stripe_client = None
         dependency_container._deepgram_client = None
         dependency_container._supabase_client_factory = None
+        dependency_container._resend_client = None
+        dependency_container._influx_client = None
         dependency_container._testing_environment = "testing"
 
         self.fake_deepgram_client = dependency_container.inject_deepgram_client()
