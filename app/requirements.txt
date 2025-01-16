@@ -159,6 +159,7 @@ requests-mock==1.12.1
 resend==2.4.0
 rich==13.7.1
 s3transfer==0.10.2
+safetensors==0.5.2
 scipy==1.13.1
 sentencepiece==0.2.0
 shellingham==1.5.4
