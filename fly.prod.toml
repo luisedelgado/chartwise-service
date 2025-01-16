@@ -24,7 +24,7 @@ primary_region = 'mia'
 [[services]]
   processes = ["app"]
   [services.vm]
-    memory = "2gb"
+    memory = "3gb"
     cpu_kind = "performance"
     cpus = 2
 
