@@ -113,7 +113,6 @@ class AssistantRouter:
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
-                                          response: Response,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
