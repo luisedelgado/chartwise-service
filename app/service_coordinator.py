@@ -6,8 +6,6 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from .internal.logging.logging_middleware import TimingMiddleware
 from .data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
 
-reranking_model = {}
-
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     print("Loading model and tokenizer...")

@@ -22,18 +22,18 @@ from ...vectors import data_cleaner
 class PineconeClient(PineconeBaseClass):
 
     NUM_INDEXES = 20
-    RERANK_TOP_N = 6
+    RERANK_TOP_N = 4
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
     MAX_CHUNK_SIZE = 512
 
     def __init__(self):
         self._pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-        self.tokenizer = AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
+        self._tokenizer = AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
                                                        cache_dir=ELECTRA_MODEL_CACHE_DIR)
-        self.model = AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
-                                                                        cache_dir=ELECTRA_MODEL_CACHE_DIR)
-        self.device = torch.device("cpu")
-        self.model.to(self.device)
+        self._model = AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
+                                                                         cache_dir=ELECTRA_MODEL_CACHE_DIR)
+        self._device = torch.device("cpu")
+        self._model.to(self._device)
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -420,6 +420,20 @@ class PineconeClient(PineconeBaseClass):
                     query_input: str,
                     retrieved_docs: list,
                     batch_size: int) -> list:
+        """
+        Re-ranks a list of documents based on their relevance to a query input, using a
+        cross-encoder model to compute relevance scores.
+
+        Args:
+            query_input (str): The query string used to rank the documents.
+            retrieved_docs (list): A list of documents (each represented as a dictionary) that are retrieved
+                                   for the query. Each document must contain at least the key 'chunk_summary',
+                                   which will be used for ranking.
+            batch_size (int): The number of document pairs to process in each batch. This controls memory usage
+                            and batch processing efficiency.
+
+        Returns: The list of documents from `retrieved_docs` sorted by their relevance score in descending order.
+        """
         # Create pairs using only the chunk_summary for ranking
         pairs = [[query_input, doc['chunk_summary']] for doc in retrieved_docs]
         scores = []
@@ -427,16 +441,16 @@ class PineconeClient(PineconeBaseClass):
         # Process in batches
         for i in range(0, len(pairs), batch_size):
             batch = pairs[i:i + batch_size]
-            inputs = self.tokenizer(
+            inputs = self._tokenizer(
                 batch,
                 padding=True,
                 truncation=True,
                 return_tensors='pt',
                 max_length=self.MAX_CHUNK_SIZE
-            ).to(self.device)
+            ).to(self._device)
 
             with torch.no_grad():
-                batch_scores = self.model(**inputs).logits.squeeze(-1)
+                batch_scores = self._model(**inputs).logits.squeeze(-1)
                 scores.extend(batch_scores.cpu().numpy())
 
         # Sort the original objects based on scores
