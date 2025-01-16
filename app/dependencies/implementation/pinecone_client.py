@@ -12,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from typing import Callable
 
+from ...data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
@@ -27,8 +28,10 @@ class PineconeClient(PineconeBaseClass):
 
     def __init__(self):
         self._pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-        self.tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-electra-base')
-        self.model = AutoModelForSequenceClassification.from_pretrained('cross-encoder/ms-marco-electra-base')
+        self.tokenizer = AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
+                                                       cache_dir=ELECTRA_MODEL_CACHE_DIR)
+        self.model = AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
+                                                                        cache_dir=ELECTRA_MODEL_CACHE_DIR)
         self.device = torch.device("cpu")
         self.model.to(self.device)
 

@@ -1,7 +1,22 @@
+from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from .internal.logging.logging_middleware import TimingMiddleware
+from .data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
+
+reranking_model = {}
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    print("Loading model and tokenizer...")
+    AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
+                                  cache_dir=ELECTRA_MODEL_CACHE_DIR)
+    AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
+                                                       cache_dir=ELECTRA_MODEL_CACHE_DIR)
+    yield
+    print("Releasing model and tokenizer...")
 
 class EndpointServiceCoordinator:
 
@@ -15,7 +30,7 @@ class EndpointServiceCoordinator:
     ]
 
     def __init__(self, routers, environment):
-        self.app = FastAPI()
+        self.app = FastAPI(lifespan=lifespan)
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=self.origins,
