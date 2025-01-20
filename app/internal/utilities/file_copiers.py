@@ -4,8 +4,10 @@ from datetime import datetime
 
 from fastapi import (File, UploadFile)
 from PIL import Image
+from pillow_heif import register_heif_opener
 
 FILES_DIR = 'app/files'
+PDF_EXTENSION = '.pdf'
 
 """
 A result representation of an image-copy operation.
@@ -34,15 +36,19 @@ async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
         copy_file_result: FileCopyResult = await make_file_copy(image)
         copy_bare_name, copy_extension = os.path.splitext(copy_file_result.file_copy_name_with_ext)
 
-        pdf_extension = '.pdf'
-        if copy_extension.lower() == pdf_extension:
+        copy_extension = copy_extension.lower()
+        if copy_extension == PDF_EXTENSION:
             # It's already a PDF, we can return as is.
             return copy_file_result
 
         # We need to make a PDF copy.
         image_copy_directory = FILES_DIR + '/'
-        image_copy_pdf_path = image_copy_directory + copy_bare_name + pdf_extension
+        image_copy_pdf_path = image_copy_directory + copy_bare_name + PDF_EXTENSION
         file_copies = copy_file_result.file_copies
+
+        # Handle .heic files by registering the HEIF opener.
+        if copy_extension == '.heic':
+            register_heif_opener()
 
         Image.open(copy_file_result.file_copy_full_path).convert('RGB').save(image_copy_pdf_path)
         file_copies.append(image_copy_pdf_path)
@@ -64,22 +70,22 @@ file – the file to be processed
 async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
     try:
         _, file_extension = os.path.splitext(file.filename)
-        audio_copy_file_name_without_ext = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-        audio_copy_file_name_with_ext = audio_copy_file_name_without_ext + file_extension
-        audio_copy_directory = FILES_DIR + '/'
-        audio_copy_full_path = audio_copy_directory + audio_copy_file_name_with_ext
+        file_copy_name_without_ext = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        file_copy_name_with_ext = file_copy_name_without_ext + file_extension
+        file_copy_directory = FILES_DIR + '/'
+        file_copy_full_path = file_copy_directory + file_copy_name_with_ext
 
         # Write incoming audio to our local volume for further processing
-        with open(audio_copy_full_path, 'wb+') as buffer:
+        with open(file_copy_full_path, 'wb+') as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        assert os.path.exists(audio_copy_full_path), "Something went wrong while processing the file."
+        assert os.path.exists(file_copy_full_path), "Something went wrong while processing the file."
 
-        return FileCopyResult(file_copy_name_with_ext=audio_copy_file_name_with_ext,
-                              file_copy_full_path=audio_copy_full_path,
-                              file_copies=[audio_copy_full_path],
-                              file_copy_directory=audio_copy_directory,
-                              file_copy_name_without_ext=audio_copy_file_name_without_ext)
+        return FileCopyResult(file_copy_name_with_ext=file_copy_name_with_ext,
+                              file_copy_full_path=file_copy_full_path,
+                              file_copies=[file_copy_full_path],
+                              file_copy_directory=file_copy_directory,
+                              file_copy_name_without_ext=file_copy_name_without_ext)
     finally:
         await file.close()
 

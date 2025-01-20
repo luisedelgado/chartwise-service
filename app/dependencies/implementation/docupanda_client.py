@@ -31,7 +31,7 @@ class DocupandaClient(DocupandaBaseClass):
                     "hidden_provider": "docupanda"
                 }
             )
-            response = portkey.post('/document', document=payload)
+            response = portkey.post(document_endpoint, document=payload)
             response_as_dict = response.dict()
             doc_id = response_as_dict["documentId"]
         else:
