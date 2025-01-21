@@ -73,10 +73,11 @@ class MediaProcessingManager(ABC):
             await self._email_manager.send_internal_alert(alert=internal_alert)
             return
 
-        # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
-        today = datetime.now().date()
-        today_formatted = today.strftime(DATE_TIME_FORMAT)
-        supabase_client.update(table_name="pending_audio_jobs",
+        if media_type == MediaType.AUDIO:
+            # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
+            today = datetime.now().date()
+            today_formatted = today.strftime(DATE_TIME_FORMAT)
+            supabase_client.update(table_name="pending_audio_jobs",
                                 filters={
                                     "session_report_id": session_notes_id
                                 },
@@ -85,7 +86,6 @@ class MediaProcessingManager(ABC):
                                     "successful_processing_date": today_formatted,
                                 })
 
-        if media_type == MediaType.AUDIO:
             # Move the file from the processing pending bucket to the processing completed bucket.
             supabase_client.storage_client.move_file_between_buckets(source_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
                                                                      destination_bucket=self.AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
