@@ -274,7 +274,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
 
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
@@ -361,7 +361,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
 
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
@@ -557,7 +557,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
 
             assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
@@ -634,7 +634,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
 
             assert len(body['id'] or '') > 0, "Missing patient id param in payload"
             assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''

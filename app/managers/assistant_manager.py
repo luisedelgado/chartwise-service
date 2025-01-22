@@ -1,4 +1,4 @@
-import asyncio, json
+import asyncio, json, os
 
 from celery import shared_task
 from datetime import datetime
@@ -258,6 +258,7 @@ class AssistantManager:
                           supabase_client: SupabaseBaseClass,
                           email_manager: EmailManager) -> str:
         try:
+            environment = os.environ.get('ENVIRONMENT')
             payload = {"therapist_id": therapist_id}
             for key, value in filtered_body.items():
                 if isinstance(value, Enum):
@@ -280,6 +281,7 @@ class AssistantManager:
             await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
                                                                           language_code=language_code,
                                                                           patient_id=patient_id,
+                                                                          environment=environment,
                                                                           therapist_id=therapist_id,
                                                                           email_manager=email_manager,
                                                                           session_id=session_id)
@@ -289,6 +291,7 @@ class AssistantManager:
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
             await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
                                                                       patient_id=patient_id,
+                                                                      environment=environment,
                                                                       therapist_id=therapist_id,
                                                                       email_manager=email_manager,
                                                                       session_id=session_id,
@@ -506,6 +509,7 @@ class AssistantManager:
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
                                          session_id=session_id,
+                                         environment=environment,
                                          exception=e,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
@@ -586,6 +590,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Updating the presession tray failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -667,6 +672,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Updating the recent topics failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -734,6 +740,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -742,6 +749,7 @@ class AssistantManager:
     async def update_patient_metrics_after_session_report_operation(self,
                                                                     supabase_client: SupabaseBaseClass,
                                                                     patient_id: str,
+                                                                    environment: str,
                                                                     therapist_id: str,
                                                                     session_id: str,
                                                                     email_manager: EmailManager,
@@ -798,6 +806,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -864,6 +873,7 @@ class AssistantManager:
         # session has already been inserted.
         await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
                                                                          patient_id=patient_id,
+                                                                         environment=environment,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
                                                                          email_manager=email_manager,
@@ -924,6 +934,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
+                                                                         environment=environment,
                                                                          email_manager=email_manager,
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
                                                                          session_date=new_session_date)
@@ -958,6 +969,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
+                                                                         environment=environment,
                                                                          email_manager=email_manager,
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
                                                                          session_date=None)
@@ -1048,6 +1060,7 @@ class AssistantManager:
                                                                  language_code: str,
                                                                  patient_id: str,
                                                                  therapist_id: str,
+                                                                 environment: str,
                                                                  email_manager: EmailManager,
                                                                  session_id: str):
         try:
@@ -1073,6 +1086,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Updating the default question suggestions failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -1082,6 +1096,7 @@ class AssistantManager:
                                                              language_code: str,
                                                              patient_id: str,
                                                              therapist_id: str,
+                                                             environment: str,
                                                              email_manager: EmailManager,
                                                              session_id: str,
                                                              supabase_client: SupabaseBaseClass,
@@ -1141,6 +1156,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description="Loading the default pre-session tray failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id,
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
@@ -1179,6 +1195,7 @@ class AssistantManager:
             eng_alert = EngineeringAlert(description=f"Updating session report {session_notes_id} with a mini summary failed",
                                          session_id=session_id,
                                          exception=e,
+                                         environment=environment,
                                          therapist_id=therapist_id)
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)

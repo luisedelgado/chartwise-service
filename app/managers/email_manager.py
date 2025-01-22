@@ -13,7 +13,8 @@ class EmailManager:
     ENGINEERING_ALERT_SUBJECT = "ChartWise Engineering Alert 🚨"
     CUSTOMER_RELATIONS_ALERT_SUBJECT = "ChartWise Customer Alert 🔔"
     SESSION_DATA_DETAILS = ("<li><b>Therapist ID:</b> {therapist_id}</li>"
-                             "<li><b>Session ID:</b> {session_id}</li>")
+                             "<li><b>Session ID:</b> {session_id}</li>"
+                             "<li><b>Environment:</b> {environment}</li>")
     PAYMENTS_ACTIVITY_DETAILS = ("<li><b>Subscription ID:</b> {subscription_id}</li>"
                                  "<li><b>Customer ID:</b> {customer_id}</li>"
                                  "<li><b>Payment Method ID:</b> {payment_method_id}</li>")
@@ -75,7 +76,8 @@ class EmailManager:
                 f"<b>{alert.description}</b>",
                 "<ul>",
                 self.SESSION_DATA_DETAILS.format(therapist_id=therapist_id,
-                                                 session_id=alert.session_id),
+                                                 session_id=alert.session_id,
+                                                 environment=alert.environment),
                 activity_details,
                 "</ul>",
                 "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
@@ -106,7 +108,8 @@ class EmailManager:
                 f"<b>{alert.description}</b>",
                 "<ul>",
                 self.SESSION_DATA_DETAILS.format(therapist_id=therapist_id,
-                                                 session_id=alert.session_id),
+                                                 session_id=alert.session_id,
+                                                 environment=alert.environment),
                 activity_details,
                 "</ul>",
                 "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"

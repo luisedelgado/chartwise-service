@@ -66,6 +66,7 @@ class MediaProcessingManager(ABC):
         if session_upload_status != SessionUploadStatus.SUCCESS.value:
             internal_alert = MediaJobProcessingAlert(description="Failed to process a media job. It will automatically be picked-up by daily job for retry",
                                                      media_type=media_type,
+                                                     environment=environment,
                                                      session_id=session_id,
                                                      session_report_id=session_notes_id,
                                                      storage_filepath=storage_filepath,

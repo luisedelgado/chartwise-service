@@ -933,11 +933,12 @@ class PaymentProcessingRouter:
                         internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) This failure usually is related to not "
                                                                             "being able to update a subscription's payment method. "
                                                                             "Please take a look to get a better understanding of the customer's journey."),
-                                                            exception=e,
-                                                            therapist_id=therapist_id,
-                                                            subscription_id=subscription.get('id', None),
-                                                            payment_method_id=payment_method_id,
-                                                            customer_id=customer_id)
+                                                                exception=e,
+                                                                environment=self._environment,
+                                                                therapist_id=therapist_id,
+                                                                subscription_id=subscription.get('id', None),
+                                                                payment_method_id=payment_method_id,
+                                                                customer_id=customer_id)
                         await self._email_manager.send_internal_alert(alert=internal_alert)
 
         else:
@@ -1034,16 +1035,18 @@ class PaymentProcessingRouter:
                                             " ",
                                             therapist_data['last_name']])
                 alert = CustomerRelationsAlert(description=alert_description,
-                                                session_id=session_id,
-                                                therapist_id=therapist_id,
-                                                therapist_name=therapist_name,
-                                                therapist_email=therapist_data['email'])
+                                               session_id=session_id,
+                                               environment=self._environment,
+                                               therapist_id=therapist_id,
+                                               therapist_name=therapist_name,
+                                               therapist_email=therapist_data['email'])
                 await self._email_manager.send_customer_relations_alert(alert)
         except Exception as e:
             internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
-                                                    session_id=session_id,
-                                                    therapist_id=therapist_id,
-                                                    exception=e,
-                                                    subscription_id=subscription_id,
-                                                    customer_id=customer_id)
+                                                   session_id=session_id,
+                                                   environment=self._environment,
+                                                   therapist_id=therapist_id,
+                                                   exception=e,
+                                                   subscription_id=subscription_id,
+                                                   customer_id=customer_id)
             await self._email_manager.send_internal_alert(alert=internal_alert)

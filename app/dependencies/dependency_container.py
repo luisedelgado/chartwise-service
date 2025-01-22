@@ -64,8 +64,14 @@ class DependencyContainer:
         return self._stripe_client
 
     def inject_resend_client(self) -> ResendBaseClass:
-        if self._resend_client is None:
-            self._resend_client = FakeResendClient() if (os.environ.get("ENVIRONMENT") != "prod") else ResendClient()
+        if self._resend_client is not None:
+            return self._resend_client
+
+        environment = os.environ.get("ENVIRONMENT")
+        if (environment == "prod" or environment == "staging"):
+            self._resend_client = ResendClient()
+        else:
+            self._resend_client = FakeResendClient()
         return self._resend_client
 
     def inject_influx_client(self) -> InfluxBaseClass:

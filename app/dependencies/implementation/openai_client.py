@@ -190,6 +190,6 @@ class OpenAIClient(OpenAIBaseClass):
             response = await openai_client.embeddings.create(input=[text],
                                                              model=self.EMBEDDING_MODEL)
             embeddings = []
-            for item in response.dict()['data']:
+            for item in response.model_dump()['data']:
                 embeddings.extend(item['embedding'])
             return embeddings

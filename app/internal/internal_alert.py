@@ -13,10 +13,12 @@ class InternalAlertCategory(Enum):
 class InternalAlert(ABC):
     @abstractmethod
     def __init__(self,
+                 environment: str,
                  description: str,
                  therapist_id: str = None,
                  session_id: str = None,
                  exception: Exception = None):
+        self.environment = environment
         self.session_id = session_id
         self.therapist_id = therapist_id
         self.description = description
@@ -24,6 +26,7 @@ class InternalAlert(ABC):
 
 class PaymentsActivityAlert(InternalAlert):
     def __init__(self,
+                 environment: str,
                  description: str,
                  session_id: str = None,
                  exception: Exception = None,
@@ -32,6 +35,7 @@ class PaymentsActivityAlert(InternalAlert):
                  customer_id: str = None,
                  payment_method_id: str = None):
         super().__init__(description=description,
+                         environment=environment,
                          therapist_id=therapist_id,
                          session_id=session_id,
                          exception=exception)
@@ -42,6 +46,7 @@ class PaymentsActivityAlert(InternalAlert):
 
 class MediaJobProcessingAlert(InternalAlert):
     def __init__(self,
+                 environment: str,
                  description: str,
                  media_type: MediaType,
                  session_id: str = None,
@@ -50,6 +55,7 @@ class MediaJobProcessingAlert(InternalAlert):
                  storage_filepath: str = None,
                  session_report_id: str = None):
         super().__init__(description=description,
+                         environment=environment,
                          therapist_id=therapist_id,
                          session_id=session_id,
                          exception=exception)
@@ -59,13 +65,15 @@ class MediaJobProcessingAlert(InternalAlert):
 
 class CustomerRelationsAlert(InternalAlert):
     def __init__(self,
+                 environment: str,
                  description: str,
                  session_id: str = None,
                  exception: Exception = None,
                  therapist_id: str = None,
                  therapist_name: str = None,
                  therapist_email: str = None):
-        super().__init__(description=description,
+        super().__init__(environment=environment,
+                         description=description,
                          therapist_id=therapist_id,
                          session_id=session_id,
                          exception=exception)
@@ -75,12 +83,14 @@ class CustomerRelationsAlert(InternalAlert):
 
 class EngineeringAlert(InternalAlert):
     def __init__(self,
+                 environment: str,
                  description: str,
                  session_id: str = None,
                  exception: Exception = None,
                  therapist_id: str = None,
                  patient_id: str = None):
-        super().__init__(description=description,
+        super().__init__(environment=environment,
+                         description=description,
                          therapist_id=therapist_id,
                          session_id=session_id,
                          exception=exception)

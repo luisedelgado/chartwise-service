@@ -162,6 +162,7 @@ async def _process_pending_audio_job(job: dict):
             alert = MediaJobProcessingAlert(description=f"Failed to process pending audio job with ID <b>{job["id"]}</b> in daily script.",
                                             media_type=MediaType.AUDIO,
                                             exception=e,
+                                            environment=os.environ.get("ENVIRONMENT"),
                                             therapist_id=job["therapist_id"],
                                             storage_filepath=job["storage_filepath"],
                                             session_report_id=job["session_report_id"])

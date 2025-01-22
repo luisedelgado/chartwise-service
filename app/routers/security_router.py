@@ -1,4 +1,4 @@
-import uuid
+import os, uuid
 
 from datetime import datetime
 from enum import Enum
@@ -427,7 +427,7 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
 
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
@@ -450,6 +450,7 @@ class SecurityRouter:
                                       payload['last_name']])
             alert = CustomerRelationsAlert(description=alert_description,
                                            session_id=session_id,
+                                           environment=os.environ.get('ENVIRONMENT'),
                                            therapist_id=user_id,
                                            therapist_email=payload['email'],
                                            therapist_name=therapist_name)
@@ -516,7 +517,7 @@ class SecurityRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            body = body.dict(exclude_unset=True)
+            body = body.model_dump(exclude_unset=True)
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
@@ -632,6 +633,7 @@ class SecurityRouter:
                                       " ",
                                       delete_response_dict[0]['last_name']])
             alert = CustomerRelationsAlert(description=alert_description,
+                                           environment=os.environ.get('ENVIRONMENT'),
                                            session_id=session_id,
                                            therapist_id=user_id,
                                            therapist_email=therapist_email,

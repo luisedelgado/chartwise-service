@@ -82,6 +82,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     else:
                         alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
                                                         media_type=MediaType.IMAGE,
+                                                        environment=environment,
                                                         therapist_id=therapist_id,
                                                         session_id=session_id)
                         await email_manager.send_internal_alert(alert)
@@ -162,6 +163,13 @@ class ImageProcessingManager(MediaProcessingManager):
                                                              session_notes_id=session_notes_id,
                                                              media_type=MediaType.IMAGE,
                                                              email_manager=email_manager)
+            alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                                            media_type=MediaType.IMAGE,
+                                            exception=e,
+                                            environment=environment,
+                                            therapist_id=therapist_id,
+                                            session_id=session_id)
+            await email_manager.send_internal_alert(alert)
             raise HTTPException(status_code=e.status_code, detail=e.detail)
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
@@ -179,4 +187,11 @@ class ImageProcessingManager(MediaProcessingManager):
                                                             session_notes_id=session_notes_id,
                                                             media_type=MediaType.IMAGE,
                                                             email_manager=email_manager)
+            alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                                            media_type=MediaType.IMAGE,
+                                            exception=e,
+                                            environment=environment,
+                                            therapist_id=therapist_id,
+                                            session_id=session_id)
+            await email_manager.send_internal_alert(alert)
             raise Exception(e)

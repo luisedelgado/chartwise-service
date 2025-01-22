@@ -188,7 +188,7 @@ class SupabaseClient(SupabaseBaseClass):
 
     def get_current_user_id(self) -> str:
         try:
-            user_id = self.client.auth.get_user().dict()['user']['id']
+            user_id = self.client.auth.get_user().model_dump()['user']['id']
             assert len(user_id or '') > 0, "Did not find a valid user id for current user"
             return user_id
         except Exception as e:
