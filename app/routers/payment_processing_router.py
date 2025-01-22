@@ -1,4 +1,4 @@
-import os
+import logging, os
 
 from enum import Enum
 from datetime import datetime
@@ -735,6 +735,8 @@ class PaymentProcessingRouter:
         stripe_client = dependency_container.inject_stripe_client()
         environment = os.environ.get("ENVIRONMENT")
 
+        logging.info(f"Received webhook for environment: {environment}")
+
         try:
             if environment == "dev":
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
@@ -751,16 +753,21 @@ class PaymentProcessingRouter:
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
 
+            logging.info("Successfully constructed Stripe event")
+
             # In deployed environments, block requests from localhost
             if environment in ["staging", "prod"] and request.client.host in ["localhost", "127.0.0.1"]:
+                logging.info(f"Blocking localhost request for {environment}")
                 raise HTTPException(
                     status_code=403, detail="Webhooks from localhost are not allowed in staging."
                 )
         except ValueError:
             # Invalid payload
+            logging.error(f"ValueError encountered: {str(e)}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
         except Exception as e:
             # Check for invalid signature
+            logging.error(f"Exception encountered trying to construct the webhook event: {str(e)}")
             if stripe_client.is_signature_verification_error(e=e):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
             else:
@@ -771,6 +778,7 @@ class PaymentProcessingRouter:
                                             stripe_client=stripe_client,
                                             background_tasks=background_tasks)
         except Exception as e:
+            logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
             raise HTTPException(e)
 
         return {}
