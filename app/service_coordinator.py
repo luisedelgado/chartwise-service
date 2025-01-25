@@ -28,7 +28,15 @@ class EndpointServiceCoordinator:
     ]
 
     def __init__(self, routers, environment):
-        self.app = FastAPI(lifespan=lifespan)
+        is_dev_environment = environment == "dev"
+        openapi_url = "/openapi.json" if is_dev_environment else None
+        docs_url = "/docs" if is_dev_environment else None
+        redoc_url = "/redoc" if is_dev_environment else None
+        self.app = FastAPI(lifespan=lifespan,
+                           title="ChartWise API Service",
+                           openapi_url=openapi_url,
+                           docs_url=docs_url,
+                           redoc_url=redoc_url)
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=self.origins,
