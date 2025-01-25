@@ -7,3 +7,4 @@ __pycache__/
 storage/index_store.json
 .env
 model_cache/
+.vscode/chartwise-service.code-workspace
