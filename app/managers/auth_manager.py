@@ -14,7 +14,7 @@ class AuthManager:
 
     ENVIRONMENT = os.environ.get("ENVIRONMENT")
     APP_COOKIE_DOMAIN = ("chartwise.ai" if os.environ.get("ENVIRONMENT") == "prod"
-                         else None)
+                         or os.environ.get("ENVIRONMENT") == "staging" else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 120
