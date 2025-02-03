@@ -13,8 +13,9 @@ async def lifespan(_: FastAPI):
                                   cache_dir=ELECTRA_MODEL_CACHE_DIR)
     AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
                                                        cache_dir=ELECTRA_MODEL_CACHE_DIR)
+    print("Finished loading model and tokenizer.")
     yield
-    print("Releasing model and tokenizer...")
+    print("Releasing model and tokenizer.")
 
 class EndpointServiceCoordinator:
 
