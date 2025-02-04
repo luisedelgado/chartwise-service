@@ -20,12 +20,11 @@ primary_region = 'mia'
     soft_limit = 25
     hard_limit = 50
 
-# FastAPI process (Performance-1x, 4 machines)
 [[services]]
   processes = ["app"]
   [services.vm]
     memory = "3gb"
-    cpu_kind = "performance"
+    cpu_kind = "shared"
     cpus = 2
 
 [machines.app]
