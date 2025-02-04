@@ -287,7 +287,7 @@ class AssistantManager:
                                                                           session_id=session_id)
 
             # Load default pre-session tray
-            has_preexisting_history = ('pre_existing_history' in filtered_body)
+            has_preexisting_history = ('pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0)
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
             await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
                                                                       patient_id=patient_id,
