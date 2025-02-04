@@ -1,5 +1,4 @@
-# Use the specified Python base image
-FROM python:3.12.3-slim-bullseye
+FROM --platform=linux/amd64 python:3.12.3-slim-bullseye
 
 ENV PYTHONUNBUFFERED=True
 ENV APP_HOME=/app

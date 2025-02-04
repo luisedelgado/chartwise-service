@@ -24,6 +24,7 @@ class EndpointServiceCoordinator:
         "https://localhost:5173",
         # chartwise.ai
         "https://chartwise.ai",
+        "https://api.staging.chartwise.ai",
         "https://staging.chartwise.ai",
         "https://api.chartwise.ai",
     ]
