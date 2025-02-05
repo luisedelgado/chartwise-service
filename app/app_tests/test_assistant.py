@@ -585,6 +585,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 401
 
@@ -608,6 +609,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 400
 
@@ -631,6 +633,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "undefined",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 400
 
@@ -654,6 +657,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 400
 
@@ -679,6 +683,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -705,6 +710,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -731,6 +737,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -757,6 +764,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -785,6 +793,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -814,6 +823,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -843,6 +853,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()
@@ -872,6 +883,7 @@ class TestingHarnessAssistantRouter:
                                         "email": "foo@foo.foo",
                                         "phone_number": "123",
                                         "consentment_channel": "verbal",
+                                        "onboarding_first_time_patient": True
                                     })
         assert response.status_code == 200
         assert "patient_id" in response.json()

@@ -47,6 +47,7 @@ class PatientInsertPayload(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     consentment_channel: Optional[PatientConsentmentChannel] = None
+    onboarding_first_time_patient: bool
 
 class PatientUpdatePayload(BaseModel):
     id: str
@@ -268,14 +269,21 @@ class AssistantManager:
             response = supabase_client.insert(table_name="patients", payload=payload)
             patient_id = response.dict()['data'][0]['id']
 
-            if 'pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0:
-                background_tasks.add_task(dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
-                                          session_id,
-                                          therapist_id,
-                                          patient_id,
-                                          filtered_body['pre_existing_history'],
-                                          dependency_container.inject_openai_client(),
-                                          self.chartwise_assistant.summarize_chunk)
+            if filtered_body['onboarding_first_time_patient']:
+                try:
+                    pre_existing_history = filtered_body['pre_existing_history']
+                    assert len(pre_existing_history or '') > 0
+
+                    background_tasks.add_task(dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
+                                            session_id,
+                                            therapist_id,
+                                            patient_id,
+                                            pre_existing_history,
+                                            dependency_container.inject_openai_client(),
+                                            self.chartwise_assistant.summarize_chunk)
+                except Exception:
+                    # If pre_existing_history is not in `filtered_body` or if it's empty, we won't do anything
+                    pass
 
             # Load default question suggestions in a background thread
             await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
