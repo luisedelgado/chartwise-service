@@ -2,11 +2,18 @@ model_cache/
 __pycache__/
 .venv/
 .pytest_cache/
+.git
+.DS_Store
+storage/index_store.json
+.env
+.vscode/chartwise-service.code-workspace
+app/requirements-dev.txt
 
 # flyctl launch added from .gitignore
 **/.venv
 **/__pycache__
 **/storage/index_store.json
+**/model_cache
 
 # flyctl launch added from .venv/lib/python3.11/site-packages/llama_index/cli/new_package/common/.gitignore
 .venv/lib/python3.11/site-packages/llama_index/cli/new_package/common/**/llama_index/_static
