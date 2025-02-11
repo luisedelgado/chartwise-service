@@ -30,10 +30,10 @@ class EndpointServiceCoordinator:
     ]
 
     def __init__(self, routers, environment):
-        is_dev_environment = environment == "dev"
-        openapi_url = "/openapi.json" if is_dev_environment else None
-        docs_url = "/docs" if is_dev_environment else None
-        redoc_url = "/redoc" if is_dev_environment else None
+        is_prod_environment = environment == "prod"
+        openapi_url = "/openapi.json" if not is_prod_environment else None
+        docs_url = "/docs" if not is_prod_environment else None
+        redoc_url = "/redoc" if not is_prod_environment else None
         self.app = FastAPI(lifespan=lifespan,
                            title="ChartWise API Service",
                            openapi_url=openapi_url,
