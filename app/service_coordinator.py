@@ -22,11 +22,12 @@ class EndpointServiceCoordinator:
     origins = [
         # Daniel Daza Development
         "https://localhost:5173",
-        # chartwise.ai
-        "https://chartwise.ai",
-        "https://api.staging.chartwise.ai",
-        "https://staging.chartwise.ai",
+        # staging webapp
+        "https://staging.api.chartwise.ai",
+        "https://staging.app.chartwise.ai",
+        # prod webapp
         "https://api.chartwise.ai",
+        "https://app.chartwise.ai",
     ]
 
     def __init__(self, routers, environment):
