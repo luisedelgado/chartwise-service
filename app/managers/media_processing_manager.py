@@ -8,7 +8,7 @@ from .auth_manager import AuthManager
 from .email_manager import EmailManager
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..internal.internal_alert import MediaJobProcessingAlert
-from ..internal.schemas import MediaType, SessionUploadStatus
+from ..internal.schemas import MediaType, SessionProcessingStatus
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class MediaProcessingManager(ABC):
@@ -30,7 +30,7 @@ class MediaProcessingManager(ABC):
     auth_manager – the auth manager to leverage internally.
     session_id – the current session id.
     supabase_client – the supabase client to leverage internally.
-    session_upload_status – the session upload status.
+    session_processing_status – the session upload status.
     session_notes_id – the id of the session to be updated.
     media_type – the type of media that was processed.
     therapist_id – the therapist id.
@@ -45,7 +45,7 @@ class MediaProcessingManager(ABC):
                                                 auth_manager: AuthManager,
                                                 session_id: str,
                                                 supabase_client: SupabaseBaseClass,
-                                                session_upload_status: str,
+                                                session_processing_status: str,
                                                 session_notes_id: str,
                                                 media_type: MediaType,
                                                 therapist_id: str,
@@ -57,13 +57,13 @@ class MediaProcessingManager(ABC):
                                                auth_manager=auth_manager,
                                                filtered_body={
                                                    "id": session_notes_id,
-                                                   "processing_status": session_upload_status
+                                                   "processing_status": session_processing_status
                                                },
                                                session_id=session_id,
                                                supabase_client=supabase_client,
                                                email_manager=email_manager)
 
-        if session_upload_status != SessionUploadStatus.SUCCESS.value:
+        if session_processing_status != SessionProcessingStatus.SUCCESS.value:
             internal_alert = MediaJobProcessingAlert(description="Failed to process a media job. It will automatically be picked-up by daily job for retry",
                                                      media_type=media_type,
                                                      environment=environment,

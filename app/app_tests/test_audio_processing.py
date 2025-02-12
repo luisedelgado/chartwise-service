@@ -103,7 +103,7 @@ class TestingHarnessAudioProcessingRouter:
                                         "patient_id": FAKE_PATIENT_ID,
                                         "session_date": "04-04-2022",
                                         "client_timezone_identifier": "UTC",
-                                        "file_path": DUMMY_WAV_FILE_LOCATION
+                                        "file_path": FAKE_PATIENT_ID
                                     })
         assert response.status_code == 401
 
@@ -120,7 +120,7 @@ class TestingHarnessAudioProcessingRouter:
                                         "patient_id": FAKE_PATIENT_ID,
                                         "session_date": "04-04-2022",
                                         "client_timezone_identifier": "UTC",
-                                        "file_path": DUMMY_WAV_FILE_LOCATION
+                                        "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
                                     },
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
@@ -145,7 +145,7 @@ class TestingHarnessAudioProcessingRouter:
                                     "patient_id": FAKE_PATIENT_ID,
                                     "session_date": "04-04-2022",
                                     "client_timezone_identifier": "UTC",
-                                    "file_path": DUMMY_WAV_FILE_LOCATION
+                                    "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
                                 },
                                 headers={
                                     "store-access-token": FAKE_ACCESS_TOKEN,
@@ -247,7 +247,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                                   "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,

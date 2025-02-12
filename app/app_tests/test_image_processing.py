@@ -3,7 +3,7 @@ import os
 from fastapi.testclient import TestClient
 
 from ..dependencies.dependency_container import dependency_container
-from ..internal.schemas import SessionUploadStatus
+from ..internal.schemas import SessionProcessingStatus
 from ..managers.auth_manager import AuthManager
 from ..routers.image_processing_router import ImageProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -109,7 +109,7 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
-        assert self.fake_supabase_user_client.session_upload_processing_status == SessionUploadStatus.PROCESSING.value
+        assert self.fake_supabase_user_client.session_upload_processing_status == SessionProcessingStatus.PROCESSING.value
 
     def test_invoke_png_textraction_free_format_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -136,7 +136,7 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
-        assert self.fake_supabase_user_client.session_upload_processing_status == SessionUploadStatus.PROCESSING.value
+        assert self.fake_supabase_user_client.session_upload_processing_status == SessionProcessingStatus.PROCESSING.value
 
     def test_invoke_pdf_textraction_success(self):
         self.fake_supabase_user_client.return_authenticated_session = True
@@ -163,4 +163,4 @@ class TestingHarnessImageProcessingRouter:
                                     })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
-        assert self.fake_supabase_user_client.session_upload_processing_status == SessionUploadStatus.PROCESSING.value
+        assert self.fake_supabase_user_client.session_upload_processing_status == SessionProcessingStatus.PROCESSING.value

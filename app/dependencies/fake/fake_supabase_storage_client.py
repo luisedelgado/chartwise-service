@@ -32,4 +32,6 @@ class FakeSupabaseStorageClient(SupabaseStorageBaseClass):
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
                                        file_path: str) -> str:
-        pass
+        return {
+            "signedURL": "testUrl"
+        }

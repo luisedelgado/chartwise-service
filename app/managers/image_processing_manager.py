@@ -8,7 +8,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
 from ..internal.internal_alert import MediaJobProcessingAlert
-from ..internal.schemas import MediaType, SessionUploadStatus
+from ..internal.schemas import MediaType, SessionProcessingStatus
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
@@ -47,7 +47,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                        "session_date": session_date,
                                                        "therapist_id": therapist_id,
                                                        "patient_id": patient_id,
-                                                       "processing_status": SessionUploadStatus.PROCESSING.value,
+                                                       "processing_status": SessionProcessingStatus.PROCESSING.value,
                                                        "source": SessionNotesSource.NOTES_IMAGE.value,
                                                    })
             session_notes_id = insert_result.dict()['data'][0]['id']
@@ -141,7 +141,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.SUCCESS.value,
+                                                         session_processing_status=SessionProcessingStatus.SUCCESS.value,
                                                          session_notes_id=session_notes_id,
                                                          therapist_id=therapist_id,
                                                          media_type=MediaType.IMAGE,
@@ -159,7 +159,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                              session_id=session_id,
                                                              therapist_id=therapist_id,
                                                              supabase_client=supabase_client,
-                                                             session_upload_status=SessionUploadStatus.FAILED.value,
+                                                             session_processing_status=SessionProcessingStatus.FAILED.value,
                                                              session_notes_id=session_notes_id,
                                                              media_type=MediaType.IMAGE,
                                                              email_manager=email_manager)
@@ -183,7 +183,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                             session_id=session_id,
                                                             therapist_id=therapist_id,
                                                             supabase_client=supabase_client,
-                                                            session_upload_status=SessionUploadStatus.FAILED.value,
+                                                            session_processing_status=SessionProcessingStatus.FAILED.value,
                                                             session_notes_id=session_notes_id,
                                                             media_type=MediaType.IMAGE,
                                                             email_manager=email_manager)

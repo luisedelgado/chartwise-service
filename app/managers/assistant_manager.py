@@ -13,7 +13,7 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
-from ..internal.schemas import Gender, SessionUploadStatus
+from ..internal.schemas import Gender, SessionProcessingStatus
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -118,7 +118,7 @@ class AssistantManager:
                 "source": source.value,
                 "last_updated": now_timestamp,
                 "therapist_id": therapist_id,
-                "processing_status": SessionUploadStatus.SUCCESS.value
+                "processing_status": SessionProcessingStatus.SUCCESS.value
             }
 
             if len(diarization or '') > 0:

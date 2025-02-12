@@ -8,7 +8,7 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal.schemas import MediaType, SessionUploadStatus
+from ..internal.schemas import MediaType, SessionProcessingStatus
 from ..internal.utilities import datetime_handler
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
@@ -49,7 +49,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                           "therapist_id": therapist_id,
                                                                           "patient_id": patient_id,
                                                                           "source": source,
-                                                                          "processing_status": SessionUploadStatus.PROCESSING.value
+                                                                          "processing_status": SessionProcessingStatus.PROCESSING.value
                                                                       })
             assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response.dict()['data'][0]['id']
@@ -119,7 +119,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                              therapist_id=therapist_id,
                                                              session_id=session_id,
                                                              supabase_client=supabase_client,
-                                                             session_upload_status=SessionUploadStatus.FAILED.value,
+                                                             session_processing_status=SessionProcessingStatus.FAILED.value,
                                                              session_notes_id=session_report_id,
                                                              media_type=MediaType.AUDIO,
                                                              email_manager=email_manager)
@@ -165,7 +165,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_processing_status=SessionProcessingStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
                                                          email_manager=email_manager)
@@ -239,7 +239,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.SUCCESS.value,
+                                                         session_processing_status=SessionProcessingStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
                                                          storage_filepath=storage_filepath,
@@ -253,7 +253,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          therapist_id=therapist_id,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_processing_status=SessionProcessingStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
                                                          email_manager=email_manager)
@@ -303,7 +303,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          session_id=session_id,
                                                          therapist_id=therapist_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.SUCCESS.value,
+                                                         session_processing_status=SessionProcessingStatus.SUCCESS.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
                                                          storage_filepath=storage_filepath,
@@ -317,7 +317,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                          auth_manager=auth_manager,
                                                          session_id=session_id,
                                                          supabase_client=supabase_client,
-                                                         session_upload_status=SessionUploadStatus.FAILED.value,
+                                                         session_processing_status=SessionProcessingStatus.FAILED.value,
                                                          session_notes_id=session_report_id,
                                                          media_type=MediaType.AUDIO,
                                                          email_manager=email_manager)

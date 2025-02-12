@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from ..dependencies.dependency_container import dependency_container
-from ..internal.schemas import SessionUploadStatus
+from ..internal.schemas import SessionProcessingStatus
 from ..managers.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -182,7 +182,7 @@ class TestingHarnessAssistantRouter:
                                     })
         assert response.status_code == 200
         assert self.fake_supabase_user_client.fake_text == insert_text
-        assert self.fake_supabase_user_client.session_upload_processing_status == SessionUploadStatus.SUCCESS.value
+        assert self.fake_supabase_user_client.session_upload_processing_status == SessionProcessingStatus.SUCCESS.value
 
     def test_update_session_with_missing_auth_token(self):
         response = self.client.put(AssistantRouter.SESSIONS_ENDPOINT,
