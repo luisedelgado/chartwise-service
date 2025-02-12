@@ -41,9 +41,9 @@ class SupabaseStorageClient(SupabaseStorageBaseClass):
                                   file_path: str):
         try:
             source_file_url = self.get_audio_file_read_signed_url(file_path=file_path,
-                                                                  bucket_name=source_bucket)
+                                                                  bucket_name=source_bucket).get("signedURL")
             destination_upload_url = self.get_audio_file_upload_signed_url(bucket_name=destination_bucket,
-                                                                           file_path=file_path)
+                                                                           file_path=file_path).get("signed_url")
 
             with httpx.stream("GET", source_file_url) as source_response:
                 # Ensure the request was successful

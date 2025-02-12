@@ -37,22 +37,20 @@ class DeepgramClient(DeepgramBaseClass):
                 headers = {
                     "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
                     "Authorization": "Token " + os.environ.get("DG_API_KEY"),
-                    "Content-type": "audio/wav",
+                    "Content-type": "application/json",
                     "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
                     "x-portkey-custom-host": custom_host_url,
                     "x-portkey-provider": "openai",
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                options = "&".join([self.DG_QUERY_PARAMS,
-                                    "diarize=true",
-                                    f"url={audio_file_url}"])
-
+                options = "&".join([self.DG_QUERY_PARAMS, "diarize=true"])
                 endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
 
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = requests.post(endpoint_configuration,
                                          headers=headers,
+                                         json={"url": audio_file_url},
                                          timeout=(self.CONNECT_TIMEOUT, self.DIARIZATION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
@@ -108,22 +106,20 @@ class DeepgramClient(DeepgramBaseClass):
                 headers = {
                     "x-portkey-forward-headers": "[\"authorization\", \"content-type\"]",
                     "Authorization": "Token " + os.environ.get("DG_API_KEY"),
-                    "Content-type": "audio/wav",
+                    "Content-type": "application/json",
                     "x-portkey-api-key": os.environ.get("PORTKEY_API_KEY"),
                     "x-portkey-custom-host": custom_host_url,
                     "x-portkey-provider": "openai",
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                options = "&".join([self.DG_QUERY_PARAMS,
-                                    f"url={audio_file_url}"])
-
-                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
+                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + self.DG_QUERY_PARAMS
 
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = requests.post(endpoint_configuration,
-                                            headers=headers,
-                                            timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
+                                         headers=headers,
+                                         json={"url": audio_file_url},
+                                         timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
