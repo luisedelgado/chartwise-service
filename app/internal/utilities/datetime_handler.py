@@ -3,6 +3,7 @@ from datetime import datetime
 from pytz import timezone
 
 DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
+DATE_TIME_FORMAT_FILE = "%d-%m-%Y-%H-%M-%S"
 DATE_FORMAT = "%m-%d-%Y"
 DATE_FORMAT_SPELL_OUT_MONTH = "%b %d, %Y"
 DATE_FORMAT_YYYY_MM_DD = '%Y-%m-%d'

@@ -4,7 +4,6 @@ ENV PYTHONUNBUFFERED=True
 ENV APP_HOME=/app
 WORKDIR $APP_HOME
 
-# Install ffmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 

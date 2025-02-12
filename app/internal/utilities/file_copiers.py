@@ -6,6 +6,8 @@ from fastapi import (File, UploadFile)
 from PIL import Image
 from pillow_heif import register_heif_opener
 
+from .datetime_handler import DATE_TIME_FORMAT_FILE
+
 FILES_DIR = 'app/files'
 PDF_EXTENSION = '.pdf'
 
@@ -70,7 +72,7 @@ file – the file to be processed
 async def make_file_copy(file: UploadFile = File(...)) -> FileCopyResult:
     try:
         _, file_extension = os.path.splitext(file.filename)
-        file_copy_name_without_ext = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+        file_copy_name_without_ext = datetime.now().strftime(DATE_TIME_FORMAT_FILE)
         file_copy_name_with_ext = file_copy_name_without_ext + file_extension
         file_copy_directory = FILES_DIR + '/'
         file_copy_full_path = file_copy_directory + file_copy_name_with_ext

@@ -12,11 +12,18 @@ WORKDIR $APP_HOME
 COPY app/requirements.txt ./requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt \
+    && rm -rf ~/.cache/pip
+
+# REMOVE any pre-existing model cache in case it was accidentally baked into a previous layer
+RUN rm -rf /app/model_cache
 
 # Now copy the rest of the application code
 COPY app/ ./app/
 COPY scripts/process_pending_jobs.py ./
+
+# Just in case, wipe it again after copying files
+RUN rm -rf /app/model_cache
 
 # Set the command to run the script
 CMD ["python3", "process_pending_jobs.py"]

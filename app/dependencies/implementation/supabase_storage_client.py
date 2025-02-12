@@ -1,3 +1,5 @@
+import httpx
+
 from supabase import Client
 
 from ...dependencies.api.supabase_storage_base_class import SupabaseStorageBaseClass
@@ -38,14 +40,40 @@ class SupabaseStorageClient(SupabaseStorageBaseClass):
                                   destination_bucket: str,
                                   file_path: str):
         try:
-            download_response = self.download_file(source_bucket=source_bucket,
-                                                   storage_filepath=file_path)
+            source_file_url = self.get_audio_file_read_signed_url(file_path=file_path,
+                                                                  bucket_name=source_bucket)
+            destination_upload_url = self.get_audio_file_upload_signed_url(bucket_name=destination_bucket,
+                                                                           file_path=file_path)
 
-            self.upload_file(destination_bucket=destination_bucket,
-                             storage_filepath=file_path,
-                             content=download_response)
+            with httpx.stream("GET", source_file_url) as source_response:
+                # Ensure the request was successful
+                source_response.raise_for_status()
+
+                # Open a streaming PUT request to upload the file to the destination signed URL
+                with httpx.stream("PUT",
+                                  destination_upload_url,
+                                  content=source_response.iter_bytes()) as dest_response:
+                    # Ensure the upload was successful
+                    dest_response.raise_for_status()
 
             self.delete_file(source_bucket=source_bucket,
                              storage_filepath=file_path)
+        except Exception as e:
+            raise Exception(e)
+
+    def get_audio_file_upload_signed_url(self,
+                                         bucket_name: str,
+                                         file_path: str) -> str:
+        try:
+            return self.client.storage.from_(bucket_name).create_signed_upload_url(file_path)
+        except Exception as e:
+            raise Exception(e)
+
+    def get_audio_file_read_signed_url(self,
+                                       bucket_name: str,
+                                       file_path: str) -> str:
+        try:
+            return self.client.storage.from_(bucket_name).create_signed_url(path=file_path,
+                                                                                                      expires_in=600)
         except Exception as e:
             raise Exception(e)

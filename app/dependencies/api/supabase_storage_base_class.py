@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 
+AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
+AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
+
 class SupabaseStorageBaseClass(ABC):
 
     """
@@ -48,7 +51,31 @@ class SupabaseStorageBaseClass(ABC):
     :param destination_bucket: The name of the destination bucket.
     :param file_path: Path to the file in the source bucket.
     """
+    @abstractmethod
     def move_file_between_buckets(source_bucket: str,
                                   destination_bucket: str,
                                   file_path: str):
+        pass
+
+    """
+    Generates a signed url for updating an audio file.
+
+    :param file_path: the filepath to be used for the file that will be uploaded.
+    :param bucket_name: the bucket name for the file that will be uploaded.
+    """
+    @abstractmethod
+    def get_audio_file_upload_signed_url(file_path: str,
+                                         bucket_name: str) -> str:
+        pass
+
+    """
+    Generates a signed url for reading an audio file.
+
+    :param file_path: the filepath to be used for the file that will be read.
+    :param bucket_name: the bucket name for the file that will be uploaded.
+    """
+    @abstractmethod
+    def get_audio_file_read_signed_url(self,
+                                       bucket_name: str,
+                                       file_path: str) -> str:
         pass

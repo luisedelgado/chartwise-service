@@ -23,3 +23,13 @@ class FakeSupabaseStorageClient(SupabaseStorageBaseClass):
                                   destination_bucket: str,
                                   file_path: str):
         pass
+
+    def get_audio_file_upload_signed_url(self,
+                                         file_path: str,
+                                         bucket_name: str) -> str:
+        pass
+
+    def get_audio_file_read_signed_url(self,
+                                       bucket_name: str,
+                                       file_path: str) -> str:
+        pass

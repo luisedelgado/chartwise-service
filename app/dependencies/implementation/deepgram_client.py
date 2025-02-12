@@ -24,7 +24,7 @@ class DeepgramClient(DeepgramBaseClass):
     TRANSCRIPTION_POOL_TIMEOUT = 100
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
-    async def diarize_audio(self, file_full_path: str) -> str:
+    async def diarize_audio(self, audio_file_url: str) -> str:
         if use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()
@@ -44,16 +44,16 @@ class DeepgramClient(DeepgramBaseClass):
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                options = "&".join([self.DG_QUERY_PARAMS, "diarize=true"])
+                options = "&".join([self.DG_QUERY_PARAMS,
+                                    "diarize=true",
+                                    f"url={audio_file_url}"])
 
                 endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
 
-                with open(file_full_path, 'rb') as audio_file:
-                    # Increase the timeout to 300 seconds (5 minutes).
-                    response = requests.post(endpoint_configuration,
-                                             headers=headers,
-                                             data=audio_file,
-                                             timeout=(self.CONNECT_TIMEOUT, self.DIARIZATION_READ_TIMEOUT))
+                # Increase the timeout to 300 seconds (5 minutes).
+                response = requests.post(endpoint_configuration,
+                                         headers=headers,
+                                         timeout=(self.CONNECT_TIMEOUT, self.DIARIZATION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -67,14 +67,6 @@ class DeepgramClient(DeepgramBaseClass):
             # Process local copy with DeepgramSDK
             try:
                 deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
-
-                with open(file_full_path, "rb") as file:
-                    buffer_data = file.read()
-
-                payload: FileSource = {
-                    "buffer": buffer_data,
-                }
-
                 options = PrerecordedOptions(
                     model="nova-2",
                     smart_format=True,
@@ -85,12 +77,12 @@ class DeepgramClient(DeepgramBaseClass):
                 )
 
                 # Increase the timeout to 300 seconds (5 minutes).
-                response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
-                                                                              options,
-                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT,
-                                                                                              read=self.DIARIZATION_READ_TIMEOUT,
-                                                                                              write=self.DIARIZATION_WRITE_TIMEOUT,
-                                                                                              pool=self.DIARIZATION_POOL_TIMEOUT))
+                response = await deepgram.listen.asyncrest.v("1").transcribe_url(source={"url": audio_file_url},
+                                                                                 options=options,
+                                                                                 timeout=Timeout(connect=self.CONNECT_TIMEOUT,
+                                                                                                 read=self.DIARIZATION_READ_TIMEOUT,
+                                                                                                 write=self.DIARIZATION_WRITE_TIMEOUT,
+                                                                                                 pool=self.DIARIZATION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 utterances = json_response.get('results').get('utterances')
@@ -103,7 +95,7 @@ class DeepgramClient(DeepgramBaseClass):
         return diarization
 
     async def transcribe_audio(self,
-                               file_full_path: str) -> str:
+                               audio_file_url: str) -> str:
         if use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()
@@ -123,14 +115,15 @@ class DeepgramClient(DeepgramBaseClass):
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + self.DG_QUERY_PARAMS
+                options = "&".join([self.DG_QUERY_PARAMS,
+                                    f"url={audio_file_url}"])
 
-                with open(file_full_path, 'rb') as audio_file:
-                    # Increase the timeout to 300 seconds (5 minutes).
-                    response = requests.post(endpoint_configuration,
-                                             headers=headers,
-                                             data=audio_file,
-                                             timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
+                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
+
+                # Increase the timeout to 300 seconds (5 minutes).
+                response = requests.post(endpoint_configuration,
+                                            headers=headers,
+                                            timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -143,14 +136,6 @@ class DeepgramClient(DeepgramBaseClass):
             # Process local copy with DeepgramSDK
             try:
                 deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
-
-                with open(file_full_path, "rb") as file:
-                    buffer_data = file.read()
-
-                payload: FileSource = {
-                    "buffer": buffer_data,
-                }
-
                 options = PrerecordedOptions(
                     model="nova-2",
                     smart_format=True,
@@ -160,12 +145,12 @@ class DeepgramClient(DeepgramBaseClass):
                 )
 
                 # Increase the timeout to 300 seconds (5 minutes).
-                response = deepgram.listen.prerecorded.v("1").transcribe_file(payload,
-                                                                              options,
-                                                                              timeout=Timeout(connect=self.CONNECT_TIMEOUT,
-                                                                                              read=self.TRANSCRIPTION_READ_TIMEOUT,
-                                                                                              write=self.TRANSCRIPTION_WRITE_TIMEOUT,
-                                                                                              pool=self.TRANSCRIPTION_POOL_TIMEOUT))
+                response = await deepgram.listen.asyncrest.v("1").transcribe_url(source={"url": audio_file_url},
+                                                                                 options=options,
+                                                                                 timeout=Timeout(connect=self.CONNECT_TIMEOUT,
+                                                                                                 read=self.TRANSCRIPTION_READ_TIMEOUT,
+                                                                                                 write=self.TRANSCRIPTION_WRITE_TIMEOUT,
+                                                                                                 pool=self.TRANSCRIPTION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']

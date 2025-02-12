@@ -97,17 +97,14 @@ class TestingHarnessAudioProcessingRouter:
         self.client = TestClient(coordinator.app)
 
     def test_invoke_transcription_with_no_auth(self):
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                     data={
                                         "template": "soap",
                                         "patient_id": FAKE_PATIENT_ID,
                                         "session_date": "04-04-2022",
                                         "client_timezone_identifier": "UTC",
-                                    },
-                                    files=files)
+                                        "file_path": DUMMY_WAV_FILE_LOCATION
+                                    })
         assert response.status_code == 401
 
     def test_invoke_soap_transcription_success(self):
@@ -116,17 +113,15 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                     data={
                                         "template": "soap",
                                         "patient_id": FAKE_PATIENT_ID,
                                         "session_date": "04-04-2022",
                                         "client_timezone_identifier": "UTC",
+                                        "file_path": DUMMY_WAV_FILE_LOCATION
                                     },
-                                    files=files,
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
                                         "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -143,56 +138,49 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                     "template": "soap",
                                     "patient_id": FAKE_PATIENT_ID,
                                     "session_date": "04-04-2022",
                                     "client_timezone_identifier": "UTC",
+                                    "file_path": DUMMY_WAV_FILE_LOCATION
                                 },
-                               files=files,
-                               headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
-                               },
-                               cookies={
-                                   "authorization": self.auth_cookie
-                               })
+                                headers={
+                                    "store-access-token": FAKE_ACCESS_TOKEN,
+                                    "store-refresh-token": FAKE_REFRESH_TOKEN
+                                },
+                                cookies={
+                                    "authorization": self.auth_cookie
+                                })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 
     def test_invoke_diarization_with_no_auth(self):
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
-                                   "client_timezone_identifier": "UTC"
-                               },
-                               files=files)
+                                   "client_timezone_identifier": "UTC",
+                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                               })
         assert response.status_code == 401
 
     def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": "",
                                    "session_date": "10-24-2020",
                                    "template": "soap",
-                                   "client_timezone_identifier": "UTC"
+                                   "client_timezone_identifier": "UTC",
+                                   "file_path": DUMMY_WAV_FILE_LOCATION
                                },
-                               files=files,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -206,17 +194,15 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "session_date": "10/24/2020",
                                    "template": "soap",
-                                   "client_timezone_identifier": "UTC"
+                                   "client_timezone_identifier": "UTC",
+                                   "file_path": DUMMY_WAV_FILE_LOCATION
                                },
-                               files=files,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -230,17 +216,15 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
-                                   "client_timezone_identifier": "gfhhfhdfhhs"
+                                   "client_timezone_identifier": "gfhhfhdfhhs",
+                                   "file_path": DUMMY_WAV_FILE_LOCATION
                                },
-                               files=files,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -256,17 +240,15 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
-        files = {
-            "audio_file": (DUMMY_WAV_FILE_LOCATION, open(DUMMY_WAV_FILE_LOCATION, 'rb'), AUDIO_WAV_FILETYPE)
-        }
+
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
-                                   "client_timezone_identifier": "UTC"
+                                   "client_timezone_identifier": "UTC",
+                                   "file_path": DUMMY_WAV_FILE_LOCATION
                                },
-                               files=files,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN

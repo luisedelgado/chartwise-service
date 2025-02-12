@@ -7,7 +7,6 @@ __pycache__/
 storage/index_store.json
 .env
 .vscode/chartwise-service.code-workspace
-app/requirements-dev.txt
 
 # flyctl launch added from .gitignore
 **/.venv

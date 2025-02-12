@@ -33,7 +33,7 @@ class SupabaseClientFactory(SupabaseFactoryBaseClass):
             client: Client = create_client(url, key)
             client.auth.set_session(access_token=access_token,
                                     refresh_token=refresh_token)
-            storage_client = FakeSupabaseStorageClient() if self.environment != "prod" else SupabaseStorageClient(client=client)
+            storage_client = FakeSupabaseStorageClient() if self.environment == "dev" else SupabaseStorageClient(client=client)
             return SupabaseClient(client=client,
                                   storage_client=storage_client,
                                   is_admin=False)

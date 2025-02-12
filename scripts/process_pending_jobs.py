@@ -84,21 +84,9 @@ async def _process_pending_audio_job(job: dict):
     Arguments:
         job: A dictionary representing a pending audio job.
     """
-    local_temp_file = None
     supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for attempt_index in range(0, RETRY_ATTEMPTS):
         try:
-            storage_filepath = job["storage_filepath"]
-            file_extension = os.path.splitext(storage_filepath)[1].lower()
-            local_temp_file = "".join(["temp_file", file_extension])
-            response = supabase_client.storage_client.download_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                                    storage_filepath=storage_filepath)
-
-            # Save the file locally
-            with open(local_temp_file, "wb") as temp_file:
-                temp_file.write(response)
-
-            files_to_delete.append(local_temp_file)
             therapist_query = supabase_client.select(table_name=THERAPISTS_TABLE_NAME,
                                                      fields="*",
                                                      filters={"id": job["therapist_id"]})
@@ -108,7 +96,6 @@ async def _process_pending_audio_job(job: dict):
             language_code = therapist_query_dict["language_preference"]
 
             old_session_report_id = job["session_report_id"]
-            old_storage_filepath = job["storage_filepath"]
             session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
                                                           fields="*",
                                                           filters={"id": old_session_report_id})
@@ -123,17 +110,17 @@ async def _process_pending_audio_job(job: dict):
             formatted_session_date = convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_query_dict["session_date"],
                                                                        incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
             new_session_report_id = await audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
-                                                                                         auth_manager=auth_manager,
                                                                                          assistant_manager=assistant_manager,
                                                                                          supabase_client=supabase_client,
+                                                                                         auth_manager=auth_manager,
                                                                                          template=SessionNotesTemplate(session_report_query_dict["template"]),
                                                                                          therapist_id=job["therapist_id"],
                                                                                          session_id=uuid.uuid4(),
-                                                                                         language_code=language_code,
-                                                                                         patient_id=session_report_query_dict["patient_id"],
+                                                                                         file_path=job["storage_filepath"],
                                                                                          session_date=formatted_session_date,
+                                                                                         patient_id=session_report_query_dict["patient_id"],
                                                                                          environment=job["environment"],
-                                                                                         audio_file=local_temp_file,
+                                                                                         language_code=language_code,
                                                                                          diarize=is_diarization_job,
                                                                                          email_manager=email_manager)
 
@@ -143,9 +130,7 @@ async def _process_pending_audio_job(job: dict):
             assert (0 != len((new_session_report_query).data)), "Did not find a valid session report."
             assert new_session_report_query.dict()['data'][0]['processing_status'] != "failed", "Processing failed."
 
-            # Processing succeeded. Delete the old session report entry, as well as the backing file.
-            supabase_client.storage_client.delete_file(source_bucket=AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                       storage_filepath=old_storage_filepath)
+            # Processing succeeded. Delete the old session report entry (the backing file was already moved to the completed-jobs bucket downstream).
             supabase_client.delete(table_name=SESSION_REPORTS_TABLE_NAME,
                                    filters={"id": old_session_report_id})
             return

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from .fake_supabase_session import FakeSession
 from .fake_supabase_storage_client import FakeSupabaseStorageClient
-from ..api.supabase_base_class import SupabaseBaseClass
+from ..api.supabase_base_class import SupabaseBaseClass, SupabaseStorageBaseClass
 
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 
@@ -33,7 +33,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     session_upload_processing_status: str = None
 
     def __init__(self):
-        self.storage_client = FakeSupabaseStorageClient()
+        self.storage_client: SupabaseStorageBaseClass = FakeSupabaseStorageClient()
 
     def delete_user(self, user_id: str):
         pass

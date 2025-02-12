@@ -1,4 +1,4 @@
-import os, uuid
+import os, re, uuid
 
 from babel.numbers import format_currency, get_currency_precision
 from fastapi import HTTPException, status
@@ -138,3 +138,8 @@ def format_currency_amount(amount: float, currency_code: str) -> str:
 
     # Format the currency
     return format_currency(number=amount, currency=currency_code.upper(), locale='en_US')
+
+def is_valid_extension(ext: str) -> bool:
+    if ext is None:
+        return False
+    return bool(re.fullmatch(r"\.[a-zA-Z0-9]+", ext))

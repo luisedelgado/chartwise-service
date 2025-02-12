@@ -6,18 +6,18 @@ class DeepgramBaseClass(ABC):
     Transcribes an audio file, and returns the text.
 
     Arguments:
-    file_full_path – the audio file's full path.
+    audio_file_url – the audio file's URL.
     """
     @abstractmethod
-    async def transcribe_audio(file_full_path: str) -> str:
+    async def transcribe_audio(audio_file_url: str) -> str:
         pass
 
     """
     Diarizes an audio file based on the incoming data.
 
     Arguments:
-    file_full_path – the audio file's full path.
+    audio_file_url – the audio file's URL.
     """
     @abstractmethod
-    async def diarize_audio(file_full_path: str):
+    async def diarize_audio(audio_file_url: str):
         pass
