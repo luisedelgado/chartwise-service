@@ -7,8 +7,9 @@ NUM_SESSIONS_IN_BASIC_PLAN = 20
 
 def reached_subscription_tier_usage_limit(tier: str,
                                           therapist_id: str,
-                                          supabase_client: SupabaseBaseClass) -> bool:
-    if tier == "premium":
+                                          supabase_client: SupabaseBaseClass,
+                                          is_free_trial_active: bool) -> bool:
+    if is_free_trial_active or tier == "premium":
         return False
 
     today = datetime.now().date()

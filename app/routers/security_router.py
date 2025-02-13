@@ -226,7 +226,8 @@ class SecurityRouter:
 
                 reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
                                                                                  therapist_id=user_id,
-                                                                                 supabase_client=supabase_client)
+                                                                                 supabase_client=supabase_client,
+                                                                                 is_free_trial_active=is_free_trial_active)
 
             await dependency_container.inject_openai_client().clear_chat_history()
 
@@ -311,7 +312,8 @@ class SecurityRouter:
 
                 reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
                                                                                  therapist_id=user_id,
-                                                                                 supabase_client=supabase_client)
+                                                                                 supabase_client=supabase_client,
+                                                                                 is_free_trial_active=is_free_trial_active)
 
             token_refresh_data = {
                 "subscription_status" : {
