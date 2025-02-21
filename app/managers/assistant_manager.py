@@ -269,7 +269,8 @@ class AssistantManager:
             response = supabase_client.insert(table_name="patients", payload=payload)
             patient_id = response.dict()['data'][0]['id']
 
-            if filtered_body['onboarding_first_time_patient']:
+            is_first_time_patient = filtered_body['onboarding_first_time_patient']
+            if is_first_time_patient:
                 try:
                     pre_existing_history = filtered_body['pre_existing_history']
                     assert len(pre_existing_history or '') > 0
@@ -295,7 +296,6 @@ class AssistantManager:
                                                                           session_id=session_id)
 
             # Load default pre-session tray
-            has_preexisting_history = ('pre_existing_history' in filtered_body and len(filtered_body['pre_existing_history'] or '') > 0)
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
             await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
                                                                       patient_id=patient_id,
@@ -304,9 +304,9 @@ class AssistantManager:
                                                                       email_manager=email_manager,
                                                                       session_id=session_id,
                                                                       supabase_client=supabase_client,
-                                                                      has_preexisting_history=has_preexisting_history,
                                                                       patient_first_name=filtered_body['first_name'],
-                                                                      patient_gender=gender)
+                                                                      patient_gender=gender,
+                                                                      is_first_time_patient=is_first_time_patient)
             return patient_id
         except Exception as e:
             raise Exception(e)
@@ -1108,8 +1108,8 @@ class AssistantManager:
                                                              email_manager: EmailManager,
                                                              session_id: str,
                                                              supabase_client: SupabaseBaseClass,
-                                                             has_preexisting_history: bool,
                                                              patient_first_name: str,
+                                                             is_first_time_patient: bool,
                                                              patient_gender: str = None):
         try:
             therapist_data_query = supabase_client.select(table_name="therapists",
@@ -1130,8 +1130,9 @@ class AssistantManager:
 
             response_value = string_query.dict()['data'][0]['value']
             briefings = response_value['briefings']
+
             if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
-                default_briefing = (briefings['existing_patient']['value'] if has_preexisting_history
+                default_briefing = (briefings['existing_patient']['value'] if not is_first_time_patient
                                     else briefings['new_patient']['value'])
                 formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
                                                                      patient_first_name=patient_first_name)
@@ -1144,7 +1145,7 @@ class AssistantManager:
                 return
 
             # Select briefing with gender specification for pre-session tray
-            default_briefing = (briefings['existing_patient'] if has_preexisting_history
+            default_briefing = (briefings['existing_patient'] if not is_first_time_patient
                                 else briefings['new_patient'])
 
             if patient_gender is not None and patient_gender == "female":
