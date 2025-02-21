@@ -886,12 +886,10 @@ class PaymentProcessingRouter:
             invoice = event['data']['object']
 
         elif event_type == 'customer.subscription.created':
-            await self._handle_subscription_upsert(subscription_upsert_event=event,
-                                                   background_tasks=background_tasks)
+            await self._handle_subscription_upsert(subscription_upsert_event=event)
         elif event_type == 'customer.subscription.updated':
             # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
-            await self._handle_subscription_upsert(subscription_upsert_event=event,
-                                                   background_tasks=background_tasks)
+            await self._handle_subscription_upsert(subscription_upsert_event=event)
         elif event_type == 'customer.subscription.paused':
             # TODO: Send an automated email confirming the pause.
             pass
@@ -955,8 +953,7 @@ class PaymentProcessingRouter:
     # Private
 
     async def _handle_subscription_upsert(self,
-                                          subscription_upsert_event: dict,
-                                          background_tasks: BackgroundTasks):
+                                          subscription_upsert_event: dict):
         subscription = subscription_upsert_event['data']['object']
         subscription_metadata = subscription.get('metadata', {})
 
