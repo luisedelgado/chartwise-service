@@ -276,12 +276,12 @@ class AssistantManager:
                     assert len(pre_existing_history or '') > 0
 
                     background_tasks.add_task(dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
-                                            session_id,
-                                            therapist_id,
-                                            patient_id,
-                                            pre_existing_history,
-                                            dependency_container.inject_openai_client(),
-                                            self.chartwise_assistant.summarize_chunk)
+                                              session_id,
+                                              therapist_id,
+                                              patient_id,
+                                              pre_existing_history,
+                                              dependency_container.inject_openai_client(),
+                                              self.chartwise_assistant.summarize_chunk)
                 except Exception:
                     # If pre_existing_history is not in `filtered_body` or if it's empty, we won't do anything
                     pass
@@ -760,6 +760,7 @@ class AssistantManager:
                                                                     environment: str,
                                                                     therapist_id: str,
                                                                     session_id: str,
+                                                                    language_code: str,
                                                                     email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
                                                                     session_date: str = None):
@@ -772,9 +773,9 @@ class AssistantManager:
                                                                     },
                                                                     order_desc_column="session_date")
             patient_session_notes_data = patient_session_notes_response.dict()['data']
-            patient_last_session_date = (None if len(patient_session_notes_data) == 0
-                                         else patient_session_notes_data[0]['session_date'])
             total_session_count = len(patient_session_notes_data)
+            patient_last_session_date = (None if total_session_count == 0
+                                         else patient_session_notes_data[0]['session_date'])
 
             # New value for last_session_date will be the most recent session we already found
             if operation == SessionCrudOperation.DELETE_COMPLETED:
@@ -786,6 +787,38 @@ class AssistantManager:
                         filters={
                             'id': patient_id
                         })
+
+                if total_session_count == 0:
+                    # Load zero-state for this patient since we don't have any data from them anymore.
+                    patient_data_response = supabase_client.select(
+                        fields="*",
+                        table_name="patients",
+                        filters={
+                            "id": patient_id
+                        })
+                    patient_data = patient_data_response.dict()['data']
+                    assert len(patient_data) > 0, "No patient found with the incoming patient_id"
+
+                    # Load zero-state question suggestions in a background thread.
+                    await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
+                                                                                  language_code=language_code,
+                                                                                  patient_id=patient_id,
+                                                                                  environment=environment,
+                                                                                  therapist_id=therapist_id,
+                                                                                  email_manager=email_manager,
+                                                                                  session_id=session_id)
+
+                    # Load zero-state pre-session tray.
+                    await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
+                                                                              patient_id=patient_id,
+                                                                              environment=environment,
+                                                                              therapist_id=therapist_id,
+                                                                              email_manager=email_manager,
+                                                                              session_id=session_id,
+                                                                              supabase_client=supabase_client,
+                                                                              patient_first_name=patient_data[0]['first_name'],
+                                                                              patient_gender=patient_data[0]['gender'],
+                                                                              is_first_time_patient=patient_data[0]['onboarding_first_time_patient'])
                 return
 
             # The operation is either insert or update.
@@ -884,13 +917,13 @@ class AssistantManager:
                                                                          environment=environment,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
+                                                                         language_code=language_code,
                                                                          email_manager=email_manager,
                                                                          operation=SessionCrudOperation.INSERT_COMPLETED,
                                                                          session_date=session_date)
 
         background_tasks.add_task(self._generate_metrics_and_insights,
                                   language_code,
-                                  background_tasks,
                                   therapist_id,
                                   patient_id,
                                   environment,
@@ -942,6 +975,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
+                                                                         language_code=language_code,
                                                                          environment=environment,
                                                                          email_manager=email_manager,
                                                                          operation=SessionCrudOperation.UPDATE_COMPLETED,
@@ -949,7 +983,6 @@ class AssistantManager:
 
         background_tasks.add_task(self._generate_metrics_and_insights,
                                   language_code,
-                                  background_tasks,
                                   therapist_id,
                                   patient_id,
                                   environment,
@@ -968,8 +1001,8 @@ class AssistantManager:
                                                     email_manager: EmailManager,
                                                     supabase_client: SupabaseBaseClass):
         dependency_container.inject_pinecone_client().delete_session_vectors(user_id=therapist_id,
-                                                                          patient_id=patient_id,
-                                                                          date=session_date)
+                                                                             patient_id=patient_id,
+                                                                             date=session_date)
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been deleted.
@@ -977,6 +1010,7 @@ class AssistantManager:
                                                                          patient_id=patient_id,
                                                                          therapist_id=therapist_id,
                                                                          session_id=session_id,
+                                                                         language_code=language_code,
                                                                          environment=environment,
                                                                          email_manager=email_manager,
                                                                          operation=SessionCrudOperation.DELETE_COMPLETED,
@@ -984,7 +1018,6 @@ class AssistantManager:
 
         background_tasks.add_task(self._generate_metrics_and_insights,
                                   language_code,
-                                  background_tasks,
                                   therapist_id,
                                   patient_id,
                                   environment,
@@ -994,7 +1027,6 @@ class AssistantManager:
 
     async def _generate_metrics_and_insights(self,
                                              language_code: str,
-                                             background_tasks: BackgroundTasks,
                                              therapist_id: str,
                                              patient_id: str,
                                              environment: str,
