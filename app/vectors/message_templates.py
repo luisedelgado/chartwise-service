@@ -446,7 +446,8 @@ class PromptCrafter:
                 "Each session entry in the Sessions table includes a 'mini summary' of no more than 50 characters. "
                 "Your task is to create this mini summary. "
                 "It should be directly extracted from the content in the session notes, without any interpretation, rephrasing, or additional analysis. "
-                "Ensure the summary conveys the core content of the session notes as clearly as possible."
+                "Ensure the summary conveys the core content of the session notes as clearly as possible. "
+                "If the content provided does not contain any meaningful information to summarize, simply return the raw session notes unchanged. "
                 f"It is very important that your output is generated using language code {language_code}. "
             )
         except Exception as e:
