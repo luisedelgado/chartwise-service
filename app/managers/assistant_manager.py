@@ -28,6 +28,7 @@ class SessionCrudOperation(Enum):
 
 class PatientConsentmentChannel(Enum):
     UNDEFINED = "undefined"
+    NO_CONSENT = "no_consent"
     VERBAL = "verbal"
     WRITTEN = "written"
 
