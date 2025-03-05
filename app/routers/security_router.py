@@ -48,10 +48,9 @@ class SecurityRouter:
 
     ROUTER_TAG = "authentication"
     LOGOUT_ENDPOINT = "/v1/logout"
-    ACCOUNT_ENDPOINT = "/v1/account"
+    THERAPISTS_ENDPOINT = "/v1/therapists"
     SIGNIN_ENDPOINT = "/v1/signin"
     SESSION_REFRESH_ENDPOINT = "/v1/session-refresh"
-    SIGNUP_ENDPOINT = "/v1/signup"
 
     def __init__(self):
         self._auth_manager = AuthManager()
@@ -106,51 +105,49 @@ class SecurityRouter:
                                                background_tasks=background_tasks,
                                                session_id=session_id)
 
-        @self.router.post(self.SIGNUP_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def signup(body: SignupPayload,
-                         request: Request,
-                         response: Response,
-                         store_access_token: Annotated[str | None, Header()] = None,
-                         store_refresh_token: Annotated[str | None, Header()] = None,
-                         session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._signup_internal(body=body,
-                                               request=request,
-                                               response=response,
-                                               store_access_token=store_access_token,
-                                               store_refresh_token=store_refresh_token,
-                                               session_id=session_id)
+        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def add_therapist(body: SignupPayload,
+                                request: Request,
+                                response: Response,
+                                store_access_token: Annotated[str | None, Header()] = None,
+                                store_refresh_token: Annotated[str | None, Header()] = None,
+                                session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._add_therapist_internal(body=body,
+                                                      request=request,
+                                                      response=response,
+                                                      store_access_token=store_access_token,
+                                                      store_refresh_token=store_refresh_token,
+                                                      session_id=session_id)
 
-        @self.router.put(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def update_account_data(request: Request,
-                                      response: Response,
-                                      body: TherapistUpdatePayload,
-                                      store_access_token: Annotated[str | None, Header()] = None,
-                                      store_refresh_token: Annotated[str | None, Header()] = None,
-                                      authorization: Annotated[Union[str, None], Cookie()] = None,
-                                      session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._update_account_data_internal(request=request,
-                                                            response=response,
-                                                            body=body,
-                                                            store_access_token=store_access_token,
-                                                            store_refresh_token=store_refresh_token,
-                                                            authorization=authorization,
-                                                            session_id=session_id)
+        @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def update_therapist(request: Request,
+                                   response: Response,
+                                   body: TherapistUpdatePayload,
+                                   store_access_token: Annotated[str | None, Header()] = None,
+                                   store_refresh_token: Annotated[str | None, Header()] = None,
+                                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                                   session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._update_therapist_internal(request=request,
+                                                         response=response,
+                                                         body=body,
+                                                         store_access_token=store_access_token,
+                                                         store_refresh_token=store_refresh_token,
+                                                         authorization=authorization,
+                                                         session_id=session_id)
 
-        @self.router.delete(self.ACCOUNT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def delete_all_account_data(request: Request,
-                                          response: Response,
-                                          background_tasks: BackgroundTasks,
-                                          store_access_token: Annotated[str | None, Header()] = None,
-                                          store_refresh_token: Annotated[str | None, Header()] = None,
-                                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                                          session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_all_account_data_internal(request=request,
-                                                                response=response,
-                                                                background_tasks=background_tasks,
-                                                                store_access_token=store_access_token,
-                                                                store_refresh_token=store_refresh_token,
-                                                                authorization=authorization,
-                                                                session_id=session_id)
+        @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def delete_therapist(request: Request,
+                                   response: Response,
+                                   store_access_token: Annotated[str | None, Header()] = None,
+                                   store_refresh_token: Annotated[str | None, Header()] = None,
+                                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                                   session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._delete_therapist_internal(request=request,
+                                                         response=response,
+                                                         store_access_token=store_access_token,
+                                                         store_refresh_token=store_refresh_token,
+                                                         authorization=authorization,
+                                                         session_id=session_id)
 
     """
     Returns an oauth token to be used for invoking the endpoints.
@@ -370,7 +367,7 @@ class SecurityRouter:
         return {}
 
     """
-    Signs up a new therapist user.
+    Adds a new therapist.
 
     Arguments:
     body – the body associated with the request.
@@ -382,13 +379,13 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _signup_internal(self,
-                               body: SignupPayload,
-                               request: Request,
-                               response: Response,
-                               store_access_token: Annotated[str | None, Header()],
-                               store_refresh_token: Annotated[str | None, Header()],
-                               session_id: Annotated[Union[str, None], Cookie()]):
+    async def _add_therapist_internal(self,
+                                      body: SignupPayload,
+                                      request: Request,
+                                      response: Response,
+                                      store_access_token: Annotated[str | None, Header()],
+                                      store_refresh_token: Annotated[str | None, Header()],
+                                      session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
@@ -487,14 +484,14 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _update_account_data_internal(self,
-                                            request: Request,
-                                            response: Response,
-                                            body: TherapistUpdatePayload,
-                                            store_access_token: Annotated[str | None, Header()],
-                                            store_refresh_token: Annotated[str | None, Header()],
-                                            authorization: Annotated[Union[str, None], Cookie()],
-                                            session_id: Annotated[Union[str, None], Cookie()]):
+    async def _update_therapist_internal(self,
+                                         request: Request,
+                                         response: Response,
+                                         body: TherapistUpdatePayload,
+                                         store_access_token: Annotated[str | None, Header()],
+                                         store_refresh_token: Annotated[str | None, Header()],
+                                         authorization: Annotated[Union[str, None], Cookie()],
+                                         session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
@@ -553,7 +550,6 @@ class SecurityRouter:
     Deletes all data associated with a therapist.
 
     Arguments:
-    background_tasks – object for scheduling concurrent tasks.
     request – the request object.
     response – the object to be used for constructing the final response.
     store_access_token – the store access token.
@@ -561,14 +557,13 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _delete_all_account_data_internal(self,
-                                                background_tasks: BackgroundTasks,
-                                                request: Request,
-                                                response: Response,
-                                                store_access_token: Annotated[str | None, Header()],
-                                                store_refresh_token: Annotated[str | None, Header()],
-                                                authorization: Annotated[Union[str, None], Cookie()],
-                                                session_id: Annotated[Union[str, None], Cookie()]):
+    async def _delete_therapist_internal(self,
+                                         request: Request,
+                                         response: Response,
+                                         store_access_token: Annotated[str | None, Header()],
+                                         store_refresh_token: Annotated[str | None, Header()],
+                                         authorization: Annotated[Union[str, None], Cookie()],
+                                         session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR

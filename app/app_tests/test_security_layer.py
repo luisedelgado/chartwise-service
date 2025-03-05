@@ -98,7 +98,7 @@ class TestingHarnessSecurityRouter:
         assert "subscription_status" in response_json
 
     def test_add_therapist_with_missing_store_tokens(self):
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                json={
                                     "email": "foo@foo.com",
                                     "first_name": "foo",
@@ -116,7 +116,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
         self.fake_supabase_user_client.select_returns_data = True
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -138,7 +138,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
                                    "authorization": self.auth_cookie
                                },
@@ -163,7 +163,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                 cookies={
                                     "authorization": self.auth_cookie
                                 },
@@ -188,7 +188,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -213,7 +213,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.select_returns_data = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.post(SecurityRouter.SIGNUP_ENDPOINT,
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
@@ -232,7 +232,7 @@ class TestingHarnessSecurityRouter:
         assert response_json["token"] is not None
 
     def test_update_therapist_with_invalid_credentials(self):
-        response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             json={
                                 "email": "foo@foo.com",
                                 "first_name": "foo",
@@ -247,7 +247,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": self.auth_cookie
                             },
@@ -269,7 +269,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": self.auth_cookie
                             },
@@ -291,7 +291,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": self.auth_cookie
                             },
@@ -313,7 +313,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.put(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
                                 "authorization": self.auth_cookie
                             },
@@ -349,7 +349,7 @@ class TestingHarnessSecurityRouter:
         assert "expires=" in cookie_header or "Max-Age=0" in cookie_header
 
     def test_delete_therapist_with_missing_auth(self):
-        response = self.client.delete(SecurityRouter.ACCOUNT_ENDPOINT)
+        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT)
         assert response.status_code == 401
 
     def test_delete_therapist_success(self):
@@ -357,7 +357,7 @@ class TestingHarnessSecurityRouter:
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
         self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(SecurityRouter.ACCOUNT_ENDPOINT,
+        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
                                         cookies={
                                             "authorization": self.auth_cookie
                                         },
