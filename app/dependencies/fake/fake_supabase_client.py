@@ -31,6 +31,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
+    email_is_verified: bool = True
 
     def __init__(self):
         self.storage_client: SupabaseStorageBaseClass = FakeSupabaseStorageClient()
@@ -92,6 +93,11 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if not self.select_returns_data:
             return FakeSupabaseResult(data=[])
 
+        if table_name == "therapists_email_verification":
+            return FakeSupabaseResult(data=[{
+                "therapist_id": FAKE_USER_ID_TOKEN,
+                "email_is_verified": self.email_is_verified,
+            }])
         if table_name == "therapists":
             return FakeSupabaseResult(data=[{
                 "language_preference": "en-US",
