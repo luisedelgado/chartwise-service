@@ -1,12 +1,15 @@
-# Use the specified Python base image
 FROM python:3.12.3-slim-bullseye
 
-# Set environment variables
 ENV PYTHONUNBUFFERED True
 ENV APP_HOME /app
-
-# Set the working directory inside the container
 WORKDIR $APP_HOME
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CPU-only PyTorch FIRST, and then transformers
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.6.0
+RUN pip install --no-cache-dir transformers==4.48.0
 
 # Copy only the requirements.txt file for caching pip install step
 COPY app/requirements.txt ./requirements.txt
@@ -18,9 +21,8 @@ RUN pip install --no-cache-dir --prefer-binary -r requirements.txt \
 # REMOVE any pre-existing model cache in case it was accidentally baked into a previous layer
 RUN rm -rf /app/model_cache
 
-# Now copy the rest of the application code
-COPY app/ ./app/
-COPY scripts/process_pending_jobs.py ./
+# Copy entire project
+COPY . ./
 
 # Just in case, wipe it again after copying files
 RUN rm -rf /app/model_cache
