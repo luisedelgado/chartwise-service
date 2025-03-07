@@ -226,17 +226,6 @@ class SecurityRouter:
                                                                                  supabase_client=supabase_client,
                                                                                  is_free_trial_active=is_free_trial_active)
 
-            # Check email verification status
-            email_verification_response = supabase_client.select(fields="*",
-                                                                 filters={
-                                                                     'therapist_id': user_id,
-                                                                 },
-                                                                 table_name="therapists_email_verification")
-            assert (0 != len((email_verification_response).data)), "Therapist email is not verified."
-
-            email_verification_data_dict = email_verification_response.dict()
-            assert email_verification_data_dict['data'][0]['email_is_verified'], "Therapist email is not verified."
-
             await dependency_container.inject_openai_client().clear_chat_history()
 
             signin_data = {

@@ -49,25 +49,6 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 401
 
-    def test_login_for_therapist_unverified_email(self):
-        self.fake_supabase_admin_client.return_authenticated_session = True
-        self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
-        self.fake_supabase_user_client.user_authentication_id = "e"
-        self.fake_supabase_user_client.select_returns_data = True
-        self.fake_supabase_user_client.email_is_verified = False
-        self.fake_supabase_admin_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_admin_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_admin_client.user_authentication_id = FAKE_THERAPIST_ID
-        response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                                    json={
-                                        "email": "foo@foo.com"
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
-        assert response.status_code == 401
-
     def test_login_for_token_authenticated_success(self):
         self.fake_supabase_admin_client.return_authenticated_session = True
         self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
