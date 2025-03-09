@@ -113,7 +113,6 @@ class SecurityRouter:
                                                       body=body,
                                                       request=request,
                                                       response=response,
-                                                      authorization=authorization,
                                                       store_access_token=store_access_token,
                                                       store_refresh_token=store_refresh_token,
                                                       session_id=session_id)
