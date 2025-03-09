@@ -95,13 +95,9 @@ class SecurityRouter:
         async def logout(request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
-                         store_access_token: Annotated[str | None, Header()] = None,
-                         store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(request=request,
                                                response=response,
-                                               store_access_token=store_access_token,
-                                               store_refresh_token=store_refresh_token,
                                                background_tasks=background_tasks,
                                                session_id=session_id)
 
@@ -109,12 +105,15 @@ class SecurityRouter:
         async def add_therapist(body: SignupPayload,
                                 request: Request,
                                 response: Response,
+                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                 store_access_token: Annotated[str | None, Header()] = None,
                                 store_refresh_token: Annotated[str | None, Header()] = None,
                                 session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._add_therapist_internal(body=body,
+            return await self._add_therapist_internal(authorization=authorization,
+                                                      body=body,
                                                       request=request,
                                                       response=response,
+                                                      authorization=authorization,
                                                       store_access_token=store_access_token,
                                                       store_refresh_token=store_refresh_token,
                                                       session_id=session_id)
@@ -195,53 +194,18 @@ class SecurityRouter:
 
             auth_token = await self._auth_manager.refresh_session(user_id=user_id,
                                                                   response=response)
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': user_id,
-                                                   },
-                                                   table_name="subscription_status")
-            customer_data_dict = customer_data.dict()
-
-            # Check if this user is already a customer, and has subscription history
-            if len(customer_data_dict['data']) == 0:
-                is_subscription_active = False
-                is_free_trial_active = False
-                tier = None
-                reached_tier_usage_limit = None
-            else:
-                is_subscription_active = customer_data_dict['data'][0]['is_active']
-                tier = customer_data_dict['data'][0]['current_tier']
-
-                # Determine if free trial is still active
-                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
-
-                if free_trial_end_date is not None:
-                    free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-                    is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
-                else:
-                    is_free_trial_active = False
-
-                reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
-                                                                                 therapist_id=user_id,
-                                                                                 supabase_client=supabase_client,
-                                                                                 is_free_trial_active=is_free_trial_active)
-
             await dependency_container.inject_openai_client().clear_chat_history()
 
-            signin_data = {
-                "subscription_status" : {
-                    "is_free_trial_active": is_free_trial_active,
-                    "is_subscription_active": is_subscription_active,
-                    "tier": tier,
-                    "reached_tier_usage_limit": reached_tier_usage_limit
-                }
+            response_payload = {
+                "token": auth_token.model_dump()
             }
-            signin_data["token"] = auth_token.model_dump()
-
-            return signin_data
+            subscription_data = self.subscription_data(supabase_client=supabase_client,
+                                                       user_id=user_id)
+            response_payload.update(subscription_data)
+            return response_payload
         except Exception as e:
-            status_code = status.HTTP_401_UNAUTHORIZED
             description = str(e)
+            status_code = status.HTTP_401_UNAUTHORIZED
             dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
                                                                   session_id=session_id,
                                                                   method=request.method,
@@ -349,19 +313,8 @@ class SecurityRouter:
                                request: Request,
                                response: Response,
                                background_tasks: BackgroundTasks,
-                               store_access_token: Annotated[str | None, Header()],
-                               store_refresh_token: Annotated[str | None, Header()],
                                session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
-        user_id = None
-        try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            user_id = supabase_client.get_current_user_id()
-        except Exception:
-            pass
-
-        request.state.therapist_id = user_id
         self._auth_manager.logout(response)
         background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
         return {}
@@ -370,6 +323,7 @@ class SecurityRouter:
     Adds a new therapist.
 
     Arguments:
+    authorization – the authorization cookie, if exists.
     body – the body associated with the request.
     password – the password associated with the new account.
     request – the request object.
@@ -380,6 +334,7 @@ class SecurityRouter:
     session_id – the session_id cookie, if exists.
     """
     async def _add_therapist_internal(self,
+                                      authorization: Annotated[Union[str, None], Cookie()],
                                       body: SignupPayload,
                                       request: Request,
                                       response: Response,
@@ -387,26 +342,11 @@ class SecurityRouter:
                                       store_refresh_token: Annotated[str | None, Header()],
                                       session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
-        if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
 
-        try:
-            # This endpoint is allowed to be invoked in a user's zero journey when creating an account.
-            # The flow is to first add the user to the auth table, and then this codepath adds them to the therapists' table.
-            # Because of this, the client may not have an auth cookie yet, so if it isn't present, we'll attempt authentication.
-            authorization_data = await self._signin_internal(email=body.email,
-                                                             store_access_token=store_access_token,
-                                                             store_refresh_token=store_refresh_token,
-                                                             request=request,
-                                                             response=response,
-                                                             session_id=session_id)
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  session_id=session_id,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e))
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
             raise security.STORE_TOKENS_ERROR
 
         try:
@@ -414,8 +354,8 @@ class SecurityRouter:
                                                                                                          refresh_token=store_refresh_token)
             user_id = supabase_client.get_current_user_id()
             request.state.therapist_id = user_id
-            await self._auth_manager.refresh_session(user_id=user_id,
-                                                     response=response)
+            auth_token = await self._auth_manager.refresh_session(user_id=user_id,
+                                                                  response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
@@ -456,9 +396,12 @@ class SecurityRouter:
             await self._email_manager.send_customer_relations_alert(alert)
 
             response_payload = {
-                "therapist_id": user_id
+                "therapist_id": user_id,
+                "token": auth_token.model_dump()
             }
-            response_payload.update(authorization_data)
+            subscription_data = self.subscription_data(supabase_client=supabase_client,
+                                                       user_id=user_id)
+            response_payload.update(subscription_data)
             return response_payload
         except Exception as e:
             description = str(e)
@@ -656,3 +599,56 @@ class SecurityRouter:
                                                                   description=description)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+
+    """
+    Returns a JSON object representing the subscription status of the user.
+    Arguments:
+    supabase_client – the supabase client to be used for querying the database.
+    user_id – the id of the user.
+    """
+    def subscription_data(self,
+                            supabase_client: SupabaseBaseClass,
+                            user_id: str,):
+        try:
+            customer_data = supabase_client.select(fields="*",
+                                                filters={
+                                                    'therapist_id': user_id,
+                                                },
+                                                table_name="subscription_status")
+            customer_data_dict = customer_data.dict()
+
+            # Check if this user is already a customer, and has subscription history
+            if len(customer_data_dict['data']) == 0:
+                is_subscription_active = False
+                is_free_trial_active = False
+                tier = None
+                reached_tier_usage_limit = None
+            else:
+                is_subscription_active = customer_data_dict['data'][0]['is_active']
+                tier = customer_data_dict['data'][0]['current_tier']
+
+                # Determine if free trial is still active
+                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+
+                if free_trial_end_date is not None:
+                    free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
+                    is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+                else:
+                    is_free_trial_active = False
+
+                reached_tier_usage_limit = reached_subscription_tier_usage_limit(tier=tier,
+                                                                                    therapist_id=user_id,
+                                                                                    supabase_client=supabase_client,
+                                                                                    is_free_trial_active=is_free_trial_active)
+            return {
+                "subscription_status" : {
+                    "is_free_trial_active": is_free_trial_active,
+                    "is_subscription_active": is_subscription_active,
+                    "tier": tier,
+                    "reached_tier_usage_limit": reached_tier_usage_limit
+                }
+            }
+        except Exception as e:
+            return {
+                "subscription_status": None
+            }
