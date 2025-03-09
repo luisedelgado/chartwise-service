@@ -109,6 +109,21 @@ class TestingHarnessSecurityRouter:
                                })
         assert response.status_code == 401
 
+    def test_add_therapist_with_auth_token_but_missing_store_tokens(self):
+        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },
+                                    json={
+                                    "email": "foo@foo.com",
+                                    "first_name": "foo",
+                                    "last_name": "bar",
+                                    "birth_date": "01/01/2000",
+                                    "language_preference": "es-419",
+                                    "gender": "male"
+                               })
+        assert response.status_code == 401
+
     def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
         self.fake_supabase_user_client.user_authentication_email = "foo@foo.com"
         self.fake_supabase_user_client.user_authentication_id = "e"
@@ -121,7 +136,10 @@ class TestingHarnessSecurityRouter:
                                    "store-access-token": FAKE_ACCESS_TOKEN,
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
-                               json={
+                               cookies={
+                                        "authorization": self.auth_cookie
+                                },
+                                json={
                                     "email": "foo@foo.com",
                                     "first_name": "foo",
                                     "last_name": "bar",
@@ -193,6 +211,9 @@ class TestingHarnessSecurityRouter:
                                 "store-access-token": FAKE_ACCESS_TOKEN,
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
+                            cookies={
+                                "authorization": self.auth_cookie
+                            },
                             json={
                                 "email": "foo@foo.com",
                                 "first_name": "foo",
@@ -218,6 +239,9 @@ class TestingHarnessSecurityRouter:
                                 "store-access-token": FAKE_ACCESS_TOKEN,
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
+                            cookies={
+                                        "authorization": self.auth_cookie
+                                    },
                             json={
                                 "email": "foo@foo.com",
                                 "first_name": "foo",
