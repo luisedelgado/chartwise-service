@@ -23,11 +23,11 @@ class ResendClient(ResendBaseClass):
                                             language_code: str,
                                             to_address: str):
         try:
-            if language_code.startswith("es-"):
+            if language_code.startswith("es"):
                 subject = "¡Te damos la bienvenida a ChartWise!"
                 from_address = "El equipo de ChartWise <hello@chartwise.ai>"
                 use_spanish_template = True
-            elif language_code.startswith("en-"):
+            elif language_code.startswith("en"):
                 subject = "Welcome to ChartWise!"
                 from_address = "ChartWise Team <hello@chartwise.ai>"
                 use_spanish_template = False

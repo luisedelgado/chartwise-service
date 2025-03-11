@@ -862,11 +862,11 @@ class AssistantManager:
         else:
             language_code = self.cached_patient_query_data.response_language_code
 
-        if language_code.startswith('es-'):
+        if language_code.startswith('es'):
             # Spanish
             return ("Parece que hay un problema que me está impidiendo poder responder tu pregunta. "
                     "Estamos trabajando en ello— ¡Vuelve a intentarlo en un momento!")
-        elif language_code.startswith('en-'):
+        elif language_code.startswith('en'):
             # English
             return ("Looks like there's a minor issue that's preventing me from being able to respond your question. "
                     "We're on it— please check back shortly!")
@@ -1081,13 +1081,13 @@ class AssistantManager:
                                                 supabase_client=supabase_client)
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
-        if language_code.startswith('es-'):
+        if language_code.startswith('es'):
             # Spanish
             return [
                 'question_suggestions_no_data_default_es_1',
                 'question_suggestions_no_data_default_es_2'
             ]
-        elif language_code.startswith('en-'):
+        elif language_code.startswith('en'):
             # English
             return [
                 'question_suggestions_no_data_default_en_1',
