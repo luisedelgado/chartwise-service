@@ -313,7 +313,9 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            if (0 == len((customer_data).data)):
+                return {"subscriptions": []}
+
             customer_id = customer_data.dict()['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
@@ -679,7 +681,9 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
+            if (0 == len((customer_data).data)):
+                return {"payments": []}
+
             customer_id = customer_data.dict()['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
