@@ -20,12 +20,16 @@ async def lifespan(_: FastAPI):
 class EndpointServiceCoordinator:
 
     origins = [
-        # Daniel Daza Development
+        # localhost
         "https://localhost:5173",
         # staging webapp
+        "https://www.staging.api.chartwise.ai",
+        "https://www.staging.app.chartwise.ai",
         "https://staging.api.chartwise.ai",
         "https://staging.app.chartwise.ai",
         # prod webapp
+        "https://www.api.chartwise.ai",
+        "https://www.app.chartwise.ai",
         "https://api.chartwise.ai",
         "https://app.chartwise.ai",
     ]

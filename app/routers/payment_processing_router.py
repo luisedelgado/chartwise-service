@@ -974,8 +974,8 @@ class PaymentProcessingRouter:
 
         try:
             therapist_query = supabase_client.select(fields="*",
-                                                        filters={ 'therapist_id': therapist_id },
-                                                        table_name="subscription_status")
+                                                     filters={ 'therapist_id': therapist_id },
+                                                     table_name="subscription_status")
             welcome_email_sent = (0 != len((therapist_query).data)) and not (therapist_query.dict()['data'][0]['welcome_email_sent'])
 
             # Get customer data
@@ -1014,8 +1014,8 @@ class PaymentProcessingRouter:
                 payload['is_active'] = False
 
             supabase_client.upsert(payload=payload,
-                                    table_name="subscription_status",
-                                    on_conflict="therapist_id")
+                                   table_name="subscription_status",
+                                   on_conflict="therapist_id")
 
             if not welcome_email_sent:
                 # Therapist is entering a valid subscription status, let's send a welcome email
@@ -1032,8 +1032,8 @@ class PaymentProcessingRouter:
                                        })
 
                 therapist_query = supabase_client.select(fields="*",
-                                                            filters={ 'id': therapist_id },
-                                                            table_name="therapists")
+                                                         filters={ 'id': therapist_id },
+                                                         table_name="therapists")
                 therapist_query_data = therapist_query.dict()
                 assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
 
