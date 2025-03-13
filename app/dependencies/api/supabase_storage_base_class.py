@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
 AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
-AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
 
 class SupabaseStorageBaseClass(ABC):
 

@@ -14,7 +14,6 @@ from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 class MediaProcessingManager(ABC):
 
     AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
-    AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
 
     def __init__(self):
         self._email_manager = EmailManager()
@@ -79,15 +78,14 @@ class MediaProcessingManager(ABC):
             today = datetime.now().date()
             today_formatted = today.strftime(DATE_TIME_FORMAT)
             supabase_client.update(table_name="pending_audio_jobs",
-                                filters={
-                                    "session_report_id": session_notes_id
-                                },
-                                payload={
-                                    "last_attempt_at_processing_date": today_formatted,
-                                    "successful_processing_date": today_formatted,
-                                })
+                                   filters={
+                                       "session_report_id": session_notes_id
+                                   },
+                                   payload={
+                                       "last_attempt_at_processing_date": today_formatted,
+                                       "successful_processing_date": today_formatted,
+                                   })
 
-            # Move the file from the processing pending bucket to the processing completed bucket.
-            supabase_client.storage_client.move_file_between_buckets(source_bucket=self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-                                                                     destination_bucket=self.AUDIO_FILES_PROCESSING_COMPLETED_BUCKET,
-                                                                     file_path=storage_filepath)
+            # Delete the file from the processing bucket.
+            supabase_client.storage_client.delete_file(self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                                                       storage_filepath=storage_filepath)
