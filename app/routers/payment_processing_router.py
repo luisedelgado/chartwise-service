@@ -965,7 +965,7 @@ class PaymentProcessingRouter:
             therapist_id = subscription_metadata.get('therapist_id', None)
             session_id = subscription_metadata.get('session_id', None)
 
-            assert len(therapist_id or None) > 0, "Did not find a therapist ID in the subscription metadata."
+            assert len(therapist_id or '') > 0, "Did not find a therapist ID in the subscription metadata."
         except Exception:
             return
 
@@ -973,10 +973,10 @@ class PaymentProcessingRouter:
         supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
         try:
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={ 'therapist_id': therapist_id },
-                                                     table_name="subscription_status")
-            welcome_email_sent = (0 != len((therapist_query).data)) and not (therapist_query.dict()['data'][0]['welcome_email_sent'])
+            therapist_subscription_query = supabase_client.select(fields="*",
+                                                                  filters={ 'therapist_id': therapist_id },
+                                                                  table_name="subscription_status")
+            is_new_customer = (0 != len((therapist_subscription_query).data))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -1017,20 +1017,7 @@ class PaymentProcessingRouter:
                                    table_name="subscription_status",
                                    on_conflict="therapist_id")
 
-            if not welcome_email_sent:
-                # Therapist is entering a valid subscription status, let's send a welcome email
-                await self._email_manager.send_new_user_welcome_email(therapist_id=therapist_id,
-                                                                      supabase_client=supabase_client)
-
-                # Update our records so that we know we've done the first outreach.
-                supabase_client.update(table_name="subscription_status",
-                                       payload={
-                                           "welcome_email_sent": True
-                                       },
-                                       filters={
-                                           "therapist_id": therapist_id
-                                       })
-
+            if is_new_customer:
                 therapist_query = supabase_client.select(fields="*",
                                                          filters={ 'id': therapist_id },
                                                          table_name="therapists")

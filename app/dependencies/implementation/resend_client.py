@@ -14,34 +14,8 @@ class ResendClient(ResendBaseClass):
     def __init__(self):
         resend.api_key = os.environ.get('RESEND_API_KEY')
         env = Environment(loader=FileSystemLoader("app/internal/email_templates"))
-        self.welcome_template = env.get_template("welcome.html")
         self.internal_eng_alert_template = env.get_template("internal_eng_alert.html")
         self.customer_relations_alert_template = env.get_template("customer_relations_alert.html")
-
-    def send_new_subscription_welcome_email(self,
-                                            user_first_name: str,
-                                            language_code: str,
-                                            to_address: str):
-        try:
-            if language_code.startswith("es"):
-                subject = "¡Te damos la bienvenida a ChartWise!"
-                from_address = "El equipo de ChartWise <hello@chartwise.ai>"
-                use_spanish_template = True
-            elif language_code.startswith("en"):
-                subject = "Welcome to ChartWise!"
-                from_address = "ChartWise Team <hello@chartwise.ai>"
-                use_spanish_template = False
-            else:
-                raise Exception("Unrecognized language code")
-
-            html_content = self.welcome_template.render(user_first_name=user_first_name,
-                                                        use_spanish_template=use_spanish_template)
-            self._send_email(from_address=from_address,
-                             to_addresses=[to_address],
-                             subject=subject,
-                             html=html_content)
-        except Exception as e:
-            raise Exception(e)
 
     def send_eng_team_internal_alert_email(self,
                                            subject: str,
