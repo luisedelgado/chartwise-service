@@ -45,6 +45,14 @@
               "remoteRoot": "/app"
             }
           ]
+        },
+        {
+          "name": "Python Debugger: Single File",
+          "type": "debugpy",
+          "request": "launch",
+          "program": "${file}",
+          "console": "integratedTerminal",
+          "justMyCode": true
         }
     ]
 }

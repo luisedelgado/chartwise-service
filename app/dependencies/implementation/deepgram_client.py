@@ -62,7 +62,7 @@ class DeepgramClient(DeepgramBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
         else:
-            # Process local copy with DeepgramSDK
+            # Process with DeepgramSDK
             try:
                 deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
                 options = PrerecordedOptions(
@@ -129,7 +129,7 @@ class DeepgramClient(DeepgramBaseClass):
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
         else:
-            # Process local copy with DeepgramSDK
+            # Process with DeepgramSDK
             try:
                 deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
                 options = PrerecordedOptions(
