@@ -11,6 +11,9 @@ from .datetime_handler import DATE_TIME_FORMAT_FILE
 FILES_DIR = 'app/files'
 PDF_EXTENSION = '.pdf'
 
+# Register HEIF opener for Pillow
+register_heif_opener()
+
 """
 A result representation of an image-copy operation.
 """
@@ -47,10 +50,6 @@ async def make_image_pdf_copy(image: UploadFile = File(...)) -> FileCopyResult:
         image_copy_directory = FILES_DIR + '/'
         image_copy_pdf_path = image_copy_directory + copy_bare_name + PDF_EXTENSION
         file_copies = copy_file_result.file_copies
-
-        # Handle .heic files by registering the HEIF opener.
-        if copy_extension == '.heic':
-            register_heif_opener()
 
         Image.open(copy_file_result.file_copy_full_path).convert('RGB').save(image_copy_pdf_path)
         file_copies.append(image_copy_pdf_path)

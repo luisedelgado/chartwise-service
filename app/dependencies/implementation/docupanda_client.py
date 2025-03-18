@@ -39,7 +39,6 @@ class DocupandaClient(DocupandaBaseClass):
                 "accept": "application/json",
                 "content-type": "application/json",
                 "X-API-Key": os.getenv("DOCUPANDA_API_KEY"),
-                "x-portkey-metadata": json.dumps({"hidden_provider": "docupanda"})
             }
             url = base_url + document_endpoint
             response = requests.post(url, json={"document": payload}, headers=headers)
