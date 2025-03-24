@@ -37,12 +37,12 @@ def deploy_process(commands: list[str]):
     os.close(master_fd)
 
 def run_tests() -> bool:
-    venv_python_dir = Path("/Users/luisdelgado/Documents/ChartWiseService/chartwise-service/.venv/bin")
+    venv_python_dir = Path("/Users/luisdelgado/Documents/ChartWiseServiceApp/chartwise-service/.venv/bin")
     if not venv_python_dir.is_dir():
         print(f"The following virtual env directory was not found: {venv_python_dir}")
         return False
 
-    venv_python = "/Users/luisdelgado/Documents/ChartWiseService/chartwise-service/.venv/bin/python"
+    venv_python = "/Users/luisdelgado/Documents/ChartWiseServiceApp/chartwise-service/.venv/bin/python"
     tests_result = subprocess.run([venv_python, "-m", "pytest", "-p", "no:warnings"], capture_output=True, text=True)
     print(tests_result.stdout)
     if tests_result.returncode != 0:

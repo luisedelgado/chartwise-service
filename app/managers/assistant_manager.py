@@ -111,8 +111,7 @@ class AssistantManager:
                                                   "id": session_report_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No session report found with the incoming session_report_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
@@ -283,8 +282,7 @@ class AssistantManager:
                                                   "id": patient_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No patient found with the incoming patient_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
@@ -921,8 +919,7 @@ class AssistantManager:
                                                   "patient_id": patient_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No data found with the incoming patient_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
@@ -936,8 +933,7 @@ class AssistantManager:
                                                   "patient_id": patient_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No data found with the incoming patient_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
@@ -951,8 +947,7 @@ class AssistantManager:
                                                   "patient_id": patient_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No data found with the incoming patient_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
@@ -966,8 +961,7 @@ class AssistantManager:
                                                   "patient_id": patient_id
                                               })
             response_data = response['data']
-            assert len(response_data) > 0, "No data found with the incoming patient_id"
-            return response_data[0]
+            return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
             raise Exception(e)
 
