@@ -265,131 +265,132 @@ class PineconeClient(PineconeBaseClass):
                                        rerank_vectors: bool,
                                        include_preexisting_history: bool = True,
                                        session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
-        missing_session_data_error = ("There's no data from patient sessions. "
-                                      "They may have not gone through their first session since the practitioner added them to the platform. ")
+        try:
+            missing_session_data_error = ("There's no data from patient sessions. "
+                                        "They may have not gone through their first session since the practitioner added them to the platform. ")
 
-        bucket_index = self._get_bucket_for_user(user_id)
-        index = self._pc.Index(bucket_index)
-        namespace = self._get_namespace(user_id=user_id,
-                                        patient_id=patient_id)
+            bucket_index = self._get_bucket_for_user(user_id)
+            index = self._pc.Index(bucket_index)
+            namespace = self._get_namespace(user_id=user_id,
+                                            patient_id=patient_id)
 
-        if include_preexisting_history:
-            # Fetch patient's historical context
-            found_historical_context, historical_context = await self.fetch_historical_context(index=index, namespace=namespace)
+            if include_preexisting_history:
+                # Fetch patient's historical context
+                found_historical_context, historical_context = await self.fetch_historical_context(index=index, namespace=namespace)
 
-            if found_historical_context:
-                historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
-                missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
-                                            "They may have not gone through their first session since the practitioner added them to the platform. ")
+                if found_historical_context:
+                    historical_context = ("Here's an outline of the patient's pre-existing history:\n" + historical_context)
+                    missing_session_data_error = (f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
+                                                "They may have not gone through their first session since the practitioner added them to the platform. ")
+                else:
+                    historical_context = ""
             else:
                 historical_context = ""
-        else:
-            historical_context = ""
-            found_historical_context = False
+                found_historical_context = False
 
-        # Check if caller wants us to fetch any vectors
-        if query_top_k > 0:
-            embeddings = await openai_client.create_embeddings(text=query_input)
-            query_result = index.query(vector=embeddings,
-                                       top_k=query_top_k,
-                                       namespace=namespace,
-                                       include_metadata=True)
-            query_matches = query_result.to_dict()['matches']
+            # Check if caller wants us to fetch any vectors
+            if query_top_k > 0:
+                embeddings = await openai_client.create_embeddings(text=query_input)
+                query_result = index.query(vector=embeddings,
+                                        top_k=query_top_k,
+                                        namespace=namespace,
+                                        include_metadata=True)
+                query_matches = query_result.to_dict()['matches']
 
-            # There's no session data, return a message explaining this, and offer the historical context, if exists.
-            if len(query_matches or []) == 0:
-                return missing_session_data_error
+                # There's no session data, return a message explaining this, and offer the historical context, if exists.
+                if len(query_matches or []) == 0:
+                    return missing_session_data_error
 
-            retrieved_docs = []
-            for match in query_matches:
-                metadata = match['metadata']
-                retrieved_docs.append({"session_date": self.encryptor.decrypt(metadata['session_date']),
-                                       "chunk_summary": self.encryptor.decrypt(metadata['chunk_summary'])})
+                retrieved_docs = []
+                for match in query_matches:
+                    metadata = match['metadata']
+                    retrieved_docs.append({"session_date": metadata['session_date'],
+                                           "chunk_summary": self.encryptor.decrypt_base64_str(metadata['chunk_summary'])})
 
-        # Check if caller wants us to rerank vectors
-        if rerank_vectors:
-            reranked_documents = self.rerank_docs(query_input=query_input,
-                                                  retrieved_docs=retrieved_docs,
-                                                  batch_size=query_top_k)
+            # Check if caller wants us to rerank vectors
+            if rerank_vectors:
+                reranked_documents = self.rerank_docs(query_input=query_input,
+                                                      retrieved_docs=retrieved_docs,
+                                                      batch_size=query_top_k)
 
-            reranked_context = ""
-            dates_contained = []
-            for doc in reranked_documents[:self.RERANK_TOP_N]:
-                decrypted_session_date = self.encryptor.decrypt(doc['session_date'])
-                decrypted_chunk_summary = self.encryptor.decrypt(doc['chunk_summary'])
-                dates_contained.append(decrypted_session_date)
-                formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=decrypted_session_date,
-                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT)
-                doc_session_date = "".join(["`session_date` = ", f"{formatted_date}\n"])
-                doc_chunk_summary = "".join(["`chunk_summary` = ", f"{decrypted_chunk_summary}"])
-                doc_full_context = "".join([doc_session_date,
-                                            doc_chunk_summary,
-                                            "\n"])
-                reranked_context = "\n".join([reranked_context, doc_full_context])
-        else:
-            reranked_context = ""
-            dates_contained = []
+                reranked_context = ""
+                dates_contained = []
+                for doc in reranked_documents[:self.RERANK_TOP_N]:
+                    decrypted_chunk_summary = self.encryptor.decrypt_base64_str(doc['chunk_summary'])
+                    dates_contained.append(doc['session_date'])
+                    formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
+                                                                                            incoming_date_format=datetime_handler.DATE_FORMAT)
+                    doc_session_date = "".join(["`session_date` = ", f"{formatted_date}\n"])
+                    doc_chunk_summary = "".join(["`chunk_summary` = ", f"{decrypted_chunk_summary}"])
+                    doc_full_context = "".join([doc_session_date,
+                                                doc_chunk_summary,
+                                                "\n"])
+                    reranked_context = "\n".join([reranked_context, doc_full_context])
+            else:
+                reranked_context = ""
+                dates_contained = []
 
-        if found_historical_context:
-            reranked_context = "\n".join([reranked_context, historical_context])
+            if found_historical_context:
+                reranked_context = "\n".join([reranked_context, historical_context])
 
-        # Check if caller wants us to fetch a specific set of vectors, other than
-        # the ones that may have already been fetched.
-        if session_dates_override is not None:
-            for current_override in session_dates_override:
-                formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
-                                                                                                     incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                override_date_is_already_contained = any(
-                    current_date.startswith(f"{formatted_session_date_override}")
-                    for current_date in dates_contained
-                )
+            # Check if caller wants us to fetch a specific set of vectors, other than
+            # the ones that may have already been fetched.
+            if session_dates_override is not None:
+                for current_override in session_dates_override:
+                    formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
+                                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                    override_date_is_already_contained = any(
+                        current_date.startswith(f"{formatted_session_date_override}")
+                        for current_date in dates_contained
+                    )
 
-                if override_date_is_already_contained:
-                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
+                    if override_date_is_already_contained:
+                        return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
-                # Add vectors associated with the session date override since they haven't been retrieved yet.
-                session_date_override_vector_ids = []
-                list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
-                                                                                           incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
-                    session_date_override_vector_ids = list_ids
+                    # Add vectors associated with the session date override since they haven't been retrieved yet.
+                    session_date_override_vector_ids = []
+                    list_operation_prefix = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
+                                                                                               incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                    for list_ids in index.list(namespace=namespace, prefix=list_operation_prefix):
+                        session_date_override_vector_ids = list_ids
 
-                # Didn't find any vectors for that day, return unchanged reranked_context
-                if len(session_date_override_vector_ids) == 0:
-                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
+                    # Didn't find any vectors for that day, return unchanged reranked_context
+                    if len(session_date_override_vector_ids) == 0:
+                        return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
-                session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
-                                                                 namespace=namespace)
-                vectors = session_date_override_fetch_result['vectors']
-                if len(vectors or []) == 0:
-                    return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
+                    session_date_override_fetch_result = index.fetch(ids=session_date_override_vector_ids,
+                                                                     namespace=namespace)
+                    vectors = session_date_override_fetch_result['vectors']
+                    if len(vectors or []) == 0:
+                        return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
 
-                # Have vectors for session date override. Append them to current reranked_context value.
-                for vector_id in vectors:
-                    vector_data = vectors[vector_id]
+                    # Have vectors for session date override. Append them to current reranked_context value.
+                    for vector_id in vectors:
+                        vector_data = vectors[vector_id]
 
-                    metadata = vector_data['metadata']
-                    decrypted_session_date = self.encryptor.decrypt(metadata['session_date'])
-                    decrypted_chunk_summary = self.encryptor.decrypt(metadata['chunk_summary'])
-                    formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=decrypted_session_date,
-                                                                                             incoming_date_format=datetime_handler.DATE_FORMAT)
-                    session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
-                    chunk_summary = "".join(["`chunk_summary` = ",f"{decrypted_chunk_summary}\n"])
-                    session_date_override_context = "".join([session_date,
-                                                             chunk_summary,])
+                        metadata = vector_data['metadata']
+                        decrypted_chunk_summary = self.encryptor.decrypt_base64_str(metadata['chunk_summary'])
+                        formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
+                                                                                                incoming_date_format=datetime_handler.DATE_FORMAT)
+                        session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
+                        chunk_summary = "".join(["`chunk_summary` = ",f"{decrypted_chunk_summary}\n"])
+                        session_date_override_context = "".join([session_date,
+                                                                chunk_summary,])
 
-                    if current_override.output_prefix_override is not None:
-                        session_date_override_context = "".join([current_override.output_prefix_override,
-                                                                 session_date_override_context])
-                    if current_override.output_suffix_override is not None:
-                        session_date_override_context = "".join([session_date_override_context,
-                                                                 current_override.output_suffix_override,
-                                                                 "\n"])
+                        if current_override.output_prefix_override is not None:
+                            session_date_override_context = "".join([current_override.output_prefix_override,
+                                                                    session_date_override_context])
+                        if current_override.output_suffix_override is not None:
+                            session_date_override_context = "".join([session_date_override_context,
+                                                                    current_override.output_suffix_override,
+                                                                    "\n"])
 
-                    reranked_context = "\n".join([reranked_context,
-                                                  session_date_override_context])
+                        reranked_context = "\n".join([reranked_context,
+                                                    session_date_override_context])
 
-        return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
+            return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
+        except Exception as e:
+            raise Exception(e)
 
     async def fetch_historical_context(self,
                                        index: Index,
@@ -413,7 +414,7 @@ class PineconeClient(PineconeBaseClass):
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
             decrypted_chunk_summary = "".join(["`pre_existing_history_summary` = ",
-                                               f"{self.encryptor.decrypt(metadata['pre_existing_history_summary'])}"])
+                                               f"{self.encryptor.decrypt_base64_str(metadata['pre_existing_history_summary'])}"])
             decrypted_chunk_full_context = "".join([decrypted_chunk_summary, "\n"])
             context_docs.append({
                 "id": vector_data['id'],
@@ -445,7 +446,7 @@ class PineconeClient(PineconeBaseClass):
         Returns: The list of documents from `retrieved_docs` sorted by their relevance score in descending order.
         """
         # Create pairs using only the chunk_summary for ranking
-        pairs = [[query_input, self.encryptor.decrypt(doc['chunk_summary'])] for doc in retrieved_docs]
+        pairs = [[query_input, self.encryptor.decrypt_base64_str(doc['chunk_summary'])] for doc in retrieved_docs]
         scores = []
 
         # Process in batches

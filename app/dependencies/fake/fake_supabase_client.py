@@ -7,7 +7,8 @@ from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
+                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                                 ENCRYPTED_SESSION_REPORTS_TABLE_NAME,)
 
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 
@@ -46,7 +47,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
     def insert(self,
                payload: dict,
                table_name: str):
-        if table_name == "session_reports":
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
             self.session_upload_processing_status = self.session_upload_processing_status if "processing_status" not in payload else payload["processing_status"]
             return FakeSupabaseResult(data=[{
@@ -63,7 +64,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                payload: dict,
                filters: dict,
                table_name: str):
-        if table_name == "session_reports":
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             self.fake_text = self.fake_text if "notes_text" not in payload else payload["notes_text"]
             self.session_upload_processing_status = self.session_upload_processing_status if "processing_status" not in payload else payload["processing_status"]
             return FakeSupabaseResult(data=[{
@@ -124,7 +125,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                 "gender": "female",
                 "pre_existing_history": "preExistingHistory" if self.patient_query_returns_preexisting_history else None
             }])
-        if table_name == "session_reports":
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "id": self.FAKE_SESSION_NOTES_ID,
                 "notes_mini_summary":"My fake mini summary",
@@ -211,7 +212,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if not self.select_returns_data:
             return FakeSupabaseResult(data=[])
 
-        if table_name == "session_reports":
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "id": self.FAKE_SESSION_NOTES_ID,
                 "notes_mini_summary":"My fake mini summary",

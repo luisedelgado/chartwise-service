@@ -15,8 +15,12 @@ from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
 from ..internal.schemas import (Gender,
                                 SessionProcessingStatus,
+                                ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+                                ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                                ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                                ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
                                 ENCRYPTED_PATIENTS_TABLE_NAME,
-                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME,)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -143,7 +147,7 @@ class AssistantManager:
             if len(diarization or '') > 0:
                 insert_payload['diarization'] = diarization
 
-            insert_result = supabase_client.insert(table_name="session_reports",
+            insert_result = supabase_client.insert(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                    payload=insert_payload)
             session_notes_id = insert_result['data'][0]['id']
 
@@ -177,7 +181,7 @@ class AssistantManager:
         try:
             session_notes_id = filtered_body['id']
             report_query = supabase_client.select(fields="*",
-                                                  table_name="session_reports",
+                                                  table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                   filters={
                                                       'id': session_notes_id
                                                   })
@@ -204,7 +208,7 @@ class AssistantManager:
                     value = value.value
                 session_update_payload[key] = value
 
-            session_update_response = supabase_client.update(table_name="session_reports",
+            session_update_response = supabase_client.update(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                              payload=session_update_payload,
                                                              filters={
                                                                  'id': session_notes_id
@@ -241,7 +245,7 @@ class AssistantManager:
                              supabase_client: SupabaseBaseClass):
         try:
             # Delete the session notes from Supabase
-            delete_result = supabase_client.delete(table_name="session_reports",
+            delete_result = supabase_client.delete(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                    filters={
                                                        'id': session_report_id
                                                    })
@@ -524,7 +528,7 @@ class AssistantManager:
                                                                     'therapist_id': therapist_id,
                                                                     'patient_id': patient_id
                                                                 },
-                                                                table_name="encrypted_patient_question_suggestions")
+                                                                table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(question_suggestions_query['data']):
@@ -537,7 +541,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="encrypted_patient_question_suggestions")
+                                       table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -546,7 +550,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "questions": questions_json
                                        },
-                                       table_name="encrypted_patient_question_suggestions")
+                                       table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
                                          session_id=session_id,
@@ -604,7 +608,7 @@ class AssistantManager:
                                                         'therapist_id': therapist_id,
                                                         'patient_id': patient_id
                                                     },
-                                                    table_name="encrypted_patient_briefings")
+                                                    table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(briefing_query['data']):
@@ -617,7 +621,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="encrypted_patient_briefings")
+                                       table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -626,7 +630,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "briefing": briefing
                                        },
-                                       table_name="encrypted_patient_briefings")
+                                       table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the presession tray failed",
                                          session_id=session_id,
@@ -684,7 +688,7 @@ class AssistantManager:
                                                       'therapist_id': therapist_id,
                                                       'patient_id': patient_id
                                                   },
-                                                  table_name="encrypted_patient_topics")
+                                                  table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(topics_query['data']):
@@ -698,7 +702,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="encrypted_patient_topics")
+                                       table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -708,7 +712,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "topics": recent_topics_json
                                        },
-                                       table_name="encrypted_patient_topics")
+                                       table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the recent topics failed",
                                          session_id=session_id,
@@ -753,7 +757,7 @@ class AssistantManager:
                                                           'therapist_id': therapist_id,
                                                           'patient_id': patient_id
                                                       },
-                                                      table_name="encrypted_patient_attendance")
+                                                      table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(attendance_query['data']):
@@ -766,7 +770,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="encrypted_patient_attendance")
+                                       table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -775,7 +779,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id
                                        },
-                                       table_name="encrypted_patient_attendance")
+                                       table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
 
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
@@ -800,7 +804,7 @@ class AssistantManager:
         try:
             # Fetch patient last session date and total session count
             patient_session_notes_response = supabase_client.select(fields="*",
-                                                                    table_name="session_reports",
+                                                                    table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                                     filters={
                                                                         "patient_id": patient_id
                                                                     },
@@ -1149,7 +1153,7 @@ class AssistantManager:
                 "questions": default_question_suggestions
             }
 
-            supabase_client.insert(table_name="encrypted_patient_question_suggestions",
+            supabase_client.insert(table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                                    payload={
                                        "patient_id": patient_id,
                                        "therapist_id": therapist_id,
@@ -1201,7 +1205,7 @@ class AssistantManager:
                                     else briefings['new_patient']['value'])
                 formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
                                                                      patient_first_name=patient_first_name)
-                supabase_client.insert(table_name="encrypted_patient_briefings",
+                supabase_client.insert(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                        payload={
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
@@ -1220,7 +1224,7 @@ class AssistantManager:
 
             formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
                                                                  patient_first_name=patient_first_name)
-            supabase_client.insert(table_name="encrypted_patient_briefings",
+            supabase_client.insert(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                    payload={
                                         "patient_id": patient_id,
                                         "therapist_id": therapist_id,

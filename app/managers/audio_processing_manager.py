@@ -8,7 +8,10 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal.schemas import MediaType, SessionProcessingStatus, ENCRYPTED_PATIENTS_TABLE_NAME
+from ..internal.schemas import (MediaType,
+                                SessionProcessingStatus,
+                                ENCRYPTED_PATIENTS_TABLE_NAME,
+                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
 from ..internal.utilities import datetime_handler
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
@@ -42,7 +45,7 @@ class AudioProcessingManager(MediaProcessingManager):
         try:
             # Upload initial attributes of session report, so client can mark it as 'processing'.
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
-            session_report_creation_response = supabase_client.insert(table_name="session_reports",
+            session_report_creation_response = supabase_client.insert(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                                       payload={
                                                                           "template": template.value,
                                                                           "session_date": session_date,
@@ -342,7 +345,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                            filters={
                                                                'patient_id': patient_id
                                                            },
-                                                           table_name="session_reports")
+                                                           table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
             total_sessions_count = len(session_reports_query['data'])
 
             # Determine the updated value for last_session_date depending on if the patient

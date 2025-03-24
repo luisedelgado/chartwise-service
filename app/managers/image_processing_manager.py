@@ -8,7 +8,9 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
 from ..internal.internal_alert import MediaJobProcessingAlert
-from ..internal.schemas import MediaType, SessionProcessingStatus
+from ..internal.schemas import (MediaType,
+                                SessionProcessingStatus,
+                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
 from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
@@ -40,7 +42,7 @@ class ImageProcessingManager(MediaProcessingManager):
             doc_id = await dependency_container.inject_docupanda_client().upload_image(image_filepath=image_copy_path,
                                                                                        image_filename=image.filename)
 
-            insert_result = supabase_client.insert(table_name="session_reports",
+            insert_result = supabase_client.insert(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                    payload={
                                                        "textraction_job_id": doc_id,
                                                        "template": template.value,
@@ -92,7 +94,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     break
 
             session_report_query = supabase_client.select(fields="*",
-                                                          table_name="session_reports",
+                                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                           filters={
                                                               "textraction_job_id": document_id,
                                                           })

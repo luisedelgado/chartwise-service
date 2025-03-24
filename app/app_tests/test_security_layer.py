@@ -392,12 +392,12 @@ class TestingHarnessSecurityRouter:
                                         })
         assert response.status_code == 200
 
-    def encryption_success(self):
+    def encryption_base64_str_decryption_success(self):
         encryptor = ChartWiseEncryptor()
         plaintext = "fooBar"
         encrypted_value = encryptor.encrypt(plaintext)
         assert len(encrypted_value or '') > 0
         assert encrypted_value != plaintext
 
-        decrypted_value = encryptor.decrypt(encrypted_value)
+        decrypted_value = encryptor.decrypt_base64_str(encrypted_value)
         assert decrypted_value == plaintext

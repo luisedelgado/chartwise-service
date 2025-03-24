@@ -3,11 +3,12 @@ import tiktoken
 from datetime import datetime
 from typing import AsyncIterable
 
-from ..dependencies.dependency_container import dependency_container
 from .message_templates import PromptCrafter, PromptScenario
+from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
+from ..internal.schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ..internal.utilities import datetime_handler
 
 TOPICS_CONTEXT_SESSIONS_CAP = 6
@@ -607,7 +608,7 @@ class ChartWiseAssistant:
                                                     filters={
                                                         "patient_id": patient_id,
                                                     },
-                                                    table_name="session_reports",
+                                                    table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                     limit=n,
                                                     order_desc_column="session_date")
             dates_response_data = dates_response['data']

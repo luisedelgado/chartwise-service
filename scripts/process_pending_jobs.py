@@ -7,7 +7,7 @@ from fastapi import BackgroundTasks
 from app.dependencies.api.templates import SessionNotesTemplate
 from app.dependencies.dependency_container import dependency_container
 from app.internal.internal_alert import MediaJobProcessingAlert
-from app.internal.schemas import MediaType
+from app.internal.schemas import MediaType, ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from app.internal.utilities.datetime_handler import (convert_to_date_format_mm_dd_yyyy,
                                                      DATE_FORMAT_YYYY_MM_DD,
                                                      DATE_TIME_FORMAT)
@@ -22,8 +22,6 @@ RETRY_ATTEMPTS = 3
 DIARIZATION_KEY = "diarization"
 TRANSCRIPTION_KEY = "transcription"
 ENVIRONMENT_KEY = "environment"
-SESSION_REPORTS_TABLE_NAME = "session_reports"
-THERAPISTS_TABLE_NAME = "therapists"
 PENDING_AUDIO_JOBS_TABLE_NAME = "pending_audio_jobs"
 AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
 AUDIO_FILES_PROCESSING_COMPLETED_BUCKET = "session-audio-files-processing-completed"
@@ -87,7 +85,7 @@ async def _process_pending_audio_job(job: dict):
     supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
     for attempt_index in range(0, RETRY_ATTEMPTS):
         try:
-            therapist_query = supabase_client.select(table_name=THERAPISTS_TABLE_NAME,
+            therapist_query = supabase_client.select(table_name="therapists",
                                                      fields="*",
                                                      filters={"id": job["therapist_id"]})
             assert (0 != len(therapist_query['data'])), "Something went wrong when querying the therapist data."
@@ -96,7 +94,7 @@ async def _process_pending_audio_job(job: dict):
             language_code = therapist_query_dict["language_preference"]
 
             old_session_report_id = job["session_report_id"]
-            session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
+            session_report_query = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                           fields="*",
                                                           filters={"id": old_session_report_id})
             assert (0 != len(session_report_query['data'])), "Something went wrong when querying the session report."
@@ -124,14 +122,14 @@ async def _process_pending_audio_job(job: dict):
                                                                                          diarize=is_diarization_job,
                                                                                          email_manager=email_manager)
 
-            new_session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
+            new_session_report_query = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                               fields="*",
                                                               filters={"id": new_session_report_id})
             assert (0 != len(new_session_report_query['data'])), "Did not find a valid session report."
             assert new_session_report_query['data'][0]['processing_status'] != "failed", "Processing failed."
 
             # Processing succeeded. Delete the old session report entry (the backing file was already moved to the completed-jobs bucket downstream).
-            supabase_client.delete(table_name=SESSION_REPORTS_TABLE_NAME,
+            supabase_client.delete(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                    filters={"id": old_session_report_id})
             return
 

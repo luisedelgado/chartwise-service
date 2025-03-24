@@ -46,7 +46,7 @@ class SupabaseClient(SupabaseBaseClass):
                table_name: str):
         try:
             payload = self.encrypt_payload(payload, table_name)
-            return self.client.table(table_name).insert(payload).execute().dict()
+            return self.client.table(table_name).insert(payload).execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -56,7 +56,7 @@ class SupabaseClient(SupabaseBaseClass):
                table_name: str):
         try:
             payload = self.encrypt_payload(payload, table_name)
-            return self.client.table(table_name).upsert(json=payload, on_conflict=on_conflict).execute().dict()
+            return self.client.table(table_name).upsert(json=payload, on_conflict=on_conflict).execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -71,7 +71,7 @@ class SupabaseClient(SupabaseBaseClass):
             for key, value in filters.items():
                 update_operation = update_operation.eq(f"{key}", f"{value}")
 
-            return update_operation.execute().dict()
+            return update_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -93,7 +93,7 @@ class SupabaseClient(SupabaseBaseClass):
             if len(order_desc_column or '') > 0:
                 select_operation = select_operation.order(order_desc_column, desc=True)
 
-            response = select_operation.execute().dict()
+            response = select_operation.execute().model_dump()
             if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
                 # Return response untouched if no need for decryption, or if no data was returned
                 return response
@@ -120,7 +120,7 @@ class SupabaseClient(SupabaseBaseClass):
             if len(order_desc_column or '') > 0:
                 select_operation = select_operation.order(order_desc_column, desc=True)
 
-            return select_operation.execute().dict()
+            return select_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -141,7 +141,7 @@ class SupabaseClient(SupabaseBaseClass):
             if limit is not None:
                 select_operation.limit(limit)
 
-            return select_operation.execute().dict()
+            return select_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -160,7 +160,7 @@ class SupabaseClient(SupabaseBaseClass):
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)
 
-            return select_operation.execute().dict()
+            return select_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -179,7 +179,7 @@ class SupabaseClient(SupabaseBaseClass):
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)
 
-            return select_operation.execute().dict()
+            return select_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -192,7 +192,7 @@ class SupabaseClient(SupabaseBaseClass):
             for key, value in filters.items():
                 delete_operation = delete_operation.eq(f"{key}", f"{value}")
 
-            return delete_operation.execute().dict()
+            return delete_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -205,13 +205,13 @@ class SupabaseClient(SupabaseBaseClass):
             for key, value in is_not_filters.items():
                 delete_operation = delete_operation.neq(f"{key}", f"{value}")
 
-            return delete_operation.execute().dict()
+            return delete_operation.execute().model_dump()
         except Exception as e:
             raise Exception(e)
 
     def get_user(self):
         try:
-            return self.client.auth.get_user().dict()
+            return self.client.auth.get_user().model_dump()
         except Exception as e:
             raise Exception(e)
 
@@ -285,81 +285,99 @@ class SupabaseClient(SupabaseBaseClass):
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENTS_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             for key, value in payload.items():
                 if key in SESSION_REPORTS_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not SESSION_REPORTS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_BRIEFINGS_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_TOPICS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_TOPICS_ENCRYPTED_COLUMNS:
-                    # Remove leading "\\x" and decode hex
+                    if value is None:
+                        continue
+
+                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
                     if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get base64 string (as bytes)
-                        base64_bytes = bytes.fromhex(value[2:])
+                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
+                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
                     else:
-                        # Assume raw base64 string (already decoded from BYTEA)
-                        base64_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt(base64_bytes=base64_bytes)
+                        # If already a base64 string, encode to bytes if needed
+                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
+                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not PATIENT_TOPICS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 

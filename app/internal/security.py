@@ -52,9 +52,29 @@ class ChartWiseEncryptor:
         encoded_ciphertext = base64.urlsafe_b64encode(ciphertext).decode('utf-8')
         return encoded_ciphertext
 
-    def decrypt(self, base64_bytes: str) -> str:
+    """
+    Decrypts a base64 encoded ciphertext. Used for BYTEA values coming from Postgres DBs
+
+    Params:
+    -------
+    b64_encoded_ciphertext_bytes: The base64 encoded ciphertext to decrypt.
+    """
+    def decrypt_b64_encoded_ciphertext(self, b64_encoded_ciphertext_bytes: str) -> str:
         try:
-            b64_str = base64_bytes.decode("utf-8")
+            b64_str = b64_encoded_ciphertext_bytes.decode("utf-8")
+            return self.decrypt_base64_str(b64_str)
+        except Exception as e:
+            raise ValueError(f"Base64 decoding failed: {str(e)}")
+
+    """
+    Decrypts a base64 string. Used for base64 string.
+
+    Params:
+    -------
+    b64_str: The base64 string to decrypt.
+    """
+    def decrypt_base64_str(self, b64_str: str) -> str:
+        try:
             ciphertext = base64.urlsafe_b64decode(b64_str)
             plaintext_bytes = self.aead.decrypt(ciphertext, None)
             return plaintext_bytes.decode("utf-8")

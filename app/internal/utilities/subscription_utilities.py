@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from .datetime_handler import DATE_FORMAT
+from ..schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ...dependencies.dependency_container import SupabaseBaseClass
 
 NUM_SESSIONS_IN_BASIC_PLAN = 20
@@ -26,8 +27,7 @@ def reached_subscription_tier_usage_limit(tier: str,
                                                                    range_end=today_formatted,
                                                                    column_marker="created_at",
                                                                    limit=20,
-                                                                   table_name="session_reports")
-        session_reports_data_dict = session_reports_data
-        return len(session_reports_data_dict['data']) >= NUM_SESSIONS_IN_BASIC_PLAN
+                                                                   table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+        return len(session_reports_data['data']) >= NUM_SESSIONS_IN_BASIC_PLAN
     except Exception as e:
         raise Exception(e)
