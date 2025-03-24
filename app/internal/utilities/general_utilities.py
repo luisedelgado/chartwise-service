@@ -52,8 +52,8 @@ def get_user_language_code(user_id: str,
                                                    'id': user_id
                                                  },
                                                  table_name="therapists")
-        assert (0 != len((therapist_query).data))
-        return therapist_query.dict()['data'][0]["language_preference"]
+        assert (0 != len(therapist_query['data']))
+        return therapist_query['data'][0]["language_preference"]
     except Exception as e:
         raise Exception("Encountered an issue while pulling user's language preference.")
 

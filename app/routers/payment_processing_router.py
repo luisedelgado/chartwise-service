@@ -242,7 +242,7 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            is_new_customer = (0 == len((customer_data).data))
+            is_new_customer = (0 == len(customer_data['data']))
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_session_url = stripe_client.generate_checkout_session(price_id=payload.price_id,
@@ -313,10 +313,10 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            if (0 == len((customer_data).data)):
+            if (0 == len(customer_data['data'])):
                 return {"subscriptions": []}
 
-            customer_id = customer_data.dict()['data'][0]['customer_id']
+            customer_id = customer_data['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
@@ -409,8 +409,8 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data.dict()['data'][0]['subscription_id']
+            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data['data'][0]['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             stripe_client.cancel_customer_subscription(subscription_id=subscription_id)
@@ -481,8 +481,8 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data.dict()['data'][0]['subscription_id']
+            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data['data'][0]['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
@@ -609,8 +609,8 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            assert (0 != len((customer_data).data)), "There isn't a subscription associated with the incoming therapist."
-            customer_id = customer_data.dict()['data'][0]['customer_id']
+            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
+            customer_id = customer_data['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             update_payment_method_url = stripe_client.generate_payment_method_update_session(customer_id=customer_id,
@@ -681,10 +681,10 @@ class PaymentProcessingRouter:
                                                        'therapist_id': therapist_id,
                                                    },
                                                    table_name="subscription_status")
-            if (0 == len((customer_data).data)):
+            if (0 == len(customer_data['data'])):
                 return {"payments": []}
 
-            customer_id = customer_data.dict()['data'][0]['customer_id']
+            customer_id = customer_data['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_intent_history = stripe_client.retrieve_payment_intent_history(customer_id=customer_id,
@@ -922,8 +922,8 @@ class PaymentProcessingRouter:
                                                            'customer_id': customer_id,
                                                        },
                                                        table_name="subscription_status")
-                assert (0 != len(customer_data.data)), "No therapist data found for incoming customer ID."
-                therapist_id = customer_data.dict()['data'][0]['therapist_id']
+                assert (0 != len(customer_data['data'])), "No therapist data found for incoming customer ID."
+                therapist_id = customer_data['data'][0]['therapist_id']
             except Exception:
                 pass
 
@@ -976,7 +976,7 @@ class PaymentProcessingRouter:
             therapist_subscription_query = supabase_client.select(fields="*",
                                                                   filters={ 'therapist_id': therapist_id },
                                                                   table_name="subscription_status")
-            is_new_customer = (0 != len((therapist_subscription_query).data))
+            is_new_customer = (0 != len(therapist_subscription_query['data']))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -1018,10 +1018,9 @@ class PaymentProcessingRouter:
                                    on_conflict="therapist_id")
 
             if is_new_customer:
-                therapist_query = supabase_client.select(fields="*",
-                                                         filters={ 'id': therapist_id },
-                                                         table_name="therapists")
-                therapist_query_data = therapist_query.dict()
+                therapist_query_data = supabase_client.select(fields="*",
+                                                              filters={ 'id': therapist_id },
+                                                              table_name="therapists")
                 assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
 
                 therapist_data = therapist_query_data['data'][0]

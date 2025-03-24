@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert
 from ..dependencies.dependency_container import dependency_container, SupabaseBaseClass
-from ..internal.schemas import Gender
+from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
 from ..managers.assistant_manager import AssistantManager
@@ -172,7 +172,7 @@ class SecurityRouter:
         try:
             supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                                             refresh_token=store_refresh_token)
-            user_details = supabase_client.get_user().dict()
+            user_details = supabase_client.get_user()
             token_email = user_details['user']['email']
 
             assert token_email == email, "Email received does not match the store tokens."
@@ -244,12 +244,11 @@ class SecurityRouter:
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
 
             # Fetch customer data
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': user_id,
-                                                   },
-                                                   table_name="subscription_status")
-            customer_data_dict = customer_data.dict()
+            customer_data_dict = supabase_client.select(fields="*",
+                                                        filters={
+                                                            'therapist_id': user_id,
+                                                        },
+                                                        table_name="subscription_status")
 
             # Check if this user is already a customer, and has subscription history
             if len(customer_data_dict['data']) == 0:
@@ -475,7 +474,7 @@ class SecurityRouter:
                                                      filters={
                                                          'id': user_id
                                                      })
-            assert (0 != len((update_response).data)), "Update operation could not be completed."
+            assert (0 != len(update_response['data'])), "Update operation could not be completed."
             return {}
         except Exception as e:
             description = str(e)
@@ -531,25 +530,23 @@ class SecurityRouter:
 
         try:
             # Cancel Stripe subscription
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': user_id,
-                                                   },
-                                                   table_name="subscription_status")
-            customer_data_dict = customer_data.dict()
+            customer_data_dict = supabase_client.select(fields="*",
+                                                        filters={
+                                                            'therapist_id': user_id,
+                                                        },
+                                                        table_name="subscription_status")
             if len(customer_data_dict['data']) > 0:
-                subscription_id = customer_data.dict()['data'][0]['subscription_id']
+                subscription_id = customer_data_dict['data'][0]['subscription_id']
 
                 stripe_client = dependency_container.inject_stripe_client()
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
 
             # Delete data from all patients
-            patients_response = supabase_client.select(fields="id",
-                                                       filters={
-                                                           "therapist_id": user_id
-                                                       },
-                                                       table_name="patients")
-            patients_response_data = patients_response.dict()
+            patients_response_data = supabase_client.select(fields="id",
+                                                            filters={
+                                                                "therapist_id": user_id
+                                                            },
+                                                            table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
             assert 'data' in patients_response_data, "Failed to retrieve therapist data for patients"
             patient_ids = patients_response_data['data']
 
@@ -562,7 +559,7 @@ class SecurityRouter:
                                                      filters={
                                                          'id': user_id
                                                      })
-            delete_response_dict = delete_response.dict()['data']
+            delete_response_dict = delete_response['data']
             assert len(delete_response_dict) > 0, "No therapist found with the incoming id"
 
             therapist_email = delete_response_dict[0]['email']
@@ -609,12 +606,11 @@ class SecurityRouter:
                             supabase_client: SupabaseBaseClass,
                             user_id: str,):
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                filters={
-                                                    'therapist_id': user_id,
-                                                },
-                                                table_name="subscription_status")
-            customer_data_dict = customer_data.dict()
+            customer_data_dict = supabase_client.select(fields="*",
+                                                        filters={
+                                                            'therapist_id': user_id,
+                                                        },
+                                                        table_name="subscription_status")
 
             # Check if this user is already a customer, and has subscription history
             if len(customer_data_dict['data']) == 0:

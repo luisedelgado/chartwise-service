@@ -574,6 +574,57 @@ class TestingHarnessAssistantRouter:
         assert CRISTIANO_QUERY == self.fake_openai_client.chat_history[0].content
         assert MESSI_QUERY != self.fake_openai_client.chat_history[1].content
 
+    def test_get_patient_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_patient_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_patient_with_auth_but_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_patient_with_auth_but_invalid_patient_id(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                    params={
+                                        "patient_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_patient_success(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+
     def test_add_patient_with_missing_auth(self):
         response = self.client.post(AssistantRouter.PATIENTS_ENDPOINT,
                                     json={

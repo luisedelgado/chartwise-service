@@ -13,7 +13,9 @@ from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
-from ..internal.schemas import Gender, SessionProcessingStatus
+from ..internal.schemas import (Gender,
+                                SessionProcessingStatus,
+                                ENCRYPTED_PATIENTS_TABLE_NAME)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -127,7 +129,7 @@ class AssistantManager:
 
             insert_result = supabase_client.insert(table_name="session_reports",
                                                    payload=insert_payload)
-            session_notes_id = insert_result.dict()['data'][0]['id']
+            session_notes_id = insert_result['data'][0]['id']
 
             # Upload vector embeddings and generate insights
             background_tasks.add_task(self._insert_vectors_and_generate_insights,
@@ -163,8 +165,8 @@ class AssistantManager:
                                                   filters={
                                                       'id': session_notes_id
                                                   })
-            assert (0 != len((report_query).data)), "There isn't a match with the incoming session data."
-            report_query_data = report_query.dict()['data'][0]
+            assert (0 != len(report_query['data'])), "There isn't a match with the incoming session data."
+            report_query_data = report_query['data'][0]
             patient_id = report_query_data['patient_id']
             therapist_id = report_query_data['therapist_id']
             current_session_text = report_query_data['notes_text']
@@ -191,7 +193,7 @@ class AssistantManager:
                                                              filters={
                                                                  'id': session_notes_id
                                                              })
-            assert (0 != len((session_update_response).data)), "Update operation could not be completed"
+            assert (0 != len(session_update_response['data'])), "Update operation could not be completed"
 
             # Update the session vectors if needed
             if session_date_changed or session_text_changed:
@@ -227,7 +229,7 @@ class AssistantManager:
                                                    filters={
                                                        'id': session_report_id
                                                    })
-            delete_result_data = delete_result.dict()['data']
+            delete_result_data = delete_result['data']
             assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
             delete_result_data = delete_result_data[0]
 
@@ -251,6 +253,21 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
+    async def retrieve_patient(self,
+                               patient_id: str,
+                               supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "id": patient_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No patient found with the incoming patient_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
     async def add_patient(self,
                           background_tasks: BackgroundTasks,
                           language_code: str,
@@ -267,8 +284,9 @@ class AssistantManager:
                     value = value.value
                 payload[key] = value
 
-            response = supabase_client.insert(table_name="patients", payload=payload)
-            patient_id = response.dict()['data'][0]['id']
+            response = supabase_client.insert(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                                              payload=payload)
+            patient_id = response['data'][0]['id']
 
             is_first_time_patient = filtered_body['onboarding_first_time_patient']
             if is_first_time_patient:
@@ -313,7 +331,6 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_patient(self,
-                             auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
                              background_tasks: BackgroundTasks,
@@ -322,9 +339,9 @@ class AssistantManager:
                                                filters={
                                                    'id': filtered_body['id'],
                                                },
-                                               table_name="patients")
-        assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-        patient_query_data = patient_query.dict()['data'][0]
+                                               table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+        assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+        patient_query_data = patient_query['data'][0]
         current_pre_existing_history = patient_query_data['pre_existing_history']
         therapist_id = patient_query_data['therapist_id']
 
@@ -336,12 +353,12 @@ class AssistantManager:
                 value = value.value
             update_db_payload[key] = value
 
-        update_response = supabase_client.update(table_name="patients",
+        update_response = supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                                  payload=update_db_payload,
                                                  filters={
                                                      'id': filtered_body['id']
                                                  })
-        assert (0 != len((update_response).data)), "Update operation could not be completed"
+        assert (0 != len(update_response['data'])), "Update operation could not be completed"
 
         if ('pre_existing_history' not in filtered_body
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
@@ -360,7 +377,6 @@ class AssistantManager:
         await openai_client.clear_chat_history()
 
     async def adapt_session_notes_to_soap(self,
-                                          auth_manager: AuthManager,
                                           therapist_id: str,
                                           session_notes_text: str,
                                           session_id: str) -> str:
@@ -413,11 +429,11 @@ class AssistantManager:
                                                         'id': query.patient_id,
                                                         'therapist_id': therapist_id
                                                     },
-                                                    table_name="patients")
-                patient_therapist_match = (0 != len((patient_query).data))
+                                                    table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+                patient_therapist_match = (0 != len(patient_query['data']))
                 assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-                patient_query_data = patient_query.dict()['data'][0]
+                patient_query_data = patient_query['data'][0]
                 patient_first_name = patient_query_data['first_name']
                 patient_last_name = patient_query_data['last_name']
                 patient_gender = patient_query_data['gender']
@@ -466,13 +482,13 @@ class AssistantManager:
                                           email_manager: EmailManager):
         try:
             patient_query = supabase_client.select(fields="*",
-                                                   table_name="patients",
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                                    filters={
                                                        'therapist_id': therapist_id,
                                                        'id': patient_id
                                                    })
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query.dict()['data'][0]
+            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+            patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
@@ -492,10 +508,10 @@ class AssistantManager:
                                                                     'therapist_id': therapist_id,
                                                                     'patient_id': patient_id
                                                                 },
-                                                                table_name="patient_question_suggestions")
+                                                                table_name="encrypted_patient_question_suggestions")
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len((question_suggestions_query).data):
+            if 0 != len(question_suggestions_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "questions": questions_json,
@@ -505,7 +521,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="patient_question_suggestions")
+                                       table_name="encrypted_patient_question_suggestions")
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -514,7 +530,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "questions": questions_json
                                        },
-                                       table_name="patient_question_suggestions")
+                                       table_name="encrypted_patient_question_suggestions")
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
                                          session_id=session_id,
@@ -538,9 +554,9 @@ class AssistantManager:
                                                        'therapist_id': therapist_id,
                                                        'id': patient_id
                                                    },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-            patient_response_data = patient_query.dict()['data'][0]
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+            patient_response_data = patient_query['data'][0]
             patient_name = patient_response_data['first_name']
             patient_gender = patient_response_data['gender']
             session_count = patient_response_data['total_sessions']
@@ -550,7 +566,7 @@ class AssistantManager:
                                                          "id": therapist_id
                                                      },
                                                      table_name="therapists")
-            therapist_response_data = therapist_query.dict()['data'][0]
+            therapist_response_data = therapist_query['data'][0]
             therapist_name = therapist_response_data['first_name']
             language_code = therapist_response_data['language_preference']
             therapist_gender = therapist_response_data['gender']
@@ -572,10 +588,10 @@ class AssistantManager:
                                                         'therapist_id': therapist_id,
                                                         'patient_id': patient_id
                                                     },
-                                                    table_name="patient_briefings")
+                                                    table_name="encrypted_patient_briefings")
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len((briefing_query).data):
+            if 0 != len(briefing_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "briefing": briefing,
@@ -585,7 +601,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="patient_briefings")
+                                       table_name="encrypted_patient_briefings")
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -594,7 +610,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "briefing": briefing
                                        },
-                                       table_name="patient_briefings")
+                                       table_name="encrypted_patient_briefings")
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the presession tray failed",
                                          session_id=session_id,
@@ -619,9 +635,9 @@ class AssistantManager:
                                                        'therapist_id': therapist_id,
                                                        'id': patient_id
                                                    },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query.dict()['data'][0]
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+            patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
@@ -652,10 +668,10 @@ class AssistantManager:
                                                       'therapist_id': therapist_id,
                                                       'patient_id': patient_id
                                                   },
-                                                  table_name="patient_topics")
+                                                  table_name="encrypted_patient_topics")
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len((topics_query).data):
+            if 0 != len(topics_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "last_updated": now_timestamp,
@@ -666,7 +682,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="patient_topics")
+                                       table_name="encrypted_patient_topics")
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -676,7 +692,7 @@ class AssistantManager:
                                            "therapist_id": therapist_id,
                                            "topics": recent_topics_json
                                        },
-                                       table_name="patient_topics")
+                                       table_name="encrypted_patient_topics")
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the recent topics failed",
                                          session_id=session_id,
@@ -701,9 +717,9 @@ class AssistantManager:
                                                        'therapist_id': therapist_id,
                                                        'id': patient_id
                                                    },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query.dict()['data'][0]
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+            patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
             patient_gender = patient_query_data['gender']
 
@@ -721,10 +737,10 @@ class AssistantManager:
                                                           'therapist_id': therapist_id,
                                                           'patient_id': patient_id
                                                       },
-                                                      table_name="patient_attendance")
+                                                      table_name="encrypted_patient_attendance")
 
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len((attendance_query).data):
+            if 0 != len(attendance_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "last_updated": now_timestamp,
@@ -734,7 +750,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
                                        },
-                                       table_name="patient_attendance")
+                                       table_name="encrypted_patient_attendance")
             else:
                 # Insert result to Supabase
                 supabase_client.insert(payload={
@@ -743,7 +759,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id
                                        },
-                                       table_name="patient_attendance")
+                                       table_name="encrypted_patient_attendance")
 
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
@@ -773,14 +789,14 @@ class AssistantManager:
                                                                         "patient_id": patient_id
                                                                     },
                                                                     order_desc_column="session_date")
-            patient_session_notes_data = patient_session_notes_response.dict()['data']
+            patient_session_notes_data = patient_session_notes_response['data']
             total_session_count = len(patient_session_notes_data)
             patient_last_session_date = (None if total_session_count == 0
                                          else patient_session_notes_data[0]['session_date'])
 
             # New value for last_session_date will be the most recent session we already found
             if operation == SessionCrudOperation.DELETE_COMPLETED:
-                supabase_client.update(table_name="patients",
+                supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                         payload={
                             "last_session_date": patient_last_session_date,
                             "total_sessions": total_session_count,
@@ -793,11 +809,11 @@ class AssistantManager:
                     # Load zero-state for this patient since we don't have any data from them anymore.
                     patient_data_response = supabase_client.select(
                         fields="*",
-                        table_name="patients",
+                        table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                         filters={
                             "id": patient_id
                         })
-                    patient_data = patient_data_response.dict()['data']
+                    patient_data = patient_data_response['data']
                     assert len(patient_data) > 0, "No patient found with the incoming patient_id"
 
                     # Load zero-state question suggestions in a background thread.
@@ -836,7 +852,7 @@ class AssistantManager:
                                                                                        second_date=formatted_date,
                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
 
-            supabase_client.update(table_name="patients",
+            supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                    payload={
                                        "last_session_date": patient_last_session_date,
                                        "total_sessions": total_session_count,
@@ -1110,14 +1126,14 @@ class AssistantManager:
             strings_query = supabase_client.select_either_or_from_column(fields="*",
                                                                          table_name="user_interface_strings",
                                                                          possible_values=default_question_suggestions)
-            assert (0 != len((strings_query).data)), "Did not find any strings data for the current scenario."
+            assert (0 != len(strings_query['data'])), "Did not find any strings data for the current scenario."
 
-            default_question_suggestions = [item['value'] for item in strings_query.dict()['data']]
+            default_question_suggestions = [item['value'] for item in strings_query['data']]
             response_dict = {
                 "questions": default_question_suggestions
             }
 
-            supabase_client.insert(table_name="patient_question_suggestions",
+            supabase_client.insert(table_name="encrypted_patient_question_suggestions",
                                    payload={
                                        "patient_id": patient_id,
                                        "therapist_id": therapist_id,
@@ -1150,8 +1166,8 @@ class AssistantManager:
                                                           filters={
                                                               "id": therapist_id
                                                           })
-            assert (0 != len((therapist_data_query).data)), "Did not find any data for the incoming therapist id."
-            therapist_first_name = therapist_data_query.dict()['data'][0]['first_name']
+            assert (0 != len(therapist_data_query['data'])), "Did not find any data for the incoming therapist id."
+            therapist_first_name = therapist_data_query['data'][0]['first_name']
 
             therapist_language = general_utilities.map_language_code_to_language(language_code)
             string_query = supabase_client.select(table_name="static_default_briefings",
@@ -1159,9 +1175,9 @@ class AssistantManager:
                                                   filters={
                                                       "id": therapist_language
                                                   })
-            assert (0 != len((string_query).data)), "Did not find any strings data for the current scenario."
+            assert (0 != len(string_query['data'])), "Did not find any strings data for the current scenario."
 
-            response_value = string_query.dict()['data'][0]['value']
+            response_value = string_query['data'][0]['value']
             briefings = response_value['briefings']
 
             if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
@@ -1169,7 +1185,7 @@ class AssistantManager:
                                     else briefings['new_patient']['value'])
                 formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
                                                                      patient_first_name=patient_first_name)
-                supabase_client.insert(table_name="patient_briefings",
+                supabase_client.insert(table_name="encrypted_patient_briefings",
                                        payload={
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
@@ -1188,7 +1204,7 @@ class AssistantManager:
 
             formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
                                                                  patient_first_name=patient_first_name)
-            supabase_client.insert(table_name="patient_briefings",
+            supabase_client.insert(table_name="encrypted_patient_briefings",
                                    payload={
                                         "patient_id": patient_id,
                                         "therapist_id": therapist_id,

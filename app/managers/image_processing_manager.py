@@ -50,7 +50,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                        "processing_status": SessionProcessingStatus.PROCESSING.value,
                                                        "source": SessionNotesSource.NOTES_IMAGE.value,
                                                    })
-            session_notes_id = insert_result.dict()['data'][0]['id']
+            session_notes_id = insert_result['data'][0]['id']
 
             # Clean up the image copies we used for processing.
             await file_copiers.clean_up_files(files_to_clean)
@@ -96,7 +96,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                           filters={
                                                               "textraction_job_id": document_id,
                                                           })
-            session_report_data = session_report_query.dict()['data']
+            session_report_data = session_report_query['data']
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
             session_report_data = session_report_data[0]
             therapist_id = session_report_data['therapist_id']
@@ -111,8 +111,7 @@ class ImageProcessingManager(MediaProcessingManager):
                 return session_notes_id
 
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
-                textraction = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                  therapist_id=therapist_id,
+                textraction = await assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,
                                                                                   session_id=session_id,
                                                                                   session_notes_text=textraction)
 

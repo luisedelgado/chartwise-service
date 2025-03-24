@@ -187,13 +187,6 @@ class SupabaseBaseClass(ABC):
         pass
 
     """
-    Refreshes the current session.
-    """
-    @abstractmethod
-    def refresh_session():
-        pass
-
-    """
     Signs out.
     """
     @abstractmethod

@@ -8,7 +8,7 @@ from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal.schemas import MediaType, SessionProcessingStatus
+from ..internal.schemas import MediaType, SessionProcessingStatus, ENCRYPTED_PATIENTS_TABLE_NAME
 from ..internal.utilities import datetime_handler
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
@@ -51,8 +51,8 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                           "source": source,
                                                                           "processing_status": SessionProcessingStatus.PROCESSING.value
                                                                       })
-            assert (0 != len((session_report_creation_response).data)), "Something went wrong when inserting the session."
-            session_report_id = session_report_creation_response.dict()['data'][0]['id']
+            assert (0 != len(session_report_creation_response['data'])), "Something went wrong when inserting the session."
+            session_report_id = session_report_creation_response['data'][0]['id']
 
             today = datetime.now().date()
             today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -212,8 +212,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                                     expects_json_response=False)
 
             if template == SessionNotesTemplate.SOAP:
-                session_summary = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                      therapist_id=therapist_id,
+                session_summary = await assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,
                                                                                       session_notes_text=session_summary,
                                                                                       session_id=session_id)
 
@@ -276,8 +275,7 @@ class AudioProcessingManager(MediaProcessingManager):
         try:
             transcription = await dependency_container.inject_deepgram_client().transcribe_audio(audio_file_url=audio_file_url)
             if template == SessionNotesTemplate.SOAP:
-                transcription = await assistant_manager.adapt_session_notes_to_soap(auth_manager=auth_manager,
-                                                                                    therapist_id=therapist_id,
+                transcription = await assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,
                                                                                     session_notes_text=transcription,
                                                                                     session_id=session_id)
 
@@ -333,10 +331,10 @@ class AudioProcessingManager(MediaProcessingManager):
                                                    filters={
                                                       'id': patient_id
                                                    },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "Did not find any data for the patient"
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            assert (0 != len(patient_query['data'])), "Did not find any data for the patient"
 
-            patient_query_data = patient_query.dict()['data']
+            patient_query_data = patient_query['data']
             patient_last_session_date = patient_query_data[0]['last_session_date']
 
             # Fetch total sessions count
@@ -345,7 +343,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                'patient_id': patient_id
                                                            },
                                                            table_name="session_reports")
-            total_sessions_count = len(session_reports_query.dict()['data'])
+            total_sessions_count = len(session_reports_query['data'])
 
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.
@@ -358,7 +356,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                                                                        first_date_format=datetime_handler.DATE_FORMAT,
                                                                                        second_date=formatted_date,
                                                                                        second_date_format=datetime_handler.DATE_FORMAT)
-            supabase_client.update(table_name="patients",
+            supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                     payload={
                                         "last_session_date": patient_last_session_date,
                                         "total_sessions": total_sessions_count,

@@ -610,7 +610,7 @@ class ChartWiseAssistant:
                                                     table_name="session_reports",
                                                     limit=n,
                                                     order_desc_column="session_date")
-            dates_response_data = dates_response.dict()['data']
+            dates_response_data = dates_response['data']
 
             overrides = []
             for date in dates_response_data:

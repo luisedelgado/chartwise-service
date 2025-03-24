@@ -27,7 +27,7 @@ def reached_subscription_tier_usage_limit(tier: str,
                                                                    column_marker="created_at",
                                                                    limit=20,
                                                                    table_name="session_reports")
-        session_reports_data_dict = session_reports_data.dict()
+        session_reports_data_dict = session_reports_data
         return len(session_reports_data_dict['data']) >= NUM_SESSIONS_IN_BASIC_PLAN
     except Exception as e:
         raise Exception(e)

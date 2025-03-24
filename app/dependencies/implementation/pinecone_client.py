@@ -16,6 +16,7 @@ from ...data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECT
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
+from ...internal.security import ChartWiseEncryptor
 from ...internal.utilities import datetime_handler
 from ...vectors import data_cleaner
 
@@ -34,6 +35,7 @@ class PineconeClient(PineconeBaseClass):
                                                                          cache_dir=ELECTRA_MODEL_CACHE_DIR)
         self._device = torch.device("cpu")
         self._model.to(self._device)
+        self.encryptor = ChartWiseEncryptor()
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -65,12 +67,14 @@ class PineconeClient(PineconeBaseClass):
                 doc = Document()
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
-                doc.set_content(chunk_text)
+                encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
+                doc.set_content(encrypted_chunk_text)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
+                encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -78,8 +82,8 @@ class PineconeClient(PineconeBaseClass):
                 doc.id_ = doc_id
                 doc.metadata.update({
                     "session_date": therapy_session_date,
-                    "chunk_summary": chunk_summary,
-                    "chunk_text": chunk_text,
+                    "chunk_summary": encrypted_chunk_summary,
+                    "chunk_text": encrypted_chunk_text,
                     "session_report_id": session_report_id
                 })
 
@@ -119,12 +123,14 @@ class PineconeClient(PineconeBaseClass):
                 doc = Document()
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
-                doc.set_content(chunk_text)
+                encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
+                doc.set_content(encrypted_chunk_text)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
+                encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -133,8 +139,8 @@ class PineconeClient(PineconeBaseClass):
                 doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary)
                 doc.metadata.update({
-                    "pre_existing_history_summary": chunk_summary,
-                    "pre_existing_history_text": chunk_text
+                    "pre_existing_history_summary": encrypted_chunk_summary,
+                    "pre_existing_history_text": encrypted_chunk_text
                 })
                 vectors.append(doc)
 
@@ -297,8 +303,8 @@ class PineconeClient(PineconeBaseClass):
             retrieved_docs = []
             for match in query_matches:
                 metadata = match['metadata']
-                retrieved_docs.append({"session_date": metadata['session_date'],
-                                       "chunk_summary": metadata['chunk_summary']})
+                retrieved_docs.append({"session_date": self.encryptor.decrypt(metadata['session_date']),
+                                       "chunk_summary": self.encryptor.decrypt(metadata['chunk_summary'])})
 
         # Check if caller wants us to rerank vectors
         if rerank_vectors:
@@ -309,11 +315,13 @@ class PineconeClient(PineconeBaseClass):
             reranked_context = ""
             dates_contained = []
             for doc in reranked_documents[:self.RERANK_TOP_N]:
-                dates_contained.append(doc['session_date'])
-                formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
+                decrypted_session_date = self.encryptor.decrypt(doc['session_date'])
+                decrypted_chunk_summary = self.encryptor.decrypt(doc['chunk_summary'])
+                dates_contained.append(decrypted_session_date)
+                formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=decrypted_session_date,
                                                                                          incoming_date_format=datetime_handler.DATE_FORMAT)
                 doc_session_date = "".join(["`session_date` = ", f"{formatted_date}\n"])
-                doc_chunk_summary = "".join(["`chunk_summary` = ", f"{doc['chunk_summary']}"])
+                doc_chunk_summary = "".join(["`chunk_summary` = ", f"{decrypted_chunk_summary}"])
                 doc_full_context = "".join([doc_session_date,
                                             doc_chunk_summary,
                                             "\n"])
@@ -361,10 +369,12 @@ class PineconeClient(PineconeBaseClass):
                     vector_data = vectors[vector_id]
 
                     metadata = vector_data['metadata']
-                    formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
+                    decrypted_session_date = self.encryptor.decrypt(metadata['session_date'])
+                    decrypted_chunk_summary = self.encryptor.decrypt(metadata['chunk_summary'])
+                    formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=decrypted_session_date,
                                                                                              incoming_date_format=datetime_handler.DATE_FORMAT)
                     session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
-                    chunk_summary = "".join(["`chunk_summary` = ",f"{metadata['chunk_summary']}\n"])
+                    chunk_summary = "".join(["`chunk_summary` = ",f"{decrypted_chunk_summary}\n"])
                     session_date_override_context = "".join([session_date,
                                                              chunk_summary,])
 
@@ -402,12 +412,12 @@ class PineconeClient(PineconeBaseClass):
         for vector_id in vectors:
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
-            chunk_summary = "".join(["`pre_existing_history_summary` = ",f"{metadata['pre_existing_history_summary']}"])
-            chunk_full_context = "".join([chunk_summary,
-                                          "\n"])
+            decrypted_chunk_summary = "".join(["`pre_existing_history_summary` = ",
+                                               f"{self.encryptor.decrypt(metadata['pre_existing_history_summary'])}"])
+            decrypted_chunk_full_context = "".join([decrypted_chunk_summary, "\n"])
             context_docs.append({
                 "id": vector_data['id'],
-                "text": chunk_full_context
+                "text": decrypted_chunk_full_context
             })
 
         if len(context_docs) > 0:
@@ -435,7 +445,7 @@ class PineconeClient(PineconeBaseClass):
         Returns: The list of documents from `retrieved_docs` sorted by their relevance score in descending order.
         """
         # Create pairs using only the chunk_summary for ranking
-        pairs = [[query_input, doc['chunk_summary']] for doc in retrieved_docs]
+        pairs = [[query_input, self.encryptor.decrypt(doc['chunk_summary'])] for doc in retrieved_docs]
         scores = []
 
         # Process in batches

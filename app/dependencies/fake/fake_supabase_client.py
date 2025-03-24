@@ -3,6 +3,11 @@ from pydantic import BaseModel
 from .fake_supabase_session import FakeSession
 from .fake_supabase_storage_client import FakeSupabaseStorageClient
 from ..api.supabase_base_class import SupabaseBaseClass, SupabaseStorageBaseClass
+from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
+                                 ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+                                 ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                                 ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
 
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 
@@ -47,7 +52,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
-        if table_name == "patients":
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "id": self.FAKE_PATIENT_ID,
             }])
@@ -64,7 +69,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                     "id": self.FAKE_SESSION_NOTES_ID
                 }])
-        if table_name == "patients":
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "first_name": "Fake first name",
                 "gender": "female",
@@ -109,7 +114,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                     "suscription_id": self.FAKE_SESSION_NOTES_ID
                 }]
             }])
-        if table_name == "patients":
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "last_session_date":"2000-01-01",
                 "total_sessions": 2,
@@ -138,19 +143,19 @@ class FakeSupabaseClient(SupabaseBaseClass):
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
-        if table_name == "patient_topics":
+        if table_name == ENCRYPTED_PATIENT_TOPICS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
-        if table_name == "patient_question_suggestions":
+        if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
-        if table_name == "patient_briefings":
+        if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
-        if table_name == "patient_attendance":
+        if table_name == ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME:
             return FakeSupabaseResult(data=[{
                 "value": "fake_string"
             }])
@@ -273,12 +278,6 @@ class FakeSupabaseClient(SupabaseBaseClass):
 
     def get_current_user_id(self) -> str:
         return self.FAKE_THERAPIST_ID
-
-    def refresh_session(self):
-        self.invoked_refresh_session = True
-        return FakeSession(return_authenticated_session=self.return_authenticated_session,
-                           fake_access_token=self.fake_access_token,
-                           fake_refresh_token=self.fake_refresh_token)
 
     def sign_out(self):
         pass

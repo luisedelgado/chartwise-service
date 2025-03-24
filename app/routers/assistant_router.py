@@ -15,7 +15,7 @@ from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
-from ..internal.schemas import Gender
+from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
                                           AssistantQuery,
@@ -152,6 +152,22 @@ class AssistantRouter:
                                          media_type="text/event-stream")
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        async def get_patient(response: Response,
+                              request: Request,
+                              patient_id: str = None,
+                              store_access_token: Annotated[str | None, Header()] = None,
+                              store_refresh_token: Annotated[str | None, Header()] = None,
+                              authorization: Annotated[Union[str, None], Cookie()] = None,
+                              session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_patient_internal(response=response,
+                                                    request=request,
+                                                    patient_id=patient_id,
+                                                    store_access_token=store_access_token,
+                                                    store_refresh_token=store_refresh_token,
+                                                    authorization=authorization,
+                                                    session_id=session_id)
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def add_patient(response: Response,
@@ -511,6 +527,56 @@ class AssistantRouter:
                                                                   description=str(e),
                                                                   session_id=session_id)
 
+    async def _get_patient_internal(self,
+                                    request: Request,
+                                    response: Response,
+                                    patient_id: str,
+                                    store_access_token: Annotated[str | None, Header()],
+                                    store_refresh_token: Annotated[str | None, Header()],
+                                    authorization: Annotated[Union[str, None], Cookie()],
+                                    session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+
+            patient_data = await self._assistant_manager.retrieve_patient(supabase_client=supabase_client,
+                                                                          patient_id=patient_id)
+            request.state.patient_id = patient_id
+            return {"patient_data": patient_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
     """
     Adds a patient.
 
@@ -642,8 +708,7 @@ class AssistantRouter:
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
                                                                               incoming_date_format=datetime_handler.DATE_FORMAT), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            await self._assistant_manager.update_patient(auth_manager=self._auth_manager,
-                                                         filtered_body=body,
+            await self._assistant_manager.update_patient(filtered_body=body,
                                                          session_id=session_id,
                                                          background_tasks=background_tasks,
                                                          supabase_client=supabase_client)
@@ -714,15 +779,15 @@ class AssistantRouter:
                                                        'therapist_id': therapist_id,
                                                        'id': patient_id
                                                    },
-                                                   table_name="patients")
-            assert (0 != len((patient_query).data)), "There isn't a patient-therapist match with the incoming ids."
+                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
 
             # Cascading will take care of deleting the session notes in Supabase.
-            delete_result = supabase_client.delete(table_name="patients",
+            delete_result = supabase_client.delete(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                                    filters={
                                                        'id': patient_id
                                                    })
-            assert len(delete_result.dict()['data']) > 0, "No patient found with the incoming patient_id"
+            assert len(delete_result['data']) > 0, "No patient found with the incoming patient_id"
 
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
                                                                 patient_id=patient_id)
@@ -792,8 +857,7 @@ class AssistantRouter:
             assert len(therapist_id or '') > 0, "Empty therapist_id param"
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
-            soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(auth_manager=self._auth_manager,
-                                                                                   therapist_id=therapist_id,
+            soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,
                                                                                    session_id=session_id,
                                                                                    session_notes_text=session_notes_text)
             return {"soap_notes": soap_notes}

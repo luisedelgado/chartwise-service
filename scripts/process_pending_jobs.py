@@ -90,7 +90,7 @@ async def _process_pending_audio_job(job: dict):
             therapist_query = supabase_client.select(table_name=THERAPISTS_TABLE_NAME,
                                                      fields="*",
                                                      filters={"id": job["therapist_id"]})
-            assert (0 != len((therapist_query).data)), "Something went wrong when querying the therapist data."
+            assert (0 != len(therapist_query['data'])), "Something went wrong when querying the therapist data."
 
             therapist_query_dict = therapist_query.model_dump()['data'][0]
             language_code = therapist_query_dict["language_preference"]
@@ -99,7 +99,7 @@ async def _process_pending_audio_job(job: dict):
             session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
                                                           fields="*",
                                                           filters={"id": old_session_report_id})
-            assert (0 != len((session_report_query).data)), "Something went wrong when querying the session report."
+            assert (0 != len(session_report_query['data'])), "Something went wrong when querying the session report."
 
             session_report_query_dict = session_report_query.model_dump()['data'][0]
             is_diarization_job = job["job_type"] == DIARIZATION_KEY
@@ -127,8 +127,8 @@ async def _process_pending_audio_job(job: dict):
             new_session_report_query = supabase_client.select(table_name=SESSION_REPORTS_TABLE_NAME,
                                                               fields="*",
                                                               filters={"id": new_session_report_id})
-            assert (0 != len((new_session_report_query).data)), "Did not find a valid session report."
-            assert new_session_report_query.dict()['data'][0]['processing_status'] != "failed", "Processing failed."
+            assert (0 != len(new_session_report_query['data'])), "Did not find a valid session report."
+            assert new_session_report_query['data'][0]['processing_status'] != "failed", "Processing failed."
 
             # Processing succeeded. Delete the old session report entry (the backing file was already moved to the completed-jobs bucket downstream).
             supabase_client.delete(table_name=SESSION_REPORTS_TABLE_NAME,
@@ -190,7 +190,7 @@ def purge_completed_audio_jobs():
                                                               non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
                                                               limit=BATCH_LIMIT,
                                                               order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
-    batch = response.data
+    batch = response['data']
 
     # Continue fetching while the batch has exactly `BATCH_LIMIT` items
     while batch and len(batch) == BATCH_LIMIT:
@@ -203,7 +203,7 @@ def purge_completed_audio_jobs():
                                                                   non_null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
                                                                   limit=BATCH_LIMIT,
                                                                   order_ascending_column=SUCCESSFUL_PROCESSING_DATE_KEY)
-        batch = response.data
+        batch = response['data']
 
     # Process the final batch if it has fewer than LIMIT items
     if batch:
@@ -222,7 +222,7 @@ async def process_pending_audio_jobs():
                                                           fields="*",
                                                           null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
                                                           limit=BATCH_LIMIT)
-    batch = response.data
+    batch = response['data']
 
     # Continue fetching while the batch has exactly `BATCH_LIMIT` items
     while batch and len(batch) == BATCH_LIMIT:
@@ -234,7 +234,7 @@ async def process_pending_audio_jobs():
                                                               fields="*",
                                                               null_column=SUCCESSFUL_PROCESSING_DATE_KEY,
                                                               limit=BATCH_LIMIT)
-        batch = response.data
+        batch = response['data']
 
     # Process the final batch if it has fewer than LIMIT items
     if batch:
