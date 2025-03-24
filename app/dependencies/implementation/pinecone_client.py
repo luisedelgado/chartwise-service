@@ -292,9 +292,9 @@ class PineconeClient(PineconeBaseClass):
             if query_top_k > 0:
                 embeddings = await openai_client.create_embeddings(text=query_input)
                 query_result = index.query(vector=embeddings,
-                                        top_k=query_top_k,
-                                        namespace=namespace,
-                                        include_metadata=True)
+                                           top_k=query_top_k,
+                                           namespace=namespace,
+                                           include_metadata=True)
                 query_matches = query_result.to_dict()['matches']
 
                 # There's no session data, return a message explaining this, and offer the historical context, if exists.
@@ -316,12 +316,11 @@ class PineconeClient(PineconeBaseClass):
                 reranked_context = ""
                 dates_contained = []
                 for doc in reranked_documents[:self.RERANK_TOP_N]:
-                    decrypted_chunk_summary = self.encryptor.decrypt_base64_str(doc['chunk_summary'])
                     dates_contained.append(doc['session_date'])
                     formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=doc['session_date'],
                                                                                             incoming_date_format=datetime_handler.DATE_FORMAT)
                     doc_session_date = "".join(["`session_date` = ", f"{formatted_date}\n"])
-                    doc_chunk_summary = "".join(["`chunk_summary` = ", f"{decrypted_chunk_summary}"])
+                    doc_chunk_summary = "".join(["`chunk_summary` = ", f"{doc['chunk_summary']}"])
                     doc_full_context = "".join([doc_session_date,
                                                 doc_chunk_summary,
                                                 "\n"])
@@ -338,7 +337,7 @@ class PineconeClient(PineconeBaseClass):
             if session_dates_override is not None:
                 for current_override in session_dates_override:
                     formatted_session_date_override = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_override.session_date,
-                                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+                                                                                                         incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
                     override_date_is_already_contained = any(
                         current_date.startswith(f"{formatted_session_date_override}")
                         for current_date in dates_contained
@@ -446,7 +445,7 @@ class PineconeClient(PineconeBaseClass):
         Returns: The list of documents from `retrieved_docs` sorted by their relevance score in descending order.
         """
         # Create pairs using only the chunk_summary for ranking
-        pairs = [[query_input, self.encryptor.decrypt_base64_str(doc['chunk_summary'])] for doc in retrieved_docs]
+        pairs = [[query_input, doc['chunk_summary']] for doc in retrieved_docs]
         scores = []
 
         # Process in batches
