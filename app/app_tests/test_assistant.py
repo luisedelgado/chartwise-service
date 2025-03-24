@@ -41,6 +41,57 @@ class TestingHarnessAssistantRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
+    def test_get_session_report_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                    params={
+                                        "session_report_id": FAKE_SESSION_REPORT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_session_report_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                    params={
+                                        "session_report_id": FAKE_SESSION_REPORT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_session_report_with_auth_but_missing_session_report_id(self):
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_session_report_with_auth_but_invalid_session_report_id(self):
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                    params={
+                                        "session_report_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_session_report_success(self):
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                    params={
+                                        "session_report_id": FAKE_SESSION_REPORT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+
     def test_insert_new_session_with_missing_auth_token(self):
         response = self.client.post(AssistantRouter.SESSIONS_ENDPOINT,
                                json={

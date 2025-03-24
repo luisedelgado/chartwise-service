@@ -15,7 +15,8 @@ from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
 from ..internal.schemas import (Gender,
                                 SessionProcessingStatus,
-                                ENCRYPTED_PATIENTS_TABLE_NAME)
+                                ENCRYPTED_PATIENTS_TABLE_NAME,
+                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -95,6 +96,21 @@ class AssistantManager:
 
     def __init__(self):
         self.chartwise_assistant = ChartWiseAssistant()
+
+    async def retrieve_session_report(self,
+                                      session_report_id: str,
+                                      supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "id": session_report_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No session report found with the incoming session_report_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
 
     async def process_new_session_data(self,
                                        environment: str,
@@ -654,14 +670,14 @@ class AssistantManager:
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
             topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
-                                                                                                user_id=therapist_id,
-                                                                                                patient_id=patient_id,
-                                                                                                environment=environment,
-                                                                                                language_code=language_code,
-                                                                                                session_id=session_id,
-                                                                                                patient_name=patient_first_name,
-                                                                                                patient_gender=patient_gender,
-                                                                                                supabase_client=supabase_client)
+                                                                                             user_id=therapist_id,
+                                                                                             patient_id=patient_id,
+                                                                                             environment=environment,
+                                                                                             language_code=language_code,
+                                                                                             session_id=session_id,
+                                                                                             patient_name=patient_first_name,
+                                                                                             patient_gender=patient_gender,
+                                                                                             supabase_client=supabase_client)
 
             topics_query = supabase_client.select(fields="*",
                                                   filters={
