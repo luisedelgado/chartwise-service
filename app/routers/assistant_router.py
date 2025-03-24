@@ -38,7 +38,12 @@ class AssistantRouter:
     QUERIES_ENDPOINT = "/v1/queries"
     PATIENTS_ENDPOINT = "/v1/patients"
     TEMPLATES_ENDPOINT = "/v1/templates"
-    ROUTER_TAG = "assistant"
+    ATTENDANCE_INSIGHTS_ENDPOINT = "/v1/attendance-insights"
+    BRIEFINGS_ENDPOINT = "/v1/briefings"
+    QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
+    RECENT_TOPICS_ENDPOINT = "/v1/recent-topics"
+    ASSISTANT_ROUTER_TAG = "assistant"
+    PATIENTS_ROUTER_TAG = "patients"
 
     def __init__(self, environment: str):
         self._environment = environment
@@ -52,7 +57,7 @@ class AssistantRouter:
     Registers the set of routes that the class' router can access.
     """
     def _register_routes(self):
-        @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def retrieve_session_report(response: Response,
                                           request: Request,
                                           session_report_id: str = None,
@@ -68,7 +73,7 @@ class AssistantRouter:
                                                                 authorization=authorization,
                                                                 session_id=session_id)
 
-        @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def insert_new_session(insert_payload: SessionNotesInsert,
                                      request: Request,
                                      response: Response,
@@ -88,7 +93,7 @@ class AssistantRouter:
                                                            authorization=authorization,
                                                            session_id=session_id)
 
-        @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def update_session(update_payload: SessionNotesUpdate,
                                  request: Request,
                                  response: Response,
@@ -108,7 +113,7 @@ class AssistantRouter:
                                                        authorization=authorization,
                                                        session_id=session_id)
 
-        @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def delete_session(response: Response,
                                  request: Request,
                                  background_tasks: BackgroundTasks,
@@ -126,7 +131,7 @@ class AssistantRouter:
                                                        authorization=authorization,
                                                        session_id=session_id)
 
-        @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
                                           store_access_token: Annotated[str | None, Header()] = None,
@@ -169,7 +174,7 @@ class AssistantRouter:
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patient(response: Response,
                               request: Request,
                               patient_id: str = None,
@@ -185,7 +190,7 @@ class AssistantRouter:
                                                     authorization=authorization,
                                                     session_id=session_id)
 
-        @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def add_patient(response: Response,
                               request: Request,
                               background_tasks: BackgroundTasks,
@@ -203,7 +208,7 @@ class AssistantRouter:
                                                     authorization=authorization,
                                                     session_id=session_id)
 
-        @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def update_patient(response: Response,
                                  request: Request,
                                  background_tasks: BackgroundTasks,
@@ -221,7 +226,7 @@ class AssistantRouter:
                                                        authorization=authorization,
                                                        session_id=session_id)
 
-        @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def delete_patient(request: Request,
                                  response: Response,
                                  patient_id: str = None,
@@ -237,7 +242,71 @@ class AssistantRouter:
                                                        authorization=authorization,
                                                        session_id=session_id)
 
-        @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(self.ATTENDANCE_INSIGHTS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        async def get_attendance_insights(response: Response,
+                                          request: Request,
+                                          patient_id: str = None,
+                                          store_access_token: Annotated[str | None, Header()] = None,
+                                          store_refresh_token: Annotated[str | None, Header()] = None,
+                                          authorization: Annotated[Union[str, None], Cookie()] = None,
+                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_attendance_insights_internal(response=response,
+                                                                request=request,
+                                                                patient_id=patient_id,
+                                                                store_access_token=store_access_token,
+                                                                store_refresh_token=store_refresh_token,
+                                                                authorization=authorization,
+                                                                session_id=session_id)
+
+        @self.router.get(self.BRIEFINGS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        async def get_briefing(response: Response,
+                               request: Request,
+                               patient_id: str = None,
+                               store_access_token: Annotated[str | None, Header()] = None,
+                               store_refresh_token: Annotated[str | None, Header()] = None,
+                               authorization: Annotated[Union[str, None], Cookie()] = None,
+                               session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_briefing_internal(response=response,
+                                                     request=request,
+                                                     patient_id=patient_id,
+                                                     store_access_token=store_access_token,
+                                                     store_refresh_token=store_refresh_token,
+                                                     authorization=authorization,
+                                                     session_id=session_id)
+
+        @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        async def get_question_suggestions(response: Response,
+                                           request: Request,
+                                           patient_id: str = None,
+                                           store_access_token: Annotated[str | None, Header()] = None,
+                                           store_refresh_token: Annotated[str | None, Header()] = None,
+                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_question_suggestions_internal(response=response,
+                                                                 request=request,
+                                                                 patient_id=patient_id,
+                                                                 store_access_token=store_access_token,
+                                                                 store_refresh_token=store_refresh_token,
+                                                                 authorization=authorization,
+                                                                 session_id=session_id)
+
+        @self.router.get(self.RECENT_TOPICS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        async def get_recent_topics(response: Response,
+                                    request: Request,
+                                    patient_id: str = None,
+                                    store_access_token: Annotated[str | None, Header()] = None,
+                                    store_refresh_token: Annotated[str | None, Header()] = None,
+                                    authorization: Annotated[Union[str, None], Cookie()] = None,
+                                    session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_recent_topics_internal(response=response,
+                                                          request=request,
+                                                          patient_id=patient_id,
+                                                          store_access_token=store_access_token,
+                                                          store_refresh_token=store_refresh_token,
+                                                          authorization=authorization,
+                                                          session_id=session_id)
+
+        @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def transform_session_with_template(request: Request,
                                                   response: Response,
                                                   background_tasks: BackgroundTasks,
@@ -882,6 +951,254 @@ class AssistantRouter:
             self._assistant_manager.delete_all_data_for_patient(therapist_id=therapist_id,
                                                                 patient_id=patient_id)
             return {}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a patient's attendance insights.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    patient_id – the id for the incoming patient.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_attendance_insights_internal(self,
+                                                request: Request,
+                                                response: Response,
+                                                patient_id: str,
+                                                store_access_token: Annotated[str | None, Header()],
+                                                store_refresh_token: Annotated[str | None, Header()],
+                                                authorization: Annotated[Union[str, None], Cookie()],
+                                                session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+
+            attendance_insights_data = await self._assistant_manager.retrieve_patient_insights(supabase_client=supabase_client,
+                                                                                               patient_id=patient_id)
+            request.state.patient_id = patient_id
+            return {"attendance_insights_data": attendance_insights_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a patient's latest briefing.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    patient_id – the id for the incoming patient.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_briefing_internal(self,
+                                     request: Request,
+                                     response: Response,
+                                     patient_id: str,
+                                     store_access_token: Annotated[str | None, Header()],
+                                     store_refresh_token: Annotated[str | None, Header()],
+                                     authorization: Annotated[Union[str, None], Cookie()],
+                                     session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+
+            briefing_data = await self._assistant_manager.retrieve_briefing(supabase_client=supabase_client,
+                                                                            patient_id=patient_id)
+            request.state.patient_id = patient_id
+            return {"briefing_data": briefing_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a patient's latest question suggestions.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    patient_id – the id for the incoming patient.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_question_suggestions_internal(self,
+                                                 request: Request,
+                                                 response: Response,
+                                                 patient_id: str,
+                                                 store_access_token: Annotated[str | None, Header()],
+                                                 store_refresh_token: Annotated[str | None, Header()],
+                                                 authorization: Annotated[Union[str, None], Cookie()],
+                                                 session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+
+            question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(supabase_client=supabase_client,
+                                                                                                    patient_id=patient_id)
+            request.state.patient_id = patient_id
+            return {"question_suggestions_data": question_suggestions_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a patient's latest recent topics.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    patient_id – the id for the incoming patient.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_recent_topics_internal(self,
+                                          request: Request,
+                                          response: Response,
+                                          patient_id: str,
+                                          store_access_token: Annotated[str | None, Header()],
+                                          store_refresh_token: Annotated[str | None, Header()],
+                                          authorization: Annotated[Union[str, None], Cookie()],
+                                          session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+
+            recent_topics_data = await self._assistant_manager.recent_topics_data(supabase_client=supabase_client,
+                                                                                  patient_id=patient_id)
+            request.state.patient_id = patient_id
+            return {"recent_topics_data": recent_topics_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

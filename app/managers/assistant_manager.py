@@ -530,11 +530,12 @@ class AssistantManager:
                                                                 },
                                                                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
 
+            questions = questions_json['questions']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(question_suggestions_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
-                                           "questions": questions_json,
+                                           "questions": questions,
                                            "last_updated": now_timestamp,
                                        },
                                        filters={
@@ -548,7 +549,7 @@ class AssistantManager:
                                            "patient_id": patient_id,
                                            "last_updated": now_timestamp,
                                            "therapist_id": therapist_id,
-                                           "questions": questions_json
+                                           "questions": questions
                                        },
                                        table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
         except Exception as e:
@@ -690,12 +691,13 @@ class AssistantManager:
                                                   },
                                                   table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
 
+            recent_topics = recent_topics_json['topics']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             if 0 != len(topics_query['data']):
                 # Update existing result in Supabase
                 supabase_client.update(payload={
                                            "last_updated": now_timestamp,
-                                           "topics": recent_topics_json,
+                                           "topics": recent_topics,
                                            "insights": topics_insights
                                        },
                                        filters={
@@ -710,7 +712,7 @@ class AssistantManager:
                                            "insights": topics_insights,
                                            "patient_id": patient_id,
                                            "therapist_id": therapist_id,
-                                           "topics": recent_topics_json
+                                           "topics": recent_topics
                                        },
                                        table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
         except Exception as e:
@@ -908,6 +910,66 @@ class AssistantManager:
                     "We're on it— please check back shortly!")
         else:
             raise Exception("Unsupported language code")
+
+    async def retrieve_patient_insights(self,
+                                        patient_id: str,
+                                        supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "patient_id": patient_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No data found with the incoming patient_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
+    async def retrieve_briefing(self,
+                                patient_id: str,
+                                supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "patient_id": patient_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No data found with the incoming patient_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
+    async def retrieve_question_suggestions(self,
+                                            patient_id: str,
+                                            supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "patient_id": patient_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No data found with the incoming patient_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
+    async def recent_topics_data(self,
+                                 patient_id: str,
+                                 supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+                                              fields="*",
+                                              filters={
+                                                  "patient_id": patient_id
+                                              })
+            response_data = response['data']
+            assert len(response_data) > 0, "No data found with the incoming patient_id"
+            return response_data[0]
+        except Exception as e:
+            raise Exception(e)
 
     # Private
 
