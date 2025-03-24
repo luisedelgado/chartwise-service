@@ -81,6 +81,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_get_session_report_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
                                     params={
                                         "session_report_id": FAKE_SESSION_REPORT_ID
@@ -665,6 +666,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_get_patient_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
                                     params={
                                         "patient_id": FAKE_PATIENT_ID

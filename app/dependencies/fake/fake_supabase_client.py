@@ -13,9 +13,18 @@ from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 
 class FakeSupabaseResult(BaseModel):
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __contains__(self, key):
+        return hasattr(self, key)
+
     data: list
 
 class FakeSupabaseUser(BaseModel):
+    def __getitem__(self, key):
+        return getattr(self, key)
+
     user: dict
 
 class FakeSupabaseClient(SupabaseBaseClass):
@@ -37,6 +46,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
     invoked_refresh_session: bool = False
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
     def __init__(self):
         self.storage_client: SupabaseStorageBaseClass = FakeSupabaseStorageClient()
