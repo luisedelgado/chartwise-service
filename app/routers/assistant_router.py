@@ -373,7 +373,7 @@ class AssistantRouter:
 
             session_report_data = await self._assistant_manager.retrieve_session_report(supabase_client=supabase_client,
                                                                                         session_report_id=session_report_id)
-            request.state.patient_id = session_report_data['patient_id']
+            request.state.patient_id = None if len(session_report_data or '') == 0 else session_report_data['patient_id']
             return {"session_report_data": session_report_data}
         except Exception as e:
             description = str(e)
