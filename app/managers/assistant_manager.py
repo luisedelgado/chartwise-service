@@ -521,35 +521,18 @@ class AssistantManager:
                                                                                         patient_gender=patient_gender)
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
-            question_suggestions_query = supabase_client.select(fields="*",
-                                                                filters={
-                                                                    'therapist_id': therapist_id,
-                                                                    'patient_id': patient_id
-                                                                },
-                                                                table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
-
             questions = questions_json['questions']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len(question_suggestions_query['data']):
-                # Update existing result in Supabase
-                supabase_client.update(payload={
-                                           "questions": questions,
-                                           "last_updated": now_timestamp,
-                                       },
-                                       filters={
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
-            else:
-                # Insert result to Supabase
-                supabase_client.insert(payload={
-                                           "patient_id": patient_id,
-                                           "last_updated": now_timestamp,
-                                           "therapist_id": therapist_id,
-                                           "questions": questions
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
+
+            # Upsert result to Supabase
+            supabase_client.upsert(payload={
+                                        "patient_id": patient_id,
+                                        "last_updated": now_timestamp,
+                                        "therapist_id": therapist_id,
+                                        "questions": questions
+                                    },
+                                    on_conflict="patient_id",
+                                    table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
                                          session_id=session_id,
@@ -602,34 +585,16 @@ class AssistantManager:
                                                                       session_count=session_count,
                                                                       supabase_client=supabase_client)
 
-            briefing_query = supabase_client.select(fields="*",
-                                                    filters={
-                                                        'therapist_id': therapist_id,
-                                                        'patient_id': patient_id
-                                                    },
-                                                    table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
-
+            # Upsert result to Supabase
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len(briefing_query['data']):
-                # Update existing result in Supabase
-                supabase_client.update(payload={
-                                           "briefing": briefing,
-                                           "last_updated": now_timestamp
-                                       },
-                                       filters={
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
-            else:
-                # Insert result to Supabase
-                supabase_client.insert(payload={
-                                           "last_updated": now_timestamp,
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                           "briefing": briefing
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
+            supabase_client.upsert(payload={
+                                        "last_updated": now_timestamp,
+                                        "patient_id": patient_id,
+                                        "therapist_id": therapist_id,
+                                        "briefing": briefing
+                                    },
+                                    on_conflict="patient_id",
+                                    table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the presession tray failed",
                                          session_id=session_id,
@@ -682,37 +647,19 @@ class AssistantManager:
                                                                                              patient_gender=patient_gender,
                                                                                              supabase_client=supabase_client)
 
-            topics_query = supabase_client.select(fields="*",
-                                                  filters={
-                                                      'therapist_id': therapist_id,
-                                                      'patient_id': patient_id
-                                                  },
-                                                  table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
-
             recent_topics = recent_topics_json['topics']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len(topics_query['data']):
-                # Update existing result in Supabase
-                supabase_client.update(payload={
-                                           "last_updated": now_timestamp,
-                                           "topics": recent_topics,
-                                           "insights": topics_insights
-                                       },
-                                       filters={
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
-            else:
-                # Insert result to Supabase
-                supabase_client.insert(payload={
-                                           "last_updated": now_timestamp,
-                                           "insights": topics_insights,
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                           "topics": recent_topics
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
+
+            # Upsert result to Supabase
+            supabase_client.upsert(payload={
+                                        "last_updated": now_timestamp,
+                                        "insights": topics_insights,
+                                        "patient_id": patient_id,
+                                        "therapist_id": therapist_id,
+                                        "topics": recent_topics
+                                    },
+                                    on_conflict="patient_id",
+                                    table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the recent topics failed",
                                          session_id=session_id,
@@ -752,34 +699,16 @@ class AssistantManager:
                                                                                               session_id=session_id,
                                                                                               supabase_client=supabase_client)
 
-            attendance_query = supabase_client.select(fields="*",
-                                                      filters={
-                                                          'therapist_id': therapist_id,
-                                                          'patient_id': patient_id
-                                                      },
-                                                      table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
-
+            # Upsert result to Supabase
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            if 0 != len(attendance_query['data']):
-                # Update existing result in Supabase
-                supabase_client.update(payload={
-                                           "last_updated": now_timestamp,
-                                           "insights": attendance_insights
-                                       },
-                                       filters={
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
-            else:
-                # Insert result to Supabase
-                supabase_client.insert(payload={
-                                           "last_updated": now_timestamp,
-                                           "insights": attendance_insights,
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id
-                                       },
-                                       table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
+            supabase_client.upsert(payload={
+                                        "last_updated": now_timestamp,
+                                        "insights": attendance_insights,
+                                        "patient_id": patient_id,
+                                        "therapist_id": therapist_id
+                                    },
+                                    on_conflict="patient_id",
+                                    table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
 
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
