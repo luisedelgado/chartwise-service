@@ -178,11 +178,11 @@ class AssistantManager:
                              supabase_client: SupabaseBaseClass,
                              email_manager: EmailManager):
         try:
-            session_notes_id = filtered_body['id']
+            session_report_id = filtered_body['id']
             report_query = supabase_client.select(fields="*",
                                                   table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                   filters={
-                                                      'id': session_notes_id
+                                                      'id': session_report_id
                                                   })
             assert (0 != len(report_query['data'])), "There isn't a match with the incoming session data."
             report_query_data = report_query['data'][0]
@@ -210,14 +210,14 @@ class AssistantManager:
             session_update_response = supabase_client.update(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                              payload=session_update_payload,
                                                              filters={
-                                                                 'id': session_notes_id
+                                                                 'id': session_report_id
                                                              })
             assert (0 != len(session_update_response['data'])), "Update operation could not be completed"
 
             # Update the session vectors if needed
             if session_date_changed or session_text_changed:
                 background_tasks.add_task(self._update_vectors_and_generate_insights,
-                                          session_notes_id,
+                                          session_report_id,
                                           therapist_id,
                                           patient_id,
                                           filtered_body.get('notes_text', current_session_text),
@@ -230,6 +230,11 @@ class AssistantManager:
                                           auth_manager,
                                           supabase_client,
                                           email_manager)
+
+            return {
+                "patient_id": report_query_data['patient_id'],
+                "session_report_id": session_report_id
+            }
         except Exception as e:
             raise Exception(e)
 
@@ -269,6 +274,11 @@ class AssistantManager:
                                       background_tasks,
                                       email_manager,
                                       supabase_client)
+
+            return {
+                "patient_id": patient_id,
+                "session_report_id": session_report_id,
+            }
         except Exception as e:
             raise Exception(e)
 

@@ -1,5 +1,6 @@
 import argparse, subprocess, os, pty
 
+from app.internal.schemas import STAGING_ENVIRONMENT, PROD_ENVIRONMENT
 from pathlib import Path
 
 # Command for executing: python test_and_deploy.py -env <environment>
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     parser.add_argument("-env", nargs=1, help="The environment to deploy if tests succeed")
     env = parser.parse_args().env[0]
 
-    if env == "staging":
+    if env == STAGING_ENVIRONMENT:
         toml_file_name = "fly.staging.toml"
         app_name = "chartwise-staging-service"
     elif env == "prod":
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         print(f"How did I get here? No env to deploy based on: {env}")
         exit()
 
-    if env != "staging" and env != "prod":
+    if env != STAGING_ENVIRONMENT and env != PROD_ENVIRONMENT:
         print("Invalid environment to deploy.")
         exit()
 

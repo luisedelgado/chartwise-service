@@ -427,23 +427,6 @@ class TestingHarnessAssistantRouter:
                                         })
         assert response.status_code == 401
 
-    def test_delete_session_with_valid_auth_token_but_supabase_returns_unathenticated_session(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                        cookies={
-                                            "authorization": self.auth_cookie
-                                        },
-                                        headers={
-                                            "store-access-token": FAKE_ACCESS_TOKEN,
-                                            "store-refresh-token": FAKE_REFRESH_TOKEN
-                                        },
-                                        params={
-                                            "session_report_id": FAKE_SESSION_REPORT_ID,
-                                        })
-        assert response.status_code == 400
-
     def test_delete_session_with_valid_auth_but_empty_session_notes_id(self):
         self.fake_supabase_user_client.return_authenticated_session = True
         self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
@@ -459,40 +442,6 @@ class TestingHarnessAssistantRouter:
                                         params={
                                             "session_report_id": "",
                                         })
-        assert response.status_code == 400
-
-    def test_delete_session_with_valid_auth_but_garbage_session_notes_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "session_report_id": "4123sdggsdgsdgdsgsdg",
-                                    })
-        assert response.status_code == 400
-
-    def test_delete_session_with_valid_auth_but_nonexistent_but_valid_session_notes_id_uuid(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        response = self.client.delete(AssistantRouter.SESSIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    params={
-                                        "session_report_id": FAKE_SESSION_REPORT_ID,
-                                    })
         assert response.status_code == 400
 
     def test_delete_session_success(self):

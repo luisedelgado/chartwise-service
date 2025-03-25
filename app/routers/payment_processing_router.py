@@ -13,12 +13,12 @@ from fastapi import (APIRouter,
 from pydantic import BaseModel
 from typing import Annotated, Optional, Union
 
-from ..internal.utilities import datetime_handler
-from ..internal import security
 from ..dependencies.dependency_container import dependency_container, StripeBaseClass
+from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
+from ..internal.schemas import DEV_ENVIRONMENT, PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
-from ..internal.utilities import general_utilities
+from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
@@ -742,11 +742,11 @@ class PaymentProcessingRouter:
         logging.info(f"Received webhook for environment: {environment}")
 
         try:
-            if environment == "dev":
+            if environment == DEV_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
-            elif environment == "staging":
+            elif environment == STAGING_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
-            elif environment == "prod":
+            elif environment == PROD_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
             else:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid environment")
@@ -760,7 +760,7 @@ class PaymentProcessingRouter:
             logging.info("Successfully constructed Stripe event")
 
             # In deployed environments, block requests from localhost
-            if environment in ["staging", "prod"] and request.client.host in ["localhost", "127.0.0.1"]:
+            if environment in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT] and request.client.host in ["localhost", "127.0.0.1"]:
                 logging.info(f"Blocking localhost request for {environment}")
                 raise HTTPException(
                     status_code=403, detail="Webhooks from localhost are not allowed in staging."

@@ -17,11 +17,12 @@ from .implementation.pinecone_client import PineconeBaseClass, PineconeClient
 from .implementation.resend_client import ResendBaseClass, ResendClient
 from .implementation.stripe_client import StripeBaseClass, StripeClient
 from .implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
+from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT, TESTING_ENVIRONMENT
 
 class DependencyContainer:
     def __init__(self):
         self._environment = os.environ.get("ENVIRONMENT")
-        self._testing_environment = (self._environment == "testing")
+        self._testing_environment = (self._environment == TESTING_ENVIRONMENT)
         self._openai_client = None
         self._pinecone_client = None
         self._docupanda_client = None
@@ -68,7 +69,7 @@ class DependencyContainer:
             return self._resend_client
 
         environment = os.environ.get("ENVIRONMENT")
-        if (environment == "prod" or environment == "staging"):
+        if (environment == PROD_ENVIRONMENT or environment == STAGING_ENVIRONMENT):
             self._resend_client = ResendClient()
         else:
             self._resend_client = FakeResendClient()

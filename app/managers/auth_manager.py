@@ -5,16 +5,15 @@ from fastapi import HTTPException, status, Response
 from passlib.context import CryptContext
 from typing import Tuple
 
-from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..dependencies.dependency_container import dependency_container
+from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ..internal.security import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class AuthManager:
 
     ENVIRONMENT = os.environ.get("ENVIRONMENT")
-    APP_COOKIE_DOMAIN = (".chartwise.ai" if (os.environ.get("ENVIRONMENT") == "prod"
-                         or os.environ.get("ENVIRONMENT") == "staging") else None)
+    APP_COOKIE_DOMAIN = (".chartwise.ai" if (os.environ.get("ENVIRONMENT") == PROD_ENVIRONMENT
+                         or os.environ.get("ENVIRONMENT") == STAGING_ENVIRONMENT) else None)
     SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 120

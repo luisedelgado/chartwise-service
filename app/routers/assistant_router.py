@@ -27,6 +27,7 @@ from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesUpdate)
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
+from ..managers.phi_audit_manager import PhiAuditManager
 
 class TemplatePayload(BaseModel):
     session_notes_text: str
@@ -50,6 +51,7 @@ class AssistantRouter:
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
         self._email_manager = EmailManager()
+        self._phi_audit_manager = PhiAuditManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -60,6 +62,7 @@ class AssistantRouter:
         @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def retrieve_session_report(response: Response,
                                           request: Request,
+                                          background_tasks: BackgroundTasks,
                                           session_report_id: str = None,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
@@ -67,6 +70,7 @@ class AssistantRouter:
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_session_report_internal(response=response,
                                                                 request=request,
+                                                                background_tasks=background_tasks,
                                                                 session_report_id=session_report_id,
                                                                 store_access_token=store_access_token,
                                                                 store_refresh_token=store_refresh_token,
@@ -134,6 +138,7 @@ class AssistantRouter:
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
+                                          background_task: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -167,6 +172,7 @@ class AssistantRouter:
 
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 request=request,
+                                                                                background_tasks=background_task,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
                                                                                 session_id=session_id),
@@ -177,6 +183,7 @@ class AssistantRouter:
         @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patient(response: Response,
                               request: Request,
+                              background_tasks: BackgroundTasks,
                               patient_id: str = None,
                               store_access_token: Annotated[str | None, Header()] = None,
                               store_refresh_token: Annotated[str | None, Header()] = None,
@@ -184,6 +191,7 @@ class AssistantRouter:
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_patient_internal(response=response,
                                                     request=request,
+                                                    background_tasks=background_tasks,
                                                     patient_id=patient_id,
                                                     store_access_token=store_access_token,
                                                     store_refresh_token=store_refresh_token,
@@ -229,6 +237,7 @@ class AssistantRouter:
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def delete_patient(request: Request,
                                  response: Response,
+                                 background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
                                  store_refresh_token: Annotated[str | None, Header()] = None,
@@ -236,6 +245,7 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(request=request,
                                                        response=response,
+                                                       background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        store_access_token=store_access_token,
                                                        store_refresh_token=store_refresh_token,
@@ -331,6 +341,7 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
+    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the incoming patient.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -340,6 +351,7 @@ class AssistantRouter:
     async def _retrieve_session_report_internal(self,
                                                 request: Request,
                                                 response: Response,
+                                                background_tasks: BackgroundTasks,
                                                 session_report_id: str,
                                                 store_access_token: Annotated[str | None, Header()],
                                                 store_refresh_token: Annotated[str | None, Header()],
@@ -386,6 +398,18 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=patient_id)
 
     """
     Stores a new session report.
@@ -473,6 +497,17 @@ class AssistantRouter:
                                                                       session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=body['patient_id'])
 
     """
     Updates a session report.
@@ -535,14 +570,15 @@ class AssistantRouter:
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
-            await self._assistant_manager.update_session(language_code=language_code,
-                                                         environment=self._environment,
-                                                         background_tasks=background_tasks,
-                                                         auth_manager=self._auth_manager,
-                                                         filtered_body=body,
-                                                         session_id=session_id,
-                                                         supabase_client=supabase_client,
-                                                         email_manager=self._email_manager)
+            patient_id = (await self._assistant_manager.update_session(language_code=language_code,
+                                                                       environment=self._environment,
+                                                                       background_tasks=background_tasks,
+                                                                       auth_manager=self._auth_manager,
+                                                                       filtered_body=body,
+                                                                       session_id=session_id,
+                                                                       supabase_client=supabase_client,
+                                                                       email_manager=self._email_manager))['patient_id']
+            request.state.patient_id = patient_id
             return {}
         except Exception as e:
             description = str(e)
@@ -555,6 +591,18 @@ class AssistantRouter:
                                                                       session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=patient_id)
 
     """
     Deletes a session report.
@@ -609,25 +657,26 @@ class AssistantRouter:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
             dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                      method=request.method,
-                                                                      therapist_id=therapist_id,
-                                                                      session_report_id=session_report_id,
-                                                                      error_code=status_code,
-                                                                      description=description,
-                                                                      session_id=session_id)
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  session_report_id=session_report_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
 
         try:
             language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
-            await self._assistant_manager.delete_session(language_code=language_code,
-                                                         email_manager=self._email_manager,
-                                                         environment=self._environment,
-                                                         session_id=session_id,
-                                                         background_tasks=background_tasks,
-                                                         therapist_id=therapist_id,
-                                                         session_report_id=session_report_id,
-                                                         supabase_client=supabase_client)
+            patient_id = (await self._assistant_manager.delete_session(language_code=language_code,
+                                                                       email_manager=self._email_manager,
+                                                                       environment=self._environment,
+                                                                       session_id=session_id,
+                                                                       background_tasks=background_tasks,
+                                                                       therapist_id=therapist_id,
+                                                                       session_report_id=session_report_id,
+                                                                       supabase_client=supabase_client))['patient_id']
+            request.state.patient_id = patient_id
             return {}
         except Exception as e:
             description = str(e)
@@ -639,6 +688,17 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=request.state.patient_id)
 
     """
     Executes a query to our assistant system.
@@ -647,6 +707,7 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     query – the query that will be executed.
+    background_task – the background task object.
     therapist_id – the therapist id associated with the query.
     supabase_client – the supabase client to be used internally.
     session_id – the session_id cookie, if exists.
@@ -654,6 +715,7 @@ class AssistantRouter:
     async def _execute_assistant_query_internal(self,
                                                 request: Request,
                                                 query: AssistantQuery,
+                                                background_tasks: BackgroundTasks,
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
@@ -673,6 +735,17 @@ class AssistantRouter:
                                                                   error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
                                                                   description=str(e),
                                                                   session_id=session_id)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=status.HTTP_200_OK,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=therapist_id,
+                                                     patient_id=query.patient_id)
 
     """
     Retrieves a patient.
@@ -680,6 +753,7 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
+    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the incoming patient.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -689,12 +763,15 @@ class AssistantRouter:
     async def _get_patient_internal(self,
                                     request: Request,
                                     response: Response,
+                                    background_tasks: BackgroundTasks,
                                     patient_id: str,
                                     store_access_token: Annotated[str | None, Header()],
                                     store_refresh_token: Annotated[str | None, Header()],
                                     authorization: Annotated[Union[str, None], Cookie()],
                                     session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
+        request.state.patient_id = patient_id
+
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
 
@@ -722,7 +799,6 @@ class AssistantRouter:
 
             patient_data = await self._assistant_manager.retrieve_patient(supabase_client=supabase_client,
                                                                           patient_id=patient_id)
-            request.state.patient_id = patient_id
             return {"patient_data": patient_data}
         except Exception as e:
             description = str(e)
@@ -735,6 +811,17 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=patient_id)
 
     """
     Adds a patient.
@@ -810,6 +897,18 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=patient_id)
 
     """
     Updates a patient.
@@ -883,6 +982,17 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=request.state.patient_id)
 
     """
     Deletes a patient.
@@ -890,6 +1000,7 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
+    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -899,6 +1010,7 @@ class AssistantRouter:
     async def _delete_patient_internal(self,
                                        request: Request,
                                        response: Response,
+                                       background_tasks: BackgroundTasks,
                                        patient_id: str,
                                        store_access_token: Annotated[str | None, Header()],
                                        store_refresh_token: Annotated[str | None, Header()],
@@ -962,6 +1074,17 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
+        finally:
+            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
+                                                     background_tasks=background_tasks,
+                                                     environment=self._environment,
+                                                     session_id=session_id,
+                                                     api_method=request.method,
+                                                     status_code=response.status_code,
+                                                     endpoint=request.url.path,
+                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
+                                                     therapist_id=request.state.therapist_id,
+                                                     patient_id=request.state.patient_id)
 
     """
     Retrieves a patient's attendance insights.
