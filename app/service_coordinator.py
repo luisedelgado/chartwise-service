@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import APIRouter, FastAPI, HTTPException, status
+from fastapi import APIRouter, FastAPI, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from .internal.logging.logging_middleware import TimingMiddleware
@@ -16,6 +17,12 @@ async def lifespan(_: FastAPI):
     print("Finished loading model and tokenizer.")
     yield
     print("Releasing model and tokenizer.")
+
+class HSTSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        return response
 
 class EndpointServiceCoordinator:
 
@@ -52,6 +59,7 @@ class EndpointServiceCoordinator:
             allow_headers=["*"],
         )
         self.app.add_middleware(TimingMiddleware)
+        self.app.add_middleware(HSTSMiddleware)
         self.environment = environment
 
         try:
