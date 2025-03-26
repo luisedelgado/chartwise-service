@@ -12,11 +12,16 @@ from ..schemas import PROD_ENVIRONMENT
 from ...dependencies.dependency_container import (dependency_container, SupabaseBaseClass)
 from ...managers.email_manager import EmailManager
 from ...routers.assistant_router import AssistantRouter
+from ...routers.audio_processing_router import AudioProcessingRouter
+from ...routers.image_processing_router import ImageProcessingRouter
 
 class TimingMiddleware(BaseHTTPMiddleware):
 
     PHI_ENDPOINTS = [AssistantRouter.PATIENTS_ENDPOINT,
-                     AssistantRouter.SESSIONS_ENDPOINT]
+                     AssistantRouter.SESSIONS_ENDPOINT,
+                     AudioProcessingRouter.DIARIZATION_ENDPOINT,
+                     AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+                     ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT]
     IRRELEVANT_PATHS = ["/", "/openapi.json", "/docs", "/favicon.ico"]
     SESSION_ID_KEY = "session_id"
     SESSION_REPORT_ID_KEY = "session_report_id"
@@ -58,7 +63,6 @@ class TimingMiddleware(BaseHTTPMiddleware):
         session_id = getattr(request.state, self.SESSION_ID_KEY, None)
         therapist_id = getattr(request.state, self.THERAPIST_ID_KEY, None)
         patient_id = (getattr(request.state, self.PATIENT_ID_KEY, None)
-                        or request.body.get(self.PATIENT_ID_KEY, None)
                         or request.query_params.get(self.PATIENT_ID_KEY, None))
 
         if (environment == PROD_ENVIRONMENT

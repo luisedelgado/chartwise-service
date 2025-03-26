@@ -60,7 +60,6 @@ class AssistantRouter:
         @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def retrieve_session_report(response: Response,
                                           request: Request,
-                                          background_tasks: BackgroundTasks,
                                           session_report_id: str = None,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
@@ -68,7 +67,6 @@ class AssistantRouter:
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_session_report_internal(response=response,
                                                                 request=request,
-                                                                background_tasks=background_tasks,
                                                                 session_report_id=session_report_id,
                                                                 store_access_token=store_access_token,
                                                                 store_refresh_token=store_refresh_token,
@@ -136,7 +134,6 @@ class AssistantRouter:
         @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
-                                          background_task: BackgroundTasks,
                                           store_access_token: Annotated[str | None, Header()] = None,
                                           store_refresh_token: Annotated[str | None, Header()] = None,
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
@@ -170,7 +167,6 @@ class AssistantRouter:
 
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
                                                                                 request=request,
-                                                                                background_tasks=background_task,
                                                                                 therapist_id=therapist_id,
                                                                                 supabase_client=supabase_client,
                                                                                 session_id=session_id),
@@ -181,7 +177,6 @@ class AssistantRouter:
         @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patient(response: Response,
                               request: Request,
-                              background_tasks: BackgroundTasks,
                               patient_id: str = None,
                               store_access_token: Annotated[str | None, Header()] = None,
                               store_refresh_token: Annotated[str | None, Header()] = None,
@@ -189,7 +184,6 @@ class AssistantRouter:
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_patient_internal(response=response,
                                                     request=request,
-                                                    background_tasks=background_tasks,
                                                     patient_id=patient_id,
                                                     store_access_token=store_access_token,
                                                     store_refresh_token=store_refresh_token,
@@ -235,7 +229,6 @@ class AssistantRouter:
         @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def delete_patient(request: Request,
                                  response: Response,
-                                 background_tasks: BackgroundTasks,
                                  patient_id: str = None,
                                  store_access_token: Annotated[str | None, Header()] = None,
                                  store_refresh_token: Annotated[str | None, Header()] = None,
@@ -243,7 +236,6 @@ class AssistantRouter:
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(request=request,
                                                        response=response,
-                                                       background_tasks=background_tasks,
                                                        patient_id=patient_id,
                                                        store_access_token=store_access_token,
                                                        store_refresh_token=store_refresh_token,
@@ -339,7 +331,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
-    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the incoming patient.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -349,7 +340,6 @@ class AssistantRouter:
     async def _retrieve_session_report_internal(self,
                                                 request: Request,
                                                 response: Response,
-                                                background_tasks: BackgroundTasks,
                                                 session_report_id: str,
                                                 store_access_token: Annotated[str | None, Header()],
                                                 store_refresh_token: Annotated[str | None, Header()],
@@ -659,7 +649,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     query – the query that will be executed.
-    background_task – the background task object.
     therapist_id – the therapist id associated with the query.
     supabase_client – the supabase client to be used internally.
     session_id – the session_id cookie, if exists.
@@ -667,7 +656,6 @@ class AssistantRouter:
     async def _execute_assistant_query_internal(self,
                                                 request: Request,
                                                 query: AssistantQuery,
-                                                background_tasks: BackgroundTasks,
                                                 therapist_id: str,
                                                 supabase_client: SupabaseBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
@@ -694,7 +682,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
-    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the incoming patient.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -704,7 +691,6 @@ class AssistantRouter:
     async def _get_patient_internal(self,
                                     request: Request,
                                     response: Response,
-                                    background_tasks: BackgroundTasks,
                                     patient_id: str,
                                     store_access_token: Annotated[str | None, Header()],
                                     store_refresh_token: Annotated[str | None, Header()],
@@ -907,7 +893,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the object to be used for constructing the final response.
-    background_tasks – object for scheduling concurrent tasks.
     patient_id – the id for the patient to be deleted.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -917,7 +902,6 @@ class AssistantRouter:
     async def _delete_patient_internal(self,
                                        request: Request,
                                        response: Response,
-                                       background_tasks: BackgroundTasks,
                                        patient_id: str,
                                        store_access_token: Annotated[str | None, Header()],
                                        store_refresh_token: Annotated[str | None, Header()],
