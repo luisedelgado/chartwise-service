@@ -1122,3 +1122,215 @@ class TestingHarnessAssistantRouter:
                                         "authorization": self.auth_cookie
                                     },)
         assert response.status_code == 200
+
+    def test_get_attendance_insights_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_attendance_insights_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_attendance_insights_with_auth_but_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_attendance_insights_with_auth_but_invalid_patient_id(self):
+        response = self.client.get(AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                                    params={
+                                        "patient_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_attendance_insights_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+        assert "attendance_insights_data" in response.json()
+
+    def test_get_briefing_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.BRIEFINGS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_briefing_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.BRIEFINGS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_briefing_with_auth_but_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.BRIEFINGS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_briefing_with_auth_but_invalid_patient_id(self):
+        response = self.client.get(AssistantRouter.BRIEFINGS_ENDPOINT,
+                                    params={
+                                        "patient_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_briefing_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.BRIEFINGS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+        assert "briefing_data" in response.json()
+
+    def test_get_question_suggestions_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_question_suggestions_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_question_suggestions_with_auth_but_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_question_suggestions_with_auth_but_invalid_patient_id(self):
+        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    params={
+                                        "patient_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_question_suggestions_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+        assert "question_suggestions_data" in response.json()
+
+    def test_get_recent_topics_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.RECENT_TOPICS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    })
+        assert response.status_code == 401
+
+    def test_get_recent_topics_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.RECENT_TOPICS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    },
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    },)
+        assert response.status_code == 401
+
+    def test_get_recent_topics_with_auth_but_missing_patient_id(self):
+        response = self.client.get(AssistantRouter.RECENT_TOPICS_ENDPOINT,
+                                    cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_recent_topics_with_auth_but_invalid_patient_id(self):
+        response = self.client.get(AssistantRouter.RECENT_TOPICS_ENDPOINT,
+                                    params={
+                                        "patient_id": ""
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 400
+
+    def test_get_recent_topics_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.RECENT_TOPICS_ENDPOINT,
+                                    params={
+                                        "patient_id": FAKE_PATIENT_ID
+                                    }, cookies={
+                                        "authorization": self.auth_cookie
+                                    }, headers={
+                                        "store-access-token": FAKE_ACCESS_TOKEN,
+                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    },)
+        assert response.status_code == 200
+        assert "recent_topics_data" in response.json()
