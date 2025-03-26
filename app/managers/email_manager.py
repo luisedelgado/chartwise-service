@@ -48,8 +48,8 @@ class EmailManager:
                 activity_details = self.MEDIA_JOB_ACTIVITY_DETAILS.format(media_type=media_type,
                                                                           session_report_id=session_report_id,
                                                                           storage_filepath=storage_filepath)
-            else:
-                raise Exception("Unrecognized alert category")
+
+            assert alert.category == InternalAlertCategory.ENGINEERING_ALERT, f"Untracked alert category: {alert.category.value}."
 
             body = "".join([
                 f"<b>{alert.description}</b>",
