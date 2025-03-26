@@ -1,4 +1,3 @@
-import base64
 import json
 
 from supabase import Client

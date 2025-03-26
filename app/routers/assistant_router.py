@@ -27,7 +27,6 @@ from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesUpdate)
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
-from ..managers.phi_audit_manager import PhiAuditManager
 
 class TemplatePayload(BaseModel):
     session_notes_text: str
@@ -51,7 +50,6 @@ class AssistantRouter:
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
         self._email_manager = EmailManager()
-        self._phi_audit_manager = PhiAuditManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -398,18 +396,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=patient_id)
 
     """
     Stores a new session report.
@@ -497,17 +483,6 @@ class AssistantRouter:
                                                                       session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=body['patient_id'])
 
     """
     Updates a session report.
@@ -591,18 +566,6 @@ class AssistantRouter:
                                                                       session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=patient_id)
 
     """
     Deletes a session report.
@@ -688,17 +651,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=request.state.patient_id)
 
     """
     Executes a query to our assistant system.
@@ -735,17 +687,6 @@ class AssistantRouter:
                                                                   error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
                                                                   description=str(e),
                                                                   session_id=session_id)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=status.HTTP_200_OK,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=therapist_id,
-                                                     patient_id=query.patient_id)
 
     """
     Retrieves a patient.
@@ -811,17 +752,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=patient_id)
 
     """
     Adds a patient.
@@ -897,18 +827,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            patient_id = None if not hasattr(request.state, "patient_id") else request.state.patient_id
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=patient_id)
 
     """
     Updates a patient.
@@ -982,17 +900,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=request.state.patient_id)
 
     """
     Deletes a patient.
@@ -1074,17 +981,6 @@ class AssistantRouter:
                                                                   session_id=session_id)
             raise HTTPException(status_code=status_code,
                                 detail=description)
-        finally:
-            self._phi_audit_manager.log_phi_activity(email_manager=self._email_manager,
-                                                     background_tasks=background_tasks,
-                                                     environment=self._environment,
-                                                     session_id=session_id,
-                                                     api_method=request.method,
-                                                     status_code=response.status_code,
-                                                     endpoint=request.url.path,
-                                                     ip_address=request.headers.get("x-forwarded-for", request.client.host),
-                                                     therapist_id=request.state.therapist_id,
-                                                     patient_id=request.state.patient_id)
 
     """
     Retrieves a patient's attendance insights.
