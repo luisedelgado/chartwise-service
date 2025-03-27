@@ -4,6 +4,7 @@ from fastapi import (APIRouter,
                      Cookie,
                      Header,
                      HTTPException,
+                     Path,
                      Request,
                      Response,
                      status)
@@ -178,18 +179,18 @@ class AssistantRouter:
         @self.router.get(self.SINGLE_PATIENT_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_single_patient(response: Response,
                                      request: Request,
-                                     patient_id: str,
+                                     patient_id: str = Path(..., min_length=1),
                                      store_access_token: Annotated[str | None, Header()] = None,
                                      store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_single_patient_internal(response=response,
-                                                    request=request,
-                                                    patient_id=patient_id,
-                                                    store_access_token=store_access_token,
-                                                    store_refresh_token=store_refresh_token,
-                                                    authorization=authorization,
-                                                    session_id=session_id)
+                                                           request=request,
+                                                           patient_id=patient_id,
+                                                           store_access_token=store_access_token,
+                                                           store_refresh_token=store_refresh_token,
+                                                           authorization=authorization,
+                                                           session_id=session_id)
 
         @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patients(response: Response,
@@ -737,7 +738,11 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+            if not patient_id.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parameter patient_id cannot be empty."
+                )
 
             patient_data = await self._assistant_manager.retrieve_single_patient(supabase_client=supabase_client,
                                                                                  patient_id=patient_id)

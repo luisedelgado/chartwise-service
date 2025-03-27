@@ -575,56 +575,64 @@ class TestingHarnessAssistantRouter:
         assert CRISTIANO_QUERY == self.fake_openai_client.chat_history[0].content
         assert MESSI_QUERY != self.fake_openai_client.chat_history[1].content
 
-    def test_get_patient_with_missing_auth(self):
-        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID
-                                    })
+    def test_get_single_patient_with_missing_auth(self):
+        url = AssistantRouter.SINGLE_PATIENT_ENDPOINT.format(patient_id=FAKE_PATIENT_ID)
+        response = self.client.get(url)
         assert response.status_code == 401
 
-    def test_get_patient_with_missing_store_tokens(self):
-        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },)
+    def test_get_single_patient_with_missing_store_tokens(self):
+        url = AssistantRouter.SINGLE_PATIENT_ENDPOINT.format(patient_id=FAKE_PATIENT_ID)
+        response = self.client.get(url,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },)
         assert response.status_code == 401
 
-    def test_get_patient_with_auth_but_missing_patient_id(self):
-        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    }, headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },)
-        assert response.status_code == 400
+    def test_get_single_patient_with_auth_but_missing_patient_id(self):
+        url = AssistantRouter.SINGLE_PATIENT_ENDPOINT.format(patient_id="")
+        response = self.client.get(url,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   }, headers={
+                                       "store-access-token": FAKE_ACCESS_TOKEN,
+                                       "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   },)
+        assert response.status_code == 401
 
-    def test_get_patient_with_auth_but_invalid_patient_id(self):
-        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
-                                    params={
-                                        "patient_id": ""
-                                    }, cookies={
-                                        "authorization": self.auth_cookie
-                                    }, headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },)
-        assert response.status_code == 400
+    def test_get_single_patient_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        url = AssistantRouter.SINGLE_PATIENT_ENDPOINT.format(patient_id=FAKE_PATIENT_ID)
+        response = self.client.get(url,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },
+                                   headers={
+                                       "store-access-token": FAKE_ACCESS_TOKEN,
+                                       "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   },)
+        assert response.status_code == 200
 
-    def test_get_patient_success(self):
+    def test_get_patients_with_missing_auth(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT)
+        assert response.status_code == 401
+
+    def test_get_patients_with_missing_store_tokens(self):
+        response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },)
+        assert response.status_code == 401
+
+    def test_get_patients_success(self):
         self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(AssistantRouter.PATIENTS_ENDPOINT,
-                                    params={
-                                        "patient_id": FAKE_PATIENT_ID
-                                    }, cookies={
-                                        "authorization": self.auth_cookie
-                                    }, headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },)
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },
+                                   headers={
+                                      "store-access-token": FAKE_ACCESS_TOKEN,
+                                      "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   },)
         assert response.status_code == 200
 
     def test_add_patient_with_missing_auth(self):
