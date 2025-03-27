@@ -37,6 +37,7 @@ class AssistantRouter:
     SESSIONS_ENDPOINT = "/v1/sessions"
     QUERIES_ENDPOINT = "/v1/queries"
     PATIENTS_ENDPOINT = "/v1/patients"
+    SINGLE_PATIENT_ENDPOINT = "/v1/patients/{patient_id}"
     TEMPLATES_ENDPOINT = "/v1/templates"
     ATTENDANCE_INSIGHTS_ENDPOINT = "/v1/attendance-insights"
     BRIEFINGS_ENDPOINT = "/v1/briefings"
@@ -174,21 +175,35 @@ class AssistantRouter:
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
-        async def get_patient(response: Response,
-                              request: Request,
-                              patient_id: str = None,
-                              store_access_token: Annotated[str | None, Header()] = None,
-                              store_refresh_token: Annotated[str | None, Header()] = None,
-                              authorization: Annotated[Union[str, None], Cookie()] = None,
-                              session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._get_patient_internal(response=response,
+        @self.router.get(self.SINGLE_PATIENT_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        async def get_single_patient(response: Response,
+                                     request: Request,
+                                     patient_id: str,
+                                     store_access_token: Annotated[str | None, Header()] = None,
+                                     store_refresh_token: Annotated[str | None, Header()] = None,
+                                     authorization: Annotated[Union[str, None], Cookie()] = None,
+                                     session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_single_patient_internal(response=response,
                                                     request=request,
                                                     patient_id=patient_id,
                                                     store_access_token=store_access_token,
                                                     store_refresh_token=store_refresh_token,
                                                     authorization=authorization,
                                                     session_id=session_id)
+
+        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        async def get_patients(response: Response,
+                               request: Request,
+                               store_access_token: Annotated[str | None, Header()] = None,
+                               store_refresh_token: Annotated[str | None, Header()] = None,
+                               authorization: Annotated[Union[str, None], Cookie()] = None,
+                               session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_patients_internal(response=response,
+                                                     request=request,
+                                                     store_access_token=store_access_token,
+                                                     store_refresh_token=store_refresh_token,
+                                                     authorization=authorization,
+                                                     session_id=session_id)
 
         @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def add_patient(response: Response,
@@ -688,14 +703,14 @@ class AssistantRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _get_patient_internal(self,
-                                    request: Request,
-                                    response: Response,
-                                    patient_id: str,
-                                    store_access_token: Annotated[str | None, Header()],
-                                    store_refresh_token: Annotated[str | None, Header()],
-                                    authorization: Annotated[Union[str, None], Cookie()],
-                                    session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_single_patient_internal(self,
+                                           request: Request,
+                                           response: Response,
+                                           patient_id: str,
+                                           store_access_token: Annotated[str | None, Header()],
+                                           store_refresh_token: Annotated[str | None, Header()],
+                                           authorization: Annotated[Union[str, None], Cookie()],
+                                           session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         request.state.patient_id = patient_id
 
@@ -724,9 +739,68 @@ class AssistantRouter:
         try:
             assert len(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            patient_data = await self._assistant_manager.retrieve_patient(supabase_client=supabase_client,
-                                                                          patient_id=patient_id)
+            patient_data = await self._assistant_manager.retrieve_single_patient(supabase_client=supabase_client,
+                                                                                 patient_id=patient_id)
             return {"patient_data": patient_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a batch of patients.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    patient_id – the id for the incoming patient.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_patients_internal(self,
+                                     request: Request,
+                                     response: Response,
+                                     store_access_token: Annotated[str | None, Header()],
+                                     store_refresh_token: Annotated[str | None, Header()],
+                                     authorization: Annotated[Union[str, None], Cookie()],
+                                     session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            patients_data = await self._assistant_manager.retrieve_patients(supabase_client=supabase_client,
+                                                                            therapist_id=therapist_id)
+            return {"patients_data": patients_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

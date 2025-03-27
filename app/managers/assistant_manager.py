@@ -282,9 +282,9 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
-    async def retrieve_patient(self,
-                               patient_id: str,
-                               supabase_client: SupabaseBaseClass):
+    async def retrieve_single_patient(self,
+                                      patient_id: str,
+                                      supabase_client: SupabaseBaseClass):
         try:
             response = supabase_client.select(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                                               fields="*",
@@ -293,6 +293,21 @@ class AssistantManager:
                                               })
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
+    async def retrieve_patients(self,
+                                therapist_id: str,
+                                supabase_client: SupabaseBaseClass):
+        try:
+            response = supabase_client.select(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                                              fields="*",
+                                              order_desc_column="first_name",
+                                              filters={
+                                                  "therapist_id": therapist_id
+                                              })
+            response_data = response['data']
+            return [] if len(response_data) == 0 else response_data
         except Exception as e:
             raise Exception(e)
 
