@@ -71,3 +71,13 @@ def convert_to_date_format_spell_out_month(session_date: str, incoming_date_form
         return datetime.strftime(session_date_as_date, DATE_FORMAT_SPELL_OUT_MONTH)
     except:
         raise Exception("Something went wrong while formatting the incoming date.")
+
+"""
+Validates an incoming year value
+"""
+def validate_year(year: str):
+    try:
+        datetime(year=int(year), month=1, day=1)
+        return True
+    except (ValueError, TypeError):
+        return False

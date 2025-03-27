@@ -143,3 +143,13 @@ def is_valid_extension(ext: str) -> bool:
     if ext is None:
         return False
     return bool(re.fullmatch(r"\.[a-zA-Z0-9]+", ext))
+
+def is_valid_uuid(uuid_string: str) -> bool:
+    if len(uuid_string or '') == 0:
+        return False
+
+    try:
+        val = uuid.UUID(uuid_string, version=None)
+        return str(val) == uuid_string.lower()
+    except (ValueError, AttributeError, TypeError):
+        return False

@@ -183,7 +183,7 @@ class AssistantRouter:
                 raise security.STORE_TOKENS_ERROR
 
             try:
-                assert len(query.patient_id or '') > 0, "Invalid patient_id in payload"
+                assert general_utilities.is_valid_uuid(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
                 return StreamingResponse(self._execute_assistant_query_internal(query=query,
@@ -344,7 +344,6 @@ class AssistantRouter:
         @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def transform_session_with_template(request: Request,
                                                   response: Response,
-                                                  background_tasks: BackgroundTasks,
                                                   body: TemplatePayload,
                                                   store_access_token: Annotated[str | None, Header()] = None,
                                                   store_refresh_token: Annotated[str | None, Header()] = None,
@@ -352,7 +351,6 @@ class AssistantRouter:
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(request=request,
                                                                         response=response,
-                                                                        background_tasks=background_tasks,
                                                                         session_notes_text=body.session_notes_text,
                                                                         template=body.template,
                                                                         store_access_token=store_access_token,
@@ -474,8 +472,8 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(year or '') > 0, "Invalid year parameteter"
-            assert len(patient_id or '') > 0, "Invalid patient_id parameteter"
+            assert datetime_handler.validate_year(year=year), "Invalid year parameteter"
+            assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
             session_reports_data = await self._assistant_manager.retrieve_session_reports(supabase_client=supabase_client,
                                                                                           patient_id=patient_id,
@@ -544,7 +542,9 @@ class AssistantRouter:
 
         try:
             body = body.model_dump(exclude_unset=True)
+            patient_id = body['patient_id']
 
+            assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id body param"
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
             tz_exists = len(client_timezone_identifier or '') > 0
@@ -557,7 +557,7 @@ class AssistantRouter:
             session_report_id = await self._assistant_manager.process_new_session_data(language_code=language_code,
                                                                                        environment=self._environment,
                                                                                        auth_manager=self._auth_manager,
-                                                                                       patient_id=body['patient_id'],
+                                                                                       patient_id=patient_id,
                                                                                        notes_text=body['notes_text'],
                                                                                        session_date=body['session_date'],
                                                                                        source=SessionNotesSource.MANUAL_INPUT,
@@ -632,6 +632,7 @@ class AssistantRouter:
         try:
             body = body.model_dump(exclude_unset=True)
 
+            assert general_utilities.is_valid_uuid(body['id']), "Invalid session report ID param in body"
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
             tz_exists = len(client_timezone_identifier or '') > 0
@@ -711,7 +712,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(session_report_id or '') > 0, "Received invalid session_report_id"
+            assert general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
@@ -1033,7 +1034,7 @@ class AssistantRouter:
         try:
             body = body.model_dump(exclude_unset=True)
 
-            assert len(body['id'] or '') > 0, "Missing patient id param in payload"
+            assert general_utilities.is_valid_uuid(body['id'] or '') > 0, "Missing patient id param in payload"
             assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
             assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
             assert 'birth_date' not in body or datetime_handler.is_valid_date(date_input=body['birth_date'],
@@ -1102,7 +1103,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Missing patient_id param"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
             assert len(therapist_id or '') > 0, "Missing therapist_id param"
 
             patient_query = supabase_client.select(fields="*",
@@ -1179,7 +1180,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             attendance_insights_data = await self._assistant_manager.retrieve_patient_insights(supabase_client=supabase_client,
                                                                                                patient_id=patient_id)
@@ -1241,7 +1242,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             briefing_data = await self._assistant_manager.retrieve_briefing(supabase_client=supabase_client,
                                                                             patient_id=patient_id)
@@ -1303,7 +1304,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(supabase_client=supabase_client,
                                                                                                     patient_id=patient_id)
@@ -1365,7 +1366,7 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             recent_topics_data = await self._assistant_manager.recent_topics_data(supabase_client=supabase_client,
                                                                                   patient_id=patient_id)
@@ -1389,7 +1390,6 @@ class AssistantRouter:
     Arguments:
     request – the request object.
     response – the response model used for the final response that will be returned.
-    background_tasks – object for scheduling concurrent tasks.
     session_notes_text – the session notes to be adapted into SOAP.
     template – the template to be applied.
     store_access_token – the store access token.
@@ -1400,7 +1400,6 @@ class AssistantRouter:
     async def _transform_session_with_template_internal(self,
                                                         request: Request,
                                                         response: Response,
-                                                        background_tasks: BackgroundTasks,
                                                         session_notes_text: str,
                                                         template: SessionNotesTemplate,
                                                         store_access_token: Annotated[str | None, Header()],
@@ -1433,7 +1432,6 @@ class AssistantRouter:
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"
-            assert len(therapist_id or '') > 0, "Empty therapist_id param"
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
             soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,

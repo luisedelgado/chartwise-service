@@ -172,7 +172,7 @@ class AudioProcessingRouter:
         try:
             assert len(file_path or '') > 0, "Invalid file path value"
             assert file_path[0:UUID_LENGTH] == therapist_id, "Attempting to create a diarization session for the wrong patient."
-            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id payload value"
             assert general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=session_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
@@ -255,7 +255,7 @@ class AudioProcessingRouter:
 
         try:
             assert is_valid_extension(file_extension), "Received invalid file extension."
-            assert len(patient_id or '') > 0, "Invalid patient_id value"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id value"
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
@@ -352,7 +352,7 @@ class AudioProcessingRouter:
         try:
             assert len(file_path or '') > 0, "Empty file path value"
             assert file_path[0:UUID_LENGTH] == therapist_id, "Attempting to create a diarization session for the wrong patient."
-            assert len(patient_id or '') > 0, "Invalid patient_id payload value"
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id payload value"
             assert general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=session_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,

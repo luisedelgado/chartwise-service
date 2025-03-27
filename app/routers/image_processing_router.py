@@ -121,7 +121,7 @@ class ImageProcessingRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(patient_id or '') > 0, "Didn't receive a valid document id."
+            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Didn't receive a valid document id."
             assert general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
             assert datetime_handler.is_valid_date(date_input=session_date,
                                                   incoming_date_format=datetime_handler.DATE_FORMAT,
