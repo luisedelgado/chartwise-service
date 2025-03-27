@@ -46,7 +46,8 @@ class TherapistUpdatePayload(BaseModel):
 
 class SecurityRouter:
 
-    ROUTER_TAG = "authentication"
+    AUTHENTICATION_ROUTER_TAG = "authentication"
+    THERAPISTS_ROUTER_TAG = "therapists"
     LOGOUT_ENDPOINT = "/v1/logout"
     THERAPISTS_ENDPOINT = "/v1/therapists"
     SIGNIN_ENDPOINT = "/v1/signin"
@@ -63,7 +64,7 @@ class SecurityRouter:
     Registers the set of routes that the class' router can access.
     """
     def _register_routes(self):
-        @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def signin(signin_data: SignInRequest,
                          response: Response,
                          request: Request,
@@ -77,7 +78,7 @@ class SecurityRouter:
                                                response=response,
                                                session_id=session_id)
 
-        @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
                                      store_access_token: Annotated[str | None, Header()] = None,
@@ -91,7 +92,7 @@ class SecurityRouter:
                                                            store_refresh_token=store_refresh_token,
                                                            session_id=session_id)
 
-        @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def logout(request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
@@ -101,7 +102,7 @@ class SecurityRouter:
                                                background_tasks=background_tasks,
                                                session_id=session_id)
 
-        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
         async def add_therapist(body: SignupPayload,
                                 request: Request,
                                 response: Response,
@@ -117,7 +118,7 @@ class SecurityRouter:
                                                       store_refresh_token=store_refresh_token,
                                                       session_id=session_id)
 
-        @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
         async def update_therapist(request: Request,
                                    response: Response,
                                    body: TherapistUpdatePayload,
@@ -133,7 +134,7 @@ class SecurityRouter:
                                                          authorization=authorization,
                                                          session_id=session_id)
 
-        @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
         async def delete_therapist(request: Request,
                                    response: Response,
                                    store_access_token: Annotated[str | None, Header()] = None,

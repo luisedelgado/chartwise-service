@@ -36,6 +36,7 @@ class TemplatePayload(BaseModel):
 class AssistantRouter:
 
     SESSIONS_ENDPOINT = "/v1/sessions"
+    SINGLE_SESSION_ENDPOINT = "/v1/sessions/{session_report_id}"
     QUERIES_ENDPOINT = "/v1/queries"
     PATIENTS_ENDPOINT = "/v1/patients"
     SINGLE_PATIENT_ENDPOINT = "/v1/patients/{patient_id}"
@@ -59,21 +60,39 @@ class AssistantRouter:
     Registers the set of routes that the class' router can access.
     """
     def _register_routes(self):
+        @self.router.get(self.SINGLE_SESSION_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        async def retrieve_single_session_report(response: Response,
+                                                 request: Request,
+                                                 session_report_id: str = Path(..., min_length=1),
+                                                 store_access_token: Annotated[str | None, Header()] = None,
+                                                 store_refresh_token: Annotated[str | None, Header()] = None,
+                                                 authorization: Annotated[Union[str, None], Cookie()] = None,
+                                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._retrieve_single_session_report_internal(response=response,
+                                                                       request=request,
+                                                                       session_report_id=session_report_id,
+                                                                       store_access_token=store_access_token,
+                                                                       store_refresh_token=store_refresh_token,
+                                                                       authorization=authorization,
+                                                                       session_id=session_id)
+
         @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
-        async def retrieve_session_report(response: Response,
-                                          request: Request,
-                                          session_report_id: str = None,
-                                          store_access_token: Annotated[str | None, Header()] = None,
-                                          store_refresh_token: Annotated[str | None, Header()] = None,
-                                          authorization: Annotated[Union[str, None], Cookie()] = None,
-                                          session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._retrieve_session_report_internal(response=response,
-                                                                request=request,
-                                                                session_report_id=session_report_id,
-                                                                store_access_token=store_access_token,
-                                                                store_refresh_token=store_refresh_token,
-                                                                authorization=authorization,
-                                                                session_id=session_id)
+        async def get_session_reports(response: Response,
+                                      request: Request,
+                                      year: str = None,
+                                      patient_id: str = None,
+                                      store_access_token: Annotated[str | None, Header()] = None,
+                                      store_refresh_token: Annotated[str | None, Header()] = None,
+                                      authorization: Annotated[Union[str, None], Cookie()] = None,
+                                      session_id: Annotated[Union[str, None], Cookie()] = None):
+            return await self._get_session_reports_internal(response=response,
+                                                            request=request,
+                                                            year=year,
+                                                            patient_id=patient_id,
+                                                            store_access_token=store_access_token,
+                                                            store_refresh_token=store_refresh_token,
+                                                            authorization=authorization,
+                                                            session_id=session_id)
 
         @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def insert_new_session(insert_payload: SessionNotesInsert,
@@ -353,14 +372,14 @@ class AssistantRouter:
     authorization – the authorization cookie, if exists.
     session_id – the session_id cookie, if exists.
     """
-    async def _retrieve_session_report_internal(self,
-                                                request: Request,
-                                                response: Response,
-                                                session_report_id: str,
-                                                store_access_token: Annotated[str | None, Header()],
-                                                store_refresh_token: Annotated[str | None, Header()],
-                                                authorization: Annotated[Union[str, None], Cookie()],
-                                                session_id: Annotated[Union[str, None], Cookie()]):
+    async def _retrieve_single_session_report_internal(self,
+                                                       request: Request,
+                                                       response: Response,
+                                                       session_report_id: str,
+                                                       store_access_token: Annotated[str | None, Header()],
+                                                       store_refresh_token: Annotated[str | None, Header()],
+                                                       authorization: Annotated[Union[str, None], Cookie()],
+                                                       session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise security.AUTH_TOKEN_EXPIRED_ERROR
@@ -385,12 +404,83 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert len(session_report_id or '') > 0, "Invalid patient_id in payload"
+            if not session_report_id.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parameter session_report_id cannot be empty."
+                )
 
-            session_report_data = await self._assistant_manager.retrieve_session_report(supabase_client=supabase_client,
-                                                                                        session_report_id=session_report_id)
+            session_report_data = await self._assistant_manager.retrieve_single_session_report(supabase_client=supabase_client,
+                                                                                               session_report_id=session_report_id)
             request.state.patient_id = None if len(session_report_data or '') == 0 else session_report_data['patient_id']
             return {"session_report_data": session_report_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  therapist_id=therapist_id,
+                                                                  error_code=status_code,
+                                                                  description=description,
+                                                                  session_id=session_id)
+            raise HTTPException(status_code=status_code,
+                                detail=description)
+
+    """
+    Retrieves a batch of session reports.
+
+    Arguments:
+    request – the request object.
+    response – the object to be used for constructing the final response.
+    year – the year associated with the batch of sessions that will be returned.
+    patient_id – the patient id associated with the batch of sessions that will be returned.
+    store_access_token – the store access token.
+    store_refresh_token – the store refresh token.
+    authorization – the authorization cookie, if exists.
+    session_id – the session_id cookie, if exists.
+    """
+    async def _get_session_reports_internal(self,
+                                            request: Request,
+                                            response: Response,
+                                            year: str,
+                                            patient_id: str,
+                                            store_access_token: Annotated[str | None, Header()],
+                                            store_refresh_token: Annotated[str | None, Header()],
+                                            authorization: Annotated[Union[str, None], Cookie()],
+                                            session_id: Annotated[Union[str, None], Cookie()]):
+        request.state.session_id = session_id
+        request.state.patient_id = patient_id
+
+        if not self._auth_manager.access_token_is_valid(authorization):
+            raise security.AUTH_TOKEN_EXPIRED_ERROR
+
+        if store_access_token is None or store_refresh_token is None:
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
+                                                                                                         refresh_token=store_refresh_token)
+            therapist_id = supabase_client.get_current_user_id()
+            request.state.therapist_id = therapist_id
+            await self._auth_manager.refresh_session(user_id=therapist_id,
+                                                     response=response)
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
+                                                                  method=request.method,
+                                                                  error_code=status_code,
+                                                                  description=str(e),
+                                                                  session_id=session_id)
+            raise security.STORE_TOKENS_ERROR
+
+        try:
+            assert len(year or '') > 0, "Invalid year parameteter"
+            assert len(patient_id or '') > 0, "Invalid patient_id parameteter"
+
+            session_reports_data = await self._assistant_manager.retrieve_session_reports(supabase_client=supabase_client,
+                                                                                          patient_id=patient_id,
+                                                                                          year=year)
+            return {"session_reports_data": session_reports_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)

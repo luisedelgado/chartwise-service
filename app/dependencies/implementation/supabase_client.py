@@ -119,7 +119,16 @@ class SupabaseClient(SupabaseBaseClass):
             if len(order_desc_column or '') > 0:
                 select_operation = select_operation.order(order_desc_column, desc=True)
 
-            return select_operation.execute().model_dump()
+            response = select_operation.execute().model_dump()
+            if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
+                # Return response untouched if no need for decryption, or if no data was returned
+                return response
+
+            response_data = response['data']
+            for index in range(0, len(response_data)):
+                response_data[index] = self.decrypt_payload(response_data[index], table_name)
+
+            return response
         except Exception as e:
             raise Exception(e)
 
@@ -132,7 +141,7 @@ class SupabaseClient(SupabaseBaseClass):
                             column_marker: str,
                             limit: int = None):
         try:
-            select_operation = self.client.table(table_name).select(fields).gt(column_marker, range_start).lt(column_marker, range_end)
+            select_operation = self.client.table(table_name).select(fields).gte(column_marker, range_start).lte(column_marker, range_end)
 
             for key, value in filters.items():
                 select_operation = select_operation.eq(f"{key}", f"{value}")
@@ -140,7 +149,16 @@ class SupabaseClient(SupabaseBaseClass):
             if limit is not None:
                 select_operation.limit(limit)
 
-            return select_operation.execute().model_dump()
+            response = select_operation.execute().model_dump()
+            if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
+                # Return response untouched if no need for decryption, or if no data was returned
+                return response
+
+            response_data = response['data']
+            for index in range(0, len(response_data)):
+                response_data[index] = self.decrypt_payload(response_data[index], table_name)
+
+            return response
         except Exception as e:
             raise Exception(e)
 
@@ -159,7 +177,16 @@ class SupabaseClient(SupabaseBaseClass):
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)
 
-            return select_operation.execute().model_dump()
+            response = select_operation.execute().model_dump()
+            if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
+                # Return response untouched if no need for decryption, or if no data was returned
+                return response
+
+            response_data = response['data']
+            for index in range(0, len(response_data)):
+                response_data[index] = self.decrypt_payload(response_data[index], table_name)
+
+            return response
         except Exception as e:
             raise Exception(e)
 
@@ -178,7 +205,16 @@ class SupabaseClient(SupabaseBaseClass):
             if order_ascending_column:
                 select_operation = select_operation.order(order_ascending_column, desc=False)
 
-            return select_operation.execute().model_dump()
+            response = select_operation.execute().model_dump()
+            if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
+                # Return response untouched if no need for decryption, or if no data was returned
+                return response
+
+            response_data = response['data']
+            for index in range(0, len(response_data)):
+                response_data[index] = self.decrypt_payload(response_data[index], table_name)
+
+            return response
         except Exception as e:
             raise Exception(e)
 

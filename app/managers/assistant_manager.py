@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from fastapi import BackgroundTasks
 from pydantic import BaseModel
-from typing import AsyncIterable, Optional
+from typing import AsyncIterable, List, Optional, Set
 
 from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -101,9 +101,9 @@ class AssistantManager:
     def __init__(self):
         self.chartwise_assistant = ChartWiseAssistant()
 
-    async def retrieve_session_report(self,
-                                      session_report_id: str,
-                                      supabase_client: SupabaseBaseClass):
+    async def retrieve_single_session_report(self,
+                                             session_report_id: str,
+                                             supabase_client: SupabaseBaseClass):
         try:
             response = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                               fields="*",
@@ -112,6 +112,24 @@ class AssistantManager:
                                               })
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
+        except Exception as e:
+            raise Exception(e)
+
+    async def retrieve_session_reports(self,
+                                       patient_id: str,
+                                       year: str,
+                                       supabase_client: SupabaseBaseClass):
+        try:
+            session_reports_data = supabase_client.select_within_range(fields="*",
+                                                                       filters={
+                                                                           "patient_id": patient_id
+                                                                       },
+                                                                       range_start=f"{year}-01-01",
+                                                                       range_end=f"{year}-12-31",
+                                                                       column_marker="session_date",
+                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+            response_data = session_reports_data['data']
+            return [] if len(response_data) == 0 else response_data
         except Exception as e:
             raise Exception(e)
 
@@ -768,12 +786,16 @@ class AssistantManager:
             patient_last_session_date = (None if total_session_count == 0
                                          else patient_session_notes_data[0]['session_date'])
 
+            unique_active_years: List[int] = self.get_patient_active_session_years(supabase_client=supabase_client,
+                                                                                   patient_id=patient_id)
+
             # New value for last_session_date will be the most recent session we already found
             if operation == SessionCrudOperation.DELETE_COMPLETED:
                 supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                         payload={
                             "last_session_date": patient_last_session_date,
                             "total_sessions": total_session_count,
+                            "unique_active_years": unique_active_years
                         },
                         filters={
                             'id': patient_id
@@ -830,6 +852,7 @@ class AssistantManager:
                                    payload={
                                        "last_session_date": patient_last_session_date,
                                        "total_sessions": total_session_count,
+                                       "unique_active_years": unique_active_years,
                                    },
                                    filters={
                                        'id': patient_id
@@ -843,6 +866,22 @@ class AssistantManager:
                                          patient_id=patient_id)
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
+
+    def get_patient_active_session_years(self,
+                                         patient_id: str,
+                                         supabase_client: SupabaseBaseClass) -> List[int]:
+        response = supabase_client.select(fields="session_date",
+                                          filters={
+                                              "patient_id": patient_id
+                                          },
+                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+        session_dates = response["data"]
+
+        unique_active_years: Set[int] = {
+            int(entry["session_date"][:4]) for entry in session_dates if entry["session_date"]
+        }
+
+        return sorted(unique_active_years)
 
     def default_streaming_error_message(self,
                                         user_id: str,
