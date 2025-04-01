@@ -1204,15 +1204,11 @@ class AssistantManager:
             assert (0 != len(strings_query['data'])), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query['data']]
-            response_dict = {
-                "questions": default_question_suggestions
-            }
-
             supabase_client.insert(table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                                    payload={
                                        "patient_id": patient_id,
                                        "therapist_id": therapist_id,
-                                       "questions": eval(json.dumps(response_dict, ensure_ascii=False))
+                                       "questions": eval(json.dumps(default_question_suggestions, ensure_ascii=False))
                                        })
         except Exception as e:
             eng_alert = EngineeringAlert(description="Updating the default question suggestions failed",
