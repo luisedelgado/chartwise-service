@@ -1,7 +1,6 @@
 import asyncio, json, os
 
-from celery import shared_task
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from fastapi import BackgroundTasks
 from pydantic import BaseModel
@@ -20,7 +19,8 @@ from ..internal.schemas import (Gender,
                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                                 ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
                                 ENCRYPTED_PATIENTS_TABLE_NAME,
-                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME,)
+                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                                TimeRange)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -115,21 +115,27 @@ class AssistantManager:
         except Exception as e:
             raise Exception(e)
 
-    async def retrieve_session_reports(self,
-                                       patient_id: str,
-                                       year: str,
-                                       supabase_client: SupabaseBaseClass):
+    def retrieve_session_reports(self,
+                                 patient_id: str,
+                                 year: str,
+                                 time_range: TimeRange,
+                                 most_recent: int,
+                                 supabase_client: SupabaseBaseClass):
         try:
-            session_reports_data = supabase_client.select_within_range(fields="*",
-                                                                       filters={
-                                                                           "patient_id": patient_id
-                                                                       },
-                                                                       range_start=f"{year}-01-01",
-                                                                       range_end=f"{year}-12-31",
-                                                                       column_marker="session_date",
-                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
-            response_data = session_reports_data['data']
-            return [] if len(response_data) == 0 else response_data
+            if year:
+                return self._retrieve_sessions_for_year(supabase_client=supabase_client,
+                                                        patient_id=patient_id,
+                                                        year=year)
+            if most_recent:
+                return self._retrieve_n_most_recent_sessions(supabase_client=supabase_client,
+                                                             patient_id=patient_id,
+                                                             most_recent_n=most_recent)
+            if time_range:
+                return self._retrieve_sessions_in_range(supabase_client=supabase_client,
+                                                        patient_id=patient_id,
+                                                        time_range=time_range)
+
+            raise ValueError("One of 'year', 'recent', or 'range' must be provided.")
         except Exception as e:
             raise Exception(e)
 
@@ -1325,4 +1331,65 @@ class AssistantManager:
                                          environment=environment,
                                          therapist_id=therapist_id)
             await email_manager.send_internal_alert(alert=eng_alert)
+            raise Exception(e)
+
+    def _retrieve_sessions_for_year(self,
+                                    supabase_client: SupabaseBaseClass,
+                                    patient_id: str,
+                                    year: str):
+        try:
+            session_reports_data = supabase_client.select_within_range(fields="*",
+                                                                       filters={
+                                                                           "patient_id": patient_id
+                                                                       },
+                                                                       range_start=f"{year}-01-01",
+                                                                       range_end=f"{year}-12-31",
+                                                                       column_marker="session_date",
+                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+            response_data = session_reports_data['data']
+            return [] if len(response_data) == 0 else response_data
+        except Exception as e:
+            raise Exception(e)
+
+    def _retrieve_sessions_in_range(self,
+                                    supabase_client: SupabaseBaseClass,
+                                    patient_id: str,
+                                    time_range: TimeRange):
+        try:
+            now = datetime.now()
+            days_map = {
+                TimeRange.WEEK: 7,
+                TimeRange.MONTH: 30,
+                TimeRange.YEAR: 365
+            }
+            start_date = (now - timedelta(days=days_map[time_range])).strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+            end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+            session_reports_data = supabase_client.select_within_range(fields="*",
+                                                                       filters={
+                                                                           "patient_id": patient_id
+                                                                       },
+                                                                       range_start=start_date,
+                                                                       range_end=end_date,
+                                                                       column_marker="session_date",
+                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+            response_data = session_reports_data['data']
+            return [] if len(response_data) == 0 else response_data
+        except Exception as e:
+            raise Exception(e)
+
+    def _retrieve_n_most_recent_sessions(self,
+                                         supabase_client: SupabaseBaseClass,
+                                         patient_id: str,
+                                         most_recent_n: int) -> list[PineconeQuerySessionDateOverride]:
+        try:
+            session_reports_data = supabase_client.select(fields="*",
+                                                          filters={
+                                                              "patient_id": patient_id,
+                                                          },
+                                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                                                          limit=most_recent_n,
+                                                          order_desc_column="session_date")
+            response_data = session_reports_data['data']
+            return [] if len(response_data) == 0 else response_data
+        except Exception as e:
             raise Exception(e)

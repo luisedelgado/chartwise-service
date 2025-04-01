@@ -5,18 +5,19 @@ from fastapi import (APIRouter,
                      Header,
                      HTTPException,
                      Path,
+                     Query,
                      Request,
                      Response,
                      status)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Annotated, AsyncIterable, Union
+from typing import Annotated, AsyncIterable, Optional, Union
 
 from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..internal import security
-from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME
+from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME, TimeRange
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
                                           AssistantQuery,
@@ -79,7 +80,9 @@ class AssistantRouter:
         @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def get_session_reports(response: Response,
                                       request: Request,
-                                      year: str = None,
+                                      year: str = Query(None),
+                                      most_recent_n: int = Query(None),
+                                      time_range: Optional[TimeRange] = Query(None),
                                       patient_id: str = None,
                                       store_access_token: Annotated[str | None, Header()] = None,
                                       store_refresh_token: Annotated[str | None, Header()] = None,
@@ -88,6 +91,8 @@ class AssistantRouter:
             return await self._get_session_reports_internal(response=response,
                                                             request=request,
                                                             year=year,
+                                                            most_recent_n=most_recent_n,
+                                                            time_range=time_range,
                                                             patient_id=patient_id,
                                                             store_access_token=store_access_token,
                                                             store_refresh_token=store_refresh_token,
@@ -431,6 +436,8 @@ class AssistantRouter:
     request – the request object.
     response – the object to be used for constructing the final response.
     year – the year associated with the batch of sessions that will be returned.
+    most_recent_n – the count of (most recent) sessions to be retrieved.
+    time_range – the time range for which a batch of sessions will be retrieved.
     patient_id – the patient id associated with the batch of sessions that will be returned.
     store_access_token – the store access token.
     store_refresh_token – the store refresh token.
@@ -441,6 +448,8 @@ class AssistantRouter:
                                             request: Request,
                                             response: Response,
                                             year: str,
+                                            most_recent_n: int,
+                                            time_range: str,
                                             patient_id: str,
                                             store_access_token: Annotated[str | None, Header()],
                                             store_refresh_token: Annotated[str | None, Header()],
@@ -472,12 +481,18 @@ class AssistantRouter:
             raise security.STORE_TOKENS_ERROR
 
         try:
-            assert datetime_handler.validate_year(year=year), "Invalid year parameteter"
+            filters = [year, most_recent_n, time_range]
+            set_filters = sum(filter is not None for filter in filters)
+
+            assert set_filters == 1, "Only one of 'year', 'recent', or 'range' needs to be specified."
+            assert year is None or datetime_handler.validate_year(year=year), "Invalid year parameteter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
-            session_reports_data = await self._assistant_manager.retrieve_session_reports(supabase_client=supabase_client,
-                                                                                          patient_id=patient_id,
-                                                                                          year=year)
+            session_reports_data = self._assistant_manager.retrieve_session_reports(supabase_client=supabase_client,
+                                                                                    patient_id=patient_id,
+                                                                                    year=year,
+                                                                                    time_range=time_range,
+                                                                                    most_recent=most_recent_n)
             return {"session_reports_data": session_reports_data}
         except Exception as e:
             description = str(e)

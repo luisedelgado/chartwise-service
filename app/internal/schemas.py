@@ -67,3 +67,8 @@ class SessionProcessingStatus(Enum):
 class MediaType(Enum):
     IMAGE = "image"
     AUDIO = "audio"
+
+class TimeRange(Enum):
+    WEEK = "week"
+    MONTH = "month"
+    YEAR = "year"
