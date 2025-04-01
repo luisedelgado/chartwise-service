@@ -1354,9 +1354,9 @@ class AssistantManager:
         try:
             now = datetime.now()
             days_map = {
-                TimeRange.WEEK: 7,
-                TimeRange.MONTH: 30,
-                TimeRange.YEAR: 365
+                TimeRange.WEEK: 28,
+                TimeRange.MONTH: 365,
+                TimeRange.YEAR: 1825 # 5 years
             }
             start_date = (now - timedelta(days=days_map[time_range])).strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
