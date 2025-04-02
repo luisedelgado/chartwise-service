@@ -6,11 +6,13 @@ from .supabase_client import SupabaseClient
 from ..fake.fake_supabase_storage_client import FakeSupabaseStorageClient
 from ..implementation.supabase_storage_client import SupabaseStorageClient
 from ...dependencies.api.supabase_factory_base_class import SupabaseFactoryBaseClass
+from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class SupabaseClientFactory(SupabaseFactoryBaseClass):
 
-    def __init__(self, environment: str):
+    def __init__(self, environment: str, encryptor: ChartWiseEncryptor):
         self.environment = environment
+        self.encryptor = encryptor
 
     def supabase_admin_client(self) -> SupabaseClient:
         try:
@@ -20,6 +22,7 @@ class SupabaseClientFactory(SupabaseFactoryBaseClass):
             storage_client = FakeSupabaseStorageClient() if self.environment != "prod" else SupabaseStorageClient(client=client)
             return SupabaseClient(client=client,
                                   storage_client=storage_client,
+                                  encryptor=self.encryptor,
                                   is_admin=True)
         except Exception as e:
             raise Exception(e)
@@ -36,6 +39,7 @@ class SupabaseClientFactory(SupabaseFactoryBaseClass):
             storage_client = FakeSupabaseStorageClient() if self.environment == "dev" else SupabaseStorageClient(client=client)
             return SupabaseClient(client=client,
                                   storage_client=storage_client,
+                                  encryptor=self.encryptor,
                                   is_admin=False)
         except Exception as e:
             raise Exception(e)

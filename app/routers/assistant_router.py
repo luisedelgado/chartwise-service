@@ -16,7 +16,7 @@ from typing import Annotated, AsyncIterable, Optional, Union
 from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
-from ..internal import security
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME, TimeRange
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import (AssistantManager,
@@ -167,10 +167,10 @@ class AssistantRouter:
             request.state.session_id = session_id
             request.state.patient_id = query.patient_id
             if not self._auth_manager.access_token_is_valid(authorization):
-                raise security.AUTH_TOKEN_EXPIRED_ERROR
+                raise AUTH_TOKEN_EXPIRED_ERROR
 
             if store_access_token is None or store_refresh_token is None:
-                raise security.STORE_TOKENS_ERROR
+                raise STORE_TOKENS_ERROR
 
             try:
                 supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -185,7 +185,7 @@ class AssistantRouter:
                                                                       error_code=status_code,
                                                                       description=str(e),
                                                                       session_id=session_id)
-                raise security.STORE_TOKENS_ERROR
+                raise STORE_TOKENS_ERROR
 
             try:
                 assert general_utilities.is_valid_uuid(query.patient_id or '') > 0, "Invalid patient_id in payload"
@@ -385,10 +385,10 @@ class AssistantRouter:
                                                        session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -404,7 +404,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             if not session_report_id.strip():
@@ -459,10 +459,10 @@ class AssistantRouter:
         request.state.patient_id = patient_id
 
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -478,7 +478,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             filters = [year, most_recent_n, time_range]
@@ -534,10 +534,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = body.patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -554,7 +554,7 @@ class AssistantRouter:
                                                                       error_code=status_code,
                                                                       description=str(e),
                                                                       session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -623,10 +623,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.session_report_id = body.id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -643,7 +643,7 @@ class AssistantRouter:
                                                                       error_code=status_code,
                                                                       description=str(e),
                                                                       session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -705,10 +705,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.session_report_id = session_report_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -725,7 +725,7 @@ class AssistantRouter:
                                                                       error_code=status_code,
                                                                       description=str(e),
                                                                       session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
@@ -823,10 +823,10 @@ class AssistantRouter:
         request.state.patient_id = patient_id
 
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -842,7 +842,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             if not patient_id.strip():
@@ -888,10 +888,10 @@ class AssistantRouter:
         request.state.session_id = session_id
 
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -907,7 +907,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             patients_data = await self._assistant_manager.retrieve_patients(supabase_client=supabase_client,
@@ -949,10 +949,10 @@ class AssistantRouter:
                                     session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -968,7 +968,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -1025,10 +1025,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = body.id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1045,7 +1045,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -1096,10 +1096,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1116,7 +1116,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
@@ -1174,10 +1174,10 @@ class AssistantRouter:
                                                 session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1193,7 +1193,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1236,10 +1236,10 @@ class AssistantRouter:
                                      session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1255,7 +1255,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1298,10 +1298,10 @@ class AssistantRouter:
                                                  session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1317,7 +1317,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1360,10 +1360,10 @@ class AssistantRouter:
                                           session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1379,7 +1379,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1425,10 +1425,10 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.notes_template = template.value
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -1444,7 +1444,7 @@ class AssistantRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"

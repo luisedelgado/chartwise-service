@@ -14,10 +14,9 @@ from pydantic import BaseModel
 from typing import Annotated, Optional, Union
 
 from ..dependencies.dependency_container import dependency_container, StripeBaseClass
-from ..internal import security
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
 from ..internal.schemas import DEV_ENVIRONMENT, PROD_ENVIRONMENT, STAGING_ENVIRONMENT
-from ..internal.security import AUTH_TOKEN_EXPIRED_ERROR
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
@@ -219,7 +218,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -234,7 +233,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             customer_data = supabase_client.select(fields="*",
@@ -289,7 +288,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -305,7 +304,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             customer_data = supabase_client.select(fields="*",
@@ -385,7 +384,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -401,7 +400,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             customer_data = supabase_client.select(fields="*",
@@ -455,7 +454,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -471,7 +470,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
@@ -525,7 +524,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -541,7 +540,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
@@ -585,7 +584,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -601,7 +600,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             customer_data = supabase_client.select(fields="*",
@@ -657,7 +656,7 @@ class PaymentProcessingRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -673,7 +672,7 @@ class PaymentProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   session_id=session_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             customer_data = supabase_client.select(fields="*",

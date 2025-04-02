@@ -13,7 +13,7 @@ from typing import Annotated, Union
 
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.api.supabase_base_class import SupabaseBaseClass
-from ..internal import security
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..dependencies.dependency_container import dependency_container
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
@@ -98,10 +98,10 @@ class ImageProcessingRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -118,7 +118,7 @@ class ImageProcessingRouter:
                                                                   error_code=status_code,
                                                                   patient_id=patient_id,
                                                                   description=str(e))
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Didn't receive a valid document id."

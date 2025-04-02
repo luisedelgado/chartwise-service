@@ -1,4 +1,4 @@
-import base64, json, os, requests
+import base64, os, requests
 
 from fastapi import status
 from portkey_ai import Portkey

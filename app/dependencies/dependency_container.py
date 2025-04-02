@@ -1,6 +1,7 @@
 import os
 
 from .fake.fake_async_openai import FakeAsyncOpenAI
+from .fake.fake_aws_kms_client import AwsKmsBaseClass, FakeAwsKmsClient
 from .fake.fake_deepgram_client import FakeDeepgramClient
 from .fake.fake_docupanda_client import FakeDocupandaClient
 from .fake.fake_influx_client import FakeInfluxClient
@@ -9,6 +10,7 @@ from .fake.fake_resend_client import FakeResendClient
 from .fake.fake_stripe_client import FakeStripeClient
 from .fake.fake_supabase_client import FakeSupabaseClient, SupabaseBaseClass
 from .fake.fake_supabase_client_factory import FakeSupabaseClientFactory
+from .implementation.aws_kms_client import AwsKmsClient
 from .implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
 from .implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
 from .implementation.influx_client import InfluxBaseClass, InfluxClient
@@ -18,6 +20,7 @@ from .implementation.resend_client import ResendBaseClass, ResendClient
 from .implementation.stripe_client import StripeBaseClass, StripeClient
 from .implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
 from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT, TESTING_ENVIRONMENT
+from ..internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class DependencyContainer:
     def __init__(self):
@@ -31,6 +34,8 @@ class DependencyContainer:
         self._stripe_client = None
         self._resend_client = None
         self._influx_client = None
+        self._aws_kms_client = None
+        self._chartwise_encryptor = None
 
     def inject_deepgram_client(self) -> DeepgramBaseClass:
         if self._deepgram_client is None:
@@ -44,7 +49,7 @@ class DependencyContainer:
 
     def inject_pinecone_client(self) -> PineconeBaseClass:
         if self._pinecone_client is None:
-            self._pinecone_client = FakePineconeClient() if self._testing_environment else PineconeClient()
+            self._pinecone_client = FakePineconeClient() if self._testing_environment else PineconeClient(encryptor=self.inject_chartwise_encryptor())
         return self._pinecone_client
 
     def inject_docupanda_client(self) -> DocupandaBaseClass:
@@ -56,7 +61,10 @@ class DependencyContainer:
         if self._supabase_client_factory is None:
             fake_admin_client: SupabaseBaseClass = FakeSupabaseClient()
             fake_user_client: SupabaseBaseClass = FakeSupabaseClient()
-            self._supabase_client_factory = FakeSupabaseClientFactory(fake_admin_client, fake_user_client) if self._testing_environment else SupabaseClientFactory(environment=os.environ.get("ENVIRONMENT"))
+            self._supabase_client_factory = FakeSupabaseClientFactory(
+                fake_admin_client,
+                fake_user_client
+            ) if self._testing_environment else SupabaseClientFactory(environment=os.environ.get("ENVIRONMENT"), encryptor=self.inject_chartwise_encryptor())
         return self._supabase_client_factory
 
     def inject_stripe_client(self) -> StripeBaseClass:
@@ -79,5 +87,15 @@ class DependencyContainer:
         if self._influx_client is None:
             self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient(environment=self._environment)
         return self._influx_client
+
+    def inject_aws_kms_client(self) -> AwsKmsBaseClass:
+        if self._aws_kms_client is None:
+            self._aws_kms_client = FakeAwsKmsClient() if self._testing_environment else AwsKmsClient()
+        return self._aws_kms_client
+
+    def inject_chartwise_encryptor(self) -> ChartWiseEncryptor:
+        if self._chartwise_encryptor is None:
+            self._chartwise_encryptor = ChartWiseEncryptor(aws_kms_client=self.inject_aws_kms_client())
+        return self._chartwise_encryptor
 
 dependency_container = DependencyContainer()

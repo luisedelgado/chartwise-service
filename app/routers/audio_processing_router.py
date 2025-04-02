@@ -14,7 +14,7 @@ from typing import Annotated, Union
 from ..dependencies.api.supabase_storage_base_class import SupabaseStorageBaseClass, AUDIO_FILES_PROCESSING_PENDING_BUCKET
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import dependency_container
-from ..internal import security
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..internal.utilities.general_utilities import is_valid_extension
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
@@ -147,10 +147,10 @@ class AudioProcessingRouter:
         request.state.session_id = session_id
         request.state.patient_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -167,7 +167,7 @@ class AudioProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   patient_id=patient_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert len(file_path or '') > 0, "Invalid file path value"
@@ -231,10 +231,10 @@ class AudioProcessingRouter:
         request.state.session_id = session_id
         request.state.patient_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -251,7 +251,7 @@ class AudioProcessingRouter:
                                                                   error_code=status_code,
                                                                   description=str(e),
                                                                   patient_id=patient_id)
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert is_valid_extension(file_extension), "Received invalid file extension."
@@ -328,10 +328,10 @@ class AudioProcessingRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -347,7 +347,7 @@ class AudioProcessingRouter:
                                                                   method=request.method,
                                                                   error_code=status_code,
                                                                   description=str(e))
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             assert len(file_path or '') > 0, "Empty file path value"

@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from typing import Tuple
 
 from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
-from ..internal.security import Token
+from ..internal.security.security_schema import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class AuthManager:

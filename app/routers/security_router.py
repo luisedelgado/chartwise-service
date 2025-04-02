@@ -15,9 +15,9 @@ from langcodes import Language
 from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
-from ..internal import security
-from ..internal.internal_alert import CustomerRelationsAlert
 from ..dependencies.dependency_container import dependency_container, SupabaseBaseClass
+from ..internal.internal_alert import CustomerRelationsAlert
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
@@ -168,7 +168,7 @@ class SecurityRouter:
                                session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -234,7 +234,7 @@ class SecurityRouter:
         request.state.session_id = session_id
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
-                raise security.AUTH_TOKEN_EXPIRED_ERROR
+                raise AUTH_TOKEN_EXPIRED_ERROR
 
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
                                                                                                          refresh_token=store_refresh_token)
@@ -343,10 +343,10 @@ class SecurityRouter:
         request.state.session_id = session_id
 
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -362,7 +362,7 @@ class SecurityRouter:
                                                                   method=request.method,
                                                                   error_code=status_code,
                                                                   description=str(e))
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -436,10 +436,10 @@ class SecurityRouter:
                                          session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -455,7 +455,7 @@ class SecurityRouter:
                                                                   method=request.method,
                                                                   error_code=status_code,
                                                                   description=str(e))
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -508,10 +508,10 @@ class SecurityRouter:
                                          session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
-            raise security.AUTH_TOKEN_EXPIRED_ERROR
+            raise AUTH_TOKEN_EXPIRED_ERROR
 
         if store_access_token is None or store_refresh_token is None:
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
@@ -527,7 +527,7 @@ class SecurityRouter:
                                                                   method=request.method,
                                                                   error_code=status_code,
                                                                   description=str(e))
-            raise security.STORE_TOKENS_ERROR
+            raise STORE_TOKENS_ERROR
 
         try:
             # Cancel Stripe subscription
