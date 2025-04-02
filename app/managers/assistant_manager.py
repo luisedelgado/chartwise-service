@@ -1392,9 +1392,8 @@ class AssistantManager:
             elif time_range == TimeRange.FIVE_YEARS:
                 years = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.YEAR_FORMAT) for item in response_data]
                 year_counter = Counter(years)
-                min_year = min(map(int, years))
                 max_year = max(map(int, years))
-                year_range = list(map(str, range(min_year, max_year + 1)))
+                year_range = list(map(str, range(max_year - 4, max_year + 1)))
                 return [{'date': year, 'sessions': year_counter.get(year, 0)} for year in year_range]
             else:
                 raise ValueError("Untracked time range value")
