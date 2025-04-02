@@ -84,6 +84,7 @@ class SupabaseBaseClass(ABC):
     range_start – the starting point for the selection range.
     range_end – the finish point for the selection range.
     column_marker – the column to be used for calculating the range.
+    sort_desc_column – the optional column to sort by in descending order.
     limit – the optional cap for count of results to be returned.
     """
     @abstractmethod
@@ -93,6 +94,7 @@ class SupabaseBaseClass(ABC):
                             range_start: str,
                             range_end: str,
                             column_marker: str,
+                            sort_desc_column: str = None,
                             limit: int = None):
         pass
 

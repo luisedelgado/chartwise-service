@@ -220,6 +220,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                             range_start: str,
                             range_end: str,
                             column_marker: str,
+                            sort_desc_column: str = None,
                             limit: int = None):
         if not self.select_returns_data:
             return FakeSupabaseResult(data=[])

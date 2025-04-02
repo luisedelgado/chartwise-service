@@ -1344,6 +1344,7 @@ class AssistantManager:
                                                                        range_start=f"{year}-01-01",
                                                                        range_end=f"{year}-12-31",
                                                                        column_marker="session_date",
+                                                                       sort_desc_column="session_date",
                                                                        table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
             response_data = session_reports_data['data']
             return [] if len(response_data) == 0 else response_data
@@ -1371,6 +1372,7 @@ class AssistantManager:
                                                                        range_start=start_date,
                                                                        range_end=end_date,
                                                                        column_marker="session_date",
+                                                                       sort_desc_column="session_date",
                                                                        table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
             response_data = session_reports_data['data']
             if len(response_data) == 0:

@@ -139,6 +139,7 @@ class SupabaseClient(SupabaseBaseClass):
                             range_start: str,
                             range_end: str,
                             column_marker: str,
+                            sort_desc_column: str = None,
                             limit: int = None):
         try:
             select_operation = self.client.table(table_name).select(fields).gte(column_marker, range_start).lte(column_marker, range_end)
@@ -148,6 +149,9 @@ class SupabaseClient(SupabaseBaseClass):
 
             if limit is not None:
                 select_operation.limit(limit)
+
+            if sort_desc_column is not None:
+                select_operation = select_operation.order(sort_desc_column, desc=True)
 
             response = select_operation.execute().model_dump()
             if table_name not in ENCRYPTED_TABLES or (0 == len(response['data'])):
