@@ -488,7 +488,8 @@ class AssistantRouter:
             assert year is None or datetime_handler.validate_year(year=year), "Invalid year parameteter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
-            session_reports_data = self._assistant_manager.retrieve_session_reports(supabase_client=supabase_client,
+            session_reports_data = self._assistant_manager.retrieve_session_reports(therapist_id=therapist_id,
+                                                                                    supabase_client=supabase_client,
                                                                                     patient_id=patient_id,
                                                                                     year=year,
                                                                                     time_range=time_range,

@@ -1,5 +1,7 @@
-from datetime import datetime
+import re
 
+from babel.dates import format_date, get_month_names
+from datetime import datetime
 from pytz import timezone
 
 DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
@@ -8,6 +10,9 @@ DATE_FORMAT = "%m-%d-%Y"
 DATE_FORMAT_SPELL_OUT_MONTH = "%b %d, %Y"
 DATE_FORMAT_YYYY_MM_DD = '%Y-%m-%d'
 MONTH_YEAR_FORMAT = "%B %Y"
+YEAR_FORMAT = "%Y"
+ABBREVIATED_MONTH_FORMAT = "%b"
+DAY_MONTH_SLASH_FORMAT = "%m/%d"
 
 """
 Returns a flag representing whether or not the incoming date is valid.
@@ -81,3 +86,33 @@ def validate_year(year: str):
         return True
     except (ValueError, TypeError):
         return False
+
+def get_base_locale(language_code: str) -> str:
+    # Drop the country so that babel can consume it (i.e: 'es' instead of 'es-ES').
+    return re.split(r'[-_]', language_code)[0]
+
+"""
+Returns the abbreviated version of month in the incoming date.
+"""
+def get_month_abbreviated(date: str, language_code: str):
+    base_locale = get_base_locale(language_code=language_code)
+    date_obj = datetime.strptime(date, DATE_FORMAT_YYYY_MM_DD)
+    babel_abbreviated_month_format = 'MMM'
+    return format_date(date_obj,
+                       format=babel_abbreviated_month_format,
+                       locale=base_locale)
+
+"""
+Returns the last 12 months (calendar-year)' abbreviated name using the incoming language code.
+"""
+def get_last_12_months_abbr(language_code: str):
+    base_locale = get_base_locale(language_code=language_code)
+    now = datetime.now()
+    months = []
+    for i in range(12):
+        month_date = datetime(now.year, now.month, 1)
+        month_offset = (month_date.month - i - 1) % 12 + 1
+        year_offset = month_date.year - ((i + (12 - month_date.month)) // 12)
+        dt = datetime(year_offset, month_offset, 1)
+        months.append(format_date(dt, format='MMM', locale=base_locale))
+    return months

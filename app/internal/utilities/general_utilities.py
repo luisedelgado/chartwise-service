@@ -47,7 +47,7 @@ Retrieves the current user's language preference.
 def get_user_language_code(user_id: str,
                            supabase_client: SupabaseBaseClass):
     try:
-        therapist_query = supabase_client.select(fields="*",
+        therapist_query = supabase_client.select(fields="language_preference",
                                                  filters={
                                                    'id': user_id
                                                  },

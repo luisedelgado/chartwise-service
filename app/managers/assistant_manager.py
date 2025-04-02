@@ -1,5 +1,6 @@
 import asyncio, json, os
 
+from collections import Counter
 from datetime import datetime, timedelta
 from enum import Enum
 from fastapi import BackgroundTasks
@@ -116,6 +117,7 @@ class AssistantManager:
             raise Exception(e)
 
     def retrieve_session_reports(self,
+                                 therapist_id: str,
                                  patient_id: str,
                                  year: str,
                                  time_range: TimeRange,
@@ -133,7 +135,8 @@ class AssistantManager:
             if time_range:
                 return self._retrieve_sessions_in_range(supabase_client=supabase_client,
                                                         patient_id=patient_id,
-                                                        time_range=time_range)
+                                                        time_range=time_range,
+                                                        therapist_id=therapist_id)
 
             raise ValueError("One of 'year', 'recent', or 'range' must be provided.")
         except Exception as e:
@@ -1350,17 +1353,18 @@ class AssistantManager:
     def _retrieve_sessions_in_range(self,
                                     supabase_client: SupabaseBaseClass,
                                     patient_id: str,
-                                    time_range: TimeRange):
+                                    time_range: TimeRange,
+                                    therapist_id: str):
         try:
             now = datetime.now()
             days_map = {
-                TimeRange.WEEK: 28,
-                TimeRange.MONTH: 365,
-                TimeRange.YEAR: 1825 # 5 years
+                TimeRange.MONTH: 30,
+                TimeRange.YEAR: 365,
+                TimeRange.FIVE_YEARS: 1825
             }
             start_date = (now - timedelta(days=days_map[time_range])).strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
             end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            session_reports_data = supabase_client.select_within_range(fields="*",
+            session_reports_data = supabase_client.select_within_range(fields="session_date",
                                                                        filters={
                                                                            "patient_id": patient_id
                                                                        },
@@ -1369,7 +1373,30 @@ class AssistantManager:
                                                                        column_marker="session_date",
                                                                        table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
             response_data = session_reports_data['data']
-            return [] if len(response_data) == 0 else response_data
+            if len(response_data) == 0:
+                return []
+
+            if time_range == TimeRange.MONTH:
+                days = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.DAY_MONTH_SLASH_FORMAT) for item in response_data]
+                day_counter = Counter(days)
+                return [{'date': day, 'sessions': day_counter[day]} for day in day_counter]
+            elif time_range == TimeRange.YEAR:
+                language_preference = general_utilities.get_user_language_code(user_id=therapist_id,
+                                                                               supabase_client=supabase_client)
+                month_names = [datetime_handler.get_month_abbreviated(date=item['session_date'], language_code=language_preference) for item in response_data]
+                month_counter = Counter(month_names)
+                months_order = datetime_handler.get_last_12_months_abbr(language_code=language_preference)
+                return [{'date': month, 'sessions': month_counter.get(month, 0)} for month in months_order]
+            elif time_range == TimeRange.FIVE_YEARS:
+                years = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.YEAR_FORMAT) for item in response_data]
+                year_counter = Counter(years)
+                min_year = min(map(int, years))
+                max_year = max(map(int, years))
+                year_range = list(map(str, range(min_year, max_year + 1)))
+                return [{'date': year, 'sessions': year_counter.get(year, 0)} for year in year_range]
+            else:
+                raise ValueError("Untracked time range value")
+
         except Exception as e:
             raise Exception(e)
 

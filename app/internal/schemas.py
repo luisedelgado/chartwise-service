@@ -69,6 +69,6 @@ class MediaType(Enum):
     AUDIO = "audio"
 
 class TimeRange(Enum):
-    WEEK = "week"
     MONTH = "month"
     YEAR = "year"
+    FIVE_YEARS = "five_years"

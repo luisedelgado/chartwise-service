@@ -124,7 +124,7 @@ class TestingHarnessAssistantRouter:
                                    },
                                    params={
                                        "patient_id": FAKE_PATIENT_ID,
-                                       "time_range": "week",
+                                       "time_range": "month",
                                        "most_recent_n": 1
                                    })
         assert response.status_code == 400
@@ -158,12 +158,12 @@ class TestingHarnessAssistantRouter:
                                    },
                                    params={
                                        "patient_id": FAKE_PATIENT_ID,
-                                       "time_range": "week",
+                                       "time_range": "month",
                                        "year": 2011
                                    })
         assert response.status_code == 400
 
-    def test_get_session_reports_by_time_range_success(self):
+    def test_get_session_reports_by_time_range_month_success(self):
         self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
                                    cookies={
@@ -175,7 +175,39 @@ class TestingHarnessAssistantRouter:
                                    },
                                    params={
                                        "patient_id": FAKE_PATIENT_ID,
-                                       "time_range": "week"
+                                       "time_range": "month"
+                                   })
+        assert response.status_code == 200
+
+    def test_get_session_reports_by_time_range_year_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },
+                                   headers={
+                                      "store-access-token": FAKE_ACCESS_TOKEN,
+                                      "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   },
+                                   params={
+                                       "patient_id": FAKE_PATIENT_ID,
+                                       "time_range": "year"
+                                   })
+        assert response.status_code == 200
+
+    def test_get_session_reports_by_time_range_five_years_success(self):
+        self.fake_supabase_user_client.select_returns_data = True
+        response = self.client.get(AssistantRouter.SESSIONS_ENDPOINT,
+                                   cookies={
+                                       "authorization": self.auth_cookie
+                                   },
+                                   headers={
+                                      "store-access-token": FAKE_ACCESS_TOKEN,
+                                      "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   },
+                                   params={
+                                       "patient_id": FAKE_PATIENT_ID,
+                                       "time_range": "five_years"
                                    })
         assert response.status_code == 200
 
