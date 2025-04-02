@@ -16,7 +16,7 @@ from ...data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECT
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
-from ...internal.security import ChartWiseEncryptor
+from ...internal.security import chartwise_encryptor
 from ...internal.utilities import datetime_handler
 from ...vectors import data_cleaner
 
@@ -35,7 +35,6 @@ class PineconeClient(PineconeBaseClass):
                                                                          cache_dir=ELECTRA_MODEL_CACHE_DIR)
         self._device = torch.device("cpu")
         self._model.to(self._device)
-        self.encryptor = ChartWiseEncryptor()
 
     async def insert_session_vectors(self,
                                      session_id: str,
@@ -67,14 +66,14 @@ class PineconeClient(PineconeBaseClass):
                 doc = Document()
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
-                encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
+                encrypted_chunk_text = chartwise_encryptor.encrypt(chunk_text)
                 doc.set_content(encrypted_chunk_text)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
-                encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
+                encrypted_chunk_summary = chartwise_encryptor.encrypt(chunk_summary)
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -123,14 +122,14 @@ class PineconeClient(PineconeBaseClass):
                 doc = Document()
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
-                encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
+                encrypted_chunk_text = chartwise_encryptor.encrypt(chunk_text)
                 doc.set_content(encrypted_chunk_text)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
-                encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
+                encrypted_chunk_summary = chartwise_encryptor.encrypt(chunk_summary)
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -305,7 +304,7 @@ class PineconeClient(PineconeBaseClass):
                 for match in query_matches:
                     metadata = match['metadata']
                     retrieved_docs.append({"session_date": metadata['session_date'],
-                                           "chunk_summary": self.encryptor.decrypt_base64_str(metadata['chunk_summary'])})
+                                           "chunk_summary": chartwise_encryptor.decrypt_base64_str(metadata['chunk_summary'])})
 
             # Check if caller wants us to rerank vectors
             if rerank_vectors:
@@ -368,7 +367,7 @@ class PineconeClient(PineconeBaseClass):
                         vector_data = vectors[vector_id]
 
                         metadata = vector_data['metadata']
-                        decrypted_chunk_summary = self.encryptor.decrypt_base64_str(metadata['chunk_summary'])
+                        decrypted_chunk_summary = chartwise_encryptor.decrypt_base64_str(metadata['chunk_summary'])
                         formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT)
                         session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
@@ -413,7 +412,7 @@ class PineconeClient(PineconeBaseClass):
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
             decrypted_chunk_summary = "".join(["`pre_existing_history_summary` = ",
-                                               f"{self.encryptor.decrypt_base64_str(metadata['pre_existing_history_summary'])}"])
+                                               f"{chartwise_encryptor.decrypt_base64_str(metadata['pre_existing_history_summary'])}"])
             decrypted_chunk_full_context = "".join([decrypted_chunk_summary, "\n"])
             context_docs.append({
                 "id": vector_data['id'],

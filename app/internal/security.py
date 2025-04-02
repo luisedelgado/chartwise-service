@@ -1,5 +1,6 @@
 import os
 import base64
+import boto3
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
@@ -40,11 +41,17 @@ class ChartWiseEncryptor:
         key_hex: str = os.environ.get(encryption_key)
         if not key_hex:
             raise ValueError(f"Missing encryption key in env var: {encryption_key}")
-        key_bytes = bytes.fromhex(key_hex)
-        if len(key_bytes) != Aead.KEY_SIZE:
-            raise ValueError("Encryption key must be 32 bytes (64 hex characters)")
-        self.key = key_bytes
-        self.aead = Aead(self.key)
+
+        encrypted_key_bytes = base64.b64decode(key_hex)
+
+        kms = boto3.client("kms", region_name=os.environ.get("AWS_PHI_ENCRYPTION_KEY_REGION"))
+        response = kms.decrypt(CiphertextBlob=encrypted_key_bytes)
+        key = response["Plaintext"]
+
+        if len(key) != Aead.KEY_SIZE:
+            raise ValueError("Decrypted key is not 32 bytes")
+
+        self.aead = Aead(key)
 
     def encrypt(self, plaintext: str) -> str:
         if plaintext is None:
@@ -89,3 +96,5 @@ class ChartWiseEncryptor:
             return plaintext_bytes.decode("utf-8")
         except Exception as e:
             raise ValueError(f"Base64 decoding failed: {str(e)}")
+
+chartwise_encryptor = ChartWiseEncryptor()

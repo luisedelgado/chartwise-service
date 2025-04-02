@@ -7,7 +7,7 @@ from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.fake.fake_supabase_client import FakeSupabaseClient
 from ..dependencies.fake.fake_supabase_client_factory import FakeSupabaseClientFactory
 from ..dependencies.dependency_container import dependency_container
-from ..internal.security import ChartWiseEncryptor
+from ..internal.security import chartwise_encryptor
 from ..managers.auth_manager import AuthManager
 from ..routers.security_router import SecurityRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -393,11 +393,10 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 200
 
     def encryption_base64_str_decryption_success(self):
-        encryptor = ChartWiseEncryptor()
         plaintext = "fooBar"
-        encrypted_value = encryptor.encrypt(plaintext)
+        encrypted_value = chartwise_encryptor.encrypt(plaintext)
         assert len(encrypted_value or '') > 0
         assert encrypted_value != plaintext
 
-        decrypted_value = encryptor.decrypt_base64_str(encrypted_value)
+        decrypted_value = chartwise_encryptor.decrypt_base64_str(encrypted_value)
         assert decrypted_value == plaintext

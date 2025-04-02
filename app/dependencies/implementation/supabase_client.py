@@ -4,7 +4,7 @@ from supabase import Client
 
 from ..api.supabase_storage_base_class import SupabaseStorageBaseClass
 from ...dependencies.api.supabase_base_class import SupabaseBaseClass
-from ...internal.security import ChartWiseEncryptor
+from ...internal.security import chartwise_encryptor
 from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
@@ -29,7 +29,6 @@ class SupabaseClient(SupabaseBaseClass):
         self.client = client
         self.is_admin = is_admin
         self.storage_client = storage_client
-        self.encryptor = ChartWiseEncryptor()
 
     def delete_user(self, user_id: str):
         if not self.is_admin:
@@ -278,40 +277,40 @@ class SupabaseClient(SupabaseBaseClass):
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENTS_ENCRYPTED_COLUMNS:
-                    payload[key] = self.encryptor.encrypt(value)
+                    payload[key] = chartwise_encryptor.encrypt(value)
             return payload
 
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             for key, value in payload.items():
                 if key in SESSION_REPORTS_ENCRYPTED_COLUMNS:
                     value_to_encrypt = value if not SESSION_REPORTS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.dumps(value)
-                    payload[key] = self.encryptor.encrypt(value_to_encrypt)
+                    payload[key] = chartwise_encryptor.encrypt(value_to_encrypt)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS:
-                    payload[key] = self.encryptor.encrypt(value)
+                    payload[key] = chartwise_encryptor.encrypt(value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_BRIEFINGS_ENCRYPTED_COLUMNS:
-                    payload[key] = self.encryptor.encrypt(value)
+                    payload[key] = chartwise_encryptor.encrypt(value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS:
                     value_to_encrypt = value if not PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.dumps(value)
-                    payload[key] = self.encryptor.encrypt(value_to_encrypt)
+                    payload[key] = chartwise_encryptor.encrypt(value_to_encrypt)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_TOPICS_TABLE_NAME:
             for key, value in payload.items():
                 if key in PATIENT_TOPICS_ENCRYPTED_COLUMNS:
                     value_to_encrypt = value if not PATIENT_TOPICS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.dumps(value)
-                    payload[key] = self.encryptor.encrypt(value_to_encrypt)
+                    payload[key] = chartwise_encryptor.encrypt(value_to_encrypt)
             return payload
 
         raise Exception(f"Attempted to encrypt values for table {table_name}, which is not tracked.")
@@ -334,7 +333,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
@@ -350,7 +349,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not SESSION_REPORTS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
@@ -367,7 +366,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
@@ -383,7 +382,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
@@ -399,7 +398,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
@@ -416,7 +415,7 @@ class SupabaseClient(SupabaseBaseClass):
                     else:
                         # If already a base64 string, encode to bytes if needed
                         b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = chartwise_encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
                     payload[key] = decrypted_value if not PATIENT_TOPICS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
