@@ -40,7 +40,7 @@ class ChartWiseEncryptor:
             b64_str = b64_encoded_ciphertext_bytes.decode("utf-8")
             return self.decrypt_base64_str(b64_str)
         except Exception as e:
-            raise ValueError(f"Base64 decoding failed: {str(e)}")
+            raise ValueError("Decoding operation failed")
 
     """
     Decrypts a base64 string. Used for base64 string.
@@ -58,4 +58,4 @@ class ChartWiseEncryptor:
             plaintext_bytes = self.aead.decrypt(ciphertext, None)
             return plaintext_bytes.decode("utf-8")
         except Exception as e:
-            raise ValueError(f"Base64 decoding failed: {str(e)}")
+            raise ValueError(f"Decoding operation failed")
