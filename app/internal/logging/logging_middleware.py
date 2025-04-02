@@ -17,6 +17,7 @@ from ...routers.image_processing_router import ImageProcessingRouter
 
 class TimingMiddleware(BaseHTTPMiddleware):
 
+    VALID_API_METHODS = ["POST", "PUT", "GET", "DELETE"]
     PHI_ENDPOINTS = [AssistantRouter.PATIENTS_ENDPOINT,
                      AssistantRouter.SESSIONS_ENDPOINT,
                      AudioProcessingRouter.DIARIZATION_ENDPOINT,
@@ -43,14 +44,16 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         start_time = time.perf_counter()
         request_url_path = request.url.path
+        request_method = request.method
         influx_client = dependency_container.inject_influx_client()
 
         environment = os.environ.get("ENVIRONMENT")
         if (environment == PROD_ENVIRONMENT
+            and request_method in self.VALID_API_METHODS
             and request_url_path not in self.IRRELEVANT_PATHS):
             await run_in_threadpool(influx_client.log_api_request,
                                     endpoint_name=request_url_path,
-                                    method=request.method,
+                                    method=request_method,
                                     session_id=request.cookies.get("session_id"))
 
         # Process the request and get the response
@@ -66,10 +69,11 @@ class TimingMiddleware(BaseHTTPMiddleware):
                         or request.query_params.get(self.PATIENT_ID_KEY, None))
 
         if (environment == PROD_ENVIRONMENT
+            and request_method in self.VALID_API_METHODS
             and request_url_path not in self.IRRELEVANT_PATHS):
             await run_in_threadpool(influx_client.log_api_response,
                                     endpoint_name=request_url_path,
-                                    method=request.method,
+                                    method=request_method,
                                     response_time=response_time,
                                     status_code=response.status_code,
                                     session_id=session_id,
@@ -79,14 +83,21 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         # Log PHI activity
         if (environment == PROD_ENVIRONMENT
+            and request_method in self.VALID_API_METHODS
             and request_url_path in self.PHI_ENDPOINTS):
             try:
                 assert len(therapist_id or '') > 0, "Therapist ID is required."
+            except Exception as e:
+                # Not having a `therapist_id` at this point likely indicates the auth or
+                # store tokens check failed. We can simply return the response since
+                # we can't do audit logging without a `therapist_id`.
+                return response
 
+            try:
                 payload = {
                     "therapist_id": therapist_id,
                     "patient_id": patient_id,
-                    "method": request.method,
+                    "method": request_method,
                     "status_code": response.status_code,
                     "url_path": request_url_path,
                     "session_id": session_id,
