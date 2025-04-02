@@ -48,8 +48,10 @@ class EmailManager:
                 activity_details = self.MEDIA_JOB_ACTIVITY_DETAILS.format(media_type=media_type,
                                                                           session_report_id=session_report_id,
                                                                           storage_filepath=storage_filepath)
-
-            assert alert.category == InternalAlertCategory.ENGINEERING_ALERT, f"Untracked alert category: {alert.category.value}."
+            else:
+                # Not tracking any `activity_details` for an internal eng alert.
+                activity_details = ""
+                assert alert.category == InternalAlertCategory.ENGINEERING_ALERT, f"Untracked alert category: {alert.category.value}."
 
             body = "".join([
                 f"<b>{alert.description}</b>",
