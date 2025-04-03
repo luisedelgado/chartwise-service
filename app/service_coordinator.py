@@ -4,11 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from .internal.db.connection import connect_pool, disconnect_pool
 from .internal.logging.logging_middleware import TimingMiddleware
 from .data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(app: FastAPI):
+    await connect_pool(app)
     print("Loading model and tokenizer...")
     AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
                                   cache_dir=ELECTRA_MODEL_CACHE_DIR)
@@ -16,6 +18,7 @@ async def lifespan(_: FastAPI):
                                                        cache_dir=ELECTRA_MODEL_CACHE_DIR)
     print("Finished loading model and tokenizer.")
     yield
+    await disconnect_pool(app)
     print("Releasing model and tokenizer.")
 
 class HSTSMiddleware(BaseHTTPMiddleware):
