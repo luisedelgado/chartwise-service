@@ -90,7 +90,9 @@ class FakeSupabaseClient(SupabaseBaseClass):
         if table_name == "therapists":
             return FakeSupabaseResult(data=[{
                 "first_name": "Fake first name",
+                "last_name": "Fake last name",
                 "gender": "female",
+                "email": "foo@chartwise.ai"
             }])
         else:
             pass
@@ -267,6 +269,7 @@ class FakeSupabaseClient(SupabaseBaseClass):
                filters: dict,
                table_name: str):
         return FakeSupabaseResult(data=[{
+            "id": self.FAKE_THERAPIST_ID,
             "therapist_id": self.FAKE_THERAPIST_ID,
             "first_name": "Pepito",
             "last_name": "Perez",
