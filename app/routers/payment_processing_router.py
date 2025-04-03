@@ -975,7 +975,7 @@ class PaymentProcessingRouter:
             therapist_subscription_query = supabase_client.select(fields="*",
                                                                   filters={ 'therapist_id': therapist_id },
                                                                   table_name="subscription_status")
-            is_new_customer = (0 != len(therapist_subscription_query['data']))
+            is_new_customer = (0 == len(therapist_subscription_query['data']))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -995,7 +995,6 @@ class PaymentProcessingRouter:
                 "customer_id": customer_id,
                 "therapist_id": therapist_id,
                 "current_billing_period_end_date": current_billing_period_end_date,
-                "free_trial_active": is_trialing,
                 "recurrence": billing_interval,
                 "subscription_id": subscription_id,
                 "current_tier": tier_name
@@ -1008,9 +1007,11 @@ class PaymentProcessingRouter:
             if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
                 # Free trial is ongoing, or subscription is active.
                 payload['is_active'] = True
+                payload['free_trial_active'] = is_trialing
             else:
                 # Subscription is not active. Restrict functionality
                 payload['is_active'] = False
+                payload['free_trial_active'] = False
 
             supabase_client.upsert(payload=payload,
                                    table_name="subscription_status",

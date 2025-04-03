@@ -514,8 +514,10 @@ class SecurityRouter:
             raise STORE_TOKENS_ERROR
 
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
+            supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_user_client(
+                access_token=store_access_token,
+                refresh_token=store_refresh_token
+            )
             user_id = supabase_client.get_current_user_id()
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(user_id=user_id,
@@ -531,7 +533,7 @@ class SecurityRouter:
 
         try:
             # Cancel Stripe subscription
-            customer_data_dict = supabase_client.select(fields="*",
+            customer_data_dict = supabase_client.select(fields="subscription_id",
                                                         filters={
                                                             'therapist_id': user_id,
                                                         },
@@ -542,33 +544,46 @@ class SecurityRouter:
                 stripe_client = dependency_container.inject_stripe_client()
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
 
-            # Delete data from all patients
-            patients_response_data = supabase_client.select(fields="id",
-                                                            filters={
-                                                                "therapist_id": user_id
-                                                            },
-                                                            table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
-            assert 'data' in patients_response_data, "Failed to retrieve therapist data for patients"
-            patient_ids = patients_response_data['data']
+                supabase_client.update(payload={
+                                           'is_active': False,
+                                           'free_trial_active': False
+                                       },
+                                       filters={
+                                           'therapist_id': user_id,
+                                       },
+                                       table_name="subscription_status")
 
-            # Delete vectors associated with therapist's patients
+            # Delete patient data associated with therapist.
+            delete_patients_operation = supabase_client.delete(
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                filters={
+                    "therapist_id": user_id
+                }
+            )
+            patient_ids = [item['id'] for item in delete_patients_operation['data']]
+
+            # Delete vectors associated with the deleted patient ids.
             self._assistant_manager.delete_all_sessions_for_therapist(user_id=user_id,
                                                                       patient_ids=patient_ids)
 
-            # Delete therapist and all their patients (through cascading)
-            delete_response = supabase_client.delete(table_name="therapists",
-                                                     filters={
-                                                         'id': user_id
-                                                     })
-            delete_response_dict = delete_response['data']
-            assert len(delete_response_dict) > 0, "No therapist found with the incoming id"
+            # Set therapist user as an inactive account.
+            disable_account_response = supabase_client.update(
+                table_name="therapists",
+                filters={
+                    'id': user_id
+                },
+                payload={
+                    'is_active_account': False
+                })
+            disable_account_response_dict = disable_account_response['data']
+            assert len(disable_account_response_dict) > 0, "No therapist found with the incoming id"
 
-            therapist_email = delete_response_dict[0]['email']
+            therapist_email = disable_account_response_dict[0]['email']
             alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
                                  "has canceled their subscription, and deleted all their account data.")
-            therapist_name = "".join([delete_response_dict[0]['first_name'],
+            therapist_name = "".join([disable_account_response_dict[0]['first_name'],
                                       " ",
-                                      delete_response_dict[0]['last_name']])
+                                      disable_account_response_dict[0]['last_name']])
             alert = CustomerRelationsAlert(description=alert_description,
                                            environment=os.environ.get('ENVIRONMENT'),
                                            session_id=session_id,

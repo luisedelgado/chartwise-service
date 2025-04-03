@@ -91,10 +91,10 @@ class OpenAIClient(OpenAIBaseClass):
                                                                        query_input=query_input)
 
             system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY,
-                                                                            patient_gender=patient_gender,
-                                                                            patient_name=patient_name,
-                                                                            last_session_date=last_session_date,
-                                                                            chat_history_included=(not is_first_message_in_conversation))
+                                                                           patient_gender=patient_gender,
+                                                                           patient_name=patient_name,
+                                                                           last_session_date=last_session_date,
+                                                                           chat_history_included=(not is_first_message_in_conversation))
 
             input_window_content = "\n".join([system_prompt,
                                               (await self.flatten_chat_history()),

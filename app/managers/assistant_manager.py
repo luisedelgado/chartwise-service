@@ -495,11 +495,11 @@ class AssistantManager:
                     or self.cached_patient_query_data.patient_id != query.patient_id):
                 language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
                 patient_query = supabase_client.select(fields="*",
-                                                    filters={
-                                                        'id': query.patient_id,
-                                                        'therapist_id': therapist_id
-                                                    },
-                                                    table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+                                                       filters={
+                                                           'id': query.patient_id,
+                                                           'therapist_id': therapist_id
+                                                       },
+                                                       table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
                 patient_therapist_match = (0 != len(patient_query['data']))
                 assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
