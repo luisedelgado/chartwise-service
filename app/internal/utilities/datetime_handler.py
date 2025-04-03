@@ -13,6 +13,8 @@ MONTH_YEAR_FORMAT = "%B %Y"
 YEAR_FORMAT = "%Y"
 ABBREVIATED_MONTH_FORMAT = "%b"
 DAY_MONTH_SLASH_FORMAT = "%m/%d"
+WEEKDAY_DATE_TIME_TIMEZONE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+DATE_TIME_TIMEZONE_FORMAT = "%Y%m%dT%H%M%SZ"
 
 """
 Returns a flag representing whether or not the incoming date is valid.
