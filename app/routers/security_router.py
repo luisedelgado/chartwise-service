@@ -373,7 +373,8 @@ class SecurityRouter:
             assert Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
 
             payload = {
-                'id': user_id
+                'id': user_id,
+                'is_active_account': True
             }
             for key, value in body.items():
                 if isinstance(value, Enum):
