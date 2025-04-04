@@ -84,15 +84,11 @@ class SecurityRouter:
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
-                                     store_access_token: Annotated[str | None, Header()] = None,
-                                     store_refresh_token: Annotated[str | None, Header()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._refresh_auth_token_internal(authorization=authorization,
                                                            request=request,
                                                            response=response,
-                                                           store_access_token=store_access_token,
-                                                           store_refresh_token=store_refresh_token,
                                                            session_id=session_id)
 
         @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
@@ -223,31 +219,25 @@ class SecurityRouter:
     authorization – the authorization cookie, if exists.
     request – the request object.
     response – the response object to be used for creating the final response.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
     session_id – the id of the current user session.
     """
     async def _refresh_auth_token_internal(self,
                                            authorization: Annotated[Union[str, None], Cookie()],
                                            request: Request,
                                            response: Response,
-                                           store_access_token: Annotated[str | None, Header()],
-                                           store_refresh_token: Annotated[str | None, Header()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
         request.state.session_id = session_id
         try:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise AUTH_TOKEN_EXPIRED_ERROR
 
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-
-            user_id = supabase_client.get_current_user_id()
+            user_id = self._auth_manager.extract_data_from_token(authorization)["user_id"]
             request.state.therapist_id = user_id
 
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
 
             # Fetch customer data
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
             customer_data_dict = supabase_client.select(fields="*",
                                                         filters={
                                                             'therapist_id': user_id,

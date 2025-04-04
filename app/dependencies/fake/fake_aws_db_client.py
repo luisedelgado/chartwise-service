@@ -1,6 +1,5 @@
 from fastapi import Request
 from typing import Any, List, Optional
-
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
