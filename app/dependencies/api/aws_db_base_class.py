@@ -1,96 +1,88 @@
 from abc import ABC, abstractmethod
 
-class AwsDbBaseClass(ABC):
+from fastapi import Request
+from typing import Any, List, Optional
 
-    """
-    Deletes a user from the authentication schema.
-    Arguments:
-    user_id – the user id to be deleted.
-    """
-    @abstractmethod
-    async def delete_user(user_id: str):
-        pass
+class AwsDbBaseClass(ABC):
 
     """
     Inserts payload into a table.
 
     Arguments:
+    request – the FastAPI request associated with the insert operation.
     payload – the payload to be inserted.
     table_name – the table into which the payload should be inserted.
     """
     @abstractmethod
-    async def insert(payload: dict,
-               table_name: str):
+    async def insert(request: Request,
+                     payload: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     """
     Updates a table with the incoming payload and filters.
 
     Arguments:
+    request – the FastAPI request associated with the update operation.
     payload – the payload to be updated.
     filters – the set of filters to be applied to the table.
     table_name – the table that should be updated.
     """
     @abstractmethod
-    async def update(payload: dict,
-               filters: dict,
-               table_name: str):
+    async def update(request: Request,
+                     payload: dict[str, Any],
+                     filters: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     """
     Upserts into a table with the incoming data.
 
     Arguments:
+    request – the FastAPI request associated with the upsert operation.
+    conflict_columns – the key to be used to update the table if a conflict arises.
     payload – the payload to be updated.
-    on_conflict – the key to be used to update the table if a conflict arises.
     table_name – the table that should be updated.
     """
     @abstractmethod
-    async def upsert(payload: dict,
-               on_conflict: str,
-               table_name: str):
+    async def upsert(request: Request,
+                     conflict_columns: List[str],
+                     payload: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     """
     Fetches data from a table based on the incoming params.
 
     Arguments:
+    request – the FastAPI request associated with the select operation.
     fields – the fields to be retrieved from a table.
     filters – the set of filters to be applied to the table.
     table_name – the table to be queried.
     limit – the optional cap for count of results to be returned.
-    order_desc_column – the optional column that should be sorted desc.
+    order_by – the optional specification for column to sort by, and sort style.
     """
     @abstractmethod
-    async def select(fields: str,
-               filters: dict,
-               table_name: str,
-               limit: int = None,
-               order_desc_column: str = None):
+    async def select(request: Request,
+                     fields: list[str],
+                     filters: dict[str, Any],
+                     table_name: str,
+                     limit: Optional[int] = None,
+                     order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         pass
 
     """
     Deletes from a table name based on the incoming params.
 
     Arguments:
+    request – the FastAPI request associated with the delete operation.
+    table_name – the table name.
     filters – the set of filters to be applied to the table.
-    table_name – the table name.
     """
     @abstractmethod
-    async def delete(filters: dict,
-               table_name: str):
-        pass
-
-    """
-    Deletes from a table name based on the incoming params, applying a "where is not" logic to the filters.
-
-    Arguments:
-    is_not_filters – the set of filters to be applied to the table with a "where is not" logic.
-    table_name – the table name.
-    """
-    @abstractmethod
-    async def delete_where_is_not(is_not_filters: dict,
-                            table_name: str):
+    async def delete(request: Request,
+                     table_name: str,
+                     filters: dict[str, Any]) -> list[dict]:
         pass
 
     """
@@ -112,4 +104,13 @@ class AwsDbBaseClass(ABC):
     """
     @abstractmethod
     async def sign_out():
+        pass
+
+    """
+    Deletes a user from the authentication schema.
+    Arguments:
+    user_id – the user id to be deleted.
+    """
+    @abstractmethod
+    async def delete_user(user_id: str):
         pass

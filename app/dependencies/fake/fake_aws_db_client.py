@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from fastapi import Request
+from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
@@ -30,42 +31,38 @@ class FakeSupabaseClient(AwsDbBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
-    async def delete_user(self, user_id: str):
-        pass
-
-    async def insert(self,
-               payload: dict,
-               table_name: str):
+    async def insert(request: Request,
+                     payload: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     async def update(self,
-               payload: dict,
-               filters: dict,
-               table_name: str):
+                     request: Request,
+                     payload: dict[str, Any],
+                     filters: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     async def upsert(self,
-               payload: dict,
-               on_conflict: str,
-               table_name: str):
+                     request: Request,
+                     conflict_columns: List[str],
+                     payload: dict[str, Any],
+                     table_name: str) -> Optional[dict]:
         pass
 
     async def select(self,
-               fields: str,
-               filters: dict,
-               table_name: str,
-               limit: int = None,
-               order_desc_column: str = None):
+                     request: Request,
+                     fields: list[str],
+                     filters: dict[str, Any],
+                     table_name: str,
+                     limit: Optional[int] = None,
+                     order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         pass
 
     async def delete(self,
-               filters: dict,
-               table_name: str):
-        pass
-
-    async def delete_where_is_not(self,
-                            is_not_filters: dict,
-                            table_name: str):
+                     request: Request,
+                     table_name: str,
+                     filters: dict[str, Any]) -> list[dict]:
         pass
 
     async def get_user(self):
@@ -75,4 +72,7 @@ class FakeSupabaseClient(AwsDbBaseClass):
         pass
 
     async def sign_out(self):
+        pass
+
+    async def delete_user(self, user_id: str):
         pass

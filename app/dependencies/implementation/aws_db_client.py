@@ -29,11 +29,6 @@ class AwsDbClient(AwsDbBaseClass):
         self.is_admin = is_admin
         self.encryptor = encryptor
 
-    async def delete_user(self,
-                          request: Request,
-                          user_id: str):
-        pass
-
     async def insert(self,
                      request: Request,
                      payload: dict[str, Any],
@@ -193,6 +188,11 @@ class AwsDbClient(AwsDbBaseClass):
         pass
 
     async def get_current_user_id(self) -> str:
+        pass
+
+    async def delete_user(self,
+                          request: Request,
+                          user_id: str):
         pass
 
     async def sign_out(self):
