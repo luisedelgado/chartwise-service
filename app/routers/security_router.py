@@ -236,8 +236,7 @@ class SecurityRouter:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise AUTH_TOKEN_EXPIRED_ERROR
 
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
+            supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
             user_id = supabase_client.get_current_user_id()
             request.state.therapist_id = user_id
