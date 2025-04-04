@@ -1,6 +1,7 @@
 import os
 
 from .fake.fake_async_openai import FakeAsyncOpenAI
+from .fake.fake_aws_db_client import FakeAwsDbClient
 from .fake.fake_aws_kms_client import AwsKmsBaseClass, FakeAwsKmsClient
 from .fake.fake_deepgram_client import FakeDeepgramClient
 from .fake.fake_docupanda_client import FakeDocupandaClient
@@ -8,8 +9,7 @@ from .fake.fake_influx_client import FakeInfluxClient
 from .fake.fake_pinecone_client import FakePineconeClient
 from .fake.fake_resend_client import FakeResendClient
 from .fake.fake_stripe_client import FakeStripeClient
-from .fake.fake_supabase_client import FakeSupabaseClient, SupabaseBaseClass
-from .fake.fake_supabase_client_factory import FakeSupabaseClientFactory
+from .implementation.aws_db_client import AwsDbBaseClass, AwsDbClient
 from .implementation.aws_kms_client import AwsKmsClient
 from .implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
 from .implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
@@ -18,7 +18,6 @@ from .implementation.openai_client import OpenAIBaseClass, OpenAIClient
 from .implementation.pinecone_client import PineconeBaseClass, PineconeClient
 from .implementation.resend_client import ResendBaseClass, ResendClient
 from .implementation.stripe_client import StripeBaseClass, StripeClient
-from .implementation.supabase_client_factory import SupabaseFactoryBaseClass, SupabaseClientFactory
 from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT, TESTING_ENVIRONMENT
 from ..internal.security.chartwise_encryptor import ChartWiseEncryptor
 
@@ -30,11 +29,11 @@ class DependencyContainer:
         self._pinecone_client = None
         self._docupanda_client = None
         self._deepgram_client = None
-        self._supabase_client_factory = None
         self._stripe_client = None
         self._resend_client = None
         self._influx_client = None
         self._aws_kms_client = None
+        self._aws_db_client = None
         self._chartwise_encryptor = None
 
     def inject_deepgram_client(self) -> DeepgramBaseClass:
@@ -56,16 +55,6 @@ class DependencyContainer:
         if self._docupanda_client is None:
             self._docupanda_client = FakeDocupandaClient() if self._testing_environment else DocupandaClient()
         return self._docupanda_client
-
-    def inject_supabase_client_factory(self) -> SupabaseFactoryBaseClass:
-        if self._supabase_client_factory is None:
-            fake_admin_client: SupabaseBaseClass = FakeSupabaseClient()
-            fake_user_client: SupabaseBaseClass = FakeSupabaseClient()
-            self._supabase_client_factory = FakeSupabaseClientFactory(
-                fake_admin_client,
-                fake_user_client
-            ) if self._testing_environment else SupabaseClientFactory(environment=os.environ.get("ENVIRONMENT"), encryptor=self.inject_chartwise_encryptor())
-        return self._supabase_client_factory
 
     def inject_stripe_client(self) -> StripeBaseClass:
         if self._stripe_client is None:
@@ -92,6 +81,11 @@ class DependencyContainer:
         if self._aws_kms_client is None:
             self._aws_kms_client = FakeAwsKmsClient() if self._testing_environment else AwsKmsClient()
         return self._aws_kms_client
+
+    def inject_aws_db_client(self) -> AwsKmsBaseClass:
+        if self._aws_db_client is None:
+            self._aws_db_client = FakeAwsDbClient() if self._testing_environment else AwsDbClient()
+        return self._aws_db_client
 
     def inject_chartwise_encryptor(self) -> ChartWiseEncryptor:
         if self._chartwise_encryptor is None:

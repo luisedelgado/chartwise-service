@@ -11,7 +11,7 @@ from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
 
 FAKE_USER_ID_TOKEN = "884f507c-f391-4248-91c4-7c25a138633a"
 
-class FakeSupabaseClient(AwsDbBaseClass):
+class FakeAwsDbClient(AwsDbBaseClass):
 
     FAKE_SESSION_NOTES_ID = "c8d981a1-b751-4d2e-8dd7-c6c873f41f40"
     FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
