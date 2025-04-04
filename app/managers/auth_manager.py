@@ -43,17 +43,37 @@ class AuthManager:
 
     def access_token_is_valid(self, access_token: str) -> bool:
         try:
-            payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            user_id: str = payload.get("sub")
+            token_data = self.extract_data_from_token(access_token)
+            user_id: str = token_data.get("user_id")
             if user_id == None or len(user_id) == 0:
                 return False
 
             # Check that token hasn't expired
-            token_expiration_date = datetime.fromtimestamp(payload.get("exp"),
+            token_expiration_date = datetime.fromtimestamp(token_data.get("exp"),
                                                            tz=timezone.utc)
             return (token_expiration_date > datetime.now(timezone.utc))
         except Exception:
             return False
+
+    def extract_data_from_token(self, access_token: str) -> dict:
+        try:
+            payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            exp: float = payload.get("exp")
+            user_id: str = payload.get("sub")
+
+            if user_id is None or len(user_id) == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: user ID not found",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            return {
+                "user_id": user_id,
+                "exp": exp
+            }
+        except Exception as e:
+            raise Exception(e)
 
     async def refresh_session(self,
                               user_id: str,
