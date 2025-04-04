@@ -6,6 +6,7 @@ from fastapi import (APIRouter,
                      BackgroundTasks,
                      Body,
                      Cookie,
+                     Depends,
                      Header,
                      HTTPException,
                      Request,
@@ -17,6 +18,7 @@ from pydantic import BaseModel
 
 from ..dependencies.dependency_container import dependency_container, SupabaseBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert
+from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
 from ..internal.schemas import Gender, ENCRYPTED_PATIENTS_TABLE_NAME
 from ..internal.utilities import datetime_handler, general_utilities
@@ -68,6 +70,7 @@ class SecurityRouter:
         async def signin(signin_data: SignInRequest,
                          response: Response,
                          request: Request,
+                         user_info: dict = Depends(verify_cognito_token),
                          store_access_token: Annotated[str | None, Header()] = None,
                          store_refresh_token: Annotated[str | None, Header()] = None,
                          session_id: Annotated[Union[str, None], Cookie()] = None):
