@@ -235,6 +235,7 @@ class SecurityRouter:
             # Fetch customer data
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data_dict = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -373,6 +374,7 @@ class SecurityRouter:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             aws_db_client.insert(
+                request=request,
                 payload=payload,
                 table_name=THERAPISTS_TABLE_NAME
             )
@@ -470,6 +472,7 @@ class SecurityRouter:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             update_response = aws_db_client.update(
+                request=request,
                 table_name="therapists",
                 payload=payload,
                 filters={
@@ -533,6 +536,7 @@ class SecurityRouter:
             # Cancel Stripe subscription
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data_dict = aws_db_client.select(
+                request=request,
                 fields="subscription_id",
                 filters={
                     'therapist_id': user_id,
@@ -547,6 +551,7 @@ class SecurityRouter:
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
 
                 aws_db_client.update(
+                    request=request,
                     payload={
                         'is_active': False,
                         'free_trial_active': False
@@ -559,6 +564,7 @@ class SecurityRouter:
 
             # Delete patient data associated with therapist.
             delete_patients_operation = aws_db_client.delete(
+                request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 filters={
                     "therapist_id": user_id
@@ -572,6 +578,7 @@ class SecurityRouter:
 
             # Set therapist user as an inactive account.
             disable_account_response = aws_db_client.update(
+                request=request,
                 table_name="therapists",
                 filters={
                     'id': user_id
@@ -623,15 +630,19 @@ class SecurityRouter:
                 detail=description
             )
 
-    def subscription_data(self, user_id: str,):
+    def subscription_data(self,
+                          user_id: str,
+                          request: Request):
         """
         Returns a JSON object representing the subscription status of the user.
         Arguments:
         user_id – the id of the user.
+        request – the upstream request object.
         """
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data_dict = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,

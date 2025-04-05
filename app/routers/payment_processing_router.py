@@ -218,6 +218,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -292,6 +293,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -388,6 +390,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -461,6 +464,7 @@ class PaymentProcessingRouter:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -602,6 +606,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -677,6 +682,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={
                     'therapist_id': user_id,
@@ -954,6 +960,7 @@ class PaymentProcessingRouter:
                 # Fetch corresponding therapist ID
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 customer_data = aws_db_client.select(
+                    request=request,
                     fields="*",
                     filters={
                         'customer_id': customer_id,
@@ -1024,6 +1031,7 @@ class PaymentProcessingRouter:
 
         try:
             therapist_subscription_query = aws_db_client.select(
+                request=request,
                 fields="*",
                 filters={ 'therapist_id': therapist_id },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
@@ -1075,6 +1083,7 @@ class PaymentProcessingRouter:
 
             if is_new_customer:
                 therapist_query_data = aws_db_client.select(
+                    request=request,
                     fields="*",
                     filters={ 'id': therapist_id },
                     table_name="therapists"
