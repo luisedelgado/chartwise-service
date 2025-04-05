@@ -3,9 +3,8 @@ import logging, os
 from enum import Enum
 from datetime import datetime
 from fastapi import (APIRouter,
-                     BackgroundTasks,
                      Cookie,
-                     Header,
+                     Depends,
                      HTTPException,
                      Request,
                      Response,
@@ -13,10 +12,17 @@ from fastapi import (APIRouter,
 from pydantic import BaseModel
 from typing import Annotated, Optional, Union
 
-from ..dependencies.dependency_container import dependency_container, StripeBaseClass
+from ..dependencies.dependency_container import dependency_container, AwsDbBaseClass, StripeBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
-from ..internal.schemas import DEV_ENVIRONMENT, PROD_ENVIRONMENT, STAGING_ENVIRONMENT
-from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR, STORE_TOKENS_ERROR
+from ..internal.schemas import (
+    DEV_ENVIRONMENT,
+    PROD_ENVIRONMENT,
+    STAGING_ENVIRONMENT,
+    SUBSCRIPTION_STATUS_TABLE_NAME,
+    USER_ID_KEY,
+)
+from ..internal.security.cognito_auth import verify_cognito_token
+from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
@@ -66,252 +72,226 @@ class PaymentProcessingRouter:
         async def create_checkout_session(request: Request,
                                           response: Response,
                                           payload: PaymentSessionPayload,
-                                          background_tasks: BackgroundTasks,
-                                          store_access_token: Annotated[str | None, Header()],
-                                          store_refresh_token: Annotated[str | None, Header()],
+                                          _: dict = Depends(verify_cognito_token),
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._create_checkout_session_internal(authorization=authorization,
-                                                                payload=payload,
-                                                                background_tasks=background_tasks,
-                                                                request=request,
-                                                                response=response,
-                                                                session_id=session_id,
-                                                                store_access_token=store_access_token,
-                                                                store_refresh_token=store_refresh_token)
+            return await self._create_checkout_session_internal(
+                authorization=authorization,
+                payload=payload,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
 
         @self.router.post(self.PAYMENT_EVENT_ENDPOINT, tags=[self.ROUTER_TAG])
         async def capture_payment_event(request: Request,
-                                        background_tasks: BackgroundTasks):
-            return await self._capture_payment_event_internal(request=request,
-                                                              background_tasks=background_tasks)
+                                        _: dict = Depends(verify_cognito_token),):
+            return await self._capture_payment_event_internal(
+                request=request
+            )
 
         @self.router.get(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_subscriptions(response: Response,
                                          request: Request,
-                                         background_tasks: BackgroundTasks,
-                                         store_access_token: Annotated[str | None, Header()],
-                                         store_refresh_token: Annotated[str | None, Header()],
+                                         _: dict = Depends(verify_cognito_token),
                                          authorization: Annotated[Union[str, None], Cookie()] = None,
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._retrieve_subscriptions_internal(authorization=authorization,
-                                                               background_tasks=background_tasks,
-                                                               request=request,
-                                                               response=response,
-                                                               session_id=session_id,
-                                                               store_access_token=store_access_token,
-                                                               store_refresh_token=store_refresh_token)
+            return await self._retrieve_subscriptions_internal(
+                authorization=authorization,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
 
         @self.router.put(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def update_subscription(payload: UpdateSubscriptionPayload,
                                       response: Response,
                                       request: Request,
-                                      background_tasks: BackgroundTasks,
-                                      store_access_token: Annotated[str | None, Header()],
-                                      store_refresh_token: Annotated[str | None, Header()],
+                                      _: dict = Depends(verify_cognito_token),
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._update_subscription_internal(authorization=authorization,
-                                                            price_id=payload.new_price_tier_id,
-                                                            behavior=payload.behavior,
-                                                            background_tasks=background_tasks,
-                                                            request=request,
-                                                            response=response,
-                                                            session_id=session_id,
-                                                            store_access_token=store_access_token,
-                                                            store_refresh_token=store_refresh_token)
+            return await self._update_subscription_internal(
+                authorization=authorization,
+                price_id=payload.new_price_tier_id,
+                behavior=payload.behavior,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
 
         @self.router.delete(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_subscription(response: Response,
                                       request: Request,
-                                      background_tasks: BackgroundTasks,
-                                      store_access_token: Annotated[str | None, Header()],
-                                      store_refresh_token: Annotated[str | None, Header()],
+                                      _: dict = Depends(verify_cognito_token),
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._delete_subscription_internal(authorization=authorization,
-                                                            background_tasks=background_tasks,
-                                                            request=request,
-                                                            response=response,
-                                                            session_id=session_id,
-                                                            store_access_token=store_access_token,
-                                                            store_refresh_token=store_refresh_token)
+            return await self._delete_subscription_internal(
+                authorization=authorization,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
 
         @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
         async def retrieve_product_catalog(request: Request,
                                            response: Response,
-                                           background_tasks: BackgroundTasks,
-                                           store_access_token: Annotated[str | None, Header()],
-                                           store_refresh_token: Annotated[str | None, Header()],
+                                           _: dict = Depends(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._retrieve_product_catalog_internal(authorization=authorization,
-                                                                 background_tasks=background_tasks,
-                                                                 request=request,
-                                                                 response=response,
-                                                                 session_id=session_id,
-                                                                 store_access_token=store_access_token,
-                                                                 store_refresh_token=store_refresh_token)
+            return await self._retrieve_product_catalog_internal(
+                authorization=authorization,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
 
         @self.router.post(self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def create_update_payment_method_session(request: Request,
                                                        response: Response,
                                                        payload: UpdatePaymentMethodPayload,
-                                                       background_tasks: BackgroundTasks,
-                                                       store_access_token: Annotated[str | None, Header()],
-                                                       store_refresh_token: Annotated[str | None, Header()],
+                                                       _: dict = Depends(verify_cognito_token),
                                                        authorization: Annotated[Union[str, None], Cookie()] = None,
                                                        session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._create_update_payment_method_session_internal(authorization=authorization,
-                                                                             background_tasks=background_tasks,
-                                                                             request=request,
-                                                                             response=response,
-                                                                             session_id=session_id,
-                                                                             payload=payload,
-                                                                             store_access_token=store_access_token,
-                                                                             store_refresh_token=store_refresh_token)
+            return await self._create_update_payment_method_session_internal(
+                authorization=authorization,
+                request=request,
+                response=response,
+                session_id=session_id,
+                payload=payload
+            )
 
         @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_payment_history(request: Request,
                                            response: Response,
-                                           background_tasks: BackgroundTasks,
-                                           store_access_token: Annotated[str | None, Header()],
-                                           store_refresh_token: Annotated[str | None, Header()],
+                                           _: dict = Depends(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None,
                                            batch_size: int = 0,
                                            pagination_last_item_id_retrieved: str = None):
-            return await self._retrieve_payment_history_internal(background_tasks=background_tasks,
-                                                                 authorization=authorization,
-                                                                 store_access_token=store_access_token,
-                                                                 store_refresh_token=store_refresh_token,
-                                                                 session_id=session_id,
-                                                                 request=request,
-                                                                 response=response,
-                                                                 limit=batch_size,
-                                                                 starting_after=pagination_last_item_id_retrieved)
+            return await self._retrieve_payment_history_internal(
+                authorization=authorization,
+                session_id=session_id,
+                request=request,
+                response=response,
+                limit=batch_size,
+                starting_after=pagination_last_item_id_retrieved
+            )
 
-    """
-    Creates a new checkout session.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    payload – the incoming request's payload.
-    """
     async def _create_checkout_session_internal(self,
-                                                background_tasks: BackgroundTasks,
                                                 authorization: str,
-                                                store_access_token: str,
-                                                store_refresh_token: str,
                                                 session_id: str,
                                                 request: Request,
                                                 response: Response,
                                                 payload: PaymentSessionPayload):
+        """
+        Creates a new checkout session.
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        payload – the incoming request's payload.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id, response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(user_id=user_id, response=response)
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             is_new_customer = (0 == len(customer_data['data']))
 
             stripe_client = dependency_container.inject_stripe_client()
-            payment_session_url = stripe_client.generate_checkout_session(price_id=payload.price_id,
-                                                                          session_id=session_id,
-                                                                          therapist_id=therapist_id,
-                                                                          success_url=payload.success_callback_url,
-                                                                          cancel_url=payload.cancel_callback_url,
-                                                                          is_new_customer=is_new_customer)
+            payment_session_url = stripe_client.generate_checkout_session(
+                price_id=payload.price_id,
+                session_id=session_id,
+                therapist_id=user_id,
+                success_url=payload.success_callback_url,
+                cancel_url=payload.cancel_callback_url,
+                is_new_customer=is_new_customer
+            )
             assert len(payment_session_url or '') > 0, "Received invalid checkout URL"
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"payment_session_url": payment_session_url}
 
-    """
-    Retrieves the set of subscriptions associated with the incoming customer ID.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    """
     async def _retrieve_subscriptions_internal(self,
-                                               background_tasks: BackgroundTasks,
                                                authorization: str,
-                                               store_access_token: str,
-                                               store_refresh_token: str,
                                                session_id: str,
                                                request: Request,
                                                response: Response):
+        """
+        Retrieves the set of subscriptions associated with the incoming customer ID.
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             if (0 == len(customer_data['data'])):
                 return {"subscriptions": []}
 
@@ -349,65 +329,62 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"subscriptions": filtered_data}
 
-    """
-    Deletes the subscriptions associated with the incoming ID.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    subscription_id – the subscription to be deleted.
-    """
     async def _delete_subscription_internal(self,
-                                            background_tasks: BackgroundTasks,
                                             authorization: str,
-                                            store_access_token: str,
-                                            store_refresh_token: str,
                                             session_id: str,
                                             request: Request,
                                             response: Response):
+        """
+        Deletes the subscriptions associated with the incoming ID.
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
             subscription_id = customer_data['data'][0]['subscription_id']
 
@@ -416,70 +393,68 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail="Subscription not found", status_code=status_code)
 
         return {}
 
-    """
-    Updates the incoming subscription ID with the incoming product information.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    behavior – the update behavior to be invoked.
-    price_id – the new price_id to be associated with the subscription.
-    """
     async def _update_subscription_internal(self,
-                                            background_tasks: BackgroundTasks,
                                             authorization: str,
-                                            store_access_token: str,
-                                            store_refresh_token: str,
                                             session_id: str,
                                             request: Request,
                                             response: Response,
                                             behavior: UpdateSubscriptionBehavior,
                                             price_id: str):
+        """
+        Updates the incoming subscription ID with the incoming product information.
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        behavior – the update behavior to be invoked.
+        price_id – the new price_id to be associated with the subscription.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
             assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
 
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
             subscription_id = customer_data['data'][0]['subscription_id']
 
@@ -489,9 +464,11 @@ class PaymentProcessingRouter:
             if behavior == UpdateSubscriptionBehavior.CHANGE_TIER:
                 assert len(price_id or '') > 0, "Missing the new tier price ID parameter."
                 subscription_item_id = subscription_data["items"]["data"][0]["id"]
-                stripe_client.update_customer_subscription_plan(subscription_id=subscription_id,
-                                                                subscription_item_id=subscription_item_id,
-                                                                price_id=price_id)
+                stripe_client.update_customer_subscription_plan(
+                    subscription_id=subscription_id,
+                    subscription_item_id=subscription_item_id,
+                    price_id=price_id
+                )
             elif behavior == UpdateSubscriptionBehavior.UNDO_CANCELLATION:
                 # Check if subscription is already in a canceled state
                 assert subscription_data['status'] != 'canceled', "The incoming subscription is already in a canceled state and cannot be resumed."
@@ -502,45 +479,52 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail=message, status_code=status_code)
 
         return {}
 
     async def _retrieve_product_catalog_internal(self,
-                                                 background_tasks: BackgroundTasks,
                                                  authorization: str,
-                                                 store_access_token: str,
-                                                 store_refresh_token: str,
                                                  session_id: str,
                                                  request: Request,
                                                  response: Response):
+        """
+        Retrieves the product catalog for the current user (customer).
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
@@ -548,147 +532,147 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail="Subscription not found", status_code=status_code)
 
         return {"catalog": response}
 
-    """
-    Generates a URL for updating a subscription's payment method with the incoming data.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    payload – the JSON payload containing the update data.
-    """
     async def _create_update_payment_method_session_internal(self,
-                                                             background_tasks: BackgroundTasks,
                                                              authorization: str,
-                                                             store_access_token: str,
-                                                             store_refresh_token: str,
                                                              session_id: str,
                                                              request: Request,
                                                              response: Response,
                                                              payload: UpdatePaymentMethodPayload):
+        """
+        Generates a URL for updating a subscription's payment method with the incoming data.
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        payload – the JSON payload containing the update data.
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
             customer_id = customer_data['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
-            update_payment_method_url = stripe_client.generate_payment_method_update_session(customer_id=customer_id,
-                                                                                             success_url=payload.success_callback_url,
-                                                                                             cancel_url=payload.cancel_callback_url)
+            update_payment_method_url = stripe_client.generate_payment_method_update_session(
+                customer_id=customer_id,
+                success_url=payload.success_callback_url,
+                cancel_url=payload.cancel_callback_url
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail=message, status_code=status_code)
 
         return { "update_payment_method_url": update_payment_method_url }
 
-    """
-    Retrieves the payment history for the current user (customer).
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    authorization – the authorization cookie, if exists.
-    store_access_token – the store access token.
-    store_refresh_token – the store refresh token.
-    session_id – the session_id cookie, if exists.
-    request – the request object.
-    response – the response model with which to create the final response.
-    limit – the limit for the batch size to be returned.
-    starting_after – the id of the last payment that was retrieved (for pagination purposes).
-    """
     async def _retrieve_payment_history_internal(self,
-                                                 background_tasks: BackgroundTasks,
                                                  authorization: str,
-                                                 store_access_token: str,
-                                                 store_refresh_token: str,
                                                  session_id: str,
                                                  request: Request,
                                                  response: Response,
                                                  limit: int,
                                                  starting_after: str | None):
+        """
+        Retrieves the payment history for the current user (customer).
+
+        Arguments:
+        authorization – the authorization cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        limit – the limit for the batch size to be returned.
+        starting_after – the id of the last payment that was retrieved (for pagination purposes).
+        """
         request.state.session_id = session_id
         if not self._auth_manager.access_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
-        if store_access_token is None or store_refresh_token is None:
-            raise STORE_TOKENS_ERROR
-
         try:
-            supabase_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=store_access_token,
-                                                                                                         refresh_token=store_refresh_token)
-            therapist_id = supabase_client.get_current_user_id()
-            request.state.therapist_id = therapist_id
-            await self._auth_manager.refresh_session(user_id=therapist_id,
-                                                     response=response)
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=str(e),
-                                                                  session_id=session_id)
-            raise STORE_TOKENS_ERROR
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise Exception(e)
 
         try:
-            customer_data = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                   },
-                                                   table_name="subscription_status")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            customer_data = aws_db_client.select(
+                fields="*",
+                filters={
+                    'therapist_id': user_id,
+                },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             if (0 == len(customer_data['data'])):
                 return {"payments": []}
 
             customer_id = customer_data['data'][0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
-            payment_intent_history = stripe_client.retrieve_payment_intent_history(customer_id=customer_id,
-                                                                                   limit=limit,
-                                                                                   starting_after=starting_after)
+            payment_intent_history = stripe_client.retrieve_payment_intent_history(
+                customer_id=customer_id,
+                limit=limit,
+                starting_after=starting_after
+            )
 
             successful_payments = []
             for intent in payment_intent_history["data"]:
@@ -716,25 +700,25 @@ class PaymentProcessingRouter:
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
             message = str(e)
-            dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
-                                                                  method=request.method,
-                                                                  error_code=status_code,
-                                                                  description=message,
-                                                                  session_id=session_id)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=message,
+                session_id=session_id
+            )
             raise HTTPException(detail=message, status_code=status_code)
 
         return {"payments": successful_payments}
 
-    """
-    Webhook for handling Stripe events.
-
-    Arguments:
-    background_tasks – object for scheduling concurrent tasks.
-    request – the incoming request object.
-    """
     async def _capture_payment_event_internal(self,
-                                              request: Request,
-                                              background_tasks: BackgroundTasks):
+                                              request: Request):
+        """
+        Webhook for handling Stripe events.
+
+        Arguments:
+        request – the incoming request object.
+        """
         stripe_client = dependency_container.inject_stripe_client()
         environment = os.environ.get("ENVIRONMENT")
 
@@ -778,8 +762,8 @@ class PaymentProcessingRouter:
 
         try:
             await self._handle_stripe_event(event=event,
-                                            stripe_client=stripe_client,
-                                            background_tasks=background_tasks)
+                                            request=request,
+                                            stripe_client=stripe_client)
         except Exception as e:
             logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
             raise HTTPException(e)
@@ -788,18 +772,17 @@ class PaymentProcessingRouter:
 
     # Private
 
-    """
-    Internal funnel for specific handlings of Stripe events.
-
-    Arguments:
-    event – the Stripe event.
-    stripe_client – the Stripe client.
-    background_tasks – object for scheduling concurrent tasks.
-    """
     async def _handle_stripe_event(self,
                                    event,
-                                   stripe_client: StripeBaseClass,
-                                   background_tasks: BackgroundTasks):
+                                   request: Request,
+                                   stripe_client: StripeBaseClass):
+        """
+        Internal funnel for specific handlings of Stripe events.
+
+        Arguments:
+        event – the Stripe event.
+        stripe_client – the Stripe client.
+        """
         event_type: str = event["type"]
 
         if event_type == 'checkout.session.completed':
@@ -811,8 +794,10 @@ class PaymentProcessingRouter:
 
             if subscription_id:
                 # Update the subscription with metadata
-                stripe_client.attach_subscription_metadata(subscription_id=subscription_id,
-                                                           metadata=metadata)
+                stripe_client.attach_subscription_metadata(
+                    subscription_id=subscription_id,
+                    metadata=metadata
+                )
 
                 # Attach product metadata to the underlying payment intent
                 try:
@@ -824,8 +809,9 @@ class PaymentProcessingRouter:
                     price = stripe_client.retrieve_price(price_id)
                     product_id = price.get("product")
                     product = stripe_client.retrieve_product(product_id)
-                    stripe_client.attach_payment_intent_metadata(payment_intent_id=latest_invoice.get("payment_intent"),
-                                                                 metadata=product.get("metadata", {}))
+                    stripe_client.attach_payment_intent_metadata(
+                        payment_intent_id=latest_invoice.get("payment_intent"),
+                        metadata=product.get("metadata", {}))
                 except Exception:
                     pass
 
@@ -839,8 +825,10 @@ class PaymentProcessingRouter:
             if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
                 subscription = stripe_client.retrieve_subscription(subscription_id)
                 invoice_metadata = subscription.get('metadata', {})
-                stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
-                                                      metadata=invoice_metadata)
+                stripe_client.attach_invoice_metadata(
+                    invoice_id=invoice['id'],
+                    metadata=invoice_metadata
+                )
 
         elif event_type == 'invoice.updated':
             invoice = event['data']['object']
@@ -852,8 +840,10 @@ class PaymentProcessingRouter:
             if len(invoice_metadata) == 0 and len(subscription_id or '') > 0:
                 subscription = stripe_client.retrieve_subscription(subscription_id)
                 invoice_metadata = subscription.get('metadata', {})
-                stripe_client.attach_invoice_metadata(invoice_id=invoice['id'],
-                                                      metadata=invoice_metadata)
+                stripe_client.attach_invoice_metadata(
+                    invoice_id=invoice['id'],
+                    metadata=invoice_metadata
+                )
 
         elif event_type == 'invoice.payment_succeeded':
             # TODO: Send ChartWise receipt to user.
@@ -873,8 +863,10 @@ class PaymentProcessingRouter:
                 product_id = price.get("product", {})
                 product = stripe_client.retrieve_product(product_id)
                 product_metadata = product.get("metadata", {})
-                stripe_client.attach_payment_intent_metadata(payment_intent_id=payment_intent_id,
-                                                             metadata=product_metadata)
+                stripe_client.attach_payment_intent_metadata(
+                    payment_intent_id=payment_intent_id,
+                    metadata=product_metadata
+                )
             except:
                 pass
 
@@ -889,10 +881,16 @@ class PaymentProcessingRouter:
             invoice = event['data']['object']
 
         elif event_type == 'customer.subscription.created':
-            await self._handle_subscription_upsert(subscription_upsert_event=event)
+            await self._handle_subscription_upsert(
+                subscription_upsert_event=event,
+                request=request
+            )
         elif event_type == 'customer.subscription.updated':
             # TODO: Handle Plan Upgrades/Downgrades emails when users change their subscription.
-            await self._handle_subscription_upsert(subscription_upsert_event=event)
+            await self._handle_subscription_upsert(
+                subscription_upsert_event=event,
+                request=request
+            )
         elif event_type == 'customer.subscription.paused':
             # TODO: Send an automated email confirming the pause.
             pass
@@ -915,39 +913,46 @@ class PaymentProcessingRouter:
 
             try:
                 # Fetch corresponding therapist ID
-                supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-                customer_data = supabase_client.select(fields="*",
-                                                       filters={
-                                                           'customer_id': customer_id,
-                                                       },
-                                                       table_name="subscription_status")
+                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+                customer_data = aws_db_client.select(
+                    fields="*",
+                    filters={
+                        'customer_id': customer_id,
+                    },
+                    table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+                )
                 assert (0 != len(customer_data['data'])), "No therapist data found for incoming customer ID."
                 therapist_id = customer_data['data'][0]['therapist_id']
             except Exception:
                 pass
 
             # Attach the payment method to the customer
-            stripe_client.attach_customer_payment_method(customer_id=customer_id,
-                                                         payment_method_id=payment_method_id)
+            stripe_client.attach_customer_payment_method(
+                customer_id=customer_id,
+                payment_method_id=payment_method_id
+            )
 
             # Update the default payment method for the subscription
             subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id)
             for subscription in subscriptions:
                 try:
-                    stripe_client.update_subscription_payment_method(subscription_id=subscription.id,
-                                                                     payment_method_id=payment_method_id)
+                    stripe_client.update_subscription_payment_method(
+                        subscription_id=subscription.id,
+                        payment_method_id=payment_method_id
+                    )
                 except Exception as e:
                     if therapist_id is not None:
                         # Failed to update a subscription's payment method. Trigger internal alert, and fail silently.
-                        internal_alert = PaymentsActivityAlert(description=("(setup_intent.succeeded) This failure usually is related to not "
-                                                                            "being able to update a subscription's payment method. "
-                                                                            "Please take a look to get a better understanding of the customer's journey."),
-                                                                exception=e,
-                                                                environment=self._environment,
-                                                                therapist_id=therapist_id,
-                                                                subscription_id=subscription.get('id', None),
-                                                                payment_method_id=payment_method_id,
-                                                                customer_id=customer_id)
+                        internal_alert = PaymentsActivityAlert(
+                            description=("(setup_intent.succeeded) This failure usually is related to not "
+                                         "being able to update a subscription's payment method. "
+                                         "Please take a look to get a better understanding of the customer's journey."),
+                            exception=e,
+                            environment=self._environment,
+                            therapist_id=therapist_id,
+                            subscription_id=subscription.get('id', None),
+                            payment_method_id=payment_method_id,
+                            customer_id=customer_id)
                         await self._email_manager.send_internal_alert(alert=internal_alert)
 
         else:
@@ -955,7 +960,14 @@ class PaymentProcessingRouter:
 
     # Private
 
+    """
+    Handles the upsert of a subscription, updating the subscription status in the database.
+
+    Arguments:
+    subscription_upsert_event – the Stripe event containing the subscription data.
+    """
     async def _handle_subscription_upsert(self,
+                                          request: Request,
                                           subscription_upsert_event: dict):
         subscription = subscription_upsert_event['data']['object']
         subscription_metadata = subscription.get('metadata', {})
@@ -969,12 +981,14 @@ class PaymentProcessingRouter:
             return
 
         stripe_client = dependency_container.inject_stripe_client()
-        supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
 
         try:
-            therapist_subscription_query = supabase_client.select(fields="*",
-                                                                  filters={ 'therapist_id': therapist_id },
-                                                                  table_name="subscription_status")
+            therapist_subscription_query = aws_db_client.select(
+                fields="*",
+                filters={ 'therapist_id': therapist_id },
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+            )
             is_new_customer = (0 == len(therapist_subscription_query['data']))
 
             # Get customer data
@@ -1013,14 +1027,19 @@ class PaymentProcessingRouter:
                 payload['is_active'] = False
                 payload['free_trial_active'] = False
 
-            supabase_client.upsert(payload=payload,
-                                   table_name="subscription_status",
-                                   on_conflict="therapist_id")
+            aws_db_client.upsert(
+                request=request,
+                on_conflict=["therapist_id"],
+                payload=payload,
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
+            )
 
             if is_new_customer:
-                therapist_query_data = supabase_client.select(fields="*",
-                                                              filters={ 'id': therapist_id },
-                                                              table_name="therapists")
+                therapist_query_data = aws_db_client.select(
+                    fields="*",
+                    filters={ 'id': therapist_id },
+                    table_name="therapists"
+                )
                 assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
 
                 therapist_data = therapist_query_data['data'][0]
@@ -1029,19 +1048,23 @@ class PaymentProcessingRouter:
                 therapist_name = "".join([therapist_data['first_name'],
                                             " ",
                                             therapist_data['last_name']])
-                alert = CustomerRelationsAlert(description=alert_description,
-                                               session_id=session_id,
-                                               environment=self._environment,
-                                               therapist_id=therapist_id,
-                                               therapist_name=therapist_name,
-                                               therapist_email=therapist_data['email'])
+                alert = CustomerRelationsAlert(
+                    description=alert_description,
+                    session_id=session_id,
+                    environment=self._environment,
+                    therapist_id=therapist_id,
+                    therapist_name=therapist_name,
+                    therapist_email=therapist_data['email']
+                )
                 await self._email_manager.send_customer_relations_alert(alert)
         except Exception as e:
-            internal_alert = PaymentsActivityAlert(description="(customer.subscription.updated) Failure caught in subscription update.",
-                                                   session_id=session_id,
-                                                   environment=self._environment,
-                                                   therapist_id=therapist_id,
-                                                   exception=e,
-                                                   subscription_id=subscription_id,
-                                                   customer_id=customer_id)
+            internal_alert = PaymentsActivityAlert(
+                description="(customer.subscription.updated) Failure caught in subscription update.",
+                session_id=session_id,
+                environment=self._environment,
+                therapist_id=therapist_id,
+                exception=e,
+                subscription_id=subscription_id,
+                customer_id=customer_id
+            )
             await self._email_manager.send_internal_alert(alert=internal_alert)

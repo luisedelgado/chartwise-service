@@ -22,7 +22,8 @@ from ..internal.schemas import (
     Gender,
     ENCRYPTED_PATIENTS_TABLE_NAME,
     SUBSCRIPTION_STATUS_TABLE_NAME,
-    THERAPISTS_TABLE_NAME
+    THERAPISTS_TABLE_NAME,
+    USER_ID_KEY,
 )
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
@@ -223,7 +224,7 @@ class SecurityRouter:
             if not self._auth_manager.access_token_is_valid(authorization):
                 raise AUTH_TOKEN_EXPIRED_ERROR
 
-            user_id = self._auth_manager.extract_data_from_token(authorization)["user_id"]
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
             request.state.therapist_id = user_id
 
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
@@ -329,7 +330,7 @@ class SecurityRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)["user_id"]
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
             request.state.therapist_id = user_id
             auth_token = await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -428,7 +429,7 @@ class SecurityRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)["user_id"]
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -504,7 +505,7 @@ class SecurityRouter:
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)["user_id"]
+            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,

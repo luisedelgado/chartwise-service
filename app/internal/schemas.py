@@ -51,10 +51,14 @@ SESSION_REPORTS_ENCRYPTED_COLUMNS = { "notes_text": {
                                         IS_JSON_KEY: False
                                     }}
 
+# Environments
 TESTING_ENVIRONMENT = "testing"
 DEV_ENVIRONMENT = "dev"
 STAGING_ENVIRONMENT = "staging"
 PROD_ENVIRONMENT = "prod"
+
+# General constants
+USER_ID_KEY = "user_id"
 
 class Gender(Enum):
     UNDEFINED = "undefined"
