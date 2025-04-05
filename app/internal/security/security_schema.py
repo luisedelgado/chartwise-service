@@ -7,12 +7,6 @@ AUTH_TOKEN_EXPIRED_ERROR = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
-STORE_TOKENS_ERROR = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="One or more store token headers are missing or expired",
-    headers={"WWW-Authenticate": "Bearer"},
-)
-
 class Token(BaseModel):
     authorization: str
     token_type: str

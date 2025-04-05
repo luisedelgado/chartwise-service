@@ -14,6 +14,10 @@ ENCRYPTED_TABLES = [ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                     ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                     ENCRYPTED_SESSION_REPORTS_TABLE_NAME]
 
+# Unencrypted tables names
+SUBSCRIPTION_STATUS_TABLE_NAME = "subscription_status"
+THERAPISTS_TABLE_NAME = "therapists"
+
 # Encryped columns per table
 IS_JSON_KEY = "is_json"
 PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS = {"insights": {IS_JSON_KEY: False},}

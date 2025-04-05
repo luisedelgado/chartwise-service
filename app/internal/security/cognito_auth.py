@@ -20,14 +20,14 @@ def verify_cognito_token(request: Request) -> Dict:
     if not auth_header or not auth_header.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header missing or invalid",
+            detail="Store authorization header missing or invalid",
         )
 
     token = auth_header.split(" ")[1]
     decoded_token = decode_cognito_token(token)
 
     return {
-        "sub": decoded_token["sub"],
+        "sub": decoded_token.get("sub"),
         "email": decoded_token.get("email"),
         "claims": decoded_token
     }
