@@ -200,7 +200,10 @@ class PaymentProcessingRouter:
         try:
             user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
             request.state.therapist_id = user_id
-            await self._auth_manager.refresh_session(user_id=user_id, response=response)
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                response=response
+            )
         except Exception as e:
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
             dependency_container.inject_influx_client().log_error(
@@ -243,7 +246,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail=message, status_code=status_code)
+            raise HTTPException(
+                detail=message,
+                status_code=status_code
+            )
 
         return {"payment_session_url": payment_session_url}
 
@@ -336,7 +342,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail=message, status_code=status_code)
+            raise HTTPException(
+                detail=message,
+                status_code=status_code
+            )
 
         return {"subscriptions": filtered_data}
 
@@ -400,7 +409,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail="Subscription not found", status_code=status_code)
+            raise HTTPException(
+                detail="Subscription not found",
+                status_code=status_code
+            )
 
         return {}
 
@@ -486,7 +498,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail=message, status_code=status_code)
+            raise HTTPException(
+                detail=message,
+                status_code=status_code
+            )
 
         return {}
 
@@ -539,7 +554,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail="Subscription not found", status_code=status_code)
+            raise HTTPException(
+                detail="Subscription not found",
+                status_code=status_code
+            )
 
         return {"catalog": response}
 
@@ -609,7 +627,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail=message, status_code=status_code)
+            raise HTTPException(
+                detail=message,
+                status_code=status_code
+            )
 
         return { "update_payment_method_url": update_payment_method_url }
 
@@ -707,7 +728,10 @@ class PaymentProcessingRouter:
                 description=message,
                 session_id=session_id
             )
-            raise HTTPException(detail=message, status_code=status_code)
+            raise HTTPException(
+                detail=message,
+                status_code=status_code
+            )
 
         return {"payments": successful_payments}
 
@@ -732,7 +756,10 @@ class PaymentProcessingRouter:
             elif environment == PROD_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
             else:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid environment")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Invalid environment"
+                )
 
             payload = await request.body()
             sig_header = request.headers.get("stripe-signature")
@@ -746,24 +773,36 @@ class PaymentProcessingRouter:
             if environment in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT] and request.client.host in ["localhost", "127.0.0.1"]:
                 logging.info(f"Blocking localhost request for {environment}")
                 raise HTTPException(
-                    status_code=403, detail="Webhooks from localhost are not allowed in staging."
+                    status_code=403,
+                    detail="Webhooks from localhost are not allowed in staging."
                 )
         except ValueError:
             # Invalid payload
             logging.error(f"ValueError encountered: {str(e)}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid payload"
+            )
         except Exception as e:
             # Check for invalid signature
             logging.error(f"Exception encountered trying to construct the webhook event: {str(e)}")
             if stripe_client.is_signature_verification_error(e=e):
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid signature"
+                )
             else:
-                raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail=str(e))
+                raise HTTPException(
+                    status_code=status.HTTP_417_EXPECTATION_FAILED,
+                    detail=str(e)
+                )
 
         try:
-            await self._handle_stripe_event(event=event,
-                                            request=request,
-                                            stripe_client=stripe_client)
+            await self._handle_stripe_event(
+                event=event,
+                request=request,
+                stripe_client=stripe_client
+            )
         except Exception as e:
             logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
             raise HTTPException(e)

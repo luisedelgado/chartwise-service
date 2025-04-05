@@ -203,7 +203,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=description
             )
-            raise HTTPException(detail=description, status_code=status_code)
+            raise HTTPException(
+                detail=description,
+                status_code=status_code
+            )
 
     async def _refresh_auth_token_internal(self,
                                            authorization: Annotated[Union[str, None], Cookie()],
@@ -286,8 +289,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=description
             )
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
     async def _logout_internal(self,
                                request: Request,
@@ -405,8 +410,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=description
             )
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
     async def _update_therapist_internal(self,
                                          request: Request,
@@ -611,7 +618,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=description
             )
-            raise HTTPException(status_code=status_code, detail=description)
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
     def subscription_data(self, user_id: str,):
         """
