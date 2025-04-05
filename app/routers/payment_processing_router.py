@@ -64,10 +64,10 @@ class PaymentProcessingRouter:
         self.router = APIRouter()
         self._register_routes()
 
-    """
-    Registers the set of routes that the class' router can access.
-    """
     def _register_routes(self):
+        """
+        Registers the set of routes that the class' router can access.
+        """
         @self.router.post(self.CHECKOUT_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def create_checkout_session(request: Request,
                                           response: Response,

@@ -39,10 +39,10 @@ class ImageProcessingRouter:
         self.router = APIRouter()
         self._register_routes()
 
-    """
-    Registers the set of routes that the class' router can access.
-    """
     def _register_routes(self):
+        """
+        Registers the set of routes that the class' router can access.
+        """
         @self.router.post(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
         async def extract_text(request: Request,
                                response: Response,
