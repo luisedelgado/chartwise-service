@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from portkey_ai import createHeaders
 from pytz import timezone
 
-from ...dependencies.api.supabase_base_class import SupabaseBaseClass
+from ...dependencies.dependency_container import AwsDbBaseClass, dependency_container
 
 """
 Returns a flag representing whether or not the incoming timezone identifier is valid.
@@ -44,14 +44,16 @@ def extract_status_code(exception, fallback: status):
 """
 Retrieves the current user's language preference.
 """
-def get_user_language_code(user_id: str,
-                           supabase_client: SupabaseBaseClass):
+def get_user_language_code(user_id: str):
     try:
-        therapist_query = supabase_client.select(fields="language_preference",
-                                                 filters={
-                                                   'id': user_id
-                                                 },
-                                                 table_name="therapists")
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+        therapist_query = aws_db_client.select(
+            fields="language_preference",
+            filters={
+            'id': user_id
+            },
+            table_name="therapists"
+        )
         assert (0 != len(therapist_query['data']))
         return therapist_query['data'][0]["language_preference"]
     except Exception as e:

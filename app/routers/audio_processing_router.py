@@ -171,10 +171,8 @@ class AudioProcessingRouter:
                 tz_identifier=client_timezone_identifier
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = general_utilities.get_user_language_code(
                 user_id=user_id,
-                aws_db_client=aws_db_client
             )
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,
@@ -365,10 +363,8 @@ class AudioProcessingRouter:
                 tz_identifier=client_timezone_identifier
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = general_utilities.get_user_language_code(
                 user_id=user_id,
-                aws_db_client=aws_db_client
             )
         except Exception as e:
             description = str(e)
