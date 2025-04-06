@@ -9,7 +9,7 @@ from starlette.requests import Request
 
 from ..internal_alert import EngineeringAlert
 from ..schemas import PROD_ENVIRONMENT
-from ...dependencies.dependency_container import (dependency_container, SupabaseBaseClass)
+from ...dependencies.dependency_container import (dependency_container, AwsDbBaseClass)
 from ...managers.email_manager import EmailManager
 from ...routers.assistant_router import AssistantRouter
 from ...routers.audio_processing_router import AudioProcessingRouter
@@ -51,10 +51,12 @@ class TimingMiddleware(BaseHTTPMiddleware):
         if (environment == PROD_ENVIRONMENT
             and request_method in self.VALID_API_METHODS
             and request_url_path not in self.IRRELEVANT_PATHS):
-            await run_in_threadpool(influx_client.log_api_request,
-                                    endpoint_name=request_url_path,
-                                    method=request_method,
-                                    session_id=request.cookies.get("session_id"))
+            await run_in_threadpool(
+                influx_client.log_api_request,
+                endpoint_name=request_url_path,
+                method=request_method,
+                session_id=request.cookies.get("session_id")
+            )
 
         # Process the request and get the response
         response = await call_next(request)
@@ -63,23 +65,45 @@ class TimingMiddleware(BaseHTTPMiddleware):
         end_time = time.perf_counter()
         response_time = (end_time - start_time) * 1000
 
-        session_id = getattr(request.state, self.SESSION_ID_KEY, None)
-        therapist_id = getattr(request.state, self.THERAPIST_ID_KEY, None)
-        patient_id = (getattr(request.state, self.PATIENT_ID_KEY, None)
-                        or request.query_params.get(self.PATIENT_ID_KEY, None))
+        session_id = getattr(
+            request.state,
+            self.SESSION_ID_KEY,
+            None
+        )
+        therapist_id = getattr(
+            request.state,
+            self.THERAPIST_ID_KEY,
+            None
+        )
+        patient_id = (
+            getattr(
+                request.state,
+                self.PATIENT_ID_KEY,
+                None
+            ) or request.query_params.get(
+                self.PATIENT_ID_KEY,
+                None
+            )
+        )
 
         if (environment == PROD_ENVIRONMENT
             and request_method in self.VALID_API_METHODS
             and request_url_path not in self.IRRELEVANT_PATHS):
-            await run_in_threadpool(influx_client.log_api_response,
-                                    endpoint_name=request_url_path,
-                                    method=request_method,
-                                    response_time=response_time,
-                                    status_code=response.status_code,
-                                    session_id=session_id,
-                                    session_report_id=getattr(request.state, self.SESSION_REPORT_ID_KEY, None),
-                                    patient_id=patient_id,
-                                    therapist_id=therapist_id)
+            await run_in_threadpool(
+                influx_client.log_api_response,
+                endpoint_name=request_url_path,
+                method=request_method,
+                response_time=response_time,
+                status_code=response.status_code,
+                session_id=session_id,
+                session_report_id=getattr(
+                    request.state,
+                    self.SESSION_REPORT_ID_KEY,
+                    None
+                ),
+                patient_id=patient_id,
+                therapist_id=therapist_id
+            )
 
         # Log PHI activity
         if (environment == PROD_ENVIRONMENT
@@ -104,21 +128,24 @@ class TimingMiddleware(BaseHTTPMiddleware):
                     "ip_address": request.headers.get("x-forwarded-for", request.client.host)
                 }
 
-                supabase_client: SupabaseBaseClass = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-                await run_in_threadpool(supabase_client.insert,
-                                        table_name="audit_logs",
-                                        payload=payload)
+                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+                await run_in_threadpool(
+                    aws_db_client.insert,
+                    table_name="audit_logs",
+                    payload=payload
+                )
             except Exception as e:
                 # Fail silently but send an internal alert.
                 description = f"Failed to log PHI activity ({request.method} {request_url_path}). Exception raised: {str(e)}"
                 asyncio.create_task(
                     EmailManager().send_internal_alert(
-                        alert=EngineeringAlert(description=description,
-                                               session_id=session_id,
-                                               environment=environment,
-                                               exception=e,
-                                               therapist_id=therapist_id,
-                                               patient_id=patient_id
+                        alert=EngineeringAlert(
+                            description=description,
+                            session_id=session_id,
+                            environment=environment,
+                            exception=e,
+                            therapist_id=therapist_id,
+                            patient_id=patient_id,
                         )
                     )
                 )
