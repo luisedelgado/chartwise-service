@@ -129,7 +129,7 @@ class ImageProcessingManager(MediaProcessingManager):
                             )
             )
 
-            # If the textraction has already been stored in Supabase we can return early.
+            # If the textraction has already been stored in our DB we can return early.
             if len(session_report_data['notes_text'] or '') > 0:
                 return session_notes_id
 

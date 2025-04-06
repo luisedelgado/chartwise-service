@@ -49,7 +49,7 @@ class MediaProcessingManager(ABC):
         therapist_id – the therapist id.
         email_manager – the email manager object.
         request – the upstream Request object.
-        storage_filepath – the storage filepath where the backing file is stored in Supabase.
+        storage_filepath – the storage filepath where the backing file is stored in S3.
         """
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         await assistant_manager.update_session(
