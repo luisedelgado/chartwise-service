@@ -1,12 +1,18 @@
 import asyncio, os
 
-from fastapi import (BackgroundTasks, File, HTTPException, status, UploadFile)
+from fastapi import (
+    BackgroundTasks,
+    File,
+    HTTPException,
+    Request,
+    status,
+    UploadFile
+)
 from typing import Tuple
 
 from .media_processing_manager import MediaProcessingManager
-from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..dependencies.api.templates import SessionNotesTemplate
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..internal.internal_alert import MediaJobProcessingAlert
 from ..internal.schemas import (MediaType,
                                 SessionProcessingStatus,
@@ -27,7 +33,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                            therapist_id: str,
                                            session_date: str,
                                            template: SessionNotesTemplate,
-                                           supabase_client: SupabaseBaseClass,
+                                           request: Request,
                                            image: UploadFile = File(...)) -> Tuple[str, str]:
         files_to_clean = None
         try:
@@ -42,16 +48,20 @@ class ImageProcessingManager(MediaProcessingManager):
             doc_id = await dependency_container.inject_docupanda_client().upload_image(image_filepath=image_copy_path,
                                                                                        image_filename=image.filename)
 
-            insert_result = supabase_client.insert(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                   payload={
-                                                       "textraction_job_id": doc_id,
-                                                       "template": template.value,
-                                                       "session_date": session_date,
-                                                       "therapist_id": therapist_id,
-                                                       "patient_id": patient_id,
-                                                       "processing_status": SessionProcessingStatus.PROCESSING.value,
-                                                       "source": SessionNotesSource.NOTES_IMAGE.value,
-                                                   })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            insert_result = aws_db_client.insert(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                payload={
+                    "textraction_job_id": doc_id,
+                    "template": template.value,
+                    "session_date": session_date,
+                    "therapist_id": therapist_id,
+                    "patient_id": patient_id,
+                    "processing_status": SessionProcessingStatus.PROCESSING.value,
+                    "source": SessionNotesSource.NOTES_IMAGE.value,
+                }
+            )
             session_notes_id = insert_result['data'][0]['id']
 
             # Clean up the image copies we used for processing.
@@ -68,10 +78,10 @@ class ImageProcessingManager(MediaProcessingManager):
                                   language_code: str,
                                   therapist_id: str,
                                   background_tasks: BackgroundTasks,
-                                  supabase_client: SupabaseBaseClass,
                                   auth_manager: AuthManager,
                                   assistant_manager: AssistantManager,
-                                  email_manager: EmailManager) -> str:
+                                  email_manager: EmailManager,
+                                  request: Request) -> str:
         try:
             session_notes_id = None
 
@@ -82,22 +92,30 @@ class ImageProcessingManager(MediaProcessingManager):
                     if attempt < MAX_RETRIES - 1:
                         await asyncio.sleep(RETRY_DELAY)
                     else:
-                        alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
-                                                        media_type=MediaType.IMAGE,
-                                                        environment=environment,
-                                                        therapist_id=therapist_id,
-                                                        session_id=session_id)
+                        alert = MediaJobProcessingAlert(
+                            description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                            media_type=MediaType.IMAGE,
+                            environment=environment,
+                            therapist_id=therapist_id,
+                            session_id=session_id
+                        )
                         await email_manager.send_internal_alert(alert)
-                        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Textraction is still processing after maximum retries")
+                        raise HTTPException(
+                            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                            detail="Textraction is still processing after maximum retries"
+                        )
                 else:
                     # Got successful response
                     break
 
-            session_report_query = supabase_client.select(fields="*",
-                                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                          filters={
-                                                              "textraction_job_id": document_id,
-                                                          })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            session_report_query = aws_db_client.select(
+                fields="*",
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                filters={
+                    "textraction_job_id": document_id,
+                }
+            )
             session_report_data = session_report_query['data']
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
             session_report_data = session_report_data[0]
@@ -105,17 +123,22 @@ class ImageProcessingManager(MediaProcessingManager):
             patient_id = session_report_data['patient_id']
             session_notes_id = session_report_data['id']
             session_date = (None if 'session_date' not in session_report_data
-                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_data['session_date'],
-                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD))
+                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(
+                                incoming_date=session_report_data['session_date'],
+                                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
+                            )
+            )
 
             # If the textraction has already been stored in Supabase we can return early.
             if len(session_report_data['notes_text'] or '') > 0:
                 return session_notes_id
 
             if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
-                textraction = await assistant_manager.adapt_session_notes_to_soap(therapist_id=therapist_id,
-                                                                                  session_id=session_id,
-                                                                                  session_notes_text=textraction)
+                textraction = await assistant_manager.adapt_session_notes_to_soap(
+                    therapist_id=therapist_id,
+                    session_id=session_id,
+                    session_notes_text=textraction
+            )
 
             filtered_body = {
                 "id": session_notes_id,
@@ -126,73 +149,88 @@ class ImageProcessingManager(MediaProcessingManager):
                 "therapist_id": therapist_id
             }
 
-            await assistant_manager.update_session(language_code=language_code,
-                                                   environment=environment,
-                                                   background_tasks=background_tasks,
-                                                   auth_manager=auth_manager,
-                                                   filtered_body=filtered_body,
-                                                   session_id=session_id,
-                                                   supabase_client=supabase_client,
-                                                   email_manager=email_manager)
+            await assistant_manager.update_session(
+                language_code=language_code,
+                environment=environment,
+                background_tasks=background_tasks,
+                auth_manager=auth_manager,
+                filtered_body=filtered_body,
+                session_id=session_id,
+                email_manager=email_manager,
+                request=request,
+            )
 
-            await self._update_session_processing_status(assistant_manager=assistant_manager,
-                                                         language_code=language_code,
-                                                         environment=environment,
-                                                         background_tasks=background_tasks,
-                                                         auth_manager=auth_manager,
-                                                         session_id=session_id,
-                                                         supabase_client=supabase_client,
-                                                         session_processing_status=SessionProcessingStatus.SUCCESS.value,
-                                                         session_notes_id=session_notes_id,
-                                                         therapist_id=therapist_id,
-                                                         media_type=MediaType.IMAGE,
-                                                         email_manager=email_manager)
+            await self._update_session_processing_status(
+                assistant_manager=assistant_manager,
+                language_code=language_code,
+                environment=environment,
+                background_tasks=background_tasks,
+                auth_manager=auth_manager,
+                session_id=session_id,
+                session_processing_status=SessionProcessingStatus.SUCCESS.value,
+                session_notes_id=session_notes_id,
+                therapist_id=therapist_id,
+                media_type=MediaType.IMAGE,
+                email_manager=email_manager,
+                request=request
+            )
 
         except HTTPException as e:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.
             if session_notes_id is not None:
-                await self._update_session_processing_status(assistant_manager=assistant_manager,
-                                                             language_code=language_code,
-                                                             environment=environment,
-                                                             background_tasks=background_tasks,
-                                                             auth_manager=auth_manager,
-                                                             session_id=session_id,
-                                                             therapist_id=therapist_id,
-                                                             supabase_client=supabase_client,
-                                                             session_processing_status=SessionProcessingStatus.FAILED.value,
-                                                             session_notes_id=session_notes_id,
-                                                             media_type=MediaType.IMAGE,
-                                                             email_manager=email_manager)
-            alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
-                                            media_type=MediaType.IMAGE,
-                                            exception=e,
-                                            environment=environment,
-                                            therapist_id=therapist_id,
-                                            session_id=session_id)
+                await self._update_session_processing_status(
+                    assistant_manager=assistant_manager,
+                    language_code=language_code,
+                    environment=environment,
+                    background_tasks=background_tasks,
+                    auth_manager=auth_manager,
+                    session_id=session_id,
+                    therapist_id=therapist_id,
+                    session_processing_status=SessionProcessingStatus.FAILED.value,
+                    session_notes_id=session_notes_id,
+                    media_type=MediaType.IMAGE,
+                    email_manager=email_manager,
+                    request=request
+                )
+            alert = MediaJobProcessingAlert(
+                description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                media_type=MediaType.IMAGE,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                session_id=session_id
+            )
             await email_manager.send_internal_alert(alert)
-            raise HTTPException(status_code=e.status_code, detail=e.detail)
+            raise HTTPException(
+                status_code=e.status_code,
+                detail=e.detail
+            )
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.
             if session_notes_id is not None:
-                await self._update_session_processing_status(assistant_manager=assistant_manager,
-                                                            language_code=language_code,
-                                                            environment=environment,
-                                                            background_tasks=background_tasks,
-                                                            auth_manager=auth_manager,
-                                                            session_id=session_id,
-                                                            therapist_id=therapist_id,
-                                                            supabase_client=supabase_client,
-                                                            session_processing_status=SessionProcessingStatus.FAILED.value,
-                                                            session_notes_id=session_notes_id,
-                                                            media_type=MediaType.IMAGE,
-                                                            email_manager=email_manager)
-            alert = MediaJobProcessingAlert(description=f"Textraction with job id {document_id} is still processing after maximum retries",
-                                            media_type=MediaType.IMAGE,
-                                            exception=e,
-                                            environment=environment,
-                                            therapist_id=therapist_id,
-                                            session_id=session_id)
+                await self._update_session_processing_status(
+                    assistant_manager=assistant_manager,
+                    language_code=language_code,
+                    environment=environment,
+                    background_tasks=background_tasks,
+                    auth_manager=auth_manager,
+                    session_id=session_id,
+                    therapist_id=therapist_id,
+                    session_processing_status=SessionProcessingStatus.FAILED.value,
+                    session_notes_id=session_notes_id,
+                    media_type=MediaType.IMAGE,
+                    email_manager=email_manager,
+                    request=request,
+                )
+            alert = MediaJobProcessingAlert(
+                description=f"Textraction with job id {document_id} is still processing after maximum retries",
+                media_type=MediaType.IMAGE,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                session_id=session_id
+            )
             await email_manager.send_internal_alert(alert)
             raise Exception(e)

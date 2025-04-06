@@ -107,20 +107,23 @@ async def _process_pending_audio_job(job: dict):
 
             formatted_session_date = convert_to_date_format_mm_dd_yyyy(incoming_date=session_report_query_dict["session_date"],
                                                                        incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
-            new_session_report_id = await audio_processing_manager.transcribe_audio_file(background_tasks=background_tasks,
-                                                                                         assistant_manager=assistant_manager,
-                                                                                         supabase_client=supabase_client,
-                                                                                         auth_manager=auth_manager,
-                                                                                         template=SessionNotesTemplate(session_report_query_dict["template"]),
-                                                                                         therapist_id=job["therapist_id"],
-                                                                                         session_id=uuid.uuid4(),
-                                                                                         file_path=job["storage_filepath"],
-                                                                                         session_date=formatted_session_date,
-                                                                                         patient_id=session_report_query_dict["patient_id"],
-                                                                                         environment=job["environment"],
-                                                                                         language_code=language_code,
-                                                                                         diarize=is_diarization_job,
-                                                                                         email_manager=email_manager)
+            # new_session_report_id = await audio_processing_manager.transcribe_audio_file(
+            #     background_tasks=background_tasks,
+            #     assistant_manager=assistant_manager,
+            #     auth_manager=auth_manager,
+            #     template=SessionNotesTemplate(session_report_query_dict["template"]),
+            #     therapist_id=job["therapist_id"],
+            #     session_id=uuid.uuid4(),
+            #     file_path=job["storage_filepath"],
+            #     session_date=formatted_session_date,
+            #     patient_id=session_report_query_dict["patient_id"],
+            #     environment=job["environment"],
+            #     language_code=language_code,
+            #     diarize=is_diarization_job,
+            #     email_manager=email_manager,
+            #     request=request,
+            # )
+            new_session_report_id = None
 
             new_session_report_query = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                                               fields="*",

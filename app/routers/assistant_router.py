@@ -405,10 +405,9 @@ class AssistantRouter:
                     detail="Parameter session_report_id cannot be empty."
                 )
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_report_data = await self._assistant_manager.retrieve_single_session_report(
-                aws_db_client=aws_db_client,
-                session_report_id=session_report_id
+                session_report_id=session_report_id,
+                request=request,
             )
             request.state.patient_id = None if len(session_report_data or '') == 0 else session_report_data['patient_id']
             return {"session_report_data": session_report_data}
@@ -482,14 +481,13 @@ class AssistantRouter:
             assert year is None or datetime_handler.validate_year(year=year), "Invalid year parameteter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = self._assistant_manager.retrieve_session_reports(
                 therapist_id=user_id,
-                aws_db_client=aws_db_client,
                 patient_id=patient_id,
                 year=year,
                 time_range=time_range,
-                most_recent=most_recent_n
+                most_recent=most_recent_n,
+                request=request,
             )
             return {"session_reports_data": session_reports_data}
         except Exception as e:
@@ -583,8 +581,8 @@ class AssistantRouter:
                 background_tasks=background_tasks,
                 session_id=session_id,
                 therapist_id=user_id,
-                aws_db_client=aws_db_client,
-                email_manager=self._email_manager
+                email_manager=self._email_manager,
+                request=request,
             )
             request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
@@ -675,7 +673,8 @@ class AssistantRouter:
                 filtered_body=body,
                 session_id=session_id,
                 aws_db_client=aws_db_client,
-                email_manager=self._email_manager)
+                email_manager=self._email_manager,
+                request=request,)
             )['patient_id']
             request.state.patient_id = patient_id
             return {}
@@ -699,7 +698,7 @@ class AssistantRouter:
                                        response: Response,
                                        background_tasks: BackgroundTasks,
                                        authorization: Annotated[Union[str, None], Cookie()],
-                                       session_id: Annotated[Union[str, None], Cookie()]):
+                                       session_id: Annotated[Union[str, None], Cookie()],):
         """
         Deletes a session report.
 
@@ -766,7 +765,8 @@ class AssistantRouter:
                 background_tasks=background_tasks,
                 therapist_id=user_id,
                 session_report_id=session_report_id,
-                aws_db_client=aws_db_client
+                aws_db_client=aws_db_client,
+                request=request,
             ))['patient_id']
             request.state.patient_id = patient_id
             return {}
@@ -808,13 +808,12 @@ class AssistantRouter:
                 session_id=session_id,
                 therapist_id=therapist_id,
                 environment=self._environment,
-                aws_db_client=aws_db_client
+                request=request,
             ):
                 yield part
         except Exception as e:
             yield ("\n" + self._assistant_manager.default_streaming_error_message(
                 user_id=therapist_id,
-                aws_db_client=aws_db_client
             ))
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -872,10 +871,10 @@ class AssistantRouter:
                     detail="Parameter patient_id cannot be empty."
                 )
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_data = await self._assistant_manager.retrieve_single_patient(
-                aws_db_client=aws_db_client,
-                patient_id=patient_id)
+                patient_id=patient_id,
+                request=request,
+            )
             return {"patient_data": patient_data}
         except Exception as e:
             description = str(e)
@@ -931,10 +930,9 @@ class AssistantRouter:
             raise Exception(e)
 
         try:
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patients_data = await self._assistant_manager.retrieve_patients(
-                aws_db_client=aws_db_client,
-                therapist_id=user_id
+                therapist_id=user_id,
+                request=request,
             )
             return {"patients_data": patients_data}
         except Exception as e:
@@ -1014,8 +1012,8 @@ class AssistantRouter:
                 filtered_body=body,
                 therapist_id=user_id,
                 session_id=session_id,
-                aws_db_client=aws_db_client,
-                email_manager=self._email_manager
+                email_manager=self._email_manager,
+                request=request,
             )
             request.state.patient_id = patient_id
             return {"patient_id": patient_id}
@@ -1088,12 +1086,11 @@ class AssistantRouter:
                 incoming_date_format=datetime_handler.DATE_FORMAT
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             await self._assistant_manager.update_patient(
                 filtered_body=body,
                 session_id=session_id,
                 background_tasks=background_tasks,
-                aws_db_client=aws_db_client
+                request=request,
             )
             return {}
         except Exception as e:
@@ -1238,10 +1235,9 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             attendance_insights_data = await self._assistant_manager.retrieve_patient_insights(
-                aws_db_client=aws_db_client,
-                patient_id=patient_id
+                patient_id=patient_id,
+                request=request,
             )
             request.state.patient_id = patient_id
             return {"attendance_insights_data": attendance_insights_data}
@@ -1302,10 +1298,9 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             briefing_data = await self._assistant_manager.retrieve_briefing(
-                aws_db_client=aws_db_client,
-                patient_id=patient_id
+                patient_id=patient_id,
+                request=request,
             )
             request.state.patient_id = patient_id
             return {"briefing_data": briefing_data}
@@ -1366,10 +1361,9 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(
-                aws_db_client=aws_db_client,
-                patient_id=patient_id
+                patient_id=patient_id,
+                request=request,
             )
             request.state.patient_id = patient_id
             return {"question_suggestions_data": question_suggestions_data}
@@ -1430,10 +1424,9 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             recent_topics_data = await self._assistant_manager.recent_topics_data(
-                aws_db_client=aws_db_client,
-                patient_id=patient_id
+                patient_id=patient_id,
+                request=request,
             )
             request.state.patient_id = patient_id
             return {"recent_topics_data": recent_topics_data}

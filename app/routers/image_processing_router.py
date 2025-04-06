@@ -149,7 +149,8 @@ class ImageProcessingRouter:
                 session_date=session_date,
                 aws_db_client=aws_db_client,
                 image=image,
-                template=template
+                template=template,
+                request=request,
             )
             request.state.session_report_id = session_report_id
             background_tasks.add_task(
@@ -158,7 +159,8 @@ class ImageProcessingRouter:
                 user_id,
                 session_id,
                 background_tasks,
-                aws_db_client
+                aws_db_client,
+                request,
             )
 
             return {
@@ -187,7 +189,8 @@ class ImageProcessingRouter:
                                    therapist_id: str,
                                    session_id: str,
                                    background_tasks: BackgroundTasks,
-                                   aws_db_client: AwsDbBaseClass):
+                                   aws_db_client: AwsDbBaseClass,
+                                   request: Request,):
         """
         Processes the textraction job in the background after the image has been uploaded.
 
@@ -212,5 +215,6 @@ class ImageProcessingRouter:
             aws_db_client=aws_db_client,
             auth_manager=self._auth_manager,
             assistant_manager=self._assistant_manager,
-            email_manager=self._email_manager
+            email_manager=self._email_manager,
+            request=request,
         )

@@ -3,25 +3,26 @@ import asyncio, json, os
 from collections import Counter
 from datetime import datetime, timedelta
 from enum import Enum
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Request
 from pydantic import BaseModel
 from typing import AsyncIterable, List, Optional, Set
 
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
-from ..dependencies.api.supabase_base_class import SupabaseBaseClass
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
-from ..internal.schemas import (Gender,
-                                SessionProcessingStatus,
-                                ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
-                                ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
-                                ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                                ENCRYPTED_PATIENTS_TABLE_NAME,
-                                ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                TimeRange)
+from ..internal.schemas import (
+    Gender,
+    SessionProcessingStatus,
+    ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+    ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+    ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+    ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+    ENCRYPTED_PATIENTS_TABLE_NAME,
+    ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    TimeRange
+)
 from ..internal.utilities import datetime_handler, general_utilities
 from ..vectors.chartwise_assistant import ChartWiseAssistant
 
@@ -104,13 +105,17 @@ class AssistantManager:
 
     async def retrieve_single_session_report(self,
                                              session_report_id: str,
-                                             supabase_client: SupabaseBaseClass):
+                                             request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "id": session_report_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "id": session_report_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -122,21 +127,27 @@ class AssistantManager:
                                  year: str,
                                  time_range: TimeRange,
                                  most_recent: int,
-                                 supabase_client: SupabaseBaseClass):
+                                 request: Request,):
         try:
             if year:
-                return self._retrieve_sessions_for_year(supabase_client=supabase_client,
-                                                        patient_id=patient_id,
-                                                        year=year)
+                return self._retrieve_sessions_for_year(
+                    request=request,
+                    patient_id=patient_id,
+                    year=year
+                )
             if most_recent:
-                return self._retrieve_n_most_recent_sessions(supabase_client=supabase_client,
-                                                             patient_id=patient_id,
-                                                             most_recent_n=most_recent)
+                return self._retrieve_n_most_recent_sessions(
+                    request=request,
+                    patient_id=patient_id,
+                    most_recent_n=most_recent
+                )
             if time_range:
-                return self._retrieve_sessions_in_range(supabase_client=supabase_client,
-                                                        patient_id=patient_id,
-                                                        time_range=time_range,
-                                                        therapist_id=therapist_id)
+                return self._retrieve_sessions_in_range(
+                    request=request,
+                    patient_id=patient_id,
+                    time_range=time_range,
+                    therapist_id=therapist_id
+                )
 
             raise ValueError("One of 'year', 'recent', or 'range' must be provided.")
         except Exception as e:
@@ -153,8 +164,8 @@ class AssistantManager:
                                        source: SessionNotesSource,
                                        session_id: str,
                                        therapist_id: str,
-                                       supabase_client: SupabaseBaseClass,
                                        email_manager: EmailManager,
+                                       request: Request,
                                        diarization: str = None) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
@@ -173,24 +184,30 @@ class AssistantManager:
             if len(diarization or '') > 0:
                 insert_payload['diarization'] = diarization
 
-            insert_result = supabase_client.insert(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                   payload=insert_payload)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            insert_result = aws_db_client.insert(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                payload=insert_payload
+            )
             session_notes_id = insert_result['data'][0]['id']
 
             # Upload vector embeddings and generate insights
-            background_tasks.add_task(self._insert_vectors_and_generate_insights,
-                                      session_notes_id,
-                                      therapist_id,
-                                      patient_id,
-                                      notes_text,
-                                      session_date,
-                                      session_id,
-                                      language_code,
-                                      environment,
-                                      background_tasks,
-                                      auth_manager,
-                                      supabase_client,
-                                      email_manager)
+            background_tasks.add_task(
+                self._insert_vectors_and_generate_insights,
+                session_notes_id=session_notes_id,
+                therapist_id=therapist_id,
+                patient_id=patient_id,
+                notes_text=notes_text,
+                session_date=session_date,
+                session_id=session_id,
+                language_code=language_code,
+                environment=environment,
+                background_tasks=background_tasks,
+                auth_manager=auth_manager,
+                email_manager=email_manager,
+                request=request,
+            )
             return session_notes_id
         except Exception as e:
             raise Exception(e)
@@ -202,23 +219,30 @@ class AssistantManager:
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
-                             supabase_client: SupabaseBaseClass,
-                             email_manager: EmailManager):
+                             email_manager: EmailManager,
+                             request: Request,):
         try:
             session_report_id = filtered_body['id']
-            report_query = supabase_client.select(fields="*",
-                                                  table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                  filters={
-                                                      'id': session_report_id
-                                                  })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            report_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                filters={
+                    'id': session_report_id
+                }
+            )
             assert (0 != len(report_query['data'])), "There isn't a match with the incoming session data."
+
             report_query_data = report_query['data'][0]
             patient_id = report_query_data['patient_id']
             therapist_id = report_query_data['therapist_id']
             current_session_text = report_query_data['notes_text']
             current_session_date = report_query_data['session_date']
-            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=current_session_date,
-                                                                                                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
+                incoming_date=current_session_date,
+                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
+            )
             session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
             session_date_changed = 'session_date' in filtered_body and filtered_body['session_date'] != current_session_date_formatted
 
@@ -234,29 +258,34 @@ class AssistantManager:
                     value = value.value
                 session_update_payload[key] = value
 
-            session_update_response = supabase_client.update(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                             payload=session_update_payload,
-                                                             filters={
-                                                                 'id': session_report_id
-                                                             })
+            session_update_response = aws_db_client.update(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                payload=session_update_payload,
+                filters={
+                    'id': session_report_id
+                }
+            )
             assert (0 != len(session_update_response['data'])), "Update operation could not be completed"
 
             # Update the session vectors if needed
             if session_date_changed or session_text_changed:
-                background_tasks.add_task(self._update_vectors_and_generate_insights,
-                                          session_report_id,
-                                          therapist_id,
-                                          patient_id,
-                                          filtered_body.get('notes_text', current_session_text),
-                                          current_session_date_formatted,
-                                          filtered_body.get('session_date', current_session_date_formatted),
-                                          session_id,
-                                          language_code,
-                                          environment,
-                                          background_tasks,
-                                          auth_manager,
-                                          supabase_client,
-                                          email_manager)
+                background_tasks.add_task(
+                    self._update_vectors_and_generate_insights,
+                    session_report_id=session_report_id,
+                    therapist_id=therapist_id,
+                    patient_id=patient_id,
+                    notes_text=filtered_body.get('notes_text', current_session_text),
+                    old_session_date=current_session_date_formatted,
+                    new_session_date=filtered_body.get('session_date', current_session_date_formatted),
+                    session_id=session_id,
+                    language_code=language_code,
+                    environment=environment,
+                    background_tasks=background_tasks,
+                    auth_manager=auth_manager,
+                    email_manager=email_manager,
+                    request=request,
+                )
 
             return {
                 "patient_id": report_query_data['patient_id'],
@@ -273,13 +302,17 @@ class AssistantManager:
                              background_tasks: BackgroundTasks,
                              therapist_id: str,
                              session_report_id: str,
-                             supabase_client: SupabaseBaseClass):
+                             request: Request,):
         try:
-            # Delete the session notes from Supabase
-            delete_result = supabase_client.delete(table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                   filters={
-                                                       'id': session_report_id
-                                                   })
+            # Delete the session notes from DB
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            delete_result = aws_db_client.delete(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                filters={
+                    'id': session_report_id
+                }
+            )
             delete_result_data = delete_result['data']
             assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
             delete_result_data = delete_result_data[0]
@@ -289,18 +322,22 @@ class AssistantManager:
             session_date = delete_result_data['session_date']
 
             # Delete vector embeddings
-            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=session_date,
-                                                                                        incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            background_tasks.add_task(self._delete_vectors_and_generate_insights,
-                                      therapist_id,
-                                      patient_id,
-                                      session_date_formatted,
-                                      session_id,
-                                      language_code,
-                                      environment,
-                                      background_tasks,
-                                      email_manager,
-                                      supabase_client)
+            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
+                incoming_date=session_date,
+                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
+            )
+            background_tasks.add_task(
+                self._delete_vectors_and_generate_insights,
+                therapist_id=therapist_id,
+                patient_id=patient_id,
+                session_date=session_date_formatted,
+                session_id=session_id,
+                language_code=language_code,
+                environment=environment,
+                background_tasks=background_tasks,
+                email_manager=email_manager,
+                request=request,
+            )
 
             return {
                 "patient_id": patient_id,
@@ -311,13 +348,17 @@ class AssistantManager:
 
     async def retrieve_single_patient(self,
                                       patient_id: str,
-                                      supabase_client: SupabaseBaseClass):
+                                      request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "id": patient_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "id": patient_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -325,14 +366,18 @@ class AssistantManager:
 
     async def retrieve_patients(self,
                                 therapist_id: str,
-                                supabase_client: SupabaseBaseClass):
+                                request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                              fields="*",
-                                              order_desc_column="first_name",
-                                              filters={
-                                                  "therapist_id": therapist_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                fields="*",
+                order_desc_column="first_name",
+                filters={
+                    "therapist_id": therapist_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data
         except Exception as e:
@@ -344,8 +389,8 @@ class AssistantManager:
                           filtered_body: dict,
                           therapist_id: str,
                           session_id: str,
-                          supabase_client: SupabaseBaseClass,
-                          email_manager: EmailManager) -> str:
+                          email_manager: EmailManager,
+                          request: Request,) -> str:
         try:
             environment = os.environ.get('ENVIRONMENT')
             payload = {"therapist_id": therapist_id}
@@ -354,8 +399,12 @@ class AssistantManager:
                     value = value.value
                 payload[key] = value
 
-            response = supabase_client.insert(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                              payload=payload)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.insert(
+                request=request,
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                payload=payload
+            )
             patient_id = response['data'][0]['id']
 
             is_first_time_patient = filtered_body['onboarding_first_time_patient']
@@ -364,38 +413,44 @@ class AssistantManager:
                     pre_existing_history = filtered_body['pre_existing_history']
                     assert len(pre_existing_history or '') > 0
 
-                    background_tasks.add_task(dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
-                                              session_id,
-                                              therapist_id,
-                                              patient_id,
-                                              pre_existing_history,
-                                              dependency_container.inject_openai_client(),
-                                              self.chartwise_assistant.summarize_chunk)
+                    background_tasks.add_task(
+                        dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
+                        session_id=session_id,
+                        user_id=therapist_id,
+                        patient_id=patient_id,
+                        text=pre_existing_history,
+                        openai_client=dependency_container.inject_openai_client(),
+                        summarize_chunk=self.chartwise_assistant.summarize_chunk
+                    )
                 except Exception:
                     # If pre_existing_history is not in `filtered_body` or if it's empty, we won't do anything
                     pass
 
             # Load default question suggestions in a background thread
-            await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
-                                                                          language_code=language_code,
-                                                                          patient_id=patient_id,
-                                                                          environment=environment,
-                                                                          therapist_id=therapist_id,
-                                                                          email_manager=email_manager,
-                                                                          session_id=session_id)
+            await self._load_default_question_suggestions_for_new_patient(
+                language_code=language_code,
+                patient_id=patient_id,
+                environment=environment,
+                therapist_id=therapist_id,
+                email_manager=email_manager,
+                session_id=session_id,
+                request=request,
+            )
 
             # Load default pre-session tray
             gender = None if 'gender' not in filtered_body else filtered_body['gender'].value
-            await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
-                                                                      patient_id=patient_id,
-                                                                      environment=environment,
-                                                                      therapist_id=therapist_id,
-                                                                      email_manager=email_manager,
-                                                                      session_id=session_id,
-                                                                      supabase_client=supabase_client,
-                                                                      patient_first_name=filtered_body['first_name'],
-                                                                      patient_gender=gender,
-                                                                      is_first_time_patient=is_first_time_patient)
+            await self._load_default_pre_session_tray_for_new_patient(
+                language_code=language_code,
+                patient_id=patient_id,
+                environment=environment,
+                therapist_id=therapist_id,
+                email_manager=email_manager,
+                session_id=session_id,
+                patient_first_name=filtered_body['first_name'],
+                patient_gender=gender,
+                is_first_time_patient=is_first_time_patient,
+                request=request,
+            )
             return patient_id
         except Exception as e:
             raise Exception(e)
@@ -404,12 +459,16 @@ class AssistantManager:
                              filtered_body: dict,
                              session_id: str,
                              background_tasks: BackgroundTasks,
-                             supabase_client: SupabaseBaseClass):
-        patient_query = supabase_client.select(fields="*",
-                                               filters={
-                                                   'id': filtered_body['id'],
-                                               },
-                                               table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+                             request: Request,):
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+        patient_query = aws_db_client.select(
+            request=request,
+            fields="*",
+            filters={
+                'id': filtered_body['id'],
+            },
+            table_name=ENCRYPTED_PATIENTS_TABLE_NAME
+        )
         assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
         patient_query_data = patient_query['data'][0]
         current_pre_existing_history = patient_query_data['pre_existing_history']
@@ -423,11 +482,14 @@ class AssistantManager:
                 value = value.value
             update_db_payload[key] = value
 
-        update_response = supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                                 payload=update_db_payload,
-                                                 filters={
-                                                     'id': filtered_body['id']
-                                                 })
+        update_response = aws_db_client.update(
+            request=request,
+            table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+            payload=update_db_payload,
+            filters={
+                'id': filtered_body['id']
+            }
+        )
         assert (0 != len(update_response['data'])), "Update operation could not be completed"
 
         if ('pre_existing_history' not in filtered_body
@@ -435,13 +497,15 @@ class AssistantManager:
             return
 
         openai_client = dependency_container.inject_openai_client()
-        background_tasks.add_task(dependency_container.inject_pinecone_client().update_preexisting_history_vectors,
-                                  session_id,
-                                  therapist_id,
-                                  filtered_body['id'],
-                                  filtered_body['pre_existing_history'],
-                                  openai_client,
-                                  self.chartwise_assistant.summarize_chunk)
+        background_tasks.add_task(
+            dependency_container.inject_pinecone_client().update_preexisting_history_vectors,
+            session_id=session_id,
+            user_id=therapist_id,
+            patient_id=filtered_body['id'],
+            text=filtered_body['pre_existing_history'],
+            openai_client=openai_client,
+            summarize_chunk=self.chartwise_assistant.summarize_chunk
+        )
 
         # New pre-existing history content means we should clear any existing conversation.
         await openai_client.clear_chat_history()
@@ -451,9 +515,11 @@ class AssistantManager:
                                           session_notes_text: str,
                                           session_id: str) -> str:
         try:
-            soap_report = await self.chartwise_assistant.create_soap_report(text=session_notes_text,
-                                                                            therapist_id=therapist_id,
-                                                                            session_id=session_id)
+            soap_report = await self.chartwise_assistant.create_soap_report(
+                text=session_notes_text,
+                therapist_id=therapist_id,
+                session_id=session_id
+            )
             return soap_report
         except Exception as e:
             raise Exception(e)
@@ -463,9 +529,14 @@ class AssistantManager:
                                     patient_id: str):
         try:
             pinecone_client = dependency_container.inject_pinecone_client()
-            pinecone_client.delete_session_vectors(user_id=therapist_id, patient_id=patient_id)
-            pinecone_client.delete_preexisting_history_vectors(user_id=therapist_id,
-                                                               patient_id=patient_id)
+            pinecone_client.delete_session_vectors(
+                user_id=therapist_id,
+                patient_id=patient_id
+            )
+            pinecone_client.delete_preexisting_history_vectors(
+                user_id=therapist_id,
+                patient_id=patient_id
+            )
         except Exception as e:
             # Index doesn't exist, failing silently. Patient may have been queued for deletion prior to having any
             # data in our vector db
@@ -477,8 +548,10 @@ class AssistantManager:
         try:
             pinecone_client = dependency_container.inject_pinecone_client()
             for patient_id in patient_ids:
-                pinecone_client.delete_session_vectors(user_id=user_id,
-                                                       patient_id=patient_id)
+                pinecone_client.delete_session_vectors(
+                    user_id=user_id,
+                    patient_id=patient_id
+                )
         except Exception as e:
             raise Exception(e)
 
@@ -487,19 +560,26 @@ class AssistantManager:
                             therapist_id: str,
                             session_id: str,
                             environment: str,
-                            supabase_client: SupabaseBaseClass) -> AsyncIterable[str]:
+                            request: Request,) -> AsyncIterable[str]:
         try:
             # If we don't have cached data about this patient, or if the therapist has
             # asked a question about a different patient, go fetch data.
             if (self.cached_patient_query_data is None
                     or self.cached_patient_query_data.patient_id != query.patient_id):
-                language_code = general_utilities.get_user_language_code(user_id=therapist_id, supabase_client=supabase_client)
-                patient_query = supabase_client.select(fields="*",
-                                                       filters={
-                                                           'id': query.patient_id,
-                                                           'therapist_id': therapist_id
-                                                       },
-                                                       table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+                language_code = general_utilities.get_user_language_code(
+                    user_id=therapist_id,
+                    aws_db_client=aws_db_client
+                )
+                patient_query = aws_db_client.select(
+                    request=request,
+                    fields="*",
+                    filters={
+                        'id': query.patient_id,
+                        'therapist_id': therapist_id
+                    },
+                    table_name=ENCRYPTED_PATIENTS_TABLE_NAME
+                )
                 patient_therapist_match = (0 != len(patient_query['data']))
                 assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
@@ -508,12 +588,14 @@ class AssistantManager:
                 patient_last_name = patient_query_data['last_name']
                 patient_gender = patient_query_data['gender']
                 patient_last_session_date = patient_query_data['last_session_date']
-                self.cached_patient_query_data = CachedPatientQueryData(patient_id=query.patient_id,
-                                                                        patient_first_name=patient_first_name,
-                                                                        patient_last_name=patient_last_name,
-                                                                        patient_gender=patient_gender,
-                                                                        last_session_date=patient_last_session_date,
-                                                                        response_language_code=language_code)
+                self.cached_patient_query_data = CachedPatientQueryData(
+                    patient_id=query.patient_id,
+                    patient_first_name=patient_first_name,
+                    patient_last_name=patient_last_name,
+                    patient_gender=patient_gender,
+                    last_session_date=patient_last_session_date,
+                    response_language_code=language_code
+                )
             else:
                 # Read cached data
                 patient_first_name = self.cached_patient_query_data.patient_first_name
@@ -523,21 +605,25 @@ class AssistantManager:
                 language_code = self.cached_patient_query_data.response_language_code
 
             if len(patient_last_session_date or '') > 0:
-                session_date_override = PineconeQuerySessionDateOverride(output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
-                                                                         output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                                                                         session_date=patient_last_session_date)
+                session_date_override = PineconeQuerySessionDateOverride(
+                    output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
+                    output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
+                    session_date=patient_last_session_date
+                )
             else:
                 session_date_override = None
 
-            async for part in self.chartwise_assistant.query_store(user_id=therapist_id,
-                                                                   patient_id=query.patient_id,
-                                                                   patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                   patient_gender=patient_gender,
-                                                                   query_input=query.text,
-                                                                   response_language_code=language_code,
-                                                                   session_id=session_id,
-                                                                   environment=environment,
-                                                                   session_date_override=session_date_override):
+            async for part in self.chartwise_assistant.query_store(
+                user_id=therapist_id,
+                patient_id=query.patient_id,
+                patient_name=(" ".join([patient_first_name, patient_last_name])),
+                patient_gender=patient_gender,
+                query_input=query.text,
+                response_language_code=language_code,
+                session_id=session_id,
+                environment=environment,
+                session_date_override=session_date_override
+            ):
                 yield part
         except Exception as e:
             raise Exception(e)
@@ -548,50 +634,60 @@ class AssistantManager:
                                           patient_id: str,
                                           environment: str,
                                           session_id: str,
-                                          supabase_client: SupabaseBaseClass,
-                                          email_manager: EmailManager):
+                                          email_manager: EmailManager,
+                                          request: Request,):
         try:
-            patient_query = supabase_client.select(fields="*",
-                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            patient_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                filters={
+                    'therapist_id': therapist_id,
+                    'id': patient_id
+                }
+            )
             assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
             patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
             patient_last_name = patient_query_data['last_name']
             patient_gender = patient_query_data['gender']
 
-            questions_json = await self.chartwise_assistant.create_question_suggestions(language_code=language_code,
-                                                                                        session_id=session_id,
-                                                                                        user_id=therapist_id,
-                                                                                        patient_id=patient_id,
-                                                                                        environment=environment,
-                                                                                        supabase_client=supabase_client,
-                                                                                        patient_name=(" ".join([patient_first_name, patient_last_name])),
-                                                                                        patient_gender=patient_gender)
+            questions_json = await self.chartwise_assistant.create_question_suggestions(
+                language_code=language_code,
+                session_id=session_id,
+                user_id=therapist_id,
+                patient_id=patient_id,
+                environment=environment,
+                patient_name=(" ".join([patient_first_name, patient_last_name])),
+                patient_gender=patient_gender
+            )
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             questions = questions_json['questions']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
 
-            # Upsert result to Supabase
-            supabase_client.upsert(payload={
-                                        "patient_id": patient_id,
-                                        "last_updated": now_timestamp,
-                                        "therapist_id": therapist_id,
-                                        "questions": questions
-                                    },
-                                    on_conflict="patient_id",
-                                    table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME)
+            # Upsert result to DB
+            aws_db_client.upsert(
+                request=request,
+                payload={
+                    "patient_id": patient_id,
+                    "last_updated": now_timestamp,
+                    "therapist_id": therapist_id,
+                    "questions": questions
+                },
+                table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                conflict_columns=["patient_id"],
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the question suggestions failed",
-                                         session_id=session_id,
-                                         environment=environment,
-                                         exception=e,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the question suggestions failed",
+                session_id=session_id,
+                environment=environment,
+                exception=e,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
@@ -600,60 +696,73 @@ class AssistantManager:
                                      patient_id: str,
                                      environment: str,
                                      session_id: str,
-                                     supabase_client: SupabaseBaseClass,
-                                     email_manager: EmailManager):
+                                     email_manager: EmailManager,
+                                     request: Request,):
         try:
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   },
-                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            patient_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                filters={
+                    'therapist_id': therapist_id,
+                    'id': patient_id
+                },
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME
+            )
             assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
             patient_response_data = patient_query['data'][0]
             patient_name = patient_response_data['first_name']
             patient_gender = patient_response_data['gender']
             session_count = patient_response_data['total_sessions']
 
-            therapist_query = supabase_client.select(fields="*",
-                                                     filters={
-                                                         "id": therapist_id
-                                                     },
-                                                     table_name="therapists")
+            therapist_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                filters={
+                    "id": therapist_id
+                },
+                table_name="therapists"
+            )
             therapist_response_data = therapist_query['data'][0]
             therapist_name = therapist_response_data['first_name']
             language_code = therapist_response_data['language_preference']
             therapist_gender = therapist_response_data['gender']
 
-            briefing = await self.chartwise_assistant.create_briefing(user_id=therapist_id,
-                                                                      patient_id=patient_id,
-                                                                      environment=environment,
-                                                                      language_code=language_code,
-                                                                      session_id=session_id,
-                                                                      patient_name=patient_name,
-                                                                      patient_gender=patient_gender,
-                                                                      therapist_name=therapist_name,
-                                                                      therapist_gender=therapist_gender,
-                                                                      session_count=session_count,
-                                                                      supabase_client=supabase_client)
+            briefing = await self.chartwise_assistant.create_briefing(
+                user_id=therapist_id,
+                patient_id=patient_id,
+                environment=environment,
+                language_code=language_code,
+                session_id=session_id,
+                patient_name=patient_name,
+                patient_gender=patient_gender,
+                therapist_name=therapist_name,
+                therapist_gender=therapist_gender,
+                session_count=session_count,
+            )
 
-            # Upsert result to Supabase
+            # Upsert result to DB
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            supabase_client.upsert(payload={
-                                        "last_updated": now_timestamp,
-                                        "patient_id": patient_id,
-                                        "therapist_id": therapist_id,
-                                        "briefing": briefing
-                                    },
-                                    on_conflict="patient_id",
-                                    table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME)
+            aws_db_client.upsert(
+                request=request,
+                payload={
+                    "last_updated": now_timestamp,
+                    "patient_id": patient_id,
+                    "therapist_id": therapist_id,
+                    "briefing": briefing
+                },
+                conflict_columns=["patient_id"],
+                table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the presession tray failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the presession tray failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
@@ -664,14 +773,18 @@ class AssistantManager:
                                            environment: str,
                                            session_id: str,
                                            email_manager: EmailManager,
-                                           supabase_client: SupabaseBaseClass):
+                                           request: Request,):
         try:
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   },
-                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            patient_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                filters={
+                    'therapist_id': therapist_id,
+                    'id': patient_id
+                },
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME
+            )
             assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
             patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
@@ -679,46 +792,53 @@ class AssistantManager:
             patient_gender = patient_query_data['gender']
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
-            recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(language_code=language_code,
-                                                                                    session_id=session_id,
-                                                                                    user_id=therapist_id,
-                                                                                    patient_id=patient_id,
-                                                                                    environment=environment,
-                                                                                    supabase_client=supabase_client,
-                                                                                    patient_name=patient_full_name,
-                                                                                    patient_gender=patient_gender)
+            recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
+                language_code=language_code,
+                session_id=session_id,
+                user_id=therapist_id,
+                patient_id=patient_id,
+                environment=environment,
+                patient_name=patient_full_name,
+                patient_gender=patient_gender
+            )
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
-            topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(recent_topics_json=recent_topics_json,
-                                                                                             user_id=therapist_id,
-                                                                                             patient_id=patient_id,
-                                                                                             environment=environment,
-                                                                                             language_code=language_code,
-                                                                                             session_id=session_id,
-                                                                                             patient_name=patient_first_name,
-                                                                                             patient_gender=patient_gender,
-                                                                                             supabase_client=supabase_client)
+            topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(
+                recent_topics_json=recent_topics_json,
+                user_id=therapist_id,
+                patient_id=patient_id,
+                environment=environment,
+                language_code=language_code,
+                session_id=session_id,
+                patient_name=patient_first_name,
+                patient_gender=patient_gender,
+            )
 
             recent_topics = recent_topics_json['topics']
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
 
-            # Upsert result to Supabase
-            supabase_client.upsert(payload={
-                                        "last_updated": now_timestamp,
-                                        "insights": topics_insights,
-                                        "patient_id": patient_id,
-                                        "therapist_id": therapist_id,
-                                        "topics": recent_topics
-                                    },
-                                    on_conflict="patient_id",
-                                    table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME)
+            # Upsert result to DB
+            aws_db_client.upsert(
+                request=request,
+                payload={
+                    "last_updated": now_timestamp,
+                    "insights": topics_insights,
+                    "patient_id": patient_id,
+                    "therapist_id": therapist_id,
+                    "topics": recent_topics
+                },
+                conflict_columns=["patient_id"],
+                table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the recent topics failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the recent topics failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
@@ -729,51 +849,60 @@ class AssistantManager:
                                            patient_id: str,
                                            session_id: str,
                                            environment: str,
-                                           supabase_client: SupabaseBaseClass):
+                                           request: Request,):
         try:
-            patient_query = supabase_client.select(fields="*",
-                                                   filters={
-                                                       'therapist_id': therapist_id,
-                                                       'id': patient_id
-                                                   },
-                                                   table_name=ENCRYPTED_PATIENTS_TABLE_NAME)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            patient_query = aws_db_client.select(
+                request=request,
+                fields="*",
+                filters={
+                    'therapist_id': therapist_id,
+                    'id': patient_id
+                },
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME
+            )
             assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
             patient_query_data = patient_query['data'][0]
             patient_first_name = patient_query_data['first_name']
             patient_gender = patient_query_data['gender']
 
-            attendance_insights = await self.chartwise_assistant.generate_attendance_insights(therapist_id=therapist_id,
-                                                                                              patient_id=patient_id,
-                                                                                              patient_gender=patient_gender,
-                                                                                              patient_name=patient_first_name,
-                                                                                              environment=environment,
-                                                                                              language_code=language_code,
-                                                                                              session_id=session_id,
-                                                                                              supabase_client=supabase_client)
+            attendance_insights = await self.chartwise_assistant.generate_attendance_insights(
+                therapist_id=therapist_id,
+                patient_id=patient_id,
+                patient_gender=patient_gender,
+                patient_name=patient_first_name,
+                environment=environment,
+                language_code=language_code,
+                session_id=session_id,
+            )
 
-            # Upsert result to Supabase
+            # Upsert result to DB
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
-            supabase_client.upsert(payload={
-                                        "last_updated": now_timestamp,
-                                        "insights": attendance_insights,
-                                        "patient_id": patient_id,
-                                        "therapist_id": therapist_id
-                                    },
-                                    on_conflict="patient_id",
-                                    table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME)
+            aws_db_client.upsert(
+                request=request,
+                payload={
+                    "last_updated": now_timestamp,
+                    "insights": attendance_insights,
+                    "patient_id": patient_id,
+                    "therapist_id": therapist_id
+                },
+                conflict_columns=["patient_id"],
+                table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME
+            )
 
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the attendance insights failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the attendance insights failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     async def update_patient_metrics_after_session_report_operation(self,
-                                                                    supabase_client: SupabaseBaseClass,
                                                                     patient_id: str,
                                                                     environment: str,
                                                                     therapist_id: str,
@@ -781,66 +910,83 @@ class AssistantManager:
                                                                     language_code: str,
                                                                     email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
+                                                                    request: Request,
                                                                     session_date: str = None):
         try:
             # Fetch patient last session date and total session count
-            patient_session_notes_response = supabase_client.select(fields="*",
-                                                                    table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                                    filters={
-                                                                        "patient_id": patient_id
-                                                                    },
-                                                                    order_desc_column="session_date")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            patient_session_notes_response = aws_db_client.select(
+                request=request,
+                fields="*",
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                filters={
+                    "patient_id": patient_id
+                },
+                order_by=("session_date", "desc")
+            )
             patient_session_notes_data = patient_session_notes_response['data']
             total_session_count = len(patient_session_notes_data)
             patient_last_session_date = (None if total_session_count == 0
                                          else patient_session_notes_data[0]['session_date'])
 
-            unique_active_years: List[int] = self.get_patient_active_session_years(supabase_client=supabase_client,
-                                                                                   patient_id=patient_id)
+            unique_active_years: List[int] = self.get_patient_active_session_years(
+                patient_id=patient_id,
+                request=request,
+            )
 
             # New value for last_session_date will be the most recent session we already found
             if operation == SessionCrudOperation.DELETE_COMPLETED:
-                supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                        payload={
-                            "last_session_date": patient_last_session_date,
-                            "total_sessions": total_session_count,
-                            "unique_active_years": unique_active_years
-                        },
-                        filters={
-                            'id': patient_id
-                        })
+                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+                aws_db_client.update(
+                    request=request,
+                    table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                    payload={
+                        "last_session_date": patient_last_session_date,
+                        "total_sessions": total_session_count,
+                        "unique_active_years": unique_active_years
+                    },
+                    filters={
+                        'id': patient_id
+                    }
+                )
 
                 if total_session_count == 0:
                     # Load zero-state for this patient since we don't have any data from them anymore.
-                    patient_data_response = supabase_client.select(
+                    patient_data_response = aws_db_client.select(
+                        request=request,
                         fields="*",
                         table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                         filters={
                             "id": patient_id
-                        })
+                        }
+                    )
                     patient_data = patient_data_response['data']
                     assert len(patient_data) > 0, "No patient found with the incoming patient_id"
 
                     # Load zero-state question suggestions in a background thread.
-                    await self._load_default_question_suggestions_for_new_patient(supabase_client=supabase_client,
-                                                                                  language_code=language_code,
-                                                                                  patient_id=patient_id,
-                                                                                  environment=environment,
-                                                                                  therapist_id=therapist_id,
-                                                                                  email_manager=email_manager,
-                                                                                  session_id=session_id)
+                    await self._load_default_question_suggestions_for_new_patient(
+                        language_code=language_code,
+                        patient_id=patient_id,
+                        environment=environment,
+                        therapist_id=therapist_id,
+                        email_manager=email_manager,
+                        session_id=session_id,
+                        request=request,
+                    )
 
                     # Load zero-state pre-session tray.
-                    await self._load_default_pre_session_tray_for_new_patient(language_code=language_code,
-                                                                              patient_id=patient_id,
-                                                                              environment=environment,
-                                                                              therapist_id=therapist_id,
-                                                                              email_manager=email_manager,
-                                                                              session_id=session_id,
-                                                                              supabase_client=supabase_client,
-                                                                              patient_first_name=patient_data[0]['first_name'],
-                                                                              patient_gender=patient_data[0]['gender'],
-                                                                              is_first_time_patient=patient_data[0]['onboarding_first_time_patient'])
+                    await self._load_default_pre_session_tray_for_new_patient(
+                        language_code=language_code,
+                        patient_id=patient_id,
+                        environment=environment,
+                        therapist_id=therapist_id,
+                        email_manager=email_manager,
+                        session_id=session_id,
+                        patient_first_name=patient_data[0]['first_name'],
+                        patient_gender=patient_data[0]['gender'],
+                        is_first_time_patient=patient_data[0]['onboarding_first_time_patient'],
+                        request=request,
+                    )
                 return
 
             # The operation is either insert or update.
@@ -850,40 +996,53 @@ class AssistantManager:
                 assert session_date is not None, "Received an invalid session date"
                 patient_last_session_date = session_date
             else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(incoming_date=patient_last_session_date,
-                                                                                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(first_date=session_date,
-                                                                                       first_date_format=datetime_handler.DATE_FORMAT,
-                                                                                       second_date=formatted_date,
-                                                                                       second_date_format=datetime_handler.DATE_FORMAT)
+                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(
+                    incoming_date=patient_last_session_date,
+                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
+                )
+                patient_last_session_date = datetime_handler.retrieve_most_recent_date(
+                    first_date=session_date,
+                    first_date_format=datetime_handler.DATE_FORMAT,
+                    second_date=formatted_date,
+                    second_date_format=datetime_handler.DATE_FORMAT
+                )
 
-            supabase_client.update(table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                                   payload={
-                                       "last_session_date": patient_last_session_date,
-                                       "total_sessions": total_session_count,
-                                       "unique_active_years": unique_active_years,
-                                   },
-                                   filters={
-                                       'id': patient_id
-                                   })
+            aws_db_client.update(
+                request=request,
+                table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                payload={
+                    "last_session_date": patient_last_session_date,
+                    "total_sessions": total_session_count,
+                    "unique_active_years": unique_active_years,
+                },
+                filters={
+                    'id': patient_id
+                }
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the patient's \"total session count\" and \"last sesion date\" failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     def get_patient_active_session_years(self,
                                          patient_id: str,
-                                         supabase_client: SupabaseBaseClass) -> List[int]:
-        response = supabase_client.select(fields="session_date",
-                                          filters={
-                                              "patient_id": patient_id
-                                          },
-                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+                                         request: Request,) -> List[int]:
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+        response = aws_db_client.select(
+            request=request,
+            fields="session_date",
+            filters={
+                "patient_id": patient_id
+            },
+            table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
+        )
         session_dates = response["data"]
 
         unique_active_years: Set[int] = {
@@ -892,11 +1051,13 @@ class AssistantManager:
 
         return sorted(unique_active_years)
 
-    def default_streaming_error_message(self,
-                                        user_id: str,
-                                        supabase_client: SupabaseBaseClass):
+    def default_streaming_error_message(self, user_id: str,):
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         if self.cached_patient_query_data is None:
-            language_code = general_utilities.get_user_language_code(user_id=user_id, supabase_client=supabase_client)
+            language_code = general_utilities.get_user_language_code(
+                user_id=user_id,
+                aws_db_client=aws_db_client
+            )
         else:
             language_code = self.cached_patient_query_data.response_language_code
 
@@ -913,13 +1074,17 @@ class AssistantManager:
 
     async def retrieve_patient_insights(self,
                                         patient_id: str,
-                                        supabase_client: SupabaseBaseClass):
+                                        request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "patient_id": patient_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+                fields="*",
+                filters={
+                    "patient_id": patient_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -927,13 +1092,17 @@ class AssistantManager:
 
     async def retrieve_briefing(self,
                                 patient_id: str,
-                                supabase_client: SupabaseBaseClass):
+                                request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "patient_id": patient_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "patient_id": patient_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -941,13 +1110,17 @@ class AssistantManager:
 
     async def retrieve_question_suggestions(self,
                                             patient_id: str,
-                                            supabase_client: SupabaseBaseClass):
+                                            request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "patient_id": patient_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "patient_id": patient_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -955,13 +1128,17 @@ class AssistantManager:
 
     async def recent_topics_data(self,
                                  patient_id: str,
-                                 supabase_client: SupabaseBaseClass):
+                                 request: Request,):
         try:
-            response = supabase_client.select(table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                                              fields="*",
-                                              filters={
-                                                  "patient_id": patient_id
-                                              })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            response = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "patient_id": patient_id
+                }
+            )
             response_data = response['data']
             return [] if len(response_data) == 0 else response_data[0]
         except Exception as e:
@@ -980,51 +1157,59 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass,
-                                                    email_manager: EmailManager):
+                                                    email_manager: EmailManager,
+                                                    request: Request,):
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
-            await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
-                                                               notes_text=notes_text,
-                                                               therapist_id=therapist_id,
-                                                               language_code=language_code,
-                                                               auth_manager=auth_manager,
-                                                               session_id=session_id,
-                                                               environment=environment,
-                                                               background_tasks=background_tasks,
-                                                               supabase_client=supabase_client,
-                                                               patient_id=patient_id,
-                                                               email_manager=email_manager)
+            await self._update_session_notes_with_mini_summary(
+                session_notes_id=session_notes_id,
+                notes_text=notes_text,
+                therapist_id=therapist_id,
+                language_code=language_code,
+                auth_manager=auth_manager,
+                session_id=session_id,
+                environment=environment,
+                background_tasks=background_tasks,
+                patient_id=patient_id,
+                email_manager=email_manager,
+                request=request,
+            )
 
-        await dependency_container.inject_pinecone_client().insert_session_vectors(session_id=session_id,
-                                                                                   user_id=therapist_id,
-                                                                                   patient_id=patient_id,
-                                                                                   text=notes_text,
-                                                                                   session_report_id=session_notes_id,
-                                                                                   openai_client=dependency_container.inject_openai_client(),
-                                                                                   therapy_session_date=session_date,
-                                                                                   summarize_chunk=self.chartwise_assistant.summarize_chunk)
+        await dependency_container.inject_pinecone_client().insert_session_vectors(
+            session_id=session_id,
+            user_id=therapist_id,
+            patient_id=patient_id,
+            text=notes_text,
+            session_report_id=session_notes_id,
+            openai_client=dependency_container.inject_openai_client(),
+            therapy_session_date=session_date,
+            summarize_chunk=self.chartwise_assistant.summarize_chunk
+        )
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
-        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
-                                                                         patient_id=patient_id,
-                                                                         environment=environment,
-                                                                         therapist_id=therapist_id,
-                                                                         session_id=session_id,
-                                                                         language_code=language_code,
-                                                                         email_manager=email_manager,
-                                                                         operation=SessionCrudOperation.INSERT_COMPLETED,
-                                                                         session_date=session_date)
+        await self.update_patient_metrics_after_session_report_operation(
+            patient_id=patient_id,
+            environment=environment,
+            therapist_id=therapist_id,
+            session_id=session_id,
+            language_code=language_code,
+            email_manager=email_manager,
+            operation=SessionCrudOperation.INSERT_COMPLETED,
+            session_date=session_date,
+            request=request,
+        )
 
-        background_tasks.add_task(self._generate_metrics_and_insights,
-                                  language_code,
-                                  therapist_id,
-                                  patient_id,
-                                  environment,
-                                  session_id,
-                                  supabase_client,
-                                  email_manager)
+        background_tasks.add_task(
+            self._generate_metrics_and_insights,
+            language_code=language_code,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
     async def _update_vectors_and_generate_insights(self,
                                                     session_notes_id: str,
@@ -1038,52 +1223,60 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    supabase_client: SupabaseBaseClass,
-                                                    email_manager: EmailManager):
+                                                    email_manager: EmailManager,
+                                                    request: Request,):
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
-            await self._update_session_notes_with_mini_summary(session_notes_id=session_notes_id,
-                                                               notes_text=notes_text,
-                                                               therapist_id=therapist_id,
-                                                               language_code=language_code,
-                                                               auth_manager=auth_manager,
-                                                               session_id=session_id,
-                                                               environment=environment,
-                                                               background_tasks=background_tasks,
-                                                               supabase_client=supabase_client,
-                                                               patient_id=patient_id,
-                                                               email_manager=email_manager)
+            await self._update_session_notes_with_mini_summary(
+                session_notes_id=session_notes_id,
+                notes_text=notes_text,
+                therapist_id=therapist_id,
+                language_code=language_code,
+                auth_manager=auth_manager,
+                session_id=session_id,
+                environment=environment,
+                background_tasks=background_tasks,
+                patient_id=patient_id,
+                email_manager=email_manager,
+                request=request,
+            )
 
-        await dependency_container.inject_pinecone_client().update_session_vectors(session_id=session_id,
-                                                                                   user_id=therapist_id,
-                                                                                   patient_id=patient_id,
-                                                                                   text=notes_text,
-                                                                                   old_date=old_session_date,
-                                                                                   new_date=new_session_date,
-                                                                                   session_report_id=session_notes_id,
-                                                                                   openai_client=dependency_container.inject_openai_client(),
-                                                                                   summarize_chunk=self.chartwise_assistant.summarize_chunk)
+        await dependency_container.inject_pinecone_client().update_session_vectors(
+            session_id=session_id,
+            user_id=therapist_id,
+            patient_id=patient_id,
+            text=notes_text,
+            old_date=old_session_date,
+            new_date=new_session_date,
+            session_report_id=session_notes_id,
+            openai_client=dependency_container.inject_openai_client(),
+            summarize_chunk=self.chartwise_assistant.summarize_chunk
+        )
 
         # If the session date changed, let's proactively recalculate the patient's last_session_date and total_sessions in case
         # the new session date overwrote the patient's last_session_date value.
-        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
-                                                                         patient_id=patient_id,
-                                                                         therapist_id=therapist_id,
-                                                                         session_id=session_id,
-                                                                         language_code=language_code,
-                                                                         environment=environment,
-                                                                         email_manager=email_manager,
-                                                                         operation=SessionCrudOperation.UPDATE_COMPLETED,
-                                                                         session_date=new_session_date)
+        await self.update_patient_metrics_after_session_report_operation(
+            patient_id=patient_id,
+            therapist_id=therapist_id,
+            session_id=session_id,
+            language_code=language_code,
+            environment=environment,
+            email_manager=email_manager,
+            operation=SessionCrudOperation.UPDATE_COMPLETED,
+            session_date=new_session_date,
+            request=request,
+        )
 
-        background_tasks.add_task(self._generate_metrics_and_insights,
-                                  language_code,
-                                  therapist_id,
-                                  patient_id,
-                                  environment,
-                                  session_id,
-                                  supabase_client,
-                                  email_manager)
+        background_tasks.add_task(
+            self._generate_metrics_and_insights,
+            language_code=language_code,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
     async def _delete_vectors_and_generate_insights(self,
                                                     therapist_id: str,
@@ -1094,31 +1287,37 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     email_manager: EmailManager,
-                                                    supabase_client: SupabaseBaseClass):
-        dependency_container.inject_pinecone_client().delete_session_vectors(user_id=therapist_id,
-                                                                             patient_id=patient_id,
-                                                                             date=session_date)
+                                                    request: Request,):
+        dependency_container.inject_pinecone_client().delete_session_vectors(
+            user_id=therapist_id,
+            patient_id=patient_id,
+            date=session_date
+        )
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been deleted.
-        await self.update_patient_metrics_after_session_report_operation(supabase_client=supabase_client,
-                                                                         patient_id=patient_id,
-                                                                         therapist_id=therapist_id,
-                                                                         session_id=session_id,
-                                                                         language_code=language_code,
-                                                                         environment=environment,
-                                                                         email_manager=email_manager,
-                                                                         operation=SessionCrudOperation.DELETE_COMPLETED,
-                                                                         session_date=None)
+        await self.update_patient_metrics_after_session_report_operation(
+            patient_id=patient_id,
+            therapist_id=therapist_id,
+            session_id=session_id,
+            language_code=language_code,
+            environment=environment,
+            email_manager=email_manager,
+            operation=SessionCrudOperation.DELETE_COMPLETED,
+            session_date=None,
+            request=request,
+        )
 
-        background_tasks.add_task(self._generate_metrics_and_insights,
-                                  language_code,
-                                  therapist_id,
-                                  patient_id,
-                                  environment,
-                                  session_id,
-                                  supabase_client,
-                                  email_manager)
+        background_tasks.add_task(
+            self._generate_metrics_and_insights,
+            language_code=language_code,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
     async def _generate_metrics_and_insights(self,
                                              language_code: str,
@@ -1126,8 +1325,8 @@ class AssistantManager:
                                              patient_id: str,
                                              environment: str,
                                              session_id: str,
-                                             supabase_client: SupabaseBaseClass,
-                                             email_manager: EmailManager):
+                                             email_manager: EmailManager,
+                                             request: Request,):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
@@ -1140,39 +1339,47 @@ class AssistantManager:
             await asyncio.sleep(30)
 
         # Update this patient's recent topics for future fetches.
-        await self.update_patient_recent_topics(language_code=language_code,
-                                                therapist_id=therapist_id,
-                                                patient_id=patient_id,
-                                                environment=environment,
-                                                session_id=session_id,
-                                                email_manager=email_manager,
-                                                supabase_client=supabase_client)
+        await self.update_patient_recent_topics(
+            language_code=language_code,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
         # Update this patient's presession tray for future fetches.
-        await self.update_presession_tray(therapist_id=therapist_id,
-                                          patient_id=patient_id,
-                                          environment=environment,
-                                          session_id=session_id,
-                                          supabase_client=supabase_client,
-                                          email_manager=email_manager)
+        await self.update_presession_tray(
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
         # Update this patient's question suggestions for future fetches.
-        await self.update_question_suggestions(language_code=language_code,
-                                               therapist_id=therapist_id,
-                                               patient_id=patient_id,
-                                               environment=environment,
-                                               session_id=session_id,
-                                               supabase_client=supabase_client,
-                                               email_manager=email_manager)
+        await self.update_question_suggestions(
+            language_code=language_code,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            environment=environment,
+            session_id=session_id,
+            email_manager=email_manager,
+            request=request,
+        )
 
         # Update attendance insights
-        await self.generate_attendance_insights(language_code=language_code,
-                                                email_manager=email_manager,
-                                                therapist_id=therapist_id,
-                                                patient_id=patient_id,
-                                                session_id=session_id,
-                                                environment=environment,
-                                                supabase_client=supabase_client)
+        await self.generate_attendance_insights(
+            language_code=language_code,
+            email_manager=email_manager,
+            therapist_id=therapist_id,
+            patient_id=patient_id,
+            session_id=session_id,
+            environment=environment,
+            request=request,
+        )
 
     def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
         if language_code.startswith('es'):
@@ -1191,35 +1398,50 @@ class AssistantManager:
             raise Exception("Unsupported language code")
 
     async def _load_default_question_suggestions_for_new_patient(self,
-                                                                 supabase_client: SupabaseBaseClass,
                                                                  language_code: str,
                                                                  patient_id: str,
                                                                  therapist_id: str,
                                                                  environment: str,
                                                                  email_manager: EmailManager,
-                                                                 session_id: str):
+                                                                 session_id: str,
+                                                                 request: Request,):
         try:
             # Insert default question suggestions for patient without any session data
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
-            strings_query = supabase_client.select_either_or_from_column(fields="*",
-                                                                         table_name="user_interface_strings",
-                                                                         possible_values=default_question_suggestions)
+            aws_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            strings_query = aws_client.select(
+                request=request,
+                fields="*",
+                table_name="user_interface_strings",
+                filters={
+                    "value": default_question_suggestions,
+                }
+            )
             assert (0 != len(strings_query['data'])), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query['data']]
-            supabase_client.insert(table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
-                                   payload={
-                                       "patient_id": patient_id,
-                                       "therapist_id": therapist_id,
-                                       "questions": eval(json.dumps(default_question_suggestions, ensure_ascii=False))
-                                       })
+            aws_client.insert(
+                table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+                payload={
+                    "patient_id": patient_id,
+                    "therapist_id": therapist_id,
+                    "questions": eval(
+                        json.dumps(
+                            default_question_suggestions,
+                            ensure_ascii=False,
+                        )
+                    )
+                }
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Updating the default question suggestions failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Updating the default question suggestions failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
@@ -1230,25 +1452,32 @@ class AssistantManager:
                                                              environment: str,
                                                              email_manager: EmailManager,
                                                              session_id: str,
-                                                             supabase_client: SupabaseBaseClass,
                                                              patient_first_name: str,
                                                              is_first_time_patient: bool,
+                                                             request: Request,
                                                              patient_gender: str = None):
         try:
-            therapist_data_query = supabase_client.select(table_name="therapists",
-                                                          fields="first_name",
-                                                          filters={
-                                                              "id": therapist_id
-                                                          })
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            therapist_data_query = aws_db_client.select(
+                request=request,
+                table_name="therapists",
+                fields="first_name",
+                filters={
+                    "id": therapist_id
+                }
+            )
             assert (0 != len(therapist_data_query['data'])), "Did not find any data for the incoming therapist id."
             therapist_first_name = therapist_data_query['data'][0]['first_name']
 
             therapist_language = general_utilities.map_language_code_to_language(language_code)
-            string_query = supabase_client.select(table_name="static_default_briefings",
-                                                  fields="value",
-                                                  filters={
-                                                      "id": therapist_language
-                                                  })
+            string_query = aws_db_client.select(
+                request=request,
+                table_name="static_default_briefings",
+                fields="value",
+                filters={
+                    "id": therapist_language
+                }
+            )
             assert (0 != len(string_query['data'])), "Did not find any strings data for the current scenario."
 
             response_value = string_query['data'][0]['value']
@@ -1257,14 +1486,24 @@ class AssistantManager:
             if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
                 default_briefing = (briefings['existing_patient']['value'] if not is_first_time_patient
                                     else briefings['new_patient']['value'])
-                formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
-                                                                     patient_first_name=patient_first_name)
-                supabase_client.insert(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                       payload={
-                                           "patient_id": patient_id,
-                                           "therapist_id": therapist_id,
-                                           "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
-                                           })
+                formatted_default_briefing = default_briefing.format(
+                    user_first_name=therapist_first_name,
+                    patient_first_name=patient_first_name
+                )
+                aws_db_client.insert(
+                    request=request,
+                    table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                    payload={
+                        "patient_id": patient_id,
+                        "therapist_id": therapist_id,
+                        "briefing": eval(
+                            json.dumps(
+                                formatted_default_briefing,
+                                ensure_ascii=False,
+                            )
+                        )
+                    }
+                )
                 return
 
             # Select briefing with gender specification for pre-session tray
@@ -1276,21 +1515,29 @@ class AssistantManager:
             else:
                 default_briefing = default_briefing['male_pronouns']['value']
 
-            formatted_default_briefing = default_briefing.format(user_first_name=therapist_first_name,
-                                                                 patient_first_name=patient_first_name)
-            supabase_client.insert(table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                   payload={
-                                        "patient_id": patient_id,
-                                        "therapist_id": therapist_id,
-                                        "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
-                                    })
+            formatted_default_briefing = default_briefing.format(
+                user_first_name=therapist_first_name,
+                patient_first_name=patient_first_name
+            )
+
+            aws_db_client.insert(
+                request=request,
+                table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+                payload={
+                    "patient_id": patient_id,
+                    "therapist_id": therapist_id,
+                    "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
+                }
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description="Loading the default pre-session tray failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id,
-                                         patient_id=patient_id)
+            eng_alert = EngineeringAlert(
+                description="Loading the default pre-session tray failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id,
+                patient_id=patient_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
@@ -1303,56 +1550,66 @@ class AssistantManager:
                                                       session_id: str,
                                                       environment: str,
                                                       background_tasks: BackgroundTasks,
-                                                      supabase_client: SupabaseBaseClass,
                                                       patient_id: str,
-                                                      email_manager: EmailManager):
+                                                      email_manager: EmailManager,
+                                                      request: Request,):
         try:
-            mini_summary = await self.chartwise_assistant.create_session_mini_summary(session_notes=notes_text,
-                                                                                      therapist_id=therapist_id,
-                                                                                      language_code=language_code,
-                                                                                      session_id=session_id,
-                                                                                      patient_id=patient_id)
-            await self.update_session(language_code=language_code,
-                                      environment=environment,
-                                      background_tasks=background_tasks,
-                                      auth_manager=auth_manager,
-                                      filtered_body={
-                                          "id": session_notes_id,
-                                          "notes_mini_summary": mini_summary
-                                      },
-                                      session_id=session_id,
-                                      supabase_client=supabase_client,
-                                      email_manager=email_manager)
+            mini_summary = await self.chartwise_assistant.create_session_mini_summary(
+                session_notes=notes_text,
+                therapist_id=therapist_id,
+                language_code=language_code,
+                session_id=session_id,
+                patient_id=patient_id
+            )
+
+            await self.update_session(
+                language_code=language_code,
+                environment=environment,
+                background_tasks=background_tasks,
+                auth_manager=auth_manager,
+                filtered_body={
+                    "id": session_notes_id,
+                    "notes_mini_summary": mini_summary
+                },
+                session_id=session_id,
+                email_manager=email_manager,
+                request=request,
+            )
         except Exception as e:
-            eng_alert = EngineeringAlert(description=f"Updating session report {session_notes_id} with a mini summary failed",
-                                         session_id=session_id,
-                                         exception=e,
-                                         environment=environment,
-                                         therapist_id=therapist_id)
+            eng_alert = EngineeringAlert(
+                description=f"Updating session report {session_notes_id} with a mini summary failed",
+                session_id=session_id,
+                exception=e,
+                environment=environment,
+                therapist_id=therapist_id
+            )
             await email_manager.send_internal_alert(alert=eng_alert)
             raise Exception(e)
 
     def _retrieve_sessions_for_year(self,
-                                    supabase_client: SupabaseBaseClass,
+                                    request: Request,
                                     patient_id: str,
                                     year: str):
         try:
-            session_reports_data = supabase_client.select_within_range(fields="*",
-                                                                       filters={
-                                                                           "patient_id": patient_id
-                                                                       },
-                                                                       range_start=f"{year}-01-01",
-                                                                       range_end=f"{year}-12-31",
-                                                                       column_marker="session_date",
-                                                                       sort_desc_column="session_date",
-                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            session_reports_data = aws_db_client.select(
+                request=request,
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                fields="*",
+                filters={
+                    "patient_id": patient_id,
+                    "session_date__gte": f"{year}-01-01",
+                    "session_date__lte": f"{year}-12-31",
+                },
+                order_by=("session_date", "desc"),
+            )
             response_data = session_reports_data['data']
             return [] if len(response_data) == 0 else response_data
         except Exception as e:
             raise Exception(e)
 
     def _retrieve_sessions_in_range(self,
-                                    supabase_client: SupabaseBaseClass,
+                                    request: Request,
                                     patient_id: str,
                                     time_range: TimeRange,
                                     therapist_id: str):
@@ -1363,56 +1620,88 @@ class AssistantManager:
                 TimeRange.YEAR: 365,
                 TimeRange.FIVE_YEARS: 1825
             }
-            start_date = (now - timedelta(days=days_map[time_range])).strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
+            start_date = (now - timedelta(days=days_map[time_range])).strftime(
+                datetime_handler.DATE_FORMAT_YYYY_MM_DD
+            )
             end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-            session_reports_data = supabase_client.select_within_range(fields="session_date",
-                                                                       filters={
-                                                                           "patient_id": patient_id
-                                                                       },
-                                                                       range_start=start_date,
-                                                                       range_end=end_date,
-                                                                       column_marker="session_date",
-                                                                       sort_desc_column="session_date",
-                                                                       table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME)
+
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            session_reports_data = aws_db_client.select(
+                request=request,
+                fields="session_date",
+                filters={
+                    "patient_id": patient_id,
+                    "session_date__gte": start_date,
+                    "session_date__lte": end_date,
+                },
+                order_by=("session_date", "desc"),
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+            )
+
             response_data = session_reports_data['data']
             if len(response_data) == 0:
                 return []
 
             if time_range == TimeRange.MONTH:
-                days = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.DAY_MONTH_SLASH_FORMAT) for item in response_data]
+                days = [
+                    datetime.strptime(
+                        item['session_date'],
+                        datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(
+                            datetime_handler.DAY_MONTH_SLASH_FORMAT
+                        ) for item in response_data
+                ]
                 day_counter = Counter(days)
-                return [{'date': day, 'sessions': day_counter[day]} for day in day_counter]
+                return [{
+                    'date': day,
+                    'sessions': day_counter[day]
+                } for day in day_counter]
             elif time_range == TimeRange.YEAR:
-                language_preference = general_utilities.get_user_language_code(user_id=therapist_id,
-                                                                               supabase_client=supabase_client)
-                month_names = [datetime_handler.get_month_abbreviated(date=item['session_date'], language_code=language_preference) for item in response_data]
+                language_preference = general_utilities.get_user_language_code(
+                    user_id=therapist_id,
+                    aws_db_client=aws_db_client
+                )
+                month_names = [
+                    datetime_handler.get_month_abbreviated(
+                        date=item['session_date'],
+                        language_code=language_preference
+                    ) for item in response_data
+                ]
                 month_counter = Counter(month_names)
                 months_order = datetime_handler.get_last_12_months_abbr(language_code=language_preference)
-                return [{'date': month, 'sessions': month_counter.get(month, 0)} for month in months_order]
+                return [{
+                    'date': month,
+                    'sessions': month_counter.get(month, 0)
+                } for month in months_order]
             elif time_range == TimeRange.FIVE_YEARS:
                 years = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.YEAR_FORMAT) for item in response_data]
                 year_counter = Counter(years)
                 max_year = max(map(int, years))
                 year_range = list(map(str, range(max_year - 4, max_year + 1)))
-                return [{'date': year, 'sessions': year_counter.get(year, 0)} for year in year_range]
+                return [{
+                    'date': year,
+                    'sessions': year_counter.get(year, 0)
+                } for year in year_range]
             else:
                 raise ValueError("Untracked time range value")
-
         except Exception as e:
             raise Exception(e)
 
     def _retrieve_n_most_recent_sessions(self,
-                                         supabase_client: SupabaseBaseClass,
+                                         request: Request,
                                          patient_id: str,
                                          most_recent_n: int) -> list[PineconeQuerySessionDateOverride]:
         try:
-            session_reports_data = supabase_client.select(fields="*",
-                                                          filters={
-                                                              "patient_id": patient_id,
-                                                          },
-                                                          table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                                          limit=most_recent_n,
-                                                          order_desc_column="session_date")
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            session_reports_data = aws_db_client.select(
+                request=request,
+                fields="*",
+                filters={
+                    "patient_id": patient_id,
+                },
+                table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                limit=most_recent_n,
+                order_by=("session_date", "desc")
+            )
             response_data = session_reports_data['data']
             return [] if len(response_data) == 0 else response_data
         except Exception as e:

@@ -49,15 +49,21 @@ class AuthManager:
                 return False
 
             # Check that token hasn't expired
-            token_expiration_date = datetime.fromtimestamp(token_data.get("exp"),
-                                                           tz=timezone.utc)
+            token_expiration_date = datetime.fromtimestamp(
+                token_data.get("exp"),
+                tz=timezone.utc
+            )
             return (token_expiration_date > datetime.now(timezone.utc))
         except Exception:
             return False
 
     def extract_data_from_token(self, access_token: str) -> dict:
         try:
-            payload = jwt.decode(access_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            payload = jwt.decode(
+                jwt=access_token,
+                key=self.SECRET_KEY,
+                algorithms=[self.ALGORITHM]
+            )
             exp: float = payload.get("exp")
             user_id: str = payload.get("sub")
 
@@ -80,18 +86,25 @@ class AuthManager:
                               response: Response) -> Token:
         try:
             auth_token, expiration_timestamp = self.create_auth_token(user_id)
-            response.set_cookie(key="authorization",
-                                value=auth_token,
-                                domain=self.APP_COOKIE_DOMAIN,
-                                httponly=True,
-                                secure=True,
-                                samesite="none")
+            response.set_cookie(
+                key="authorization",
+                value=auth_token,
+                domain=self.APP_COOKIE_DOMAIN,
+                httponly=True,
+                secure=True,
+                samesite="none"
+            )
 
-            return Token(authorization=auth_token,
-                         token_type="bearer",
-                         expiration_timestamp=expiration_timestamp)
+            return Token(
+                authorization=auth_token,
+                token_type="bearer",
+                expiration_timestamp=expiration_timestamp
+            )
         except Exception as e:
-            raise HTTPException(detail=str(e), status_code=status.HTTP_401_UNAUTHORIZED)
+            raise HTTPException(
+                detail=str(e),
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
     def logout(self, response: Response):
         response.delete_cookie("authorization")

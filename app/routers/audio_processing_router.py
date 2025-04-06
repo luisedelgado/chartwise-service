@@ -179,7 +179,6 @@ class AudioProcessingRouter:
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,
                 assistant_manager=self._assistant_manager,
-                aws_db_client=aws_db_client,
                 auth_manager=self._auth_manager,
                 template=template,
                 therapist_id=user_id,
@@ -190,7 +189,8 @@ class AudioProcessingRouter:
                 environment=self._environment,
                 language_code=language_code,
                 diarize=False,
-                email_manager=self._email_manager
+                email_manager=self._email_manager,
+                request=request,
             )
 
             request.state.session_report_id = session_report_id
@@ -387,7 +387,6 @@ class AudioProcessingRouter:
                 background_tasks=background_tasks,
                 assistant_manager=self._assistant_manager,
                 auth_manager=self._auth_manager,
-                aws_db_client=aws_db_client,
                 template=template,
                 therapist_id=user_id,
                 session_date=session_date,
@@ -397,7 +396,9 @@ class AudioProcessingRouter:
                 environment=self._environment,
                 language_code=language_code,
                 diarize=True,
-                email_manager=self._email_manager)
+                email_manager=self._email_manager,
+                request=request,
+            )
             request.state.session_report_id = session_report_id
             return {"session_report_id": session_report_id}
         except Exception as e:
