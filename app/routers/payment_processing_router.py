@@ -1030,13 +1030,13 @@ class PaymentProcessingRouter:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
 
         try:
-            therapist_subscription_query = aws_db_client.select(
+            therapist_query_data = aws_db_client.select(
                 request=request,
                 fields="*",
-                filters={ 'therapist_id': therapist_id },
-                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
-            )
-            is_new_customer = (0 == len(therapist_subscription_query['data']))
+                filters={ 'id': therapist_id },
+                table_name="therapists"
+            )['data']
+            is_new_customer = (0 == len(therapist_query_data))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -1082,15 +1082,7 @@ class PaymentProcessingRouter:
             )
 
             if is_new_customer:
-                therapist_query_data = aws_db_client.select(
-                    request=request,
-                    fields="*",
-                    filters={ 'id': therapist_id },
-                    table_name="therapists"
-                )
-                assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
-
-                therapist_data = therapist_query_data['data'][0]
+                therapist_data = therapist_query_data[0]
                 alert_description = (f"Customer has just entered an active subscription state for the first time. "
                                         "Consider reaching out directly for a more personal welcome note.")
                 therapist_name = "".join([therapist_data['first_name'],
