@@ -1,14 +1,12 @@
 import time
 import jwt
+import os
 
 from jwt import PyJWKClient
 from fastapi import HTTPException, status, Request
 from typing import Dict
 
-COGNITO_APP_CLIENT_ID = "6nbh3gxxxx9dfv2sdfexample"
-COGNITO_REGION = "us-east-1"
-USER_POOL_ID = "us-east-1_ABC123456"
-COGNITO_ISSUER = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}"
+COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get("COGNITO_REGION")}.amazonaws.com/{os.environ.get("COGNITO_USER_POOL_ID")}"
 JWKS_URL = f"{COGNITO_ISSUER}/.well-known/jwks.json"
 JWKS_CACHE = None
 JWKS_CACHE_EXPIRATION = 0
@@ -40,7 +38,7 @@ def decode_cognito_token(token: str) -> Dict:
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=COGNITO_APP_CLIENT_ID,
+            audience=os.environ.get("COGNITO_APP_CLIENT_ID"),
             issuer=COGNITO_ISSUER,
         )
 
