@@ -972,10 +972,10 @@ class PaymentProcessingRouter:
         supabase_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
 
         try:
-            therapist_subscription_query = supabase_client.select(fields="*",
-                                                                  filters={ 'therapist_id': therapist_id },
-                                                                  table_name="subscription_status")
-            is_new_customer = (0 == len(therapist_subscription_query['data']))
+            therapist_query_data = supabase_client.select(fields="*",
+                                                          filters={ 'id': therapist_id },
+                                                          table_name="therapists")['data']
+            is_new_customer = (0 == len(therapist_query_data['data']))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
@@ -1018,12 +1018,7 @@ class PaymentProcessingRouter:
                                    on_conflict="therapist_id")
 
             if is_new_customer:
-                therapist_query_data = supabase_client.select(fields="*",
-                                                              filters={ 'id': therapist_id },
-                                                              table_name="therapists")
-                assert 0 != len(therapist_query_data), "Did not find therapist in internal records."
-
-                therapist_data = therapist_query_data['data'][0]
+                therapist_data = therapist_query_data[0]
                 alert_description = (f"Customer has just entered an active subscription state for the first time. "
                                         "Consider reaching out directly for a more personal welcome note.")
                 therapist_name = "".join([therapist_data['first_name'],
