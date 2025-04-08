@@ -1,7 +1,9 @@
-import argparse, subprocess, os, pty
+import argparse, json, subprocess, os, pty
 
 from app.internal.schemas import STAGING_ENVIRONMENT, PROD_ENVIRONMENT
 from pathlib import Path
+
+ALWAYS_ON_REGIONS = {"mia", "dfw"}
 
 # Command for executing: python test_and_deploy.py -env <environment>
 
@@ -51,6 +53,40 @@ def run_tests() -> bool:
 
     return True
 
+def update_autostop_for_always_on_regions(app_name: str):
+    print("\nNow checking machine autostop configs in always-on regions...\n")
+
+    # Fetch all machines as JSON
+    result = subprocess.run(
+        ["fly", "machines", "list", "-a", app_name, "--json"],
+        capture_output=True, text=True
+    )
+
+    if result.returncode != 0:
+        print("❌ Failed to fetch machines list.")
+        print(result.stderr)
+        return
+
+    machines = json.loads(result.stdout)
+
+    for machine in machines:
+        region = machine.get("region")
+        machine_id = machine.get("id")
+        config_services = machine.get("config", {}).get("services", [])
+
+        if region in ALWAYS_ON_REGIONS:
+            autostop = config_services[0].get("autostop") if config_services else None
+            if autostop == False or autostop == "off":
+                continue
+
+            print(f"🔧 Updating autostop for machine {machine_id} in {region}...\n")
+            subprocess.run([
+                "fly", "machine", "update", machine_id,
+                "--autostop=off",
+                "--autostart=true",
+                "-a", app_name
+            ])
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a command and perform an action if it succeeds.")
     parser.add_argument("-env", nargs=1, help="The environment to deploy if tests succeed")
@@ -59,7 +95,7 @@ if __name__ == "__main__":
     if env == STAGING_ENVIRONMENT:
         toml_file_name = "fly.staging.toml"
         app_name = "chartwise-staging-service"
-    elif env == "prod":
+    elif env == PROD_ENVIRONMENT:
         toml_file_name = "fly.prod.toml"
         app_name = "chartwise-service-prod"
     else:
@@ -85,5 +121,8 @@ if __name__ == "__main__":
                             toml_file_name,
                             "-a",
                             app_name])
+
+    if env == PROD_ENVIRONMENT:
+        update_autostop_for_always_on_regions(app_name)
 
     print("\nDone")
