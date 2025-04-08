@@ -1,7 +1,4 @@
-# fly.toml app configuration file generated for chartwise-service-prod on 2024-06-12T18:59:09-04:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml app configuration file for chartwise-service-prod
 
 app = 'chartwise-service-prod'
 primary_region = 'mia'
@@ -11,25 +8,31 @@ primary_region = 'mia'
 [http_service]
   internal_port = 8080
   force_https = true
+  processes = ['app']
+  min_machines_running = 1
   auto_stop_machines = "suspend"
   auto_start_machines = true
-  min_machines_running = 1
-  processes = ['app']
   [http_service.concurrency]
     type = "requests"
     soft_limit = 20
     hard_limit = 40
 
-[[services]]
-  processes = ["app"]
-  [services.vm]
-    memory = "3gb"
-    cpu_kind = "shared"
-    cpus = 2
+  # Region-specific overrides
+  [http_service.regions.mia]
+    auto_start_machines = true
+    auto_stop_machines = false
+
+  [http_service.regions.dfw]
+    auto_start_machines = true
+    auto_stop_machines = false
+
+[[vm]]
+memory = "2gb"
+cpu_kind = "shared"
+cpus = 2
 
 [machines.app]
-  count = 4  # 4 machines for FastAPI
+  count = 4
 
 [processes]
-  # This is your FastAPI process
   app = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
