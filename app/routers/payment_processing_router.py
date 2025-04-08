@@ -975,7 +975,7 @@ class PaymentProcessingRouter:
             therapist_query_data = supabase_client.select(fields="*",
                                                           filters={ 'id': therapist_id },
                                                           table_name="therapists")['data']
-            is_new_customer = (0 == len(therapist_query_data['data']))
+            is_new_customer = (0 == len(therapist_query_data))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
