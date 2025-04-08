@@ -1,4 +1,4 @@
-# fly.toml app configuration file for chartwise-service-prod
+# fly.prod.toml app configuration file for chartwise-service-prod
 
 app = 'chartwise-service-prod'
 primary_region = 'mia'

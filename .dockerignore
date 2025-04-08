@@ -188,4 +188,5 @@ storage/index_store.json
 # flyctl launch added from .venv/lib/python3.11/site-packages/llama_index/legacy/_static/tiktoken_cache/.gitignore
 # Include this file
 !.venv/lib/python3.11/site-packages/llama_index/legacy/_static/tiktoken_cache/**/.gitignore
-fly.toml
+fly.prod.toml
+fly.staging.toml
