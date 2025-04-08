@@ -1,8 +1,4 @@
-# fly.toml app configuration file generated for chartwise-service-prod on 2024-06-12T18:59:09-04:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
+# fly.toml app configuration file for chartwise-service-prod
 app = 'chartwise-service-prod'
 primary_region = 'mia'
 
@@ -30,6 +26,47 @@ primary_region = 'mia'
 [machines.app]
   count = 4  # 4 machines for FastAPI
 
+# Primary + Preferred Secondary (Always-On)
+[[vm]]
+  region = "mia"
+  auto_start = true
+  auto_stop = false
+
+[[vm]]
+  region = "dfw"
+  auto_start = true
+  auto_stop = false
+
+# Secondary (Suspendable)
+[[vm]]
+  region = "bos"
+  auto_start = true
+  auto_stop = "suspend"
+
+[[vm]]
+  region = "iad"
+  auto_start = true
+  auto_stop = "suspend"
+
+[[vm]]
+  region = "atl"
+  auto_start = true
+  auto_stop = "suspend"
+
+[[vm]]
+  region = "lax"
+  auto_start = true
+  auto_stop = "suspend"
+
+[[vm]]
+  region = "ord"
+  auto_start = true
+  auto_stop = "suspend"
+
+[[vm]]
+  region = "phx"
+  auto_start = true
+  auto_stop = "suspend"
+
 [processes]
-  # This is your FastAPI process
-  app = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
+app = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
