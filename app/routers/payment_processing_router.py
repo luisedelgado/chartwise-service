@@ -848,15 +848,18 @@ class PaymentProcessingRouter:
                 try:
                     subscription = stripe_client.retrieve_subscription(subscription_id)
                     latest_invoice = stripe_client.retrieve_invoice(subscription.get("latest_invoice"))
-                    price_id = subscription["items"]["data"][0]["price"]["id"]
+                    payment_intent_id = latest_invoice.get("payment_intent")
+                    if payment_intent_id is not None:
+                        price_id = subscription["items"]["data"][0]["price"]["id"]
 
-                    # Retrieve product metadata associated with the price id.
-                    price = stripe_client.retrieve_price(price_id)
-                    product_id = price.get("product")
-                    product = stripe_client.retrieve_product(product_id)
-                    stripe_client.attach_payment_intent_metadata(
-                        payment_intent_id=latest_invoice.get("payment_intent"),
-                        metadata=product.get("metadata", {}))
+                        # Retrieve product metadata associated with the price id.
+                        price = stripe_client.retrieve_price(price_id)
+                        product_id = price.get("product")
+                        product = stripe_client.retrieve_product(product_id)
+                        stripe_client.attach_payment_intent_metadata(
+                            payment_intent_id=payment_intent_id,
+                            metadata=product.get("metadata", {})
+                        )
                 except Exception:
                     pass
 

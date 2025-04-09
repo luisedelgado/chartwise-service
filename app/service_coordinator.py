@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from .internal.db.connection import connect_pool, disconnect_pool
@@ -23,7 +24,14 @@ async def lifespan(app: FastAPI):
 
 class HSTSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        response: Response = await call_next(request)
+        try:
+            response: Response = await call_next(request)
+        except Exception as e:
+            return JSONResponse(
+                {"detail": "Internal server error in middleware."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
         return response
 
