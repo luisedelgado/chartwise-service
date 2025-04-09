@@ -87,10 +87,10 @@ def update_autostop_for_always_on_regions(app_name: str):
 
 def deploy_fastapi_app(env):
     if env == STAGING_ENVIRONMENT:
-        toml_file_name = "fly.app.staging.toml"
+        toml_file_name = "fly.staging.toml"
         app_name = "chartwise-staging-service"
     elif env == PROD_ENVIRONMENT:
-        toml_file_name = "fly.app.prod.toml"
+        toml_file_name = "fly.prod.toml"
         app_name = "chartwise-service-prod"
     else:
         print(f"How did I get here? No env to deploy based on: {env}")
@@ -116,7 +116,7 @@ def deploy_fastapi_app(env):
                             "-a",
                             app_name,
                             "--dockerfile",
-                            "Dockerfile.app"])
+                            "Dockerfile"])
 
     if env == PROD_ENVIRONMENT:
         update_autostop_for_always_on_regions(app_name)
