@@ -4,6 +4,7 @@ from .fake.fake_async_openai import FakeAsyncOpenAI
 from .fake.fake_aws_db_client import FakeAwsDbClient
 from .fake.fake_aws_kms_client import AwsKmsBaseClass, FakeAwsKmsClient
 from .fake.fake_aws_s3_client import FakeAwsS3Client
+from .fake.fake_aws_secret_manager_client import AwsSecretManagerBaseClass, FakeAwsSecretManagerClient
 from .fake.fake_deepgram_client import FakeDeepgramClient
 from .fake.fake_docupanda_client import FakeDocupandaClient
 from .fake.fake_influx_client import FakeInfluxClient
@@ -13,6 +14,7 @@ from .fake.fake_stripe_client import FakeStripeClient
 from .implementation.aws_db_client import AwsDbBaseClass, AwsDbClient
 from .implementation.aws_kms_client import AwsKmsClient
 from .implementation.aws_s3_client import AwsS3BaseClass, AwsS3Client
+from .implementation.aws_secret_manager_client import AwsSecretManagerClient
 from .implementation.deepgram_client import DeepgramBaseClass, DeepgramClient
 from .implementation.docupanda_client import DocupandaBaseClass, DocupandaClient
 from .implementation.influx_client import InfluxBaseClass, InfluxClient
@@ -93,6 +95,11 @@ class DependencyContainer:
     def inject_aws_s3_client(self) -> AwsS3BaseClass:
         if self._aws_s3_client is None:
             self._aws_s3_client = FakeAwsS3Client() if self._testing_environment else AwsS3Client()
+        return self._aws_s3_client
+
+    def inject_aws_secret_manager_client(self) -> AwsSecretManagerBaseClass:
+        if self._aws_s3_client is None:
+            self._aws_s3_client = FakeAwsSecretManagerClient() if self._testing_environment else AwsSecretManagerClient()
         return self._aws_s3_client
 
     def inject_chartwise_encryptor(self) -> ChartWiseEncryptor:

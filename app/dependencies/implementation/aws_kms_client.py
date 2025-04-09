@@ -22,7 +22,7 @@ class AwsKmsClient(AwsKmsBaseClass):
             raise ValueError(f"Missing encryption key in env var: {encryption_key}")
 
         self.key_hex = key_hex
-        self.region = os.environ.get("AWS_PHI_ENCRYPTION_KEY_REGION")
+        self.region = os.environ.get("AWS_SERVICES_REGION")
         self.session = boto3.Session()
         self.botocore_session = get_session()
 

@@ -5,18 +5,27 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from .dependencies.dependency_container import dependency_container
 from .internal.db.connection import connect_pool, disconnect_pool
 from .internal.logging.logging_middleware import TimingMiddleware
 from .data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await connect_pool(app)
+    secret_manager = dependency_container.inject_aws_secret_manager_client()
+    await connect_pool(
+        app=app,
+        secret_manager=secret_manager
+    )
     print("Loading model and tokenizer...")
-    AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
-                                  cache_dir=ELECTRA_MODEL_CACHE_DIR)
-    AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
-                                                       cache_dir=ELECTRA_MODEL_CACHE_DIR)
+    AutoTokenizer.from_pretrained(
+        ELECTRA_MODEL_NAME,
+        cache_dir=ELECTRA_MODEL_CACHE_DIR
+    )
+    AutoModelForSequenceClassification.from_pretrained(
+        ELECTRA_MODEL_NAME,
+        cache_dir=ELECTRA_MODEL_CACHE_DIR
+    )
     print("Finished loading model and tokenizer.")
     yield
     await disconnect_pool(app)
@@ -57,11 +66,13 @@ class EndpointServiceCoordinator:
         openapi_url = "/openapi.json" if not is_prod_environment else None
         docs_url = "/docs" if not is_prod_environment else None
         redoc_url = "/redoc" if not is_prod_environment else None
-        self.app = FastAPI(lifespan=lifespan,
-                           title="ChartWise API Service",
-                           openapi_url=openapi_url,
-                           docs_url=docs_url,
-                           redoc_url=redoc_url)
+        self.app = FastAPI(
+            lifespan=lifespan,
+            title="ChartWise API Service",
+            openapi_url=openapi_url,
+            docs_url=docs_url,
+            redoc_url=redoc_url
+        )
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=self.origins,
