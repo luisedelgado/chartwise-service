@@ -778,8 +778,7 @@ class PaymentProcessingRouter:
 
         try:
             await self._handle_stripe_event(event=event,
-                                            stripe_client=stripe_client,
-                                            background_tasks=background_tasks)
+                                            stripe_client=stripe_client)
         except Exception as e:
             logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
             raise HTTPException(e)
@@ -794,12 +793,10 @@ class PaymentProcessingRouter:
     Arguments:
     event – the Stripe event.
     stripe_client – the Stripe client.
-    background_tasks – object for scheduling concurrent tasks.
     """
     async def _handle_stripe_event(self,
                                    event,
-                                   stripe_client: StripeBaseClass,
-                                   background_tasks: BackgroundTasks):
+                                   stripe_client: StripeBaseClass):
         event_type: str = event["type"]
 
         if event_type == 'checkout.session.completed':
