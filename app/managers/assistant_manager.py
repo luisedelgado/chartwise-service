@@ -569,6 +569,7 @@ class AssistantManager:
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 language_code = general_utilities.get_user_language_code(
                     user_id=therapist_id,
+                    aws_db_client=aws_db_client,
                 )
                 patient_query = aws_db_client.select(
                     request=request,
@@ -1052,8 +1053,10 @@ class AssistantManager:
 
     def default_streaming_error_message(self, user_id: str,):
         if self.cached_patient_query_data is None:
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = general_utilities.get_user_language_code(
                 user_id=user_id,
+                aws_db_client=aws_db_client,
             )
         else:
             language_code = self.cached_patient_query_data.response_language_code
@@ -1655,6 +1658,7 @@ class AssistantManager:
             elif time_range == TimeRange.YEAR:
                 language_preference = general_utilities.get_user_language_code(
                     user_id=therapist_id,
+                    aws_db_client=aws_db_client,
                 )
                 month_names = [
                     datetime_handler.get_month_abbreviated(

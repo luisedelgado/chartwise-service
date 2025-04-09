@@ -203,6 +203,7 @@ class ImageProcessingRouter:
         """
         language_code = general_utilities.get_user_language_code(
             user_id=therapist_id,
+            aws_db_client=aws_db_client,
         )
         await self._image_processing_manager.process_textraction(
             document_id=job_id,

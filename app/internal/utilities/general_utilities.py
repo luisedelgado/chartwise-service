@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from portkey_ai import createHeaders
 from pytz import timezone
 
-from ...dependencies.dependency_container import AwsDbBaseClass, dependency_container
+from ...dependencies.dependency_container import AwsDbBaseClass
 
 """
 Returns a flag representing whether or not the incoming timezone identifier is valid.
@@ -44,9 +44,8 @@ def extract_status_code(exception, fallback: status):
 """
 Retrieves the current user's language preference.
 """
-def get_user_language_code(user_id: str):
+def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
     try:
-        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         therapist_query = aws_db_client.select(
             fields="language_preference",
             filters={
