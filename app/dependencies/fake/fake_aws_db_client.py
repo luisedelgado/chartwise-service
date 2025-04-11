@@ -76,3 +76,6 @@ class FakeAwsDbClient(AwsDbBaseClass):
 
     async def delete_user(self, user_id: str):
         pass
+
+    async def set_session_user_id(self, request: Request, user_id: str):
+        pass

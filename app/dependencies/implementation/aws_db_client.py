@@ -198,6 +198,15 @@ class AwsDbClient(AwsDbBaseClass):
     async def sign_out(self):
         pass
 
+    async def set_session_user_id(self, request: Request, user_id: str):
+        try:
+            async with (await get_conn(request.app)) as conn:
+                await conn.execute(
+                    "SET app.current_user_id = $1", user_id
+                )
+        except Exception as e:
+            raise RuntimeError(f"Failed to set session user ID: {e}") from e
+
     # Private
 
     def encrypt_payload(self, payload: dict, table_name: str) -> dict:
