@@ -149,6 +149,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 n=BRIEFING_CONTEXT_SESSIONS_CAP
             )
@@ -239,6 +240,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP
             )
@@ -323,6 +325,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
@@ -410,6 +413,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = self._retrieve_n_most_recent_session_dates(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
@@ -480,6 +484,7 @@ class ChartWiseAssistant:
         try:
             patient_session_dates = [
                 date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(
+                    therapist_id=therapist_id,
                     patient_id=patient_id,
                     n=ATTENDANCE_CONTEXT_SESSIONS_CAP
                 )
@@ -663,11 +668,13 @@ class ChartWiseAssistant:
     # Private
 
     def _retrieve_n_most_recent_session_dates(self,
+                                              therapist_id: str,
                                               patient_id: str,
                                               n: int) -> list[PineconeQuerySessionDateOverride]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             dates_response = aws_db_client.select(
+                user_id=therapist_id,
                 fields="session_date",
                 filters={
                     "patient_id": patient_id,

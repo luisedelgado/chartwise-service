@@ -31,12 +31,15 @@ class FakeAwsDbClient(AwsDbBaseClass):
     select_default_briefing_has_different_pronouns: bool = False
     session_upload_processing_status: str = None
 
-    async def insert(request: Request,
+    async def insert(self,
+                     user_id: str,
+                     request: Request,
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         pass
 
     async def update(self,
+                     user_id: str,
                      request: Request,
                      payload: dict[str, Any],
                      filters: dict[str, Any],
@@ -44,6 +47,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         pass
 
     async def upsert(self,
+                     user_id: str,
                      request: Request,
                      conflict_columns: List[str],
                      payload: dict[str, Any],
@@ -51,6 +55,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         pass
 
     async def select(self,
+                     user_id: str,
                      request: Request,
                      fields: list[str],
                      filters: dict[str, Any],
@@ -60,6 +65,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         pass
 
     async def delete(self,
+                     user_id: str,
                      request: Request,
                      table_name: str,
                      filters: dict[str, Any]) -> list[dict]:

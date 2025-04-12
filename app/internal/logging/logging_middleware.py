@@ -131,6 +131,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 await run_in_threadpool(
                     aws_db_client.insert,
+                    user_id=therapist_id,
                     table_name="audit_logs",
                     payload=payload
                 )

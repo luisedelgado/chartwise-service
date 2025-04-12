@@ -104,11 +104,13 @@ class AssistantManager:
         self.chartwise_assistant = ChartWiseAssistant()
 
     async def retrieve_single_session_report(self,
+                                             therapist_id: str,
                                              session_report_id: str,
                                              request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 fields="*",
@@ -131,12 +133,14 @@ class AssistantManager:
         try:
             if year:
                 return self._retrieve_sessions_for_year(
+                    therapist_id=therapist_id,
                     request=request,
                     patient_id=patient_id,
                     year=year
                 )
             if most_recent:
                 return self._retrieve_n_most_recent_sessions(
+                    therapist_id=therapist_id,
                     request=request,
                     patient_id=patient_id,
                     most_recent_n=most_recent
@@ -186,6 +190,7 @@ class AssistantManager:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             insert_result = aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload=insert_payload
@@ -213,6 +218,7 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_session(self,
+                             therapist_id: str,
                              language_code: str,
                              environment: str,
                              background_tasks: BackgroundTasks,
@@ -225,6 +231,7 @@ class AssistantManager:
             session_report_id = filtered_body['id']
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             report_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -236,7 +243,6 @@ class AssistantManager:
 
             report_query_data = report_query['data'][0]
             patient_id = report_query_data['patient_id']
-            therapist_id = report_query_data['therapist_id']
             current_session_text = report_query_data['notes_text']
             current_session_date = report_query_data['session_date']
             current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
@@ -259,6 +265,7 @@ class AssistantManager:
                 session_update_payload[key] = value
 
             session_update_response = aws_db_client.update(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload=session_update_payload,
@@ -307,6 +314,7 @@ class AssistantManager:
             # Delete the session notes from DB
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             delete_result = aws_db_client.delete(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
@@ -347,11 +355,13 @@ class AssistantManager:
             raise Exception(e)
 
     async def retrieve_single_patient(self,
+                                      therapist_id: str,
                                       patient_id: str,
                                       request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 fields="*",
@@ -370,6 +380,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 fields="*",
@@ -401,6 +412,7 @@ class AssistantManager:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload=payload
@@ -456,12 +468,14 @@ class AssistantManager:
             raise Exception(e)
 
     async def update_patient(self,
+                             therapist_id: str,
                              filtered_body: dict,
                              session_id: str,
                              background_tasks: BackgroundTasks,
                              request: Request,):
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         patient_query = aws_db_client.select(
+            user_id=therapist_id,
             request=request,
             fields="*",
             filters={
@@ -472,7 +486,6 @@ class AssistantManager:
         assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
         patient_query_data = patient_query['data'][0]
         current_pre_existing_history = patient_query_data['pre_existing_history']
-        therapist_id = patient_query_data['therapist_id']
 
         update_db_payload = {}
         for key, value in filtered_body.items():
@@ -483,6 +496,7 @@ class AssistantManager:
             update_db_payload[key] = value
 
         update_response = aws_db_client.update(
+            user_id=therapist_id,
             request=request,
             table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
             payload=update_db_payload,
@@ -572,6 +586,7 @@ class AssistantManager:
                     aws_db_client=aws_db_client,
                 )
                 patient_query = aws_db_client.select(
+                    user_id=therapist_id,
                     request=request,
                     fields="*",
                     filters={
@@ -639,6 +654,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
@@ -669,6 +685,7 @@ class AssistantManager:
 
             # Upsert result to DB
             aws_db_client.upsert(
+                user_id=therapist_id,
                 request=request,
                 payload={
                     "patient_id": patient_id,
@@ -701,6 +718,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={
@@ -716,6 +734,7 @@ class AssistantManager:
             session_count = patient_response_data['total_sessions']
 
             therapist_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={
@@ -744,6 +763,7 @@ class AssistantManager:
             # Upsert result to DB
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             aws_db_client.upsert(
+                user_id=therapist_id,
                 request=request,
                 payload={
                     "last_updated": now_timestamp,
@@ -777,6 +797,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={
@@ -819,6 +840,7 @@ class AssistantManager:
 
             # Upsert result to DB
             aws_db_client.upsert(
+                user_id=therapist_id,
                 request=request,
                 payload={
                     "last_updated": now_timestamp,
@@ -853,6 +875,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={
@@ -879,6 +902,7 @@ class AssistantManager:
             # Upsert result to DB
             now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
             aws_db_client.upsert(
+                user_id=therapist_id,
                 request=request,
                 payload={
                     "last_updated": now_timestamp,
@@ -916,6 +940,7 @@ class AssistantManager:
             # Fetch patient last session date and total session count
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_session_notes_response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -930,6 +955,7 @@ class AssistantManager:
                                          else patient_session_notes_data[0]['session_date'])
 
             unique_active_years: List[int] = self.get_patient_active_session_years(
+                therapist_id=therapist_id,
                 patient_id=patient_id,
                 request=request,
             )
@@ -938,6 +964,7 @@ class AssistantManager:
             if operation == SessionCrudOperation.DELETE_COMPLETED:
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 aws_db_client.update(
+                    user_id=therapist_id,
                     request=request,
                     table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                     payload={
@@ -953,6 +980,7 @@ class AssistantManager:
                 if total_session_count == 0:
                     # Load zero-state for this patient since we don't have any data from them anymore.
                     patient_data_response = aws_db_client.select(
+                        user_id=therapist_id,
                         request=request,
                         fields="*",
                         table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
@@ -1008,6 +1036,7 @@ class AssistantManager:
                 )
 
             aws_db_client.update(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload={
@@ -1032,10 +1061,12 @@ class AssistantManager:
             raise Exception(e)
 
     def get_patient_active_session_years(self,
+                                         therapist_id: str,
                                          patient_id: str,
                                          request: Request,) -> List[int]:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         response = aws_db_client.select(
+            user_id=therapist_id,
             request=request,
             fields="session_date",
             filters={
@@ -1073,11 +1104,13 @@ class AssistantManager:
             raise Exception("Unsupported language code")
 
     async def retrieve_patient_insights(self,
+                                        therapist_id: str,
                                         patient_id: str,
                                         request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                 fields="*",
@@ -1091,11 +1124,13 @@ class AssistantManager:
             raise Exception(e)
 
     async def retrieve_briefing(self,
+                                therapist_id: str,
                                 patient_id: str,
                                 request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                 fields="*",
@@ -1109,11 +1144,13 @@ class AssistantManager:
             raise Exception(e)
 
     async def retrieve_question_suggestions(self,
+                                            therapist_id: str,
                                             patient_id: str,
                                             request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 fields="*",
@@ -1127,11 +1164,13 @@ class AssistantManager:
             raise Exception(e)
 
     async def recent_topics_data(self,
+                                 therapist_id: str,
                                  patient_id: str,
                                  request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
                 fields="*",
@@ -1410,6 +1449,7 @@ class AssistantManager:
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
             aws_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             strings_query = aws_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 table_name="user_interface_strings",
@@ -1421,6 +1461,7 @@ class AssistantManager:
 
             default_question_suggestions = [item['value'] for item in strings_query['data']]
             aws_client.insert(
+                user_id=therapist_id,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 payload={
                     "patient_id": patient_id,
@@ -1459,6 +1500,7 @@ class AssistantManager:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             therapist_data_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name="therapists",
                 fields="first_name",
@@ -1471,6 +1513,7 @@ class AssistantManager:
 
             therapist_language = general_utilities.map_language_code_to_language(language_code)
             string_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name="static_default_briefings",
                 fields="value",
@@ -1491,6 +1534,7 @@ class AssistantManager:
                     patient_first_name=patient_first_name
                 )
                 aws_db_client.insert(
+                    user_id=therapist_id,
                     request=request,
                     table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                     payload={
@@ -1521,6 +1565,7 @@ class AssistantManager:
             )
 
             aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                 payload={
@@ -1563,6 +1608,7 @@ class AssistantManager:
             )
 
             await self.update_session(
+                therapist_id=therapist_id,
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,
@@ -1587,12 +1633,14 @@ class AssistantManager:
             raise Exception(e)
 
     def _retrieve_sessions_for_year(self,
+                                    therapist_id: str,
                                     request: Request,
                                     patient_id: str,
                                     year: str):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 fields="*",
@@ -1627,6 +1675,7 @@ class AssistantManager:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="session_date",
                 filters={
@@ -1687,12 +1736,14 @@ class AssistantManager:
             raise Exception(e)
 
     def _retrieve_n_most_recent_sessions(self,
+                                         therapist_id: str,
                                          request: Request,
                                          patient_id: str,
                                          most_recent_n: int) -> list[PineconeQuerySessionDateOverride]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={

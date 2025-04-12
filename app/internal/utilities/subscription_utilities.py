@@ -20,6 +20,7 @@ def reached_subscription_tier_usage_limit(tier: str,
 
     try:
         session_reports_data = aws_db_client.select(
+            user_id=therapist_id,
             fields="*",
             filters={
                 "therapist_id": therapist_id,

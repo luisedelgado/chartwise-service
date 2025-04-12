@@ -50,6 +50,7 @@ class ImageProcessingManager(MediaProcessingManager):
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             insert_result = aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload={
@@ -110,6 +111,7 @@ class ImageProcessingManager(MediaProcessingManager):
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_report_query = aws_db_client.select(
+                user_id=therapist_id,
                 fields="*",
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
@@ -150,6 +152,7 @@ class ImageProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(
+                therapist_id=therapist_id,
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,

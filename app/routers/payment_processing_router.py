@@ -84,8 +84,7 @@ class PaymentProcessingRouter:
             )
 
         @self.router.post(self.PAYMENT_EVENT_ENDPOINT, tags=[self.ROUTER_TAG])
-        async def capture_payment_event(request: Request,
-                                        _: dict = Depends(verify_cognito_token),):
+        async def capture_payment_event(request: Request,):
             return await self._capture_payment_event_internal(
                 request=request
             )
@@ -218,6 +217,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -293,6 +293,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -390,6 +391,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -464,6 +466,7 @@ class PaymentProcessingRouter:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -606,6 +609,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -682,6 +686,7 @@ class PaymentProcessingRouter:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -747,6 +752,7 @@ class PaymentProcessingRouter:
         Webhook for handling Stripe events.
 
         Arguments:
+        therapist_id – the therapist id.
         request – the incoming request object.
         """
         stripe_client = dependency_container.inject_stripe_client()
@@ -807,7 +813,7 @@ class PaymentProcessingRouter:
             await self._handle_stripe_event(
                 event=event,
                 request=request,
-                stripe_client=stripe_client
+                stripe_client=stripe_client,
             )
         except Exception as e:
             logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
@@ -820,7 +826,7 @@ class PaymentProcessingRouter:
     async def _handle_stripe_event(self,
                                    event,
                                    request: Request,
-                                   stripe_client: StripeBaseClass):
+                                   stripe_client: StripeBaseClass,):
         """
         Internal funnel for specific handlings of Stripe events.
 
@@ -963,6 +969,7 @@ class PaymentProcessingRouter:
                 # Fetch corresponding therapist ID
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 customer_data = aws_db_client.select(
+                    user_id=user_id,
                     request=request,
                     fields="*",
                     filters={
@@ -1034,6 +1041,7 @@ class PaymentProcessingRouter:
 
         try:
             therapist_query_data = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={ 'id': therapist_id },
@@ -1078,6 +1086,7 @@ class PaymentProcessingRouter:
                 payload['free_trial_active'] = False
 
             aws_db_client.upsert(
+                user_id=therapist_id,
                 request=request,
                 on_conflict=["therapist_id"],
                 payload=payload,

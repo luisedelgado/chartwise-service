@@ -82,7 +82,7 @@ class DependencyContainer:
             self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient(environment=self._environment)
         return self._influx_client
 
-    def inject_aws_db_client(self) -> AwsKmsBaseClass:
+    def inject_aws_db_client(self) -> AwsDbBaseClass:
         if self._aws_db_client is None:
             self._aws_db_client: AwsDbBaseClass = FakeAwsDbClient() if self._testing_environment else AwsDbClient()
         return self._aws_db_client

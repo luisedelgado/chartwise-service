@@ -6,13 +6,15 @@ from typing import Any, List, Optional
 class AwsDbBaseClass(ABC):
 
     @abstractmethod
-    async def insert(request: Request,
+    async def insert(user_id: str,
+                     request: Request,
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         """
         Inserts payload into a table.
 
         Arguments:
+        user_id – the current user ID.
         request – the FastAPI request associated with the insert operation.
         payload – the payload to be inserted.
         table_name – the table into which the payload should be inserted.
@@ -20,7 +22,8 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def update(request: Request,
+    async def update(user_id: str,
+                     request: Request,
                      payload: dict[str, Any],
                      filters: dict[str, Any],
                      table_name: str) -> Optional[dict]:
@@ -28,6 +31,7 @@ class AwsDbBaseClass(ABC):
         Updates a table with the incoming payload and filters.
 
         Arguments:
+        user_id – the current user ID.
         request – the FastAPI request associated with the update operation.
         payload – the payload to be updated.
         filters – the set of filters to be applied to the table.
@@ -36,7 +40,8 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def upsert(request: Request,
+    async def upsert(user_id: str,
+                     request: Request,
                      conflict_columns: List[str],
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
@@ -44,6 +49,7 @@ class AwsDbBaseClass(ABC):
         Upserts into a table with the incoming data.
 
         Arguments:
+        user_id – the current user ID.
         request – the FastAPI request associated with the upsert operation.
         conflict_columns – the key to be used to update the table if a conflict arises.
         payload – the payload to be updated.
@@ -52,7 +58,8 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def select(request: Request,
+    async def select(user_id: str,
+                     request: Request,
                      fields: list[str],
                      filters: dict[str, Any],
                      table_name: str,
@@ -62,6 +69,7 @@ class AwsDbBaseClass(ABC):
         Fetches data from a table based on the incoming params.
 
         Arguments:
+        user_id – the current user ID.
         request – the FastAPI request associated with the select operation.
         fields – the fields to be retrieved from a table.
         filters – the set of filters to be applied to the table.
@@ -72,13 +80,15 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def delete(request: Request,
+    async def delete(user_id: str,
+                     request: Request,
                      table_name: str,
                      filters: dict[str, Any]) -> list[dict]:
         """
         Deletes from a table name based on the incoming params.
 
         Arguments:
+        user_id – the current user ID.
         request – the FastAPI request associated with the delete operation.
         table_name – the table name.
         filters – the set of filters to be applied to the table.

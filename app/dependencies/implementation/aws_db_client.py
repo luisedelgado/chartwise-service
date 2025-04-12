@@ -30,10 +30,17 @@ class AwsDbClient(AwsDbBaseClass):
         self.encryptor = encryptor
 
     async def insert(self,
+                     user_id: str,
                      request: Request,
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
+            # Set the current user ID for satisfying RLS.
+            self.set_session_user_id(
+                request=request,
+                user_id=user_id
+            )
+
             payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
             values = list(payload.values())
@@ -54,13 +61,19 @@ class AwsDbClient(AwsDbBaseClass):
             raise RuntimeError(f"Insert failed: {e}") from e
 
     async def upsert(self,
+                     user_id: str,
                      request: Request,
                      conflict_columns: List[str],
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
-            payload = self.encrypt_payload(payload, table_name)
+            # Set the current user ID for satisfying RLS.
+            self.set_session_user_id(
+                request=request,
+                user_id=user_id
+            )
 
+            payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
             values = list(payload.values())
             placeholders = ', '.join([f"${i+1}" for i in range(len(values))])
@@ -89,11 +102,18 @@ class AwsDbClient(AwsDbBaseClass):
             raise RuntimeError(f"Upsert failed: {e}") from e
 
     async def update(self,
+                     user_id: str,
                      request: Request,
                      payload: dict[str, Any],
                      filters: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
+            # Set the current user ID for satisfying RLS.
+            self.set_session_user_id(
+                request=request,
+                user_id=user_id
+            )
+
             payload = self.encrypt_payload(payload, table_name)
 
             set_columns = list(payload.keys())
@@ -128,6 +148,7 @@ class AwsDbClient(AwsDbBaseClass):
             raise Exception(e)
 
     async def select(self,
+                     user_id: str,
                      request: Request,
                      fields: list[str],
                      filters: dict[str, Any],
@@ -135,8 +156,13 @@ class AwsDbClient(AwsDbBaseClass):
                      limit: Optional[int] = None,
                      order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         try:
+            # Set the current user ID for satisfying RLS.
+            self.set_session_user_id(
+                request=request,
+                user_id=user_id
+            )
+
             where_clause, where_values = self.build_where_clause(filters)
-            
             field_expr = ', '.join([f'"{field}"' for field in fields])
             limit_clause = f"LIMIT {limit}" if limit is not None else ""
             order_clause = ""
@@ -165,17 +191,25 @@ class AwsDbClient(AwsDbBaseClass):
             raise RuntimeError(f"Select failed: {e}") from e
 
     async def delete(self,
+                     user_id: str,
                      request: Request,
                      table_name: str,
                      filters: dict[str, Any]) -> list[dict]:
         try:
-            where_clause, where_values = self.build_where_clause(filters)
+            # Set the current user ID for satisfying RLS.
+            self.set_session_user_id(
+                request=request,
+                user_id=user_id
+            )
 
-            delete_query = f"""
+            where_clause, where_values = self.build_where_clause(filters)
+            delete_query = (
+                f"""
                 DELETE FROM "{table_name}"
                 {where_clause}
                 RETURNING *
-            """
+                """
+            )
             delete_query = " ".join(delete_query.split())
 
             async with (await get_conn(request.app)) as conn:
@@ -185,17 +219,37 @@ class AwsDbClient(AwsDbBaseClass):
             raise RuntimeError(f"Delete failed: {e}") from e
 
     async def get_user(self):
+        # # Set the current user ID for satisfying RLS.
+        # self.set_session_user_id(
+        #     request=request,
+        #     user_id=user_id
+        # )
         pass
 
     async def get_current_user_id(self) -> str:
+        # # Set the current user ID for satisfying RLS.
+        # self.set_session_user_id(
+        #     request=request,
+        #     user_id=user_id
+        # )
         pass
 
     async def delete_user(self,
                           request: Request,
                           user_id: str):
+        # # Set the current user ID for satisfying RLS.
+        # self.set_session_user_id(
+        #     request=request,
+        #     user_id=user_id
+        # )
         pass
 
     async def sign_out(self):
+        # # Set the current user ID for satisfying RLS.
+        # self.set_session_user_id(
+        #     request=request,
+        #     user_id=user_id
+        # )
         pass
 
     async def set_session_user_id(self, request: Request, user_id: str):

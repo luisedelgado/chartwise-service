@@ -48,6 +48,7 @@ class AudioProcessingManager(MediaProcessingManager):
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_report_creation_response = aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload={
@@ -65,6 +66,7 @@ class AudioProcessingManager(MediaProcessingManager):
             today = datetime.now().date()
             today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
             aws_db_client.insert(
+                user_id=therapist_id,
                 request=request,
                 table_name="pending_audio_jobs",
                 payload={
@@ -124,7 +126,8 @@ class AudioProcessingManager(MediaProcessingManager):
                 self._update_patient_metrics_after_processing_transcription_session,
                 request=request,
                 patient_id=patient_id,
-                session_date=session_date
+                session_date=session_date,
+                therapist_id=therapist_id,
             )
 
             return session_report_id
@@ -170,6 +173,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 "diarization": diarization,
             }
             await assistant_manager.update_session(
+                therapist_id=therapist_id,
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,
@@ -257,6 +261,7 @@ class AudioProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(
+                therapist_id=therapist_id,
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,
@@ -328,6 +333,7 @@ class AudioProcessingManager(MediaProcessingManager):
             }
 
             await assistant_manager.update_session(
+                therapist_id=therapist_id,
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,
@@ -373,11 +379,13 @@ class AudioProcessingManager(MediaProcessingManager):
     async def _update_patient_metrics_after_processing_transcription_session(self,
                                                                              request: Request,
                                                                              patient_id: str,
-                                                                             session_date: str):
+                                                                             session_date: str,
+                                                                             therapist_id: str):
         try:
             # Fetch last session date
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="*",
                 filters={
@@ -392,6 +400,7 @@ class AudioProcessingManager(MediaProcessingManager):
 
             # Fetch total sessions count
             session_reports_query = aws_db_client.select(
+                user_id=therapist_id,
                 request=request,
                 fields="id",
                 filters={
@@ -418,6 +427,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 )
 
             aws_db_client.update(
+                user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload={

@@ -53,6 +53,7 @@ class MediaProcessingManager(ABC):
         """
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         await assistant_manager.update_session(
+            therapist_id=therapist_id,
             language_code=language_code,
             environment=environment,
             background_tasks=background_tasks,
@@ -85,6 +86,7 @@ class MediaProcessingManager(ABC):
             today = datetime.now().date()
             today_formatted = today.strftime(DATE_TIME_FORMAT)
             aws_db_client.update(
+                user_id=therapist_id,
                 request=request,
                 table_name="pending_audio_jobs",
                 filters={

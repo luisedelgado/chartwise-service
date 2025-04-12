@@ -406,6 +406,7 @@ class AssistantRouter:
                 )
 
             session_report_data = await self._assistant_manager.retrieve_single_session_report(
+                therapist_id=user_id,
                 session_report_id=session_report_id,
                 request=request,
             )
@@ -666,6 +667,7 @@ class AssistantRouter:
                 aws_db_client=aws_db_client,
             )
             patient_id = (await self._assistant_manager.update_session(
+                therapist_id=user_id,
                 language_code=language_code,
                 environment=self._environment,
                 background_tasks=background_tasks,
@@ -872,6 +874,7 @@ class AssistantRouter:
                 )
 
             patient_data = await self._assistant_manager.retrieve_single_patient(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
@@ -1087,6 +1090,7 @@ class AssistantRouter:
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             await self._assistant_manager.update_patient(
+                therapist_id=user_id,
                 filtered_body=body,
                 session_id=session_id,
                 background_tasks=background_tasks,
@@ -1153,6 +1157,7 @@ class AssistantRouter:
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = aws_db_client.select(
+                user_id=user_id,
                 request=request,
                 fields="*",
                 filters={
@@ -1165,6 +1170,7 @@ class AssistantRouter:
 
             # Cascading will take care of deleting the session notes as well.
             delete_result = aws_db_client.delete(
+                user_id=user_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 filters={
@@ -1236,6 +1242,7 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             attendance_insights_data = await self._assistant_manager.retrieve_patient_insights(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
@@ -1299,6 +1306,7 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             briefing_data = await self._assistant_manager.retrieve_briefing(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
@@ -1362,6 +1370,7 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
@@ -1425,6 +1434,7 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             recent_topics_data = await self._assistant_manager.recent_topics_data(
+                therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
