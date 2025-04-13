@@ -3,7 +3,7 @@ from fastapi import (
     BackgroundTasks,
     Body,
     Cookie,
-    Depends,
+    Security,
     HTTPException,
     Path,
     Query,
@@ -73,7 +73,7 @@ class AssistantRouter:
         @self.router.get(self.SINGLE_SESSION_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def retrieve_single_session_report(response: Response,
                                                  request: Request,
-                                                 _: dict = Depends(verify_cognito_token),
+                                                 _: dict = Security(verify_cognito_token),
                                                  session_report_id: str = Path(..., min_length=1),
                                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -92,7 +92,7 @@ class AssistantRouter:
                                       most_recent_n: int = Query(None),
                                       time_range: Optional[TimeRange] = Query(None),
                                       patient_id: str = None,
-                                      _: dict = Depends(verify_cognito_token),
+                                      _: dict = Security(verify_cognito_token),
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_session_reports_internal(
@@ -111,7 +111,7 @@ class AssistantRouter:
                                      request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
-                                     _: dict = Depends(verify_cognito_token),
+                                     _: dict = Security(verify_cognito_token),
                                      client_timezone_identifier: Annotated[str, Body()] = None,
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -130,7 +130,7 @@ class AssistantRouter:
                                  request: Request,
                                  response: Response,
                                  background_tasks: BackgroundTasks,
-                                 _: dict = Depends(verify_cognito_token),
+                                 _: dict = Security(verify_cognito_token),
                                  client_timezone_identifier: Annotated[str, Body()] = None,
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -149,7 +149,7 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  session_report_id: str = None,
-                                 _: dict = Depends(verify_cognito_token),
+                                 _: dict = Security(verify_cognito_token),
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_session_internal(
@@ -165,12 +165,12 @@ class AssistantRouter:
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
                                           response: Response,
-                                          _: dict = Depends(verify_cognito_token),
+                                          _: dict = Security(verify_cognito_token),
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             request.state.session_id = session_id
             request.state.patient_id = query.patient_id
-            if not self._auth_manager.access_token_is_valid(authorization):
+            if not self._auth_manager.session_token_is_valid(authorization):
                 raise AUTH_TOKEN_EXPIRED_ERROR
 
             try:
@@ -211,7 +211,7 @@ class AssistantRouter:
         async def get_single_patient(response: Response,
                                      request: Request,
                                      patient_id: str = Path(..., min_length=1),
-                                     _: dict = Depends(verify_cognito_token),
+                                     _: dict = Security(verify_cognito_token),
                                      authorization: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_single_patient_internal(
@@ -225,7 +225,7 @@ class AssistantRouter:
         @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patients(response: Response,
                                request: Request,
-                               _: dict = Depends(verify_cognito_token),
+                               _: dict = Security(verify_cognito_token),
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_patients_internal(
@@ -240,7 +240,7 @@ class AssistantRouter:
                               request: Request,
                               background_tasks: BackgroundTasks,
                               body: PatientInsertPayload,
-                              _: dict = Depends(verify_cognito_token),
+                              _: dict = Security(verify_cognito_token),
                               authorization: Annotated[Union[str, None], Cookie()] = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(
@@ -257,7 +257,7 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  body: PatientUpdatePayload,
-                                 _: dict = Depends(verify_cognito_token),
+                                 _: dict = Security(verify_cognito_token),
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(
@@ -273,7 +273,7 @@ class AssistantRouter:
         async def delete_patient(request: Request,
                                  response: Response,
                                  patient_id: str = None,
-                                 _: dict = Depends(verify_cognito_token),
+                                 _: dict = Security(verify_cognito_token),
                                  authorization: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(
@@ -288,7 +288,7 @@ class AssistantRouter:
         async def get_attendance_insights(response: Response,
                                           request: Request,
                                           patient_id: str = None,
-                                          _: dict = Depends(verify_cognito_token),
+                                          _: dict = Security(verify_cognito_token),
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_attendance_insights_internal(
@@ -303,7 +303,7 @@ class AssistantRouter:
         async def get_briefing(response: Response,
                                request: Request,
                                patient_id: str = None,
-                               _: dict = Depends(verify_cognito_token),
+                               _: dict = Security(verify_cognito_token),
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_briefing_internal(
@@ -318,7 +318,7 @@ class AssistantRouter:
         async def get_question_suggestions(response: Response,
                                            request: Request,
                                            patient_id: str = None,
-                                           _: dict = Depends(verify_cognito_token),
+                                           _: dict = Security(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_question_suggestions_internal(
@@ -333,7 +333,7 @@ class AssistantRouter:
         async def get_recent_topics(response: Response,
                                     request: Request,
                                     patient_id: str = None,
-                                    _: dict = Depends(verify_cognito_token),
+                                    _: dict = Security(verify_cognito_token),
                                     authorization: Annotated[Union[str, None], Cookie()] = None,
                                     session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_recent_topics_internal(
@@ -348,7 +348,7 @@ class AssistantRouter:
         async def transform_session_with_template(request: Request,
                                                   response: Response,
                                                   body: TemplatePayload,
-                                                  _: dict = Depends(verify_cognito_token),
+                                                  _: dict = Security(verify_cognito_token),
                                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(
@@ -377,7 +377,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -453,7 +453,7 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
 
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -529,7 +529,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = body.patient_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -625,7 +625,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.session_report_id = body.id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -714,7 +714,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.session_report_id = session_report_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -845,7 +845,7 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
 
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -911,7 +911,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -973,7 +973,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1056,7 +1056,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = body.id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1129,7 +1129,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1217,7 +1217,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1281,7 +1281,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1345,7 +1345,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1409,7 +1409,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -1476,7 +1476,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.notes_template = template.value
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:

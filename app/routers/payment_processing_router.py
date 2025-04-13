@@ -4,10 +4,10 @@ from enum import Enum
 from datetime import datetime
 from fastapi import (APIRouter,
                      Cookie,
-                     Depends,
                      HTTPException,
                      Request,
                      Response,
+                     Security,
                      status)
 from pydantic import BaseModel
 from typing import Annotated, Optional, Union
@@ -72,7 +72,7 @@ class PaymentProcessingRouter:
         async def create_checkout_session(request: Request,
                                           response: Response,
                                           payload: PaymentSessionPayload,
-                                          _: dict = Depends(verify_cognito_token),
+                                          _: dict = Security(verify_cognito_token),
                                           authorization: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_checkout_session_internal(
@@ -92,7 +92,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_subscriptions(response: Response,
                                          request: Request,
-                                         _: dict = Depends(verify_cognito_token),
+                                         _: dict = Security(verify_cognito_token),
                                          authorization: Annotated[Union[str, None], Cookie()] = None,
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_subscriptions_internal(
@@ -106,7 +106,7 @@ class PaymentProcessingRouter:
         async def update_subscription(payload: UpdateSubscriptionPayload,
                                       response: Response,
                                       request: Request,
-                                      _: dict = Depends(verify_cognito_token),
+                                      _: dict = Security(verify_cognito_token),
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_subscription_internal(
@@ -121,7 +121,7 @@ class PaymentProcessingRouter:
         @self.router.delete(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_subscription(response: Response,
                                       request: Request,
-                                      _: dict = Depends(verify_cognito_token),
+                                      _: dict = Security(verify_cognito_token),
                                       authorization: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_subscription_internal(
@@ -134,7 +134,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
         async def retrieve_product_catalog(request: Request,
                                            response: Response,
-                                           _: dict = Depends(verify_cognito_token),
+                                           _: dict = Security(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_product_catalog_internal(
@@ -148,7 +148,7 @@ class PaymentProcessingRouter:
         async def create_update_payment_method_session(request: Request,
                                                        response: Response,
                                                        payload: UpdatePaymentMethodPayload,
-                                                       _: dict = Depends(verify_cognito_token),
+                                                       _: dict = Security(verify_cognito_token),
                                                        authorization: Annotated[Union[str, None], Cookie()] = None,
                                                        session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_update_payment_method_session_internal(
@@ -162,7 +162,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_payment_history(request: Request,
                                            response: Response,
-                                           _: dict = Depends(verify_cognito_token),
+                                           _: dict = Security(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None,
                                            batch_size: int = 0,
@@ -193,7 +193,7 @@ class PaymentProcessingRouter:
         payload – the incoming request's payload.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -269,7 +269,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -367,7 +367,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -440,7 +440,7 @@ class PaymentProcessingRouter:
         price_id – the new price_id to be associated with the subscription.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -527,7 +527,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -585,7 +585,7 @@ class PaymentProcessingRouter:
         payload – the JSON payload containing the update data.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -662,7 +662,7 @@ class PaymentProcessingRouter:
         starting_after – the id of the last payment that was retrieved (for pagination purposes).
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:

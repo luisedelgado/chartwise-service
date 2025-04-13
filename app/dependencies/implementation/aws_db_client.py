@@ -24,9 +24,7 @@ from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 class AwsDbClient(AwsDbBaseClass):
 
     def __init__(self,
-                 encryptor: ChartWiseEncryptor,
-                 is_admin: bool = False):
-        self.is_admin = is_admin
+                 encryptor: ChartWiseEncryptor):
         self.encryptor = encryptor
 
     async def insert(self,

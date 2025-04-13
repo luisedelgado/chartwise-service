@@ -3,7 +3,7 @@ import jwt
 import os
 
 from jwt import PyJWKClient
-from fastapi import HTTPException, status, Request
+from fastapi import Header, HTTPException, status, Request
 from typing import Dict
 
 COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get("COGNITO_REGION")}.amazonaws.com/{os.environ.get("COGNITO_USER_POOL_ID")}"
@@ -12,22 +12,21 @@ JWKS_CACHE = None
 JWKS_CACHE_EXPIRATION = 0
 JWKS_CACHE_TTL_SECONDS = 86400 # 24 hours
 
-def verify_cognito_token(request: Request) -> Dict:
+def verify_cognito_token(auth_header: str = Header(..., description="Bearer Cognito ID token")) -> Dict:
     """FastAPI dependency that validates the Authorization header and returns user info."""
-    auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Store authorization header missing or invalid",
         )
 
-    token = auth_header.split(" ")[1]
-    decoded_token = decode_cognito_token(token)
+    cognito_token = auth_header.split(" ")[1]
+    decoded_cognito_token = decode_cognito_token(cognito_token)
 
     return {
-        "sub": decoded_token.get("sub"),
-        "email": decoded_token.get("email"),
-        "claims": decoded_token
+        "sub": decoded_cognito_token.get("sub"),
+        "email": decoded_cognito_token.get("email"),
+        "claims": decoded_cognito_token
     }
 
 def decode_cognito_token(token: str) -> Dict:

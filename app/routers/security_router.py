@@ -5,10 +5,10 @@ from enum import Enum
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
-                     Depends,
                      HTTPException,
                      Request,
                      Response,
+                     Security,
                      status,)
 from langcodes import Language
 from typing import Annotated, Optional, Union
@@ -70,7 +70,7 @@ class SecurityRouter:
         @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def signin(response: Response,
                          request: Request,
-                         user_info: dict = Depends(verify_cognito_token),
+                         user_info: dict = Security(verify_cognito_token),
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signin_internal(
                 user_info=user_info,
@@ -82,11 +82,11 @@ class SecurityRouter:
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
-                                     _: dict = Depends(verify_cognito_token),
-                                     authorization: Annotated[Union[str, None], Cookie()] = None,
+                                     _: dict = Security(verify_cognito_token),
+                                     session_token: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._refresh_auth_token_internal(
-                authorization=authorization,
+                session_token=session_token,
                 request=request,
                 response=response,
                 session_id=session_id
@@ -96,7 +96,7 @@ class SecurityRouter:
         async def logout(request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
-                         _: dict = Depends(verify_cognito_token),
+                         _: dict = Security(verify_cognito_token),
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(
                 request=request,
@@ -109,11 +109,11 @@ class SecurityRouter:
         async def add_therapist(body: SignupPayload,
                                 request: Request,
                                 response: Response,
-                                authorization: Annotated[Union[str, None], Cookie()] = None,
-                                _: dict = Depends(verify_cognito_token),
+                                _: dict = Security(verify_cognito_token),
+                                session_token: Annotated[Union[str, None], Cookie()] = None,
                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_therapist_internal(
-                authorization=authorization,
+                session_token=session_token,
                 body=body,
                 request=request,
                 response=response,
@@ -124,27 +124,27 @@ class SecurityRouter:
         async def update_therapist(request: Request,
                                    response: Response,
                                    body: TherapistUpdatePayload,
-                                   _: dict = Depends(verify_cognito_token),
-                                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                                   _: dict = Security(verify_cognito_token),
+                                   session_token: Annotated[Union[str, None], Cookie()] = None,
                                    session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_therapist_internal(
                 request=request,
                 response=response,
                 body=body,
-                authorization=authorization,
+                authorization=session_token,
                 session_id=session_id
             )
 
         @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
         async def delete_therapist(request: Request,
                                    response: Response,
-                                   _: dict = Depends(verify_cognito_token),
-                                   authorization: Annotated[Union[str, None], Cookie()] = None,
+                                   _: dict = Security(verify_cognito_token),
+                                   session_token: Annotated[Union[str, None], Cookie()] = None,
                                    session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_therapist_internal(
                 request=request,
                 response=response,
-                authorization=authorization,
+                session_token=session_token,
                 session_id=session_id
             )
 
@@ -209,25 +209,25 @@ class SecurityRouter:
             )
 
     async def _refresh_auth_token_internal(self,
-                                           authorization: Annotated[Union[str, None], Cookie()],
                                            request: Request,
                                            response: Response,
+                                           session_token: Annotated[Union[str, None], Cookie()],
                                            session_id: Annotated[Union[str, None], Cookie()]):
         """
         Refreshes an oauth token to be used for invoking the endpoints.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
         request – the request object.
         response – the response object to be used for creating the final response.
+        session_token – the session token cookie, if exists.
         session_id – the id of the current user session.
         """
         request.state.session_id = session_id
         try:
-            if not self._auth_manager.access_token_is_valid(authorization):
+            if not self._auth_manager.session_token_is_valid(session_token):
                 raise AUTH_TOKEN_EXPIRED_ERROR
 
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
 
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
@@ -316,28 +316,28 @@ class SecurityRouter:
         return {}
 
     async def _add_therapist_internal(self,
-                                      authorization: Annotated[Union[str, None], Cookie()],
                                       body: SignupPayload,
                                       request: Request,
                                       response: Response,
+                                      session_token: Annotated[Union[str, None], Cookie()],
                                       session_id: Annotated[Union[str, None], Cookie()]):
         """
         Adds a new therapist.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
         body – the body associated with the request.
         request – the request object.
         response – the response object to be used for creating the final response.
+        session_token – the session token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(session_token):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             auth_token = await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -423,7 +423,7 @@ class SecurityRouter:
                                          request: Request,
                                          response: Response,
                                          body: TherapistUpdatePayload,
-                                         authorization: Annotated[Union[str, None], Cookie()],
+                                         session_token: Annotated[Union[str, None], Cookie()],
                                          session_id: Annotated[Union[str, None], Cookie()]):
         """
         Updates data associated with a therapist.
@@ -432,15 +432,15 @@ class SecurityRouter:
         request – the request object.
         response – the object to be used for constructing the final response.
         body – the body associated with the request.
-        authorization – the authorization cookie, if exists.
+        session_token – the session token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(session_token):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -502,7 +502,7 @@ class SecurityRouter:
     async def _delete_therapist_internal(self,
                                          request: Request,
                                          response: Response,
-                                         authorization: Annotated[Union[str, None], Cookie()],
+                                         session_token: Annotated[Union[str, None], Cookie()],
                                          session_id: Annotated[Union[str, None], Cookie()]):
         """
         Deletes all data associated with a therapist.
@@ -510,15 +510,15 @@ class SecurityRouter:
         Arguments:
         request – the request object.
         response – the object to be used for constructing the final response.
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(session_token):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,

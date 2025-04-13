@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
-                     Depends,
+                     Security,
                      Form,
                      Header,
                      HTTPException,
@@ -58,7 +58,7 @@ class AudioProcessingRouter:
                                            patient_id: Annotated[str, Form()],
                                            session_date: Annotated[str, Form()],
                                            client_timezone_identifier: Annotated[str, Form()],
-                                           _: dict = Depends(verify_cognito_token),
+                                           _: dict = Security(verify_cognito_token),
                                            authorization: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(request=request,
@@ -81,7 +81,7 @@ class AudioProcessingRouter:
                                   patient_id: Annotated[str, Form()],
                                   session_date: Annotated[str, Form()],
                                   client_timezone_identifier: Annotated[str, Form()],
-                                  _: dict = Depends(verify_cognito_token),
+                                  _: dict = Security(verify_cognito_token),
                                   authorization: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(request=request,
@@ -100,7 +100,7 @@ class AudioProcessingRouter:
                                             response: Response,
                                             patient_id: str = None,
                                             file_extension: str = None,
-                                            _: dict = Depends(verify_cognito_token),
+                                            _: dict = Security(verify_cognito_token),
                                             authorization: Annotated[Union[str, None], Cookie()] = None,
                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._generate_audio_upload_url_internal(file_extension=file_extension,
@@ -138,7 +138,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -230,7 +230,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = session_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:
@@ -333,7 +333,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:

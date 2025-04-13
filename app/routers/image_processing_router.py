@@ -2,7 +2,7 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Cookie,
-    Depends,
+    Security,
     File,
     Form,
     Header,
@@ -51,7 +51,7 @@ class ImageProcessingRouter:
                                session_date: Annotated[str, Form()],
                                template: Annotated[SessionNotesTemplate, Form()],
                                client_timezone_identifier: Annotated[str, Form()],
-                               _: dict = Depends(verify_cognito_token),
+                               _: dict = Security(verify_cognito_token),
                                image: UploadFile = File(...),
                                authorization: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -96,7 +96,7 @@ class ImageProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.access_token_is_valid(authorization):
+        if not self._auth_manager.session_token_is_valid(authorization):
             raise AUTH_TOKEN_EXPIRED_ERROR
 
         try:

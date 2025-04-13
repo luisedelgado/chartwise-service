@@ -84,7 +84,8 @@ class DependencyContainer:
 
     def inject_aws_db_client(self) -> AwsDbBaseClass:
         if self._aws_db_client is None:
-            self._aws_db_client: AwsDbBaseClass = FakeAwsDbClient() if self._testing_environment else AwsDbClient()
+            chartwise_encryptor = self.inject_chartwise_encryptor()
+            self._aws_db_client: AwsDbBaseClass = FakeAwsDbClient() if self._testing_environment else AwsDbClient(encryptor=chartwise_encryptor)
         return self._aws_db_client
 
     def inject_aws_kms_client(self) -> AwsKmsBaseClass:

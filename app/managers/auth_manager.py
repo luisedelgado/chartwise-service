@@ -41,7 +41,7 @@ class AuthManager:
         formatted_expiration_time = expiration_time.strftime(DATE_TIME_FORMAT)
         return (jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM), formatted_expiration_time)
 
-    def access_token_is_valid(self, access_token: str) -> bool:
+    def session_token_is_valid(self, access_token: str) -> bool:
         try:
             token_data = self.extract_data_from_token(access_token)
             user_id: str = token_data.get("user_id")
