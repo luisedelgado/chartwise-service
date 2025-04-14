@@ -1,10 +1,10 @@
 import json
 
+from asyncpg import Connection
 from fastapi import Request
 from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
-from ...internal.db.connection import get_conn
 from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
@@ -33,12 +33,6 @@ class AwsDbClient(AwsDbBaseClass):
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
-            # Set the current user ID for satisfying RLS.
-            self.set_session_user_id(
-                request=request,
-                user_id=user_id
-            )
-
             payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
             values = list(payload.values())
@@ -52,7 +46,13 @@ class AwsDbClient(AwsDbBaseClass):
                 RETURNING *
                 """
             )
-            async with (await get_conn(request.app)) as conn:
+
+            async with request.app.state.pool.acquire() as conn:
+                # Set the current user ID for satisfying RLS.
+                await self.set_session_user_id(
+                    conn=conn,
+                    user_id=user_id
+                )
                 row = await conn.fetchrow(insert_statement, *values)
                 return dict(row) if row else None
         except Exception as e:
@@ -65,12 +65,6 @@ class AwsDbClient(AwsDbBaseClass):
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
-            # Set the current user ID for satisfying RLS.
-            self.set_session_user_id(
-                request=request,
-                user_id=user_id
-            )
-
             payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
             values = list(payload.values())
@@ -93,7 +87,12 @@ class AwsDbClient(AwsDbBaseClass):
                 """
             )
 
-            async with (await get_conn(request.app)) as conn:
+            async with request.app.state.pool.acquire() as conn:
+                # Set the current user ID for satisfying RLS.
+                await self.set_session_user_id(
+                    conn=conn,
+                    user_id=user_id
+                )
                 row = await conn.fetchrow(upsert_query, *values)
                 return dict(row) if row else None
         except Exception as e:
@@ -106,12 +105,6 @@ class AwsDbClient(AwsDbBaseClass):
                      filters: dict[str, Any],
                      table_name: str) -> Optional[dict]:
         try:
-            # Set the current user ID for satisfying RLS.
-            self.set_session_user_id(
-                request=request,
-                user_id=user_id
-            )
-
             payload = self.encrypt_payload(payload, table_name)
 
             set_columns = list(payload.keys())
@@ -139,7 +132,12 @@ class AwsDbClient(AwsDbBaseClass):
 
             all_values = set_values + where_values
 
-            async with (await get_conn(request.app)) as conn:
+            async with request.app.state.pool.acquire() as conn:
+                # Set the current user ID for satisfying RLS.
+                await self.set_session_user_id(
+                    conn=conn,
+                    user_id=user_id
+                )
                 row = await conn.fetchrow(update_query, *all_values)
                 return dict(row) if row else None
         except Exception as e:
@@ -154,12 +152,6 @@ class AwsDbClient(AwsDbBaseClass):
                      limit: Optional[int] = None,
                      order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         try:
-            # Set the current user ID for satisfying RLS.
-            self.set_session_user_id(
-                request=request,
-                user_id=user_id
-            )
-
             where_clause, where_values = self.build_where_clause(filters)
             field_expr = ', '.join([f'"{field}"' for field in fields])
             limit_clause = f"LIMIT {limit}" if limit is not None else ""
@@ -181,7 +173,12 @@ class AwsDbClient(AwsDbBaseClass):
             )
             select_query = " ".join(select_query.split())
 
-            async with (await get_conn(request.app)) as conn:
+            async with request.app.state.pool.acquire() as conn:
+                # Set the current user ID for satisfying RLS.
+                await self.set_session_user_id(
+                    conn=conn,
+                    user_id=user_id
+                )
                 rows = await conn.fetch(select_query, *where_values)
                 return [dict(row) for row in rows]
 
@@ -194,12 +191,6 @@ class AwsDbClient(AwsDbBaseClass):
                      table_name: str,
                      filters: dict[str, Any]) -> list[dict]:
         try:
-            # Set the current user ID for satisfying RLS.
-            self.set_session_user_id(
-                request=request,
-                user_id=user_id
-            )
-
             where_clause, where_values = self.build_where_clause(filters)
             delete_query = (
                 f"""
@@ -210,7 +201,12 @@ class AwsDbClient(AwsDbBaseClass):
             )
             delete_query = " ".join(delete_query.split())
 
-            async with (await get_conn(request.app)) as conn:
+            async with request.app.state.pool.acquire() as conn:
+                # Set the current user ID for satisfying RLS.
+                await self.set_session_user_id(
+                    conn=conn,
+                    user_id=user_id
+                )
                 rows = await conn.fetch(delete_query, *where_values)
                 return [dict(row) for row in rows]
         except Exception as e:
@@ -218,16 +214,16 @@ class AwsDbClient(AwsDbBaseClass):
 
     async def get_user(self):
         # # Set the current user ID for satisfying RLS.
-        # self.set_session_user_id(
-        #     request=request,
+        # await self.set_session_user_id(
+        #     conn=conn,
         #     user_id=user_id
         # )
         pass
 
     async def get_current_user_id(self) -> str:
         # # Set the current user ID for satisfying RLS.
-        # self.set_session_user_id(
-        #     request=request,
+        # await self.set_session_user_id(
+        #     conn=conn,
         #     user_id=user_id
         # )
         pass
@@ -236,26 +232,26 @@ class AwsDbClient(AwsDbBaseClass):
                           request: Request,
                           user_id: str):
         # # Set the current user ID for satisfying RLS.
-        # self.set_session_user_id(
-        #     request=request,
+        # await self.set_session_user_id(
+        #     conn=conn,
         #     user_id=user_id
         # )
         pass
 
     async def sign_out(self):
         # # Set the current user ID for satisfying RLS.
-        # self.set_session_user_id(
-        #     request=request,
+        # await self.set_session_user_id(
+        #     conn=conn,
         #     user_id=user_id
         # )
         pass
 
-    async def set_session_user_id(self, request: Request, user_id: str):
+    async def set_session_user_id(self,
+                                  user_id: str,
+                                  conn: Connection):
         try:
-            async with (await get_conn(request.app)) as conn:
-                await conn.execute(
-                    "SET app.current_user_id = $1", user_id
-                )
+            quoted_user_id = await conn.fetchval("SELECT quote_literal($1)", user_id)
+            await conn.execute(f"SET app.current_user_id = {quoted_user_id}")
         except Exception as e:
             raise RuntimeError(f"Failed to set session user ID: {e}") from e
 

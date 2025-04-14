@@ -27,6 +27,3 @@ async def connect_pool(app: FastAPI, secret_manager: AwsSecretManagerBaseClass):
 
 async def disconnect_pool(app: FastAPI):
     await app.state.pool.close()
-
-async def get_conn(app: FastAPI):
-    return await app.state.pool.acquire()
