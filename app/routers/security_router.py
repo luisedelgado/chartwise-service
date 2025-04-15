@@ -20,6 +20,7 @@ from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
 from ..internal.schemas import (
     Gender,
+    DATE_COLUMNS,
     ENCRYPTED_PATIENTS_TABLE_NAME,
     SUBSCRIPTION_STATUS_TABLE_NAME,
     THERAPISTS_TABLE_NAME,
@@ -371,6 +372,11 @@ class SecurityRouter:
             for key, value in body.items():
                 if isinstance(value, Enum):
                     value = value.value
+                elif key in DATE_COLUMNS:
+                    value = datetime.strptime(
+                        value,
+                        datetime_handler.DATE_FORMAT
+                    ).date()
                 payload[key] = value
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -470,6 +476,11 @@ class SecurityRouter:
             for key, value in body.items():
                 if isinstance(value, Enum):
                     value = value.value
+                elif key in DATE_COLUMNS:
+                    value = datetime.strptime(
+                        value,
+                        datetime_handler.DATE_FORMAT
+                    ).date()
                 payload[key] = value
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()

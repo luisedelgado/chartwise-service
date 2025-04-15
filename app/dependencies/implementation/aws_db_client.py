@@ -54,7 +54,10 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                row = await conn.fetchrow(insert_statement, *values)
+                row = await conn.fetchrow(
+                    insert_statement,
+                    *values
+                )
                 return dict(row) if row else None
         except Exception as e:
             raise RuntimeError(f"Insert failed: {e}") from e
@@ -94,7 +97,10 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                row = await conn.fetchrow(upsert_query, *values)
+                row = await conn.fetchrow(
+                    upsert_query,
+                    *values
+                )
                 return dict(row) if row else None
         except Exception as e:
             raise RuntimeError(f"Upsert failed: {e}") from e
@@ -139,7 +145,10 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                row = await conn.fetchrow(update_query, *all_values)
+                row = await conn.fetchrow(
+                    update_query,
+                    *all_values
+                )
                 return dict(row) if row else None
         except Exception as e:
             raise Exception(e)
@@ -154,7 +163,7 @@ class AwsDbClient(AwsDbBaseClass):
                      order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         try:
             where_clause, where_values = self.build_where_clause(filters)
-            field_expr = ', '.join([f'"{field}"' for field in fields])
+            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
             limit_clause = f"LIMIT {limit}" if limit is not None else ""
             order_clause = ""
             if order_by:
@@ -180,9 +189,11 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                rows = await conn.fetch(select_query, *where_values)
+                rows = await conn.fetch(
+                    select_query,
+                    *where_values
+                )
                 return [dict(row) for row in rows]
-
         except Exception as e:
             raise RuntimeError(f"Select failed: {e}") from e
 
@@ -208,7 +219,10 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                rows = await conn.fetch(delete_query, *where_values)
+                rows = await conn.fetch(
+                    delete_query,
+                    *where_values
+                )
                 return [dict(row) for row in rows]
         except Exception as e:
             raise RuntimeError(f"Delete failed: {e}") from e
