@@ -1,4 +1,5 @@
 import json
+import uuid
 
 from asyncpg import Connection
 from fastapi import Request
@@ -250,8 +251,9 @@ class AwsDbClient(AwsDbBaseClass):
                                   user_id: str,
                                   conn: Connection):
         try:
-            quoted_user_id = await conn.fetchval("SELECT quote_literal($1)", user_id)
-            await conn.execute(f"SET app.current_user_id = {quoted_user_id}")
+            # Validate and normalize
+            parsed_user_id = str(uuid.UUID(user_id))
+            await conn.execute(f"SET app.current_user_id = '{parsed_user_id}'")
         except Exception as e:
             raise RuntimeError(f"Failed to set session user ID: {e}") from e
 
