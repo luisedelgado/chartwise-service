@@ -1052,7 +1052,10 @@ class PaymentProcessingRouter:
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
             current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
-            current_billing_period_end_date = current_period_end.strftime(DATE_FORMAT)
+            current_billing_period_end_date = datetime.strptime(
+                current_period_end,
+                DATE_FORMAT
+            ).date()
             customer_id = subscription.get('customer')
             subscription_id = subscription.get('id')
             product_id = subscription['items']['data'][0]['price']['product']
@@ -1073,8 +1076,12 @@ class PaymentProcessingRouter:
             }
 
             if is_trialing:
-                trial_end_date = datetime.fromtimestamp(subscription['trial_end'])
-                payload["free_trial_end_date"] = trial_end_date.strftime(DATE_FORMAT)
+                trial_end_date_from_timestamp = datetime.fromtimestamp(subscription['trial_end'])
+                trial_end_date_formatted = datetime.strptime(
+                    trial_end_date_from_timestamp,
+                    DATE_FORMAT
+                ).date()
+                payload["free_trial_end_date"] = trial_end_date_formatted
 
             if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
                 # Free trial is ongoing, or subscription is active.
