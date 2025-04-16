@@ -85,7 +85,7 @@ class MediaProcessingManager(ABC):
             # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
             today = datetime.now().date()
             today_formatted = today.strftime(DATE_TIME_FORMAT)
-            aws_db_client.update(
+            await aws_db_client.update(
                 user_id=therapist_id,
                 request=request,
                 table_name="pending_audio_jobs",

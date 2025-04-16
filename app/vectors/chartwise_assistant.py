@@ -148,7 +148,7 @@ class ChartWiseAssistant:
                 "to explore in our upcoming session?"
             )
 
-            session_dates_override = self._retrieve_n_most_recent_session_dates(
+            session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=BRIEFING_CONTEXT_SESSIONS_CAP
@@ -239,7 +239,7 @@ class ChartWiseAssistant:
                 "about {patient_name}'s session history?"
             )
 
-            session_dates_override = self._retrieve_n_most_recent_session_dates(
+            session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP
@@ -324,7 +324,7 @@ class ChartWiseAssistant:
                 f"What are the topics that have come up the most in {patient_name}'s most recent sessions?"
             )
 
-            session_dates_override = self._retrieve_n_most_recent_session_dates(
+            session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
@@ -412,7 +412,7 @@ class ChartWiseAssistant:
                 f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
             )
 
-            session_dates_override = self._retrieve_n_most_recent_session_dates(
+            session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
@@ -483,11 +483,11 @@ class ChartWiseAssistant:
                                            patient_gender: str,) -> str:
         try:
             patient_session_dates = [
-                date_wrapper.session_date for date_wrapper in self._retrieve_n_most_recent_session_dates(
+                date_wrapper.session_date for date_wrapper in (await self._retrieve_n_most_recent_session_dates(
                     therapist_id=therapist_id,
                     patient_id=patient_id,
                     n=ATTENDANCE_CONTEXT_SESSIONS_CAP
-                )
+                ))
             ]
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(
@@ -667,13 +667,13 @@ class ChartWiseAssistant:
 
     # Private
 
-    def _retrieve_n_most_recent_session_dates(self,
-                                              therapist_id: str,
-                                              patient_id: str,
-                                              n: int) -> list[PineconeQuerySessionDateOverride]:
+    async def _retrieve_n_most_recent_session_dates(self,
+                                                    therapist_id: str,
+                                                    patient_id: str,
+                                                    n: int) -> list[PineconeQuerySessionDateOverride]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            dates_response_data = aws_db_client.select(
+            dates_response_data = await aws_db_client.select(
                 user_id=therapist_id,
                 fields="session_date",
                 filters={

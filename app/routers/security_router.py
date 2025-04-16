@@ -191,7 +191,7 @@ class SecurityRouter:
             response_payload = {
                 "token": auth_token.model_dump()
             }
-            subscription_data = self.subscription_data(
+            subscription_data = await self.subscription_data(
                 user_id=user_id,
                 request=request,
             )
@@ -238,7 +238,7 @@ class SecurityRouter:
 
             # Fetch customer data
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = aws_db_client.select(
+            customer_data_dict = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields="*",
@@ -267,7 +267,7 @@ class SecurityRouter:
                 else:
                     is_free_trial_active = False
 
-                reached_tier_usage_limit = reached_subscription_tier_usage_limit(
+                reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
                     tier=tier,
                     therapist_id=user_id,
                     aws_db_client=aws_db_client,
@@ -383,7 +383,7 @@ class SecurityRouter:
                 payload[key] = value
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            aws_db_client.insert(
+            await aws_db_client.insert(
                 user_id=user_id,
                 request=request,
                 payload=payload,
@@ -410,7 +410,7 @@ class SecurityRouter:
                 "therapist_id": user_id,
                 "token": auth_token.model_dump()
             }
-            subscription_data = self.subscription_data(
+            subscription_data = await self.subscription_data(
                 user_id=user_id,
                 request=request,
             )
@@ -490,7 +490,7 @@ class SecurityRouter:
                 payload[key] = value
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            update_response = aws_db_client.update(
+            update_response = await aws_db_client.update(
                 user_id=user_id,
                 request=request,
                 table_name="therapists",
@@ -555,7 +555,7 @@ class SecurityRouter:
         try:
             # Cancel Stripe subscription
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = aws_db_client.select(
+            customer_data_dict = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields="subscription_id",
@@ -571,7 +571,7 @@ class SecurityRouter:
                 stripe_client = dependency_container.inject_stripe_client()
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
 
-                aws_db_client.update(
+                await aws_db_client.update(
                     user_id=user_id,
                     request=request,
                     payload={
@@ -585,7 +585,7 @@ class SecurityRouter:
                 )
 
             # Delete patient data associated with therapist.
-            delete_patients_operation = aws_db_client.delete(
+            delete_patients_operation = await aws_db_client.delete(
                 user_id=user_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
@@ -602,7 +602,7 @@ class SecurityRouter:
             )
 
             # Set therapist user as an inactive account.
-            disable_account_response_dict = aws_db_client.update(
+            disable_account_response_dict = await aws_db_client.update(
                 user_id=user_id,
                 request=request,
                 table_name="therapists",
@@ -655,9 +655,9 @@ class SecurityRouter:
                 detail=description
             )
 
-    def subscription_data(self,
-                          user_id: str,
-                          request: Request):
+    async def subscription_data(self,
+                                user_id: str,
+                                request: Request):
         """
         Returns a JSON object representing the subscription status of the user.
         Arguments:
@@ -666,7 +666,7 @@ class SecurityRouter:
         """
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = aws_db_client.select(
+            customer_data_dict = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields="*",
@@ -695,7 +695,7 @@ class SecurityRouter:
                 else:
                     is_free_trial_active = False
 
-                reached_tier_usage_limit = reached_subscription_tier_usage_limit(
+                reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
                     tier=tier,
                     therapist_id=user_id,
                     aws_db_client=aws_db_client,

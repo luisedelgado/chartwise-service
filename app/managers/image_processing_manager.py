@@ -49,7 +49,7 @@ class ImageProcessingManager(MediaProcessingManager):
                                                                                        image_filename=image.filename)
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            insert_result = aws_db_client.insert(
+            insert_result = await aws_db_client.insert(
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -110,7 +110,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     break
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            session_report_data = aws_db_client.select(
+            session_report_data = await aws_db_client.select(
                 user_id=therapist_id,
                 fields="*",
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,

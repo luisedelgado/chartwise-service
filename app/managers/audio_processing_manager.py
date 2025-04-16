@@ -47,7 +47,7 @@ class AudioProcessingManager(MediaProcessingManager):
             # Upload initial attributes of session report, so client can mark it as 'processing'.
             source = SessionNotesSource.FULL_SESSION_RECORDING.value if diarize else SessionNotesSource.NOTES_RECORDING.value
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            session_report_creation_response = aws_db_client.insert(
+            session_report_creation_response = await aws_db_client.insert(
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -65,7 +65,7 @@ class AudioProcessingManager(MediaProcessingManager):
 
             today = datetime.now().date()
             today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
-            aws_db_client.insert(
+            await aws_db_client.insert(
                 user_id=therapist_id,
                 request=request,
                 table_name="pending_audio_jobs",
@@ -384,7 +384,7 @@ class AudioProcessingManager(MediaProcessingManager):
         try:
             # Fetch last session date
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            patient_query_data = aws_db_client.select(
+            patient_query_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields="*",
@@ -398,7 +398,7 @@ class AudioProcessingManager(MediaProcessingManager):
             patient_last_session_date = patient_query_data[0]['last_session_date']
 
             # Fetch total sessions count
-            session_reports_query = aws_db_client.select(
+            session_reports_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields="id",
@@ -425,7 +425,7 @@ class AudioProcessingManager(MediaProcessingManager):
                     second_date_format=datetime_handler.DATE_FORMAT
                 )
 
-            aws_db_client.update(
+            await aws_db_client.update(
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,

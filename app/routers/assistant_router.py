@@ -482,7 +482,7 @@ class AssistantRouter:
             assert year is None or datetime_handler.validate_year(year=year), "Invalid year parameteter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
-            session_reports_data = self._assistant_manager.retrieve_session_reports(
+            session_reports_data = await self._assistant_manager.retrieve_session_reports(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 year=year,
@@ -567,7 +567,7 @@ class AssistantRouter:
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
             )
@@ -662,7 +662,7 @@ class AssistantRouter:
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
             )
@@ -755,7 +755,7 @@ class AssistantRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client
             )
@@ -814,9 +814,9 @@ class AssistantRouter:
             ):
                 yield part
         except Exception as e:
-            yield ("\n" + self._assistant_manager.default_streaming_error_message(
+            yield ("\n" + (await self._assistant_manager.default_streaming_error_message(
                 user_id=therapist_id,
-            ))
+            )))
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1005,7 +1005,7 @@ class AssistantRouter:
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
             )
@@ -1156,7 +1156,7 @@ class AssistantRouter:
             assert len(user_id or '') > 0, "Missing therapist_id param"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            patient_query = aws_db_client.select(
+            patient_query = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields="*",
@@ -1169,7 +1169,7 @@ class AssistantRouter:
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
 
             # Cascading will take care of deleting the session notes as well.
-            delete_result = aws_db_client.delete(
+            delete_result = await aws_db_client.delete(
                 user_id=user_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,

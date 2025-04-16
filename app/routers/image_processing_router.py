@@ -201,7 +201,7 @@ class ImageProcessingRouter:
         background_tasks – the background tasks manager for scheduling concurrent tasks.
         aws_db_client – the AWS database client for database operations.
         """
-        language_code = general_utilities.get_user_language_code(
+        language_code = await general_utilities.get_user_language_code(
             user_id=therapist_id,
             aws_db_client=aws_db_client,
         )

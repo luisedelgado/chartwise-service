@@ -172,7 +172,7 @@ class AudioProcessingRouter:
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
             )
@@ -366,7 +366,7 @@ class AudioProcessingRouter:
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            language_code = general_utilities.get_user_language_code(
+            language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
             )

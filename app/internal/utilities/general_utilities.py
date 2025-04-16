@@ -44,9 +44,9 @@ def extract_status_code(exception, fallback: status):
 """
 Retrieves the current user's language preference.
 """
-def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
+async def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
     try:
-        therapist_query = aws_db_client.select(
+        therapist_query = await aws_db_client.select(
             user_id=user_id,
             fields="language_preference",
             filters={

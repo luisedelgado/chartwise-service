@@ -6,10 +6,10 @@ from ...dependencies.dependency_container import AwsDbBaseClass
 
 NUM_SESSIONS_IN_BASIC_PLAN = 20
 
-def reached_subscription_tier_usage_limit(tier: str,
-                                          therapist_id: str,
-                                          aws_db_client: AwsDbBaseClass,
-                                          is_free_trial_active: bool) -> bool:
+async def reached_subscription_tier_usage_limit(tier: str,
+                                                therapist_id: str,
+                                                aws_db_client: AwsDbBaseClass,
+                                                is_free_trial_active: bool) -> bool:
     if is_free_trial_active or tier == "premium":
         return False
 
@@ -19,7 +19,7 @@ def reached_subscription_tier_usage_limit(tier: str,
     current_monday_formatted = current_monday.strftime(DATE_FORMAT)
 
     try:
-        session_reports_data = aws_db_client.select(
+        session_reports_data = await aws_db_client.select(
             user_id=therapist_id,
             fields="*",
             filters={
