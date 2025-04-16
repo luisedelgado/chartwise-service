@@ -1,11 +1,14 @@
+import asyncpg
 import json
+import os
 import uuid
 
-from asyncpg import Connection
 from fastapi import Request
 from typing import Any, List, Optional
+from urllib.parse import quote_plus
 
 from ..api.aws_db_base_class import AwsDbBaseClass
+from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
@@ -23,6 +26,8 @@ from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
 from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class AwsDbClient(AwsDbBaseClass):
+
+    STRIPE_READER_ROLE = "stripe_reader"
 
     def __init__(self,
                  encryptor: ChartWiseEncryptor):
@@ -208,6 +213,45 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Select failed: {e}") from e
 
+    async def select_with_stripe_connection(self,
+                                            fields: list[str],
+                                            filters: dict[str, Any],
+                                            table_name: str,
+                                            secret_manager: AwsSecretManagerBaseClass,
+                                            limit: Optional[int] = None,
+                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+        try:
+            where_clause, where_values = self.build_where_clause(filters)
+            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
+            limit_clause = f"LIMIT {limit}" if limit is not None else ""
+            order_clause = ""
+
+            if order_by:
+                col, direction = order_by
+                direction = direction.upper()
+                if direction not in {"ASC", "DESC"}:
+                    raise ValueError(f"Invalid order direction: {direction}")
+                order_clause = f'ORDER BY "{col}" {direction}'
+
+            select_query = (
+                f"""
+                SELECT {field_expr} FROM "{table_name}"
+                {where_clause}
+                {order_clause}
+                {limit_clause}
+                """
+            )
+            select_query = " ".join(select_query.split())
+            conn = await self.get_stripe_reader_connection(secret_manager=secret_manager)
+
+            try:
+                rows = await conn.fetch(select_query, *where_values)
+                return [dict(row) for row in rows]
+            finally:
+                await conn.close()
+        except Exception as e:
+            raise RuntimeError(f"Stripe select failed: {e}") from e
+
     async def delete(self,
                      user_id: str,
                      request: Request,
@@ -274,7 +318,7 @@ class AwsDbClient(AwsDbBaseClass):
 
     async def set_session_user_id(self,
                                   user_id: str,
-                                  conn: Connection):
+                                  conn: asyncpg.Connection):
         try:
             # Validate and normalize
             parsed_user_id = str(uuid.UUID(user_id))
@@ -437,3 +481,23 @@ class AwsDbClient(AwsDbBaseClass):
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         return where_clause, values
+
+    async def get_stripe_reader_connection(self, secret_manager: AwsSecretManagerBaseClass):
+        secret = secret_manager.get_rds_secret(
+            secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
+        )
+        password = quote_plus(secret.get(self.STRIPE_READER_ROLE))
+        endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
+        port = os.getenv("AWS_RDS_DB_PORT")
+        db = os.getenv("AWS_RDS_DB_NAME")
+
+        conn = await asyncpg.connect(
+            user=self.STRIPE_READER_ROLE,
+            password=password,
+            database=db,
+            host=endpoint,
+            port=port,
+            ssl='require',
+            timeout=10
+        )
+        return conn

@@ -6,7 +6,7 @@ from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 
 class AwsSecretManagerClient(AwsSecretManagerBaseClass):
 
-    def get_rds_secret(self) -> str:
+    def get_rds_secret(self, secret_id: str) -> str:
         region = os.environ.get("AWS_SERVICES_REGION")
         session = boto3.session.Session()
         client = session.client(
@@ -16,7 +16,7 @@ class AwsSecretManagerClient(AwsSecretManagerBaseClass):
 
         try:
             response = client.get_secret_value(
-                SecretId=os.environ.get("AWS_SECRET_MANAGER_RDS_SECRET_NAME")
+                SecretId=secret_id
             )
         except Exception as e:
             raise Exception(e)

@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from fastapi import Request
 from typing import Any, List, Optional
 
+from .aws_secret_manager_base_class import AwsSecretManagerBaseClass
+
 class AwsDbBaseClass(ABC):
 
     @abstractmethod
@@ -74,6 +76,27 @@ class AwsDbBaseClass(ABC):
         fields – the fields to be retrieved from a table.
         filters – the set of filters to be applied to the table.
         table_name – the table to be queried.
+        limit – the optional cap for count of results to be returned.
+        order_by – the optional specification for column to sort by, and sort style.
+        """
+        pass
+
+    @abstractmethod
+    async def select_with_stripe_connection(self,
+                                            fields: list[str],
+                                            filters: dict[str, Any],
+                                            table_name: str,
+                                            secret_manager: AwsSecretManagerBaseClass,
+                                            limit: Optional[int] = None,
+                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+        """
+        Fetches data from a table based on the incoming params, using a stripe_reader connection.
+
+        Arguments:
+        fields – the fields to be retrieved from a table.
+        filters – the set of filters to be applied to the table.
+        table_name – the table to be queried.
+        secret_manager – the secret manager object to be used internally.
         limit – the optional cap for count of results to be returned.
         order_by – the optional specification for column to sort by, and sort style.
         """

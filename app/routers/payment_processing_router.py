@@ -12,7 +12,12 @@ from fastapi import (APIRouter,
 from pydantic import BaseModel
 from typing import Annotated, Optional, Union
 
-from ..dependencies.dependency_container import dependency_container, AwsDbBaseClass, StripeBaseClass
+from ..dependencies.dependency_container import (
+    dependency_container,
+    AwsDbBaseClass,
+    AwsSecretManagerBaseClass,
+    StripeBaseClass
+)
 from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
 from ..internal.schemas import (
     DEV_ENVIRONMENT,
@@ -23,7 +28,7 @@ from ..internal.schemas import (
 )
 from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
-from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
@@ -216,16 +221,16 @@ class PaymentProcessingRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            is_new_customer = (0 == len(customer_data['data']))
+            is_new_customer = (0 == len(customer_data))
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_session_url = stripe_client.generate_checkout_session(
@@ -292,19 +297,19 @@ class PaymentProcessingRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            if (0 == len(customer_data['data'])):
+            if (0 == len(customer_data)):
                 return {"subscriptions": []}
 
-            customer_id = customer_data['data'][0]['customer_id']
+            customer_id = customer_data['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
@@ -312,7 +317,7 @@ class PaymentProcessingRouter:
             subscription_data = response['data']
             filtered_data = []
             for object in subscription_data:
-                payment_method_id = object.get("default_payment_method")
+                payment_method_id = object.get("default_payment_method", None)
                 payment_method_data = stripe_client.retrieve_payment_method(payment_method_id)
 
                 subscription_status = object['status']
@@ -390,17 +395,17 @@ class PaymentProcessingRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data['data'][0]['subscription_id']
+            assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             stripe_client.cancel_customer_subscription(subscription_id=subscription_id)
@@ -465,17 +470,17 @@ class PaymentProcessingRouter:
             assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data['data'][0]['subscription_id']
+            assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
+            subscription_id = customer_data['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
@@ -608,17 +613,17 @@ class PaymentProcessingRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            assert (0 != len(customer_data['data'])), "There isn't a subscription associated with the incoming therapist."
-            customer_id = customer_data['data'][0]['customer_id']
+            assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
+            customer_id = customer_data['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             update_payment_method_url = stripe_client.generate_payment_method_update_session(
@@ -685,19 +690,19 @@ class PaymentProcessingRouter:
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                 },
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-            if (0 == len(customer_data['data'])):
+            if (0 == len(customer_data)):
                 return {"payments": []}
 
-            customer_id = customer_data['data'][0]['customer_id']
+            customer_id = customer_data['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_intent_history = stripe_client.retrieve_payment_intent_history(
@@ -838,8 +843,8 @@ class PaymentProcessingRouter:
 
         if event_type == 'checkout.session.completed':
             checkout_session = event['data']['object']
-            subscription_id = checkout_session.get('subscription')
-            customer_id = checkout_session.get('customer')
+            subscription_id = checkout_session.get('subscription', None)
+            customer_id = checkout_session.get('customer', None)
             metadata = checkout_session.get('metadata', {})
             therapist_id = None if 'therapist_id' not in metadata else metadata['therapist_id']
 
@@ -853,14 +858,14 @@ class PaymentProcessingRouter:
                 # Attach product metadata to the underlying payment intent
                 try:
                     subscription = stripe_client.retrieve_subscription(subscription_id)
-                    latest_invoice = stripe_client.retrieve_invoice(subscription.get("latest_invoice"))
-                    payment_intent_id = latest_invoice.get("payment_intent")
+                    latest_invoice = stripe_client.retrieve_invoice(subscription.get("latest_invoice", None))
+                    payment_intent_id = latest_invoice.get("payment_intent", None)
                     if payment_intent_id is not None:
                         price_id = subscription["items"]["data"][0]["price"]["id"]
 
                         # Retrieve product metadata associated with the price id.
                         price = stripe_client.retrieve_price(price_id)
-                        product_id = price.get("product")
+                        product_id = price.get("product", None)
                         product = stripe_client.retrieve_product(product_id)
                         stripe_client.attach_payment_intent_metadata(
                             payment_intent_id=payment_intent_id,
@@ -871,7 +876,7 @@ class PaymentProcessingRouter:
 
         elif event_type == 'invoice.created':
             invoice = event['data']['object']
-            subscription_id = invoice.get('subscription')
+            subscription_id = invoice.get('subscription', None)
             invoice_metadata = invoice.get("metadata", {})
 
             # If the invoice has no metadata, and a subscription exists, let's retrieve
@@ -886,7 +891,7 @@ class PaymentProcessingRouter:
 
         elif event_type == 'invoice.updated':
             invoice = event['data']['object']
-            subscription_id = invoice.get('subscription')
+            subscription_id = invoice.get('subscription', None)
             invoice_metadata = invoice.get("metadata", {})
 
             # If the invoice has no metadata, and a subscription exists, let's retrieve
@@ -905,10 +910,10 @@ class PaymentProcessingRouter:
 
             try:
                 # Attach metadata containing the product ID to the payment intent
-                payment_intent_id = invoice.get("payment_intent")
+                payment_intent_id = invoice.get("payment_intent", None)
                 assert payment_intent_id, "No ID found for associated payment intent."
 
-                subscription_id = invoice.get("subscription")
+                subscription_id = invoice.get("subscription", None)
                 assert subscription_id, "No ID found for associated subscription."
 
                 subscription = stripe_client.retrieve_subscription(subscription_id)
@@ -967,18 +972,18 @@ class PaymentProcessingRouter:
 
             try:
                 # Fetch corresponding therapist ID
+                secret_manager: AwsSecretManagerBaseClass = dependency_container.inject_aws_secret_manager_client()
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-                customer_data = aws_db_client.select(
-                    user_id=user_id,
-                    request=request,
-                    fields="*",
+                customer_data = await aws_db_client.select_with_stripe_connection(
+                    fields=["*"],
                     filters={
                         'customer_id': customer_id,
                     },
-                    table_name=SUBSCRIPTION_STATUS_TABLE_NAME
+                    table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
+                    secret_manager=secret_manager,
                 )
-                assert (0 != len(customer_data['data'])), "No therapist data found for incoming customer ID."
-                therapist_id = customer_data['data'][0]['therapist_id']
+                assert (0 != len(customer_data)), "No therapist data found for incoming customer ID."
+                therapist_id = customer_data['therapist_id']
             except Exception:
                 pass
 
@@ -1040,30 +1045,27 @@ class PaymentProcessingRouter:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
 
         try:
-            therapist_query_data = aws_db_client.select(
+            therapist_query_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={ 'id': therapist_id },
                 table_name="therapists"
-            )['data']
+            )
             is_new_customer = (0 == len(therapist_query_data))
 
             # Get customer data
             billing_interval = subscription['items']['data'][0]['plan']['interval']
             current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
-            current_billing_period_end_date = datetime.strptime(
-                current_period_end,
-                DATE_FORMAT
-            ).date()
-            customer_id = subscription.get('customer')
-            subscription_id = subscription.get('id')
+            current_billing_period_end_date = current_period_end.date()
+            customer_id = subscription.get('customer', None)
+            subscription_id = subscription.get('id', None)
             product_id = subscription['items']['data'][0]['price']['product']
             product_data = stripe_client.retrieve_product(product_id)
             stripe_product_name = product_data['metadata']['product_name']
             tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
             is_trialing = subscription['status'] == 'trialing'
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now().date()
 
             payload = {
                 "last_updated": now_timestamp,
@@ -1077,13 +1079,9 @@ class PaymentProcessingRouter:
 
             if is_trialing:
                 trial_end_date_from_timestamp = datetime.fromtimestamp(subscription['trial_end'])
-                trial_end_date_formatted = datetime.strptime(
-                    trial_end_date_from_timestamp,
-                    DATE_FORMAT
-                ).date()
-                payload["free_trial_end_date"] = trial_end_date_formatted
+                payload["free_trial_end_date"] = trial_end_date_from_timestamp.date()
 
-            if (subscription.get('status') in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end'):
+            if (subscription.get('status', None) in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end', None):
                 # Free trial is ongoing, or subscription is active.
                 payload['is_active'] = True
                 payload['free_trial_active'] = is_trialing
@@ -1092,28 +1090,27 @@ class PaymentProcessingRouter:
                 payload['is_active'] = False
                 payload['free_trial_active'] = False
 
-            aws_db_client.upsert(
+            await aws_db_client.upsert(
                 user_id=therapist_id,
                 request=request,
-                on_conflict=["therapist_id"],
+                conflict_columns=["therapist_id"],
                 payload=payload,
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
             )
 
             if is_new_customer:
-                therapist_data = therapist_query_data[0]
                 alert_description = (f"Customer has just entered an active subscription state for the first time. "
                                         "Consider reaching out directly for a more personal welcome note.")
-                therapist_name = "".join([therapist_data['first_name'],
-                                            " ",
-                                            therapist_data['last_name']])
+                therapist_name = "".join([therapist_query_data['first_name'],
+                                          " ",
+                                          therapist_query_data['last_name']])
                 alert = CustomerRelationsAlert(
                     description=alert_description,
                     session_id=session_id,
                     environment=self._environment,
                     therapist_id=therapist_id,
                     therapist_name=therapist_name,
-                    therapist_email=therapist_data['email']
+                    therapist_email=therapist_query_data['email']
                 )
                 await self._email_manager.send_customer_relations_alert(alert)
         except Exception as e:

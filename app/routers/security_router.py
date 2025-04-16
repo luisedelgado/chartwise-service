@@ -191,7 +191,10 @@ class SecurityRouter:
             response_payload = {
                 "token": auth_token.model_dump()
             }
-            subscription_data = self.subscription_data(user_id=user_id)
+            subscription_data = self.subscription_data(
+                user_id=user_id,
+                request=request,
+            )
             response_payload.update(subscription_data)
             return response_payload
         except Exception as e:
@@ -407,7 +410,10 @@ class SecurityRouter:
                 "therapist_id": user_id,
                 "token": auth_token.model_dump()
             }
-            subscription_data = self.subscription_data(user_id=user_id)
+            subscription_data = self.subscription_data(
+                user_id=user_id,
+                request=request,
+            )
             response_payload.update(subscription_data)
             return response_payload
         except Exception as e:

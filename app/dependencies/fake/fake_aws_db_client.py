@@ -2,6 +2,7 @@ from fastapi import Request
 from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
+from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
@@ -62,6 +63,15 @@ class FakeAwsDbClient(AwsDbBaseClass):
                      table_name: str,
                      limit: Optional[int] = None,
                      order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+        pass
+
+    async def select_with_stripe_connection(self,
+                                            fields: list[str],
+                                            filters: dict[str, Any],
+                                            table_name: str,
+                                            secret_manager: AwsSecretManagerBaseClass,
+                                            limit: Optional[int] = None,
+                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
         pass
 
     async def delete(self,

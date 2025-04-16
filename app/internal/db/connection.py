@@ -10,7 +10,10 @@ CHARTWISE_USER = "chartwise_user"
 
 async def connect_pool(app: FastAPI, secret_manager: AwsSecretManagerBaseClass):
     try:
-        secret = secret_manager.get_rds_secret()
+        chartwise_user_secret_id = os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE")
+        secret = secret_manager.get_rds_secret(
+            secret_id=chartwise_user_secret_id
+        )
         password = quote_plus(secret.get(CHARTWISE_USER))
         endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
         port = os.getenv("AWS_RDS_DB_PORT")
