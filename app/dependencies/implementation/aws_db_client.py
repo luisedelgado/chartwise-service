@@ -27,7 +27,7 @@ from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class AwsDbClient(AwsDbBaseClass):
 
-    STRIPE_READER_ROLE = "stripe_reader"
+    STRIPE_READER_ROLE_SECRET_KEY = "username_pswd_stripe_reader_role"
 
     def __init__(self,
                  encryptor: ChartWiseEncryptor):
@@ -483,21 +483,24 @@ class AwsDbClient(AwsDbBaseClass):
         return where_clause, values
 
     async def get_stripe_reader_connection(self, secret_manager: AwsSecretManagerBaseClass):
-        secret = secret_manager.get_rds_secret(
-            secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
-        )
-        password = quote_plus(secret.get(self.STRIPE_READER_ROLE))
-        endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
-        port = os.getenv("AWS_RDS_DB_PORT")
-        db = os.getenv("AWS_RDS_DB_NAME")
+        try:
+            secret = secret_manager.get_rds_secret(
+                secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
+            )
+            password = quote_plus(secret.get(self.STRIPE_READER_ROLE_SECRET_KEY))
+            endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
+            port = os.getenv("AWS_RDS_DB_PORT")
+            db = os.getenv("AWS_RDS_DB_NAME")
 
-        conn = await asyncpg.connect(
-            user=self.STRIPE_READER_ROLE,
-            password=password,
-            database=db,
-            host=endpoint,
-            port=port,
-            ssl='require',
-            timeout=10
-        )
-        return conn
+            conn = await asyncpg.connect(
+                user=self.STRIPE_READER_ROLE_SECRET_KEY,
+                password=password,
+                database=db,
+                host=endpoint,
+                port=port,
+                ssl='require',
+                timeout=10
+            )
+            return conn
+        except Exception as e:
+            raise Exception(e)

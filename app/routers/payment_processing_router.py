@@ -309,7 +309,7 @@ class PaymentProcessingRouter:
             if (0 == len(customer_data)):
                 return {"subscriptions": []}
 
-            customer_id = customer_data['customer_id']
+            customer_id = customer_data[0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
@@ -327,9 +327,9 @@ class PaymentProcessingRouter:
                     "product_id": object['items']['data'][0]['id'],
                     "status": subscription_status,
                     "payment_method_data": {
-                        "id": payment_method_data['id'],
-                        "type": payment_method_data['type'],
-                        "data": payment_method_data['card'],
+                        "id": None if 'id' not in payment_method_data else payment_method_data['id'],
+                        "type": None if 'type' not in payment_method_data else payment_method_data['type'],
+                        "data": None if 'data' not in payment_method_data else payment_method_data['card'],
                     },
                 }
 
@@ -405,7 +405,7 @@ class PaymentProcessingRouter:
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
             assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data['subscription_id']
+            subscription_id = customer_data[0]['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             stripe_client.cancel_customer_subscription(subscription_id=subscription_id)
@@ -480,7 +480,7 @@ class PaymentProcessingRouter:
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
             assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
-            subscription_id = customer_data['subscription_id']
+            subscription_id = customer_data[0]['subscription_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
@@ -623,7 +623,7 @@ class PaymentProcessingRouter:
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
             assert (0 != len(customer_data)), "There isn't a subscription associated with the incoming therapist."
-            customer_id = customer_data['customer_id']
+            customer_id = customer_data[0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             update_payment_method_url = stripe_client.generate_payment_method_update_session(
@@ -702,7 +702,7 @@ class PaymentProcessingRouter:
             if (0 == len(customer_data)):
                 return {"payments": []}
 
-            customer_id = customer_data['customer_id']
+            customer_id = customer_data[0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_intent_history = stripe_client.retrieve_payment_intent_history(
