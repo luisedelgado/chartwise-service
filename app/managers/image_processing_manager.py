@@ -63,7 +63,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     "source": SessionNotesSource.NOTES_IMAGE.value,
                 }
             )
-            session_notes_id = insert_result['data'][0]['id']
+            session_notes_id = insert_result['id']
 
             # Clean up the image copies we used for processing.
             await file_copiers.clean_up_files(files_to_clean)
@@ -110,7 +110,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     break
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            session_report_query = aws_db_client.select(
+            session_report_data = aws_db_client.select(
                 user_id=therapist_id,
                 fields="*",
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -118,7 +118,6 @@ class ImageProcessingManager(MediaProcessingManager):
                     "textraction_job_id": document_id,
                 }
             )
-            session_report_data = session_report_query['data']
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
             session_report_data = session_report_data[0]
             therapist_id = session_report_data['therapist_id']

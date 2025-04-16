@@ -60,8 +60,8 @@ class AudioProcessingManager(MediaProcessingManager):
                     "processing_status": SessionProcessingStatus.PROCESSING.value
                 }
             )
-            assert (0 != len(session_report_creation_response['data'])), "Something went wrong when inserting the session."
-            session_report_id = session_report_creation_response['data'][0]['id']
+            assert (0 != len(session_report_creation_response)), "Something went wrong when inserting the session."
+            session_report_id = session_report_creation_response['id']
 
             today = datetime.now().date()
             today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
@@ -384,7 +384,7 @@ class AudioProcessingManager(MediaProcessingManager):
         try:
             # Fetch last session date
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            patient_query = aws_db_client.select(
+            patient_query_data = aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields="*",
@@ -393,9 +393,8 @@ class AudioProcessingManager(MediaProcessingManager):
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
-            assert (0 != len(patient_query['data'])), "Did not find any data for the patient"
+            assert (0 != len(patient_query_data)), "Did not find any data for the patient"
 
-            patient_query_data = patient_query['data']
             patient_last_session_date = patient_query_data[0]['last_session_date']
 
             # Fetch total sessions count
@@ -408,7 +407,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 },
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
             )
-            total_sessions_count = len(session_reports_query['data'])
+            total_sessions_count = len(session_reports_query)
 
             # Determine the updated value for last_session_date depending on if the patient
             # has met with the therapist before or not.

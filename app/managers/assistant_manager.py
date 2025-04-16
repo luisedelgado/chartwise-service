@@ -118,8 +118,7 @@ class AssistantManager:
                     "id": session_report_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -195,7 +194,7 @@ class AssistantManager:
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload=insert_payload
             )
-            session_notes_id = insert_result['data'][0]['id']
+            session_notes_id = insert_result['id']
 
             # Upload vector embeddings and generate insights
             background_tasks.add_task(
@@ -239,12 +238,11 @@ class AssistantManager:
                     'id': session_report_id
                 }
             )
-            assert (0 != len(report_query['data'])), "There isn't a match with the incoming session data."
+            assert (0 != len(report_query)), "There isn't a match with the incoming session data."
 
-            report_query_data = report_query['data'][0]
-            patient_id = report_query_data['patient_id']
-            current_session_text = report_query_data['notes_text']
-            current_session_date = report_query_data['session_date']
+            patient_id = report_query['patient_id']
+            current_session_text = report_query['notes_text']
+            current_session_date = report_query['session_date']
             current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
                 incoming_date=current_session_date,
                 incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
@@ -273,7 +271,7 @@ class AssistantManager:
                     'id': session_report_id
                 }
             )
-            assert (0 != len(session_update_response['data'])), "Update operation could not be completed"
+            assert (0 != len(session_update_response)), "Update operation could not be completed"
 
             # Update the session vectors if needed
             if session_date_changed or session_text_changed:
@@ -295,7 +293,7 @@ class AssistantManager:
                 )
 
             return {
-                "patient_id": report_query_data['patient_id'],
+                "patient_id": report_query['patient_id'],
                 "session_report_id": session_report_id
             }
         except Exception as e:
@@ -313,7 +311,7 @@ class AssistantManager:
         try:
             # Delete the session notes from DB
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            delete_result = aws_db_client.delete(
+            delete_result_data = aws_db_client.delete(
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -321,7 +319,6 @@ class AssistantManager:
                     'id': session_report_id
                 }
             )
-            delete_result_data = delete_result['data']
             assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
             delete_result_data = delete_result_data[0]
 
@@ -369,8 +366,7 @@ class AssistantManager:
                     "id": patient_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -389,8 +385,7 @@ class AssistantManager:
                     "therapist_id": therapist_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data
+            return [] if len(response) == 0 else response
         except Exception as e:
             raise Exception(e)
 
@@ -417,7 +412,7 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload=payload
             )
-            patient_id = response['data'][0]['id']
+            patient_id = response['id']
 
             is_first_time_patient = filtered_body['onboarding_first_time_patient']
             if is_first_time_patient:
@@ -483,9 +478,8 @@ class AssistantManager:
             },
             table_name=ENCRYPTED_PATIENTS_TABLE_NAME
         )
-        assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
-        patient_query_data = patient_query['data'][0]
-        current_pre_existing_history = patient_query_data['pre_existing_history']
+        assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
+        current_pre_existing_history = patient_query['pre_existing_history']
 
         update_db_payload = {}
         for key, value in filtered_body.items():
@@ -504,7 +498,7 @@ class AssistantManager:
                 'id': filtered_body['id']
             }
         )
-        assert (0 != len(update_response['data'])), "Update operation could not be completed"
+        assert (0 != len(update_response)), "Update operation could not be completed"
 
         if ('pre_existing_history' not in filtered_body
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
@@ -595,14 +589,13 @@ class AssistantManager:
                     },
                     table_name=ENCRYPTED_PATIENTS_TABLE_NAME
                 )
-                patient_therapist_match = (0 != len(patient_query['data']))
+                patient_therapist_match = (0 != len(patient_query))
                 assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
 
-                patient_query_data = patient_query['data'][0]
-                patient_first_name = patient_query_data['first_name']
-                patient_last_name = patient_query_data['last_name']
-                patient_gender = patient_query_data['gender']
-                patient_last_session_date = patient_query_data['last_session_date']
+                patient_first_name = patient_query['first_name']
+                patient_last_name = patient_query['last_name']
+                patient_gender = patient_query['gender']
+                patient_last_session_date = patient_query['last_session_date']
                 self.cached_patient_query_data = CachedPatientQueryData(
                     patient_id=query.patient_id,
                     patient_first_name=patient_first_name,
@@ -663,11 +656,10 @@ class AssistantManager:
                     'id': patient_id
                 }
             )
-            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query['data'][0]
-            patient_first_name = patient_query_data['first_name']
-            patient_last_name = patient_query_data['last_name']
-            patient_gender = patient_query_data['gender']
+            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
+            patient_first_name = patient_query['first_name']
+            patient_last_name = patient_query['last_name']
+            patient_gender = patient_query['gender']
 
             questions_json = await self.chartwise_assistant.create_question_suggestions(
                 language_code=language_code,
@@ -727,11 +719,10 @@ class AssistantManager:
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
-            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
-            patient_response_data = patient_query['data'][0]
-            patient_name = patient_response_data['first_name']
-            patient_gender = patient_response_data['gender']
-            session_count = patient_response_data['total_sessions']
+            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
+            patient_name = patient_query['first_name']
+            patient_gender = patient_query['gender']
+            session_count = patient_query['total_sessions']
 
             therapist_query = aws_db_client.select(
                 user_id=therapist_id,
@@ -742,10 +733,9 @@ class AssistantManager:
                 },
                 table_name="therapists"
             )
-            therapist_response_data = therapist_query['data'][0]
-            therapist_name = therapist_response_data['first_name']
-            language_code = therapist_response_data['language_preference']
-            therapist_gender = therapist_response_data['gender']
+            therapist_name = therapist_query['first_name']
+            language_code = therapist_query['language_preference']
+            therapist_gender = therapist_query['gender']
 
             briefing = await self.chartwise_assistant.create_briefing(
                 user_id=therapist_id,
@@ -806,11 +796,10 @@ class AssistantManager:
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
-            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query['data'][0]
-            patient_first_name = patient_query_data['first_name']
-            patient_last_name = patient_query_data['last_name']
-            patient_gender = patient_query_data['gender']
+            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
+            patient_first_name = patient_query['first_name']
+            patient_last_name = patient_query['last_name']
+            patient_gender = patient_query['gender']
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
             recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
@@ -884,10 +873,9 @@ class AssistantManager:
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
-            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
-            patient_query_data = patient_query['data'][0]
-            patient_first_name = patient_query_data['first_name']
-            patient_gender = patient_query_data['gender']
+            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
+            patient_first_name = patient_query['first_name']
+            patient_gender = patient_query['gender']
 
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(
                 therapist_id=therapist_id,
@@ -939,7 +927,7 @@ class AssistantManager:
         try:
             # Fetch patient last session date and total session count
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            patient_session_notes_response = aws_db_client.select(
+            patient_session_notes_data = aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields="*",
@@ -949,7 +937,6 @@ class AssistantManager:
                 },
                 order_by=("session_date", "desc")
             )
-            patient_session_notes_data = patient_session_notes_response['data']
             total_session_count = len(patient_session_notes_data)
             patient_last_session_date = (None if total_session_count == 0
                                          else patient_session_notes_data[0]['session_date'])
@@ -979,7 +966,7 @@ class AssistantManager:
 
                 if total_session_count == 0:
                     # Load zero-state for this patient since we don't have any data from them anymore.
-                    patient_data_response = aws_db_client.select(
+                    patient_data = aws_db_client.select(
                         user_id=therapist_id,
                         request=request,
                         fields="*",
@@ -988,7 +975,6 @@ class AssistantManager:
                             "id": patient_id
                         }
                     )
-                    patient_data = patient_data_response['data']
                     assert len(patient_data) > 0, "No patient found with the incoming patient_id"
 
                     # Load zero-state question suggestions in a background thread.
@@ -1065,7 +1051,7 @@ class AssistantManager:
                                          patient_id: str,
                                          request: Request,) -> List[int]:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-        response = aws_db_client.select(
+        session_dates = aws_db_client.select(
             user_id=therapist_id,
             request=request,
             fields="session_date",
@@ -1074,7 +1060,6 @@ class AssistantManager:
             },
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
         )
-        session_dates = response["data"]
 
         unique_active_years: Set[int] = {
             int(entry["session_date"][:4]) for entry in session_dates if entry["session_date"]
@@ -1118,8 +1103,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -1138,8 +1122,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -1158,8 +1141,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -1178,8 +1160,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            response_data = response['data']
-            return [] if len(response_data) == 0 else response_data[0]
+            return [] if len(response) == 0 else response[0]
         except Exception as e:
             raise Exception(e)
 
@@ -1457,9 +1438,9 @@ class AssistantManager:
                     "value": default_question_suggestions,
                 }
             )
-            assert (0 != len(strings_query['data'])), "Did not find any strings data for the current scenario."
+            assert (0 != len(strings_query)), "Did not find any strings data for the current scenario."
 
-            default_question_suggestions = [item['value'] for item in strings_query['data']]
+            default_question_suggestions = [item['value'] for item in strings_query]
             aws_client.insert(
                 user_id=therapist_id,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
@@ -1508,8 +1489,8 @@ class AssistantManager:
                     "id": therapist_id
                 }
             )
-            assert (0 != len(therapist_data_query['data'])), "Did not find any data for the incoming therapist id."
-            therapist_first_name = therapist_data_query['data'][0]['first_name']
+            assert (0 != len(therapist_data_query)), "Did not find any data for the incoming therapist id."
+            therapist_first_name = therapist_data_query['first_name']
 
             therapist_language = general_utilities.map_language_code_to_language(language_code)
             string_query = aws_db_client.select(
@@ -1521,11 +1502,9 @@ class AssistantManager:
                     "id": therapist_language
                 }
             )
-            assert (0 != len(string_query['data'])), "Did not find any strings data for the current scenario."
+            assert (0 != len(string_query)), "Did not find any strings data for the current scenario."
 
-            response_value = string_query['data'][0]['value']
-            briefings = response_value['briefings']
-
+            briefings = string_query['value']['briefings']
             if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
                 default_briefing = (briefings['existing_patient']['value'] if not is_first_time_patient
                                     else briefings['new_patient']['value'])
@@ -1651,8 +1630,7 @@ class AssistantManager:
                 },
                 order_by=("session_date", "desc"),
             )
-            response_data = session_reports_data['data']
-            return [] if len(response_data) == 0 else response_data
+            return [] if len(session_reports_data) == 0 else session_reports_data
         except Exception as e:
             raise Exception(e)
 
@@ -1674,7 +1652,7 @@ class AssistantManager:
             end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            session_reports_data = aws_db_client.select(
+            response_data = aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields="session_date",
@@ -1687,7 +1665,6 @@ class AssistantManager:
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
             )
 
-            response_data = session_reports_data['data']
             if len(response_data) == 0:
                 return []
 
@@ -1753,7 +1730,6 @@ class AssistantManager:
                 limit=most_recent_n,
                 order_by=("session_date", "desc")
             )
-            response_data = session_reports_data['data']
-            return [] if len(response_data) == 0 else response_data
+            return [] if len(session_reports_data) == 0 else session_reports_data
         except Exception as e:
             raise Exception(e)

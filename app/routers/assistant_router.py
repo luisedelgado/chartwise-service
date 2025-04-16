@@ -1166,7 +1166,7 @@ class AssistantRouter:
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
-            assert (0 != len(patient_query['data'])), "There isn't a patient-therapist match with the incoming ids."
+            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
 
             # Cascading will take care of deleting the session notes as well.
             delete_result = aws_db_client.delete(
@@ -1177,7 +1177,7 @@ class AssistantRouter:
                     'id': patient_id
                 }
             )
-            assert len(delete_result['data']) > 0, "No patient found with the incoming patient_id"
+            assert len(delete_result) > 0, "No patient found with the incoming patient_id"
 
             self._assistant_manager.delete_all_data_for_patient(
                 therapist_id=user_id,

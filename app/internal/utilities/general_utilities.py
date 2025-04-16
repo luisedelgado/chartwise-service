@@ -54,8 +54,8 @@ def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
             },
             table_name="therapists"
         )
-        assert (0 != len(therapist_query['data']))
-        return therapist_query['data'][0]["language_preference"]
+        assert (1 == len(therapist_query))
+        return therapist_query["language_preference"]
     except Exception as e:
         raise Exception("Encountered an issue while pulling user's language preference.")
 

@@ -673,7 +673,7 @@ class ChartWiseAssistant:
                                               n: int) -> list[PineconeQuerySessionDateOverride]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            dates_response = aws_db_client.select(
+            dates_response_data = aws_db_client.select(
                 user_id=therapist_id,
                 fields="session_date",
                 filters={
@@ -683,7 +683,6 @@ class ChartWiseAssistant:
                 limit=n,
                 order_by=("session_date", "desc")
             )
-            dates_response_data = dates_response['data']
 
             overrides = []
             for date in dates_response_data:

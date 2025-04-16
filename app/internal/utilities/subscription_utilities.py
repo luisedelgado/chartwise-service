@@ -30,6 +30,6 @@ def reached_subscription_tier_usage_limit(tier: str,
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
             limit=20,
         )
-        return len(session_reports_data['data']) >= NUM_SESSIONS_IN_BASIC_PLAN
+        return len(session_reports_data) >= NUM_SESSIONS_IN_BASIC_PLAN
     except Exception as e:
         raise Exception(e)

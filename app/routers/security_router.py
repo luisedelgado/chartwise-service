@@ -249,17 +249,17 @@ class SecurityRouter:
             )
 
             # Check if this user is already a customer, and has subscription history
-            if len(customer_data_dict['data']) == 0:
+            if len(customer_data_dict) == 0:
                 is_subscription_active = False
                 is_free_trial_active = False
                 tier = None
                 reached_tier_usage_limit = None
             else:
-                is_subscription_active = customer_data_dict['data'][0]['is_active']
-                tier = customer_data_dict['data'][0]['current_tier']
+                is_subscription_active = customer_data_dict['is_active']
+                tier = customer_data_dict['current_tier']
 
                 # Determine if free trial is still active
-                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+                free_trial_end_date = customer_data_dict['free_trial_end_date']
 
                 if free_trial_end_date is not None:
                     free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
@@ -499,7 +499,7 @@ class SecurityRouter:
                     'id': user_id
                 }
             )
-            assert (0 != len(update_response['data'])), "Update operation could not be completed."
+            assert (0 != len(update_response)), "Update operation could not be completed."
             return {}
         except Exception as e:
             description = str(e)
@@ -565,8 +565,8 @@ class SecurityRouter:
                 table_name="subscription_status"
             )
 
-            if len(customer_data_dict['data']) > 0:
-                subscription_id = customer_data_dict['data'][0]['subscription_id']
+            if len(customer_data_dict) > 0:
+                subscription_id = customer_data_dict['subscription_id']
 
                 stripe_client = dependency_container.inject_stripe_client()
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
@@ -593,7 +593,7 @@ class SecurityRouter:
                     "therapist_id": user_id
                 }
             )
-            patient_ids = [item['id'] for item in delete_patients_operation['data']]
+            patient_ids = [item['id'] for item in delete_patients_operation]
 
             # Delete vectors associated with the deleted patient ids.
             self._assistant_manager.delete_all_sessions_for_therapist(
@@ -602,7 +602,7 @@ class SecurityRouter:
             )
 
             # Set therapist user as an inactive account.
-            disable_account_response = aws_db_client.update(
+            disable_account_response_dict = aws_db_client.update(
                 user_id=user_id,
                 request=request,
                 table_name="therapists",
@@ -613,7 +613,6 @@ class SecurityRouter:
                     'is_active_account': False
                 }
             )
-            disable_account_response_dict = disable_account_response['data']
             assert len(disable_account_response_dict) > 0, "No therapist found with the incoming id"
 
             therapist_email = disable_account_response_dict[0]['email']
@@ -678,17 +677,17 @@ class SecurityRouter:
             )
 
             # Check if this user is already a customer, and has subscription history
-            if len(customer_data_dict['data']) == 0:
+            if len(customer_data_dict) == 0:
                 is_subscription_active = False
                 is_free_trial_active = False
                 tier = None
                 reached_tier_usage_limit = None
             else:
-                is_subscription_active = customer_data_dict['data'][0]['is_active']
-                tier = customer_data_dict['data'][0]['current_tier']
+                is_subscription_active = customer_data_dict['is_active']
+                tier = customer_data_dict['current_tier']
 
                 # Determine if free trial is still active
-                free_trial_end_date = customer_data_dict['data'][0]['free_trial_end_date']
+                free_trial_end_date = customer_data_dict['free_trial_end_date']
 
                 if free_trial_end_date is not None:
                     free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
