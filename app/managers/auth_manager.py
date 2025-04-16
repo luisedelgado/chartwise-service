@@ -24,7 +24,7 @@ class AuthManager:
 
     # Authentication
 
-    def create_auth_token(self, user_id: str) -> Tuple[str, str]:
+    def create_session_token(self, user_id: str) -> Tuple[str, str]:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,10 +85,10 @@ class AuthManager:
                               user_id: str,
                               response: Response) -> Token:
         try:
-            auth_token, expiration_timestamp = self.create_auth_token(user_id)
+            session_token, expiration_timestamp = self.create_session_token(user_id)
             response.set_cookie(
-                key="authorization",
-                value=auth_token,
+                key="session_token",
+                value=session_token,
                 domain=self.APP_COOKIE_DOMAIN,
                 httponly=True,
                 secure=True,
@@ -96,7 +96,7 @@ class AuthManager:
             )
 
             return Token(
-                authorization=auth_token,
+                session_token=session_token,
                 token_type="bearer",
                 expiration_timestamp=expiration_timestamp
             )
@@ -107,5 +107,5 @@ class AuthManager:
             )
 
     def logout(self, response: Response):
-        response.delete_cookie("authorization")
+        response.delete_cookie("session_token")
         response.delete_cookie("session_id")

@@ -18,7 +18,7 @@ from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..internal.schemas import USER_ID_KEY
 from ..internal.security.cognito_auth import verify_cognito_token
-from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
+from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
@@ -53,7 +53,7 @@ class ImageProcessingRouter:
                                client_timezone_identifier: Annotated[str, Form()],
                                _: dict = Security(verify_cognito_token),
                                image: UploadFile = File(...),
-                               authorization: Annotated[Union[str, None], Cookie()] = None,
+                               session_token: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._extract_text_internal(
                 request=request,
@@ -64,7 +64,7 @@ class ImageProcessingRouter:
                 patient_id=patient_id,
                 session_date=session_date,
                 client_timezone_identifier=client_timezone_identifier,
-                authorization=authorization,
+                session_token=session_token,
                 session_id=session_id
             )
 
@@ -77,7 +77,7 @@ class ImageProcessingRouter:
                                      patient_id: str,
                                      session_date: str,
                                      client_timezone_identifier: str,
-                                     authorization: Annotated[Union[str, None], Cookie()],
+                                     session_token: Annotated[Union[str, None], Cookie()],
                                      session_id: Annotated[Union[str, None], Cookie()]):
         """
         Performs the textraction on the incoming image file.
@@ -91,16 +91,16 @@ class ImageProcessingRouter:
         patient_id – the patient id.
         session_date – the associated session date.
         client_timezone_identifier – the client timezone id.
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,

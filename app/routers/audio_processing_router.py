@@ -19,7 +19,7 @@ from ..dependencies.dependency_container import (
 from ..dependencies.api.aws_s3_base_class import AUDIO_FILES_PROCESSING_PENDING_BUCKET, AwsS3BaseClass
 from ..internal.schemas import USER_ID_KEY
 from ..internal.security.cognito_auth import verify_cognito_token
-from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
+from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities.general_utilities import is_valid_extension
 from ..internal.utilities import datetime_handler, general_utilities
 from ..managers.assistant_manager import AssistantManager
@@ -59,7 +59,7 @@ class AudioProcessingRouter:
                                            session_date: Annotated[str, Form()],
                                            client_timezone_identifier: Annotated[str, Form()],
                                            _: dict = Security(verify_cognito_token),
-                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(request=request,
                                                                  response=response,
@@ -69,7 +69,7 @@ class AudioProcessingRouter:
                                                                  session_date=session_date,
                                                                  client_timezone_identifier=client_timezone_identifier,
                                                                  file_path=file_path,
-                                                                 authorization=authorization,
+                                                                 session_token=session_token,
                                                                  session_id=session_id)
 
         @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -82,7 +82,7 @@ class AudioProcessingRouter:
                                   session_date: Annotated[str, Form()],
                                   client_timezone_identifier: Annotated[str, Form()],
                                   _: dict = Security(verify_cognito_token),
-                                  authorization: Annotated[Union[str, None], Cookie()] = None,
+                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(request=request,
                                                         response=response,
@@ -92,7 +92,7 @@ class AudioProcessingRouter:
                                                         session_date=session_date,
                                                         client_timezone_identifier=client_timezone_identifier,
                                                         file_path=file_path,
-                                                        authorization=authorization,
+                                                        session_token=session_token,
                                                         session_id=session_id)
 
         @self.router.get(self.UPLOAD_URL_ENDPOINT, tags=[self.ROUTER_TAG])
@@ -101,13 +101,13 @@ class AudioProcessingRouter:
                                             patient_id: str = None,
                                             file_extension: str = None,
                                             _: dict = Security(verify_cognito_token),
-                                            authorization: Annotated[Union[str, None], Cookie()] = None,
+                                            session_token: Annotated[Union[str, None], Cookie()] = None,
                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._generate_audio_upload_url_internal(file_extension=file_extension,
                                                                   patient_id=patient_id,
                                                                   request=request,
                                                                   response=response,
-                                                                  authorization=authorization,
+                                                                  session_token=session_token,
                                                                   session_id=session_id)
 
     async def _transcribe_session_notes_internal(self,
@@ -119,7 +119,7 @@ class AudioProcessingRouter:
                                                  patient_id: Annotated[str, Form()],
                                                  session_date: Annotated[str, Form()],
                                                  client_timezone_identifier: Annotated[str, Form()],
-                                                 authorization: Annotated[Union[str, None], Cookie()],
+                                                 session_token: Annotated[Union[str, None], Cookie()],
                                                  session_id: Annotated[Union[str, None], Cookie()]):
         """
         Returns the transcription created from the incoming audio file.
@@ -133,16 +133,16 @@ class AudioProcessingRouter:
         patient_id – the patient id associated with the operation.
         session_date – the session date associated with the operation.
         client_timezone_identifier – the timezone associated with the client.
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
         request.state.patient_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -215,7 +215,7 @@ class AudioProcessingRouter:
                                                   patient_id: str,
                                                   request: Request,
                                                   response: Response,
-                                                  authorization: Annotated[Union[str, None], Cookie()],
+                                                  session_token: Annotated[Union[str, None], Cookie()],
                                                   session_id: Annotated[Union[str, None], Cookie()]):
         """
         Generates a URL for the client to be able to upload an (audio) file.
@@ -225,16 +225,16 @@ class AudioProcessingRouter:
         file_extension – the file extension for the file that will be uploaded.
         request – the response object.
         response – the response model with which to create the final response.
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
         request.state.patient_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -314,7 +314,7 @@ class AudioProcessingRouter:
                                         patient_id: Annotated[str, Form()],
                                         session_date: Annotated[str, Form()],
                                         client_timezone_identifier: Annotated[str, Form()],
-                                        authorization: Annotated[Union[str, None], Cookie()],
+                                        session_token: Annotated[Union[str, None], Cookie()],
                                         session_id: Annotated[Union[str, None], Cookie()]):
         """
         Returns the transcription created from the incoming audio file.
@@ -328,16 +328,16 @@ class AudioProcessingRouter:
         patient_id – the patient id associated with the operation.
         session_date – the session date associated with the operation.
         client_timezone_identifier – the timezone associated with the client.
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,

@@ -17,7 +17,7 @@ def verify_cognito_token(auth_header: str = Header(..., description="Bearer Cogn
     if not auth_header or not auth_header.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Store authorization header missing or invalid",
+            detail="Identity authorization header missing or invalid",
         )
 
     cognito_token = auth_header.split(" ")[1]

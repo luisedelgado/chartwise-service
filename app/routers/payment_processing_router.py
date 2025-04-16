@@ -27,7 +27,7 @@ from ..internal.schemas import (
     USER_ID_KEY,
 )
 from ..internal.security.cognito_auth import verify_cognito_token
-from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
+from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..managers.auth_manager import AuthManager
@@ -78,10 +78,10 @@ class PaymentProcessingRouter:
                                           response: Response,
                                           payload: PaymentSessionPayload,
                                           _: dict = Security(verify_cognito_token),
-                                          authorization: Annotated[Union[str, None], Cookie()] = None,
+                                          session_token: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_checkout_session_internal(
-                authorization=authorization,
+                session_token=session_token,
                 payload=payload,
                 request=request,
                 response=response,
@@ -98,10 +98,10 @@ class PaymentProcessingRouter:
         async def retrieve_subscriptions(response: Response,
                                          request: Request,
                                          _: dict = Security(verify_cognito_token),
-                                         authorization: Annotated[Union[str, None], Cookie()] = None,
+                                         session_token: Annotated[Union[str, None], Cookie()] = None,
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_subscriptions_internal(
-                authorization=authorization,
+                session_token=session_token,
                 request=request,
                 response=response,
                 session_id=session_id
@@ -112,10 +112,10 @@ class PaymentProcessingRouter:
                                       response: Response,
                                       request: Request,
                                       _: dict = Security(verify_cognito_token),
-                                      authorization: Annotated[Union[str, None], Cookie()] = None,
+                                      session_token: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_subscription_internal(
-                authorization=authorization,
+                session_token=session_token,
                 price_id=payload.new_price_tier_id,
                 behavior=payload.behavior,
                 request=request,
@@ -127,10 +127,10 @@ class PaymentProcessingRouter:
         async def delete_subscription(response: Response,
                                       request: Request,
                                       _: dict = Security(verify_cognito_token),
-                                      authorization: Annotated[Union[str, None], Cookie()] = None,
+                                      session_token: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_subscription_internal(
-                authorization=authorization,
+                session_token=session_token,
                 request=request,
                 response=response,
                 session_id=session_id
@@ -140,10 +140,10 @@ class PaymentProcessingRouter:
         async def retrieve_product_catalog(request: Request,
                                            response: Response,
                                            _: dict = Security(verify_cognito_token),
-                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_product_catalog_internal(
-                authorization=authorization,
+                session_token=session_token,
                 request=request,
                 response=response,
                 session_id=session_id
@@ -154,10 +154,10 @@ class PaymentProcessingRouter:
                                                        response: Response,
                                                        payload: UpdatePaymentMethodPayload,
                                                        _: dict = Security(verify_cognito_token),
-                                                       authorization: Annotated[Union[str, None], Cookie()] = None,
+                                                       session_token: Annotated[Union[str, None], Cookie()] = None,
                                                        session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_update_payment_method_session_internal(
-                authorization=authorization,
+                session_token=session_token,
                 request=request,
                 response=response,
                 session_id=session_id,
@@ -168,12 +168,12 @@ class PaymentProcessingRouter:
         async def retrieve_payment_history(request: Request,
                                            response: Response,
                                            _: dict = Security(verify_cognito_token),
-                                           authorization: Annotated[Union[str, None], Cookie()] = None,
+                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None,
                                            batch_size: int = 0,
                                            pagination_last_item_id_retrieved: str = None):
             return await self._retrieve_payment_history_internal(
-                authorization=authorization,
+                session_token=session_token,
                 session_id=session_id,
                 request=request,
                 response=response,
@@ -182,7 +182,7 @@ class PaymentProcessingRouter:
             )
 
     async def _create_checkout_session_internal(self,
-                                                authorization: str,
+                                                session_token: str,
                                                 session_id: str,
                                                 request: Request,
                                                 response: Response,
@@ -191,18 +191,18 @@ class PaymentProcessingRouter:
         Creates a new checkout session.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
         payload – the incoming request's payload.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -260,7 +260,7 @@ class PaymentProcessingRouter:
         return {"payment_session_url": payment_session_url}
 
     async def _retrieve_subscriptions_internal(self,
-                                               authorization: str,
+                                               session_token: str,
                                                session_id: str,
                                                request: Request,
                                                response: Response):
@@ -268,17 +268,17 @@ class PaymentProcessingRouter:
         Retrieves the set of subscriptions associated with the incoming customer ID.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -358,7 +358,7 @@ class PaymentProcessingRouter:
         return {"subscriptions": filtered_data}
 
     async def _delete_subscription_internal(self,
-                                            authorization: str,
+                                            session_token: str,
                                             session_id: str,
                                             request: Request,
                                             response: Response):
@@ -366,17 +366,17 @@ class PaymentProcessingRouter:
         Deletes the subscriptions associated with the incoming ID.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -427,7 +427,7 @@ class PaymentProcessingRouter:
         return {}
 
     async def _update_subscription_internal(self,
-                                            authorization: str,
+                                            session_token: str,
                                             session_id: str,
                                             request: Request,
                                             response: Response,
@@ -437,7 +437,7 @@ class PaymentProcessingRouter:
         Updates the incoming subscription ID with the incoming product information.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
@@ -445,11 +445,11 @@ class PaymentProcessingRouter:
         price_id – the new price_id to be associated with the subscription.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -518,7 +518,7 @@ class PaymentProcessingRouter:
         return {}
 
     async def _retrieve_product_catalog_internal(self,
-                                                 authorization: str,
+                                                 session_token: str,
                                                  session_id: str,
                                                  request: Request,
                                                  response: Response):
@@ -526,17 +526,17 @@ class PaymentProcessingRouter:
         Retrieves the product catalog for the current user (customer).
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -574,7 +574,7 @@ class PaymentProcessingRouter:
         return {"catalog": response}
 
     async def _create_update_payment_method_session_internal(self,
-                                                             authorization: str,
+                                                             session_token: str,
                                                              session_id: str,
                                                              request: Request,
                                                              response: Response,
@@ -583,18 +583,18 @@ class PaymentProcessingRouter:
         Generates a URL for updating a subscription's payment method with the incoming data.
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
         payload – the JSON payload containing the update data.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
@@ -649,7 +649,7 @@ class PaymentProcessingRouter:
         return { "update_payment_method_url": update_payment_method_url }
 
     async def _retrieve_payment_history_internal(self,
-                                                 authorization: str,
+                                                 session_token: str,
                                                  session_id: str,
                                                  request: Request,
                                                  response: Response,
@@ -659,7 +659,7 @@ class PaymentProcessingRouter:
         Retrieves the payment history for the current user (customer).
 
         Arguments:
-        authorization – the authorization cookie, if exists.
+        session_token – the session_token cookie, if exists.
         session_id – the session_id cookie, if exists.
         request – the request object.
         response – the response model with which to create the final response.
@@ -667,11 +667,11 @@ class PaymentProcessingRouter:
         starting_after – the id of the last payment that was retrieved (for pagination purposes).
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(authorization):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
-            user_id = self._auth_manager.extract_data_from_token(authorization)[USER_ID_KEY]
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,

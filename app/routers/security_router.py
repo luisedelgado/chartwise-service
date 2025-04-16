@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from ..dependencies.dependency_container import dependency_container, AwsDbBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert
 from ..internal.security.cognito_auth import verify_cognito_token
-from ..internal.security.security_schema import AUTH_TOKEN_EXPIRED_ERROR
+from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.schemas import (
     Gender,
     DATE_COLUMNS,
@@ -132,7 +132,7 @@ class SecurityRouter:
                 request=request,
                 response=response,
                 body=body,
-                authorization=session_token,
+                session_token=session_token,
                 session_id=session_id
             )
 
@@ -229,7 +229,7 @@ class SecurityRouter:
         request.state.session_id = session_id
         try:
             if not self._auth_manager.session_token_is_valid(session_token):
-                raise AUTH_TOKEN_EXPIRED_ERROR
+                raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
@@ -338,7 +338,7 @@ class SecurityRouter:
         request.state.session_id = session_id
 
         if not self._auth_manager.session_token_is_valid(session_token):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
@@ -449,7 +449,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
         if not self._auth_manager.session_token_is_valid(session_token):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
@@ -532,7 +532,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
         if not self._auth_manager.session_token_is_valid(session_token):
-            raise AUTH_TOKEN_EXPIRED_ERROR
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
