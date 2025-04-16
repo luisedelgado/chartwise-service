@@ -245,7 +245,7 @@ class SecurityRouter:
                 filters={
                     'therapist_id': user_id,
                 },
-                table_name="subscription_status"
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
 
             # Check if this user is already a customer, and has subscription history
@@ -558,11 +558,11 @@ class SecurityRouter:
             customer_data_dict = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="subscription_id",
+                fields=["subscription_id"],
                 filters={
                     'therapist_id': user_id,
                 },
-                table_name="subscription_status"
+                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
 
             if len(customer_data_dict) > 0:
@@ -581,7 +581,7 @@ class SecurityRouter:
                     filters={
                         'therapist_id': user_id,
                     },
-                    table_name="subscription_status"
+                    table_name=SUBSCRIPTION_STATUS_TABLE_NAME
                 )
 
             # Delete patient data associated with therapist.
@@ -615,12 +615,12 @@ class SecurityRouter:
             )
             assert len(disable_account_response_dict) > 0, "No therapist found with the incoming id"
 
-            therapist_email = disable_account_response_dict[0]['email']
+            therapist_email = disable_account_response_dict['email']
             alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
                                  "has canceled their subscription, and deleted all their account data.")
-            therapist_name = "".join([disable_account_response_dict[0]['first_name'],
+            therapist_name = "".join([disable_account_response_dict['first_name'],
                                       " ",
-                                      disable_account_response_dict[0]['last_name']])
+                                      disable_account_response_dict['last_name']])
             alert = CustomerRelationsAlert(
                 description=alert_description,
                 environment=os.environ.get('ENVIRONMENT'),
@@ -632,13 +632,16 @@ class SecurityRouter:
             await self._email_manager.send_customer_relations_alert(alert)
 
             # Remove the active session and clear Auth data from client storage.
-            aws_db_client.sign_out()
+            await aws_db_client.sign_out()
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
             # Delete user from our DB's Auth schema
-            aws_db_client.delete_user(user_id)
+            await aws_db_client.delete_user(
+                request=request,
+                user_id=user_id,
+            )
             return {}
         except Exception as e:
             description = str(e)

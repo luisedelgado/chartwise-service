@@ -48,7 +48,7 @@ async def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
     try:
         therapist_query = await aws_db_client.select(
             user_id=user_id,
-            fields="language_preference",
+            fields=["language_preference"],
             filters={
             'id': user_id
             },

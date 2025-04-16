@@ -1054,7 +1054,7 @@ class AssistantManager:
         session_dates = await aws_db_client.select(
             user_id=therapist_id,
             request=request,
-            fields="session_date",
+            fields=["session_date"],
             filters={
                 "patient_id": patient_id
             },
@@ -1484,7 +1484,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name="therapists",
-                fields="first_name",
+                fields=["first_name"],
                 filters={
                     "id": therapist_id
                 }
@@ -1497,7 +1497,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name="static_default_briefings",
-                fields="value",
+                fields=["value"],
                 filters={
                     "id": therapist_language
                 }
@@ -1655,7 +1655,7 @@ class AssistantManager:
             response_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="session_date",
+                fields=["session_date"],
                 filters={
                     "patient_id": patient_id,
                     "session_date__gte": start_date,

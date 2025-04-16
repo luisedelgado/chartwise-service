@@ -675,7 +675,7 @@ class ChartWiseAssistant:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             dates_response_data = await aws_db_client.select(
                 user_id=therapist_id,
-                fields="session_date",
+                fields=["session_date"],
                 filters={
                     "patient_id": patient_id,
                 },
