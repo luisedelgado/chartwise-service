@@ -11,6 +11,8 @@ from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class AuthManager:
 
+    SESSION_TOKEN_KEY = "session_token"
+    SESSION_ID_KEY = "session_id"
     ENVIRONMENT = os.environ.get("ENVIRONMENT")
     APP_COOKIE_DOMAIN = (".chartwise.ai" if (os.environ.get("ENVIRONMENT") == PROD_ENVIRONMENT
                          or os.environ.get("ENVIRONMENT") == STAGING_ENVIRONMENT) else None)
@@ -87,7 +89,7 @@ class AuthManager:
         try:
             session_token, expiration_timestamp = self.create_session_token(user_id)
             response.set_cookie(
-                key="session_token",
+                key=self.SESSION_TOKEN_KEY,
                 value=session_token,
                 domain=self.APP_COOKIE_DOMAIN,
                 httponly=True,
@@ -107,5 +109,5 @@ class AuthManager:
             )
 
     def logout(self, response: Response):
-        response.delete_cookie("session_token")
-        response.delete_cookie("session_id")
+        response.delete_cookie(self.SESSION_TOKEN_KEY)
+        response.delete_cookie(self.SESSION_ID_KEY)

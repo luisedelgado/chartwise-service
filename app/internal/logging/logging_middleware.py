@@ -55,7 +55,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 influx_client.log_api_request,
                 endpoint_name=request_url_path,
                 method=request_method,
-                session_id=request.cookies.get("session_id")
+                session_id=request.cookies.get(self.SESSION_ID_KEY)
             )
 
         # Process the request and get the response

@@ -1159,7 +1159,7 @@ class AssistantRouter:
             patient_query = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': user_id,
                     'id': patient_id

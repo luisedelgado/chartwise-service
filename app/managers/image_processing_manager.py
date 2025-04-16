@@ -112,7 +112,7 @@ class ImageProcessingManager(MediaProcessingManager):
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_report_data = await aws_db_client.select(
                 user_id=therapist_id,
-                fields="*",
+                fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
                     "textraction_job_id": document_id,

@@ -387,7 +387,7 @@ class AudioProcessingManager(MediaProcessingManager):
             patient_query_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'id': patient_id
                 },

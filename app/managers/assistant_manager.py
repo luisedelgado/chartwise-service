@@ -113,7 +113,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "id": session_report_id
                 }
@@ -232,7 +232,7 @@ class AssistantManager:
             report_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
                     'id': session_report_id
@@ -361,7 +361,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "id": patient_id
                 }
@@ -379,7 +379,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 order_desc_column="first_name",
                 filters={
                     "therapist_id": therapist_id
@@ -472,7 +472,7 @@ class AssistantManager:
         patient_query = await aws_db_client.select(
             user_id=therapist_id,
             request=request,
-            fields="*",
+            fields=["*"],
             filters={
                 'id': filtered_body['id'],
             },
@@ -582,7 +582,7 @@ class AssistantManager:
                 patient_query = await aws_db_client.select(
                     user_id=therapist_id,
                     request=request,
-                    fields="*",
+                    fields=["*"],
                     filters={
                         'id': query.patient_id,
                         'therapist_id': therapist_id
@@ -649,7 +649,7 @@ class AssistantManager:
             patient_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 filters={
                     'therapist_id': therapist_id,
@@ -712,7 +712,7 @@ class AssistantManager:
             patient_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': therapist_id,
                     'id': patient_id
@@ -727,7 +727,7 @@ class AssistantManager:
             therapist_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     "id": therapist_id
                 },
@@ -789,7 +789,7 @@ class AssistantManager:
             patient_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': therapist_id,
                     'id': patient_id
@@ -866,7 +866,7 @@ class AssistantManager:
             patient_query = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     'therapist_id': therapist_id,
                     'id': patient_id
@@ -930,7 +930,7 @@ class AssistantManager:
             patient_session_notes_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
                     "patient_id": patient_id
@@ -969,7 +969,7 @@ class AssistantManager:
                     patient_data = await aws_db_client.select(
                         user_id=therapist_id,
                         request=request,
-                        fields="*",
+                        fields=["*"],
                         table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                         filters={
                             "id": patient_id
@@ -1098,7 +1098,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id
                 }
@@ -1117,7 +1117,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id
                 }
@@ -1136,7 +1136,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id
                 }
@@ -1155,7 +1155,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id
                 }
@@ -1432,7 +1432,7 @@ class AssistantManager:
             strings_query = aws_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 table_name="user_interface_strings",
                 filters={
                     "value": default_question_suggestions,
@@ -1622,7 +1622,7 @@ class AssistantManager:
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id,
                     "session_date__gte": f"{year}-01-01",
@@ -1722,7 +1722,7 @@ class AssistantManager:
             session_reports_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
-                fields="*",
+                fields=["*"],
                 filters={
                     "patient_id": patient_id,
                 },
