@@ -983,7 +983,7 @@ class PaymentProcessingRouter:
                     secret_manager=secret_manager,
                 )
                 assert (0 != len(customer_data)), "No therapist data found for incoming customer ID."
-                therapist_id = customer_data['therapist_id']
+                therapist_id = customer_data[0]['therapist_id']
             except Exception:
                 pass
 

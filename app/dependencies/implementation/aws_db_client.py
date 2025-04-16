@@ -5,7 +5,6 @@ import uuid
 
 from fastapi import Request
 from typing import Any, List, Optional
-from urllib.parse import quote_plus
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
@@ -28,6 +27,7 @@ from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 class AwsDbClient(AwsDbBaseClass):
 
     STRIPE_READER_ROLE_SECRET_KEY = "username_pswd_stripe_reader_role"
+    STRIPE_READER_ROLE = "stripe_reader"
 
     def __init__(self,
                  encryptor: ChartWiseEncryptor):
@@ -487,13 +487,13 @@ class AwsDbClient(AwsDbBaseClass):
             secret = secret_manager.get_rds_secret(
                 secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
             )
-            password = quote_plus(secret.get(self.STRIPE_READER_ROLE_SECRET_KEY))
+            password = secret.get(self.STRIPE_READER_ROLE_SECRET_KEY)
             endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
             port = os.getenv("AWS_RDS_DB_PORT")
             db = os.getenv("AWS_RDS_DB_NAME")
 
             conn = await asyncpg.connect(
-                user=self.STRIPE_READER_ROLE_SECRET_KEY,
+                user=self.STRIPE_READER_ROLE,
                 password=password,
                 database=db,
                 host=endpoint,
