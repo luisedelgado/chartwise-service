@@ -305,7 +305,7 @@ class PineconeClient(PineconeBaseClass):
                 for match in query_matches:
                     metadata = match['metadata']
                     retrieved_docs.append({"session_date": metadata['session_date'],
-                                           "chunk_summary": self.encryptor.decrypt_base64_str(metadata['chunk_summary'])})
+                                           "chunk_summary": self.encryptor.decrypt(metadata['chunk_summary'])})
 
             # Check if caller wants us to rerank vectors
             if rerank_vectors:
@@ -368,7 +368,7 @@ class PineconeClient(PineconeBaseClass):
                         vector_data = vectors[vector_id]
 
                         metadata = vector_data['metadata']
-                        decrypted_chunk_summary = self.encryptor.decrypt_base64_str(metadata['chunk_summary'])
+                        decrypted_chunk_summary = self.encryptor.decrypt(metadata['chunk_summary'])
                         formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT)
                         session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
@@ -413,7 +413,7 @@ class PineconeClient(PineconeBaseClass):
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
             decrypted_chunk_summary = "".join(["`pre_existing_history_summary` = ",
-                                               f"{self.encryptor.decrypt_base64_str(metadata['pre_existing_history_summary'])}"])
+                                               f"{self.encryptor.decrypt(metadata['pre_existing_history_summary'])}"])
             decrypted_chunk_full_context = "".join([decrypted_chunk_summary, "\n"])
             context_docs.append({
                 "id": vector_data['id'],

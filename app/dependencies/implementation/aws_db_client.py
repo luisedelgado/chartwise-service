@@ -166,6 +166,7 @@ class AwsDbClient(AwsDbBaseClass):
             field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
             limit_clause = f"LIMIT {limit}" if limit is not None else ""
             order_clause = ""
+
             if order_by:
                 col, direction = order_by
                 direction = direction.upper()
@@ -193,7 +194,17 @@ class AwsDbClient(AwsDbBaseClass):
                     select_query,
                     *where_values
                 )
-                return [dict(row) for row in rows]
+
+                if table_name not in ENCRYPTED_TABLES or (0 == len(rows)):
+                    # Return response untouched if no need for decryption, or if no data was returned
+                    return [dict(row) for row in rows]
+
+                decrypted_payload = []
+                for row in rows:
+                    decrypted_row = self.decrypt_payload(dict(row), table_name)
+                    decrypted_payload.append(decrypted_row)
+
+                return decrypted_payload
         except Exception as e:
             raise RuntimeError(f"Select failed: {e}") from e
 
@@ -329,15 +340,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in PATIENTS_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = self.encryptor.decrypt(value)
             return payload
 
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
@@ -345,15 +348,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in SESSION_REPORTS_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = self.encryptor.decrypt(value)
                     payload[key] = decrypted_value if not SESSION_REPORTS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
@@ -362,15 +357,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = self.encryptor.decrypt(value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
@@ -378,15 +365,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in PATIENT_BRIEFINGS_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    payload[key] = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    payload[key] = self.encryptor.decrypt(value)
             return payload
 
         if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
@@ -394,15 +373,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = self.encryptor.decrypt(value)
                     payload[key] = decrypted_value if not PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 
@@ -411,15 +382,7 @@ class AwsDbClient(AwsDbBaseClass):
                 if key in PATIENT_TOPICS_ENCRYPTED_COLUMNS:
                     if value is None:
                         continue
-
-                    # Supabase returns BYTEA as hex-encoded base64 strings prefixed with "\\x"
-                    if value.startswith("\\x") or value.startswith("0x"):
-                        # Decode hex to get raw base64 bytes (which represent the actual ciphertext)
-                        b64_encoded_ciphertext_bytes = bytes.fromhex(value[2:])
-                    else:
-                        # If already a base64 string, encode to bytes if needed
-                        b64_encoded_ciphertext_bytes = value.encode("utf-8") if isinstance(value, str) else value
-                    decrypted_value = self.encryptor.decrypt_b64_encoded_ciphertext(b64_encoded_ciphertext_bytes)
+                    decrypted_value = self.encryptor.decrypt(value)
                     payload[key] = decrypted_value if not PATIENT_TOPICS_ENCRYPTED_COLUMNS[key][IS_JSON_KEY] else json.loads(decrypted_value)
             return payload
 

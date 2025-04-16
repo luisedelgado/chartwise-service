@@ -398,5 +398,5 @@ class TestingHarnessSecurityRouter:
         assert len(encrypted_value or '') > 0
         assert encrypted_value != plaintext
 
-        decrypted_value = chartwise_encryptor.decrypt_base64_str(encrypted_value)
+        decrypted_value = chartwise_encryptor.decrypt(encrypted_value)
         assert decrypted_value == plaintext
