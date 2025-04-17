@@ -1101,16 +1101,16 @@ class PaymentProcessingRouter:
             if is_new_customer:
                 alert_description = (f"Customer has just entered an active subscription state for the first time. "
                                         "Consider reaching out directly for a more personal welcome note.")
-                therapist_name = "".join([therapist_query_data['first_name'],
+                therapist_name = "".join([therapist_query_data[0]['first_name'],
                                           " ",
-                                          therapist_query_data['last_name']])
+                                          therapist_query_data[0]['last_name']])
                 alert = CustomerRelationsAlert(
                     description=alert_description,
                     session_id=session_id,
                     environment=self._environment,
                     therapist_id=therapist_id,
                     therapist_name=therapist_name,
-                    therapist_email=therapist_query_data['email']
+                    therapist_email=therapist_query_data[0]['email']
                 )
                 await self._email_manager.send_customer_relations_alert(alert)
         except Exception as e:
