@@ -175,6 +175,7 @@ class AudioProcessingRouter:
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,
@@ -369,6 +370,7 @@ class AudioProcessingRouter:
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
         except Exception as e:
             description = str(e)

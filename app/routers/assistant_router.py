@@ -570,6 +570,7 @@ class AssistantRouter:
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
             session_report_id = await self._assistant_manager.process_new_session_data(
                 language_code=language_code,
@@ -665,6 +666,7 @@ class AssistantRouter:
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
             patient_id = (await self._assistant_manager.update_session(
                 therapist_id=user_id,
@@ -757,7 +759,8 @@ class AssistantRouter:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
-                aws_db_client=aws_db_client
+                aws_db_client=aws_db_client,
+                request=request,
             )
             patient_id = (await self._assistant_manager.delete_session(
                 language_code=language_code,
@@ -816,6 +819,7 @@ class AssistantRouter:
         except Exception as e:
             yield ("\n" + (await self._assistant_manager.default_streaming_error_message(
                 user_id=therapist_id,
+                request=request,
             )))
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -1008,6 +1012,7 @@ class AssistantRouter:
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
             patient_id = await self._assistant_manager.add_patient(
                 language_code=language_code,

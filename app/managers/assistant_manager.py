@@ -578,6 +578,7 @@ class AssistantManager:
                 language_code = await general_utilities.get_user_language_code(
                     user_id=therapist_id,
                     aws_db_client=aws_db_client,
+                    request=request,
                 )
                 patient_query = await aws_db_client.select(
                     user_id=therapist_id,
@@ -1067,12 +1068,15 @@ class AssistantManager:
 
         return sorted(unique_active_years)
 
-    async def default_streaming_error_message(self, user_id: str,):
+    async def default_streaming_error_message(self,
+                                              user_id: str,
+                                              request: Request):
         if self.cached_patient_query_data is None:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
                 aws_db_client=aws_db_client,
+                request=request,
             )
         else:
             language_code = self.cached_patient_query_data.response_language_code
@@ -1429,7 +1433,7 @@ class AssistantManager:
             # Insert default question suggestions for patient without any session data
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
             aws_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            strings_query = aws_client.select(
+            strings_query = await aws_client.select(
                 user_id=therapist_id,
                 request=request,
                 fields=["*"],
@@ -1441,7 +1445,7 @@ class AssistantManager:
             assert (0 != len(strings_query)), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query]
-            aws_client.insert(
+            await aws_client.insert(
                 user_id=therapist_id,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 payload={
@@ -1685,6 +1689,7 @@ class AssistantManager:
                 language_preference = await general_utilities.get_user_language_code(
                     user_id=therapist_id,
                     aws_db_client=aws_db_client,
+                    request=request,
                 )
                 month_names = [
                     datetime_handler.get_month_abbreviated(

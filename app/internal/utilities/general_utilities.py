@@ -1,7 +1,11 @@
 import os, re, uuid
 
 from babel.numbers import format_currency, get_currency_precision
-from fastapi import HTTPException, status
+from fastapi import (
+    HTTPException,
+    status,
+    Request
+)
 from portkey_ai import createHeaders
 from pytz import timezone
 
@@ -44,18 +48,21 @@ def extract_status_code(exception, fallback: status):
 """
 Retrieves the current user's language preference.
 """
-async def get_user_language_code(user_id: str, aws_db_client: AwsDbBaseClass):
+async def get_user_language_code(user_id: str,
+                                 aws_db_client: AwsDbBaseClass,
+                                 request: Request):
     try:
         therapist_query = await aws_db_client.select(
+            request=request,
             user_id=user_id,
             fields=["language_preference"],
             filters={
-            'id': user_id
+                'id': user_id
             },
             table_name="therapists"
         )
         assert (1 == len(therapist_query))
-        return therapist_query["language_preference"]
+        return therapist_query[0]["language_preference"]
     except Exception as e:
         raise Exception("Encountered an issue while pulling user's language preference.")
 
