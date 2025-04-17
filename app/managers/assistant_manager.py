@@ -380,7 +380,7 @@ class AssistantManager:
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 fields=["*"],
-                order_desc_column="first_name",
+                order_by=("first_name", "desc"),
                 filters={
                     "therapist_id": therapist_id
                 }
@@ -479,7 +479,7 @@ class AssistantManager:
             table_name=ENCRYPTED_PATIENTS_TABLE_NAME
         )
         assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-        current_pre_existing_history = patient_query['pre_existing_history']
+        current_pre_existing_history = patient_query[0]['pre_existing_history']
 
         update_db_payload = {}
         for key, value in filtered_body.items():
@@ -590,13 +590,12 @@ class AssistantManager:
                     },
                     table_name=ENCRYPTED_PATIENTS_TABLE_NAME
                 )
-                patient_therapist_match = (0 != len(patient_query))
-                assert patient_therapist_match, "There isn't a patient-therapist match with the incoming ids."
+                assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
 
-                patient_first_name = patient_query['first_name']
-                patient_last_name = patient_query['last_name']
-                patient_gender = patient_query['gender']
-                patient_last_session_date = patient_query['last_session_date']
+                patient_first_name = patient_query[0]['first_name']
+                patient_last_name = patient_query[0]['last_name']
+                patient_gender = patient_query[0]['gender']
+                patient_last_session_date = patient_query[0]['last_session_date']
                 self.cached_patient_query_data = CachedPatientQueryData(
                     patient_id=query.patient_id,
                     patient_first_name=patient_first_name,
@@ -1439,13 +1438,14 @@ class AssistantManager:
                 fields=["*"],
                 table_name="user_interface_strings",
                 filters={
-                    "value": default_question_suggestions,
+                    "id": default_question_suggestions,
                 }
             )
             assert (0 != len(strings_query)), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query]
             await aws_client.insert(
+                request=request,
                 user_id=therapist_id,
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 payload={
@@ -1493,8 +1493,8 @@ class AssistantManager:
                     "id": therapist_id
                 }
             )
-            assert (0 != len(therapist_data_query)), "Did not find any data for the incoming therapist id."
-            therapist_first_name = therapist_data_query['first_name']
+            assert (1 == len(therapist_data_query)), "Did not find any data for the incoming therapist id."
+            therapist_first_name = therapist_data_query[0]['first_name']
 
             therapist_language = general_utilities.map_language_code_to_language(language_code)
             string_query = await aws_db_client.select(
@@ -1508,7 +1508,7 @@ class AssistantManager:
             )
             assert (0 != len(string_query)), "Did not find any strings data for the current scenario."
 
-            briefings = string_query['value']['briefings']
+            briefings = json.loads(string_query[0]['value'])['briefings']
             if not 'has_different_pronouns' in briefings or not briefings['has_different_pronouns']:
                 default_briefing = (briefings['existing_patient']['value'] if not is_first_time_patient
                                     else briefings['new_patient']['value'])

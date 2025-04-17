@@ -196,12 +196,10 @@ class AssistantRouter:
                 assert general_utilities.is_valid_uuid(query.patient_id or '') > 0, "Invalid patient_id in payload"
                 assert len(query.text or '') > 0, "Invalid text in payload"
 
-                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 return StreamingResponse(self._execute_assistant_query_internal(
                     query=query,
                     request=request,
                     therapist_id=user_id,
-                    aws_db_client=aws_db_client,
                     session_id=session_id
                 ), media_type="text/event-stream")
             except Exception as e:
@@ -794,7 +792,6 @@ class AssistantRouter:
                                                 request: Request,
                                                 query: AssistantQuery,
                                                 therapist_id: str,
-                                                aws_db_client: AwsDbBaseClass,
                                                 session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
         """
         Executes a query to our assistant system.
@@ -804,7 +801,6 @@ class AssistantRouter:
         request – the request object.
         query – the query that will be executed.
         therapist_id – the therapist id associated with the query.
-        aws_db_client – the AWS database client to interact with the database.
         session_id – the session_id cookie, if exists.
         """
         try:

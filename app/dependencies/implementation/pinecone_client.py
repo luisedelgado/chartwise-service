@@ -1,3 +1,4 @@
+import base64
 import hashlib, os, uuid
 import tiktoken, torch
 
@@ -68,13 +69,15 @@ class PineconeClient(PineconeBaseClass):
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
-                doc.set_content(encrypted_chunk_text)
+                encoded_chunk_ciphertext = base64.b64encode(encrypted_chunk_text).decode("utf-8")
+                doc.set_content(encoded_chunk_ciphertext)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
                 encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
+                encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
                 vector_store.namespace = namespace
                 doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
@@ -82,8 +85,8 @@ class PineconeClient(PineconeBaseClass):
                 doc.id_ = doc_id
                 doc.metadata.update({
                     "session_date": therapy_session_date,
-                    "chunk_summary": encrypted_chunk_summary,
-                    "chunk_text": encrypted_chunk_text,
+                    "chunk_summary": encoded_chunk_summary_ciphertext,
+                    "chunk_text": encoded_chunk_ciphertext,
                     "session_report_id": session_report_id
                 })
 
@@ -124,13 +127,15 @@ class PineconeClient(PineconeBaseClass):
 
                 chunk_text = data_cleaner.clean_up_text(chunk)
                 encrypted_chunk_text = self.encryptor.encrypt(chunk_text)
-                doc.set_content(encrypted_chunk_text)
+                encoded_chunk_ciphertext = base64.b64encode(encrypted_chunk_text).decode("utf-8")
+                doc.set_content(encoded_chunk_ciphertext)
 
                 chunk_summary = await summarize_chunk(user_id=user_id,
                                                       session_id=session_id,
                                                       chunk_text=chunk_text,
                                                       openai_client=openai_client)
                 encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
+                encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
                 vector_store.namespace = "".join([namespace,
@@ -139,8 +144,8 @@ class PineconeClient(PineconeBaseClass):
                 doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary)
                 doc.metadata.update({
-                    "pre_existing_history_summary": encrypted_chunk_summary,
-                    "pre_existing_history_text": encrypted_chunk_text
+                    "pre_existing_history_summary": encoded_chunk_summary_ciphertext,
+                    "pre_existing_history_text": encoded_chunk_ciphertext
                 })
                 vectors.append(doc)
 
@@ -304,8 +309,10 @@ class PineconeClient(PineconeBaseClass):
                 retrieved_docs = []
                 for match in query_matches:
                     metadata = match['metadata']
+                    ciphertext = base64.b64decode(metadata['chunk_summary'])
+                    plaintext = self.encryptor.decrypt(ciphertext)
                     retrieved_docs.append({"session_date": metadata['session_date'],
-                                           "chunk_summary": self.encryptor.decrypt(metadata['chunk_summary'])})
+                                           "chunk_summary": plaintext})
 
             # Check if caller wants us to rerank vectors
             if rerank_vectors:
@@ -368,11 +375,12 @@ class PineconeClient(PineconeBaseClass):
                         vector_data = vectors[vector_id]
 
                         metadata = vector_data['metadata']
-                        decrypted_chunk_summary = self.encryptor.decrypt(metadata['chunk_summary'])
+                        ciphertext = base64.b64decode(metadata['chunk_summary'])
+                        plaintext = self.encryptor.decrypt(ciphertext)
                         formatted_date = datetime_handler.convert_to_date_format_spell_out_month(session_date=metadata['session_date'],
-                                                                                                incoming_date_format=datetime_handler.DATE_FORMAT)
+                                                                                                 incoming_date_format=datetime_handler.DATE_FORMAT)
                         session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
-                        chunk_summary = "".join(["`chunk_summary` = ",f"{decrypted_chunk_summary}\n"])
+                        chunk_summary = "".join(["`chunk_summary` = ",f"{plaintext}\n"])
                         session_date_override_context = "".join([session_date,
                                                                 chunk_summary,])
 
@@ -412,8 +420,10 @@ class PineconeClient(PineconeBaseClass):
         for vector_id in vectors:
             vector_data = vectors[vector_id]
             metadata = vector_data['metadata']
+            ciphertext = base64.b64decode(metadata['pre_existing_history_summary'])
+            plaintext = self.encryptor.decrypt(ciphertext)
             decrypted_chunk_summary = "".join(["`pre_existing_history_summary` = ",
-                                               f"{self.encryptor.decrypt(metadata['pre_existing_history_summary'])}"])
+                                               f"{plaintext}"])
             decrypted_chunk_full_context = "".join([decrypted_chunk_summary, "\n"])
             context_docs.append({
                 "id": vector_data['id'],
