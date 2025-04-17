@@ -1,6 +1,6 @@
 import os, uuid
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from fastapi import (APIRouter,
                      BackgroundTasks,
@@ -236,55 +236,12 @@ class SecurityRouter:
 
             token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
 
-            # Fetch customer data
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = await aws_db_client.select(
+            subscription_data = await self.subscription_data(
                 user_id=user_id,
                 request=request,
-                fields=["*"],
-                filters={
-                    'therapist_id': user_id,
-                },
-                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
-
-            # Check if this user is already a customer, and has subscription history
-            if len(customer_data_dict) == 0:
-                is_subscription_active = False
-                is_free_trial_active = False
-                tier = None
-                reached_tier_usage_limit = None
-            else:
-                is_subscription_active = customer_data_dict['is_active']
-                tier = customer_data_dict['current_tier']
-
-                # Determine if free trial is still active
-                free_trial_end_date = customer_data_dict['free_trial_end_date']
-
-                if free_trial_end_date is not None:
-                    free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-                    is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
-                else:
-                    is_free_trial_active = False
-
-                reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
-                    tier=tier,
-                    therapist_id=user_id,
-                    aws_db_client=aws_db_client,
-                    is_free_trial_active=is_free_trial_active
-                )
-
-            token_refresh_data = {
-                "subscription_status" : {
-                    "is_free_trial_active": is_free_trial_active,
-                    "is_subscription_active": is_subscription_active,
-                    "tier": tier,
-                    "reached_tier_usage_limit": reached_tier_usage_limit
-                }
-            }
-            token_refresh_data["token"] = token.model_dump()
-
-            return token_refresh_data
+            subscription_data["token"] = token.model_dump()
+            return subscription_data
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
@@ -669,7 +626,7 @@ class SecurityRouter:
         """
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = await aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields=["*"],
@@ -680,21 +637,20 @@ class SecurityRouter:
             )
 
             # Check if this user is already a customer, and has subscription history
-            if len(customer_data_dict) == 0:
+            if len(customer_data) == 0:
                 is_subscription_active = False
                 is_free_trial_active = False
                 tier = None
                 reached_tier_usage_limit = None
             else:
-                is_subscription_active = customer_data_dict['is_active']
-                tier = customer_data_dict['current_tier']
+                is_subscription_active = customer_data[0]['is_active']
+                tier = customer_data[0]['current_tier']
 
                 # Determine if free trial is still active
-                free_trial_end_date = customer_data_dict['free_trial_end_date']
+                free_trial_end_date: date = customer_data[0]['free_trial_end_date']
 
                 if free_trial_end_date is not None:
-                    free_trial_end_date_formatted = datetime.strptime(free_trial_end_date, datetime_handler.DATE_FORMAT_YYYY_MM_DD).date()
-                    is_free_trial_active = datetime.now().date() < free_trial_end_date_formatted
+                    is_free_trial_active = (datetime.now().date() < free_trial_end_date)
                 else:
                     is_free_trial_active = False
 
