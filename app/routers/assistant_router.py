@@ -11,6 +11,7 @@ from fastapi import (
     Response,
     status
 )
+from datetime import datetime
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Annotated, AsyncIterable, Optional, Union
@@ -570,13 +571,18 @@ class AssistantRouter:
                 aws_db_client=aws_db_client,
                 request=request,
             )
+
+            formatted_session_date = datetime.strptime(
+                body['session_date'],
+                datetime_handler.DATE_FORMAT
+            ).date()
             session_report_id = await self._assistant_manager.process_new_session_data(
                 language_code=language_code,
                 environment=self._environment,
                 auth_manager=self._auth_manager,
                 patient_id=patient_id,
                 notes_text=body['notes_text'],
-                session_date=body['session_date'],
+                session_date=formatted_session_date,
                 source=SessionNotesSource.MANUAL_INPUT,
                 background_tasks=background_tasks,
                 session_id=session_id,

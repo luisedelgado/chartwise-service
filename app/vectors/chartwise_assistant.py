@@ -1,6 +1,7 @@
 import tiktoken
 
 from datetime import datetime
+from fastapi import Request
 from typing import AsyncIterable
 
 from .message_templates import PromptCrafter, PromptScenario
@@ -125,7 +126,8 @@ class ChartWiseAssistant:
                               patient_gender: str,
                               therapist_name: str,
                               therapist_gender: str,
-                              session_count: int,) -> str:
+                              session_count: int,
+                              request: Request) -> str:
         """
         Creates and returns a briefing on the incoming patient id's data.
 
@@ -140,6 +142,7 @@ class ChartWiseAssistant:
         therapist_name – the name by which the patient should be referred to.
         therapist_gender – the therapist gender.
         session_count – the count of sessions so far with this patient.
+        request – the upstream request object.
         """
         try:
             query_input = (
@@ -149,6 +152,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
+                request=request,
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=BRIEFING_CONTEXT_SESSIONS_CAP
@@ -220,7 +224,8 @@ class ChartWiseAssistant:
                                           language_code: str,
                                           session_id: str,
                                           patient_name: str,
-                                          patient_gender: str,) -> str:
+                                          patient_gender: str,
+                                          request: Request,) -> str:
         """
         Fetches a set of questions to be suggested to the user for feeding the assistant.
 
@@ -232,6 +237,7 @@ class ChartWiseAssistant:
         session_id – the session id.
         patient_name – the name by which the patient should be addressed.
         patient_gender – the patient gender.
+        request – the upstream request object.
         """
         try:
             query_input = (
@@ -240,6 +246,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
+                request=request,
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP
@@ -306,7 +313,8 @@ class ChartWiseAssistant:
                                   language_code: str,
                                   session_id: str,
                                   patient_name: str,
-                                  patient_gender: str,) -> str:
+                                  patient_gender: str,
+                                  request: Request,) -> str:
         """
         Fetches a set of topics associated with the user along with respective density percentages.
 
@@ -318,6 +326,7 @@ class ChartWiseAssistant:
         session_id – the session id.
         patient_name – the name by which the patient should be addressed.
         patient_gender – the patient gender.
+        request – the upstream request object.
         """
         try:
             query_input = (
@@ -325,6 +334,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
+                request=request,
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
@@ -393,7 +403,8 @@ class ChartWiseAssistant:
                                               language_code: str,
                                               session_id: str,
                                               patient_name: str,
-                                              patient_gender: str,) -> str:
+                                              patient_gender: str,
+                                              request: Request,) -> str:
         """
         Create insight for a given set of recent topics.
 
@@ -406,6 +417,7 @@ class ChartWiseAssistant:
         session_id – the session id.
         patient_name – the name by which the patient should be addressed.
         patient_gender – the patient gender.
+        request – the upstream request object.
         """
         try:
             query_input = (
@@ -413,6 +425,7 @@ class ChartWiseAssistant:
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
+                request=request,
                 therapist_id=user_id,
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
@@ -480,10 +493,12 @@ class ChartWiseAssistant:
                                            language_code: str,
                                            session_id: str,
                                            patient_name: str,
-                                           patient_gender: str,) -> str:
+                                           patient_gender: str,
+                                           request: Request,) -> str:
         try:
             patient_session_dates = [
                 date_wrapper.session_date for date_wrapper in (await self._retrieve_n_most_recent_session_dates(
+                    request=request,
                     therapist_id=therapist_id,
                     patient_id=patient_id,
                     n=ATTENDANCE_CONTEXT_SESSIONS_CAP
@@ -668,6 +683,7 @@ class ChartWiseAssistant:
     # Private
 
     async def _retrieve_n_most_recent_session_dates(self,
+                                                    request: Request,
                                                     therapist_id: str,
                                                     patient_id: str,
                                                     n: int) -> list[PineconeQuerySessionDateOverride]:
@@ -675,6 +691,7 @@ class ChartWiseAssistant:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             dates_response_data = await aws_db_client.select(
                 user_id=therapist_id,
+                request=request,
                 fields=["session_date"],
                 filters={
                     "patient_id": patient_id,

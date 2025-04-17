@@ -1,7 +1,7 @@
 import asyncio, json, os
 
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from enum import Enum
 from fastapi import BackgroundTasks, Request
 from pydantic import BaseModel
@@ -163,7 +163,7 @@ class AssistantManager:
                                        auth_manager: AuthManager,
                                        patient_id: str,
                                        notes_text: str,
-                                       session_date: str,
+                                       session_date: date,
                                        source: SessionNotesSource,
                                        session_id: str,
                                        therapist_id: str,
@@ -172,7 +172,7 @@ class AssistantManager:
                                        diarization: str = None) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
             insert_payload = {
                 "notes_text": notes_text,
                 "notes_mini_summary": "-",
@@ -203,7 +203,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id,
                 notes_text=notes_text,
-                session_date=session_date,
+                session_date=session_date.strftime(datetime_handler.DATE_FORMAT),
                 session_id=session_id,
                 language_code=language_code,
                 environment=environment,
@@ -240,18 +240,15 @@ class AssistantManager:
             )
             assert (0 != len(report_query)), "There isn't a match with the incoming session data."
 
-            patient_id = report_query['patient_id']
-            current_session_text = report_query['notes_text']
-            current_session_date = report_query['session_date']
-            current_session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
-                incoming_date=current_session_date,
-                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
-            )
+            patient_id = report_query[0]['patient_id']
+            current_session_text = report_query[0]['notes_text']
+            current_session_date: date = report_query[0]['session_date']
+            current_session_date_formatted = current_session_date.strftime(datetime_handler.DATE_FORMAT)
             session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
             session_date_changed = 'session_date' in filtered_body and filtered_body['session_date'] != current_session_date_formatted
 
             # Start populating payload for updating session.
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
             session_update_payload = {
                 "last_updated": now_timestamp
             }
@@ -293,7 +290,7 @@ class AssistantManager:
                 )
 
             return {
-                "patient_id": report_query['patient_id'],
+                "patient_id": report_query[0]['patient_id'],
                 "session_report_id": session_report_id
             }
         except Exception as e:
@@ -657,9 +654,9 @@ class AssistantManager:
                 }
             )
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-            patient_first_name = patient_query['first_name']
-            patient_last_name = patient_query['last_name']
-            patient_gender = patient_query['gender']
+            patient_first_name = patient_query[0]['first_name']
+            patient_last_name = patient_query[0]['last_name']
+            patient_gender = patient_query[0]['gender']
 
             questions_json = await self.chartwise_assistant.create_question_suggestions(
                 language_code=language_code,
@@ -668,12 +665,13 @@ class AssistantManager:
                 patient_id=patient_id,
                 environment=environment,
                 patient_name=(" ".join([patient_first_name, patient_last_name])),
-                patient_gender=patient_gender
+                patient_gender=patient_gender,
+                request=request,
             )
             assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
             questions = questions_json['questions']
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
 
             # Upsert result to DB
             await aws_db_client.upsert(
@@ -720,9 +718,9 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-            patient_name = patient_query['first_name']
-            patient_gender = patient_query['gender']
-            session_count = patient_query['total_sessions']
+            patient_name = patient_query[0]['first_name']
+            patient_gender = patient_query[0]['gender']
+            session_count = patient_query[0]['total_sessions']
 
             therapist_query = await aws_db_client.select(
                 user_id=therapist_id,
@@ -733,9 +731,10 @@ class AssistantManager:
                 },
                 table_name="therapists"
             )
-            therapist_name = therapist_query['first_name']
-            language_code = therapist_query['language_preference']
-            therapist_gender = therapist_query['gender']
+            assert (0 != len(therapist_query)), "Error caught when trying to find data associated to therapist ID"
+            therapist_name = therapist_query[0]['first_name']
+            language_code = therapist_query[0]['language_preference']
+            therapist_gender = therapist_query[0]['gender']
 
             briefing = await self.chartwise_assistant.create_briefing(
                 user_id=therapist_id,
@@ -748,10 +747,11 @@ class AssistantManager:
                 therapist_name=therapist_name,
                 therapist_gender=therapist_gender,
                 session_count=session_count,
+                request=request,
             )
 
             # Upsert result to DB
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
             await aws_db_client.upsert(
                 user_id=therapist_id,
                 request=request,
@@ -797,9 +797,9 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-            patient_first_name = patient_query['first_name']
-            patient_last_name = patient_query['last_name']
-            patient_gender = patient_query['gender']
+            patient_first_name = patient_query[0]['first_name']
+            patient_last_name = patient_query[0]['last_name']
+            patient_gender = patient_query[0]['gender']
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
 
             recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
@@ -809,7 +809,8 @@ class AssistantManager:
                 patient_id=patient_id,
                 environment=environment,
                 patient_name=patient_full_name,
-                patient_gender=patient_gender
+                patient_gender=patient_gender,
+                request=request,
             )
             assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
@@ -822,10 +823,11 @@ class AssistantManager:
                 session_id=session_id,
                 patient_name=patient_first_name,
                 patient_gender=patient_gender,
+                request=request,
             )
 
             recent_topics = recent_topics_json['topics']
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
 
             # Upsert result to DB
             await aws_db_client.upsert(
@@ -874,8 +876,8 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-            patient_first_name = patient_query['first_name']
-            patient_gender = patient_query['gender']
+            patient_first_name = patient_query[0]['first_name']
+            patient_gender = patient_query[0]['gender']
 
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(
                 therapist_id=therapist_id,
@@ -885,10 +887,11 @@ class AssistantManager:
                 environment=environment,
                 language_code=language_code,
                 session_id=session_id,
+                request=request,
             )
 
             # Upsert result to DB
-            now_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT)
+            now_timestamp = datetime.now()
             await aws_db_client.upsert(
                 user_id=therapist_id,
                 request=request,
@@ -938,10 +941,12 @@ class AssistantManager:
                 order_by=("session_date", "desc")
             )
             total_session_count = len(patient_session_notes_data)
-            patient_last_session_date = (None if total_session_count == 0
-                                         else patient_session_notes_data[0]['session_date'])
+            patient_last_session_date: date = (
+                None if total_session_count == 0
+                else patient_session_notes_data[0]['session_date']
+            )
 
-            unique_active_years: List[int] = await self.get_patient_active_session_years(
+            unique_active_years: Set[str] = await self.get_patient_active_session_years(
                 therapist_id=therapist_id,
                 patient_id=patient_id,
                 request=request,
@@ -1010,10 +1015,7 @@ class AssistantManager:
                 assert session_date is not None, "Received an invalid session date"
                 patient_last_session_date = session_date
             else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(
-                    incoming_date=patient_last_session_date,
-                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
-                )
+                formatted_date = patient_last_session_date.strftime(datetime_handler.DATE_FORMAT)
                 patient_last_session_date = datetime_handler.retrieve_most_recent_date(
                     first_date=session_date,
                     first_date_format=datetime_handler.DATE_FORMAT,
@@ -1026,7 +1028,10 @@ class AssistantManager:
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload={
-                    "last_session_date": patient_last_session_date,
+                    "last_session_date": datetime.strptime(
+                        patient_last_session_date,
+                        datetime_handler.DATE_FORMAT
+                    ).date(),
                     "total_sessions": total_session_count,
                     "unique_active_years": unique_active_years,
                 },
@@ -1049,7 +1054,7 @@ class AssistantManager:
     async def get_patient_active_session_years(self,
                                                therapist_id: str,
                                                patient_id: str,
-                                               request: Request,) -> List[int]:
+                                               request: Request,) -> Set[str]:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         session_dates = await aws_db_client.select(
             user_id=therapist_id,
@@ -1061,8 +1066,8 @@ class AssistantManager:
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
         )
 
-        unique_active_years: Set[int] = {
-            int(entry["session_date"][:4]) for entry in session_dates if entry["session_date"]
+        unique_active_years: Set[str] = {
+            str(entry["session_date"].year) for entry in session_dates if entry["session_date"]
         }
 
         return sorted(unique_active_years)
