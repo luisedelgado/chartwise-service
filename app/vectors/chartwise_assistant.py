@@ -190,7 +190,7 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (patient_id + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (str(patient_id) + "-briefing-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -279,7 +279,7 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (patient_id + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (str(patient_id) + "-questions-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -368,7 +368,7 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (patient_id + "-topics-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (str(patient_id) + "-topics-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -459,7 +459,7 @@ class ChartWiseAssistant:
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (patient_id + "-topics-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (str(patient_id) + "-topics-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user_id": user_id,
@@ -519,7 +519,7 @@ class ChartWiseAssistant:
             openai_client = dependency_container.inject_openai_client()
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            caching_shard_key = (patient_id + "-attendance-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
+            caching_shard_key = (str(patient_id) + "-attendance-insights-" + datetime.now().strftime(datetime_handler.DATE_FORMAT))
             metadata = {
                 "environment": environment,
                 "user_id": therapist_id,
@@ -703,9 +703,11 @@ class ChartWiseAssistant:
 
             overrides = []
             for date in dates_response_data:
-                plain_date = date['session_date']
+                date_obj = date['session_date']
                 overrides.append(
-                    PineconeQuerySessionDateOverride(session_date=plain_date)
+                    PineconeQuerySessionDateOverride(
+                        session_date=date_obj.strftime(datetime_handler.DATE_FORMAT)
+                    )
                 )
             return overrides
         except Exception as e:

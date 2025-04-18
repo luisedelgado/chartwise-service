@@ -76,8 +76,8 @@ def convert_to_date_format_spell_out_month(session_date: str, incoming_date_form
     try:
         session_date_as_date = datetime.strptime(session_date, incoming_date_format)
         return datetime.strftime(session_date_as_date, DATE_FORMAT_SPELL_OUT_MONTH)
-    except:
-        raise Exception("Something went wrong while formatting the incoming date.")
+    except Exception as e:
+        raise Exception(f"Something went wrong while formatting the incoming date: {e}")
 
 """
 Validates an incoming year value
@@ -96,11 +96,10 @@ def get_base_locale(language_code: str) -> str:
 """
 Returns the abbreviated version of month in the incoming date.
 """
-def get_month_abbreviated(date: str, language_code: str):
+def get_month_abbreviated(date: datetime.date, language_code: str):
     base_locale = get_base_locale(language_code=language_code)
-    date_obj = datetime.strptime(date, DATE_FORMAT_YYYY_MM_DD)
     babel_abbreviated_month_format = 'MMM'
-    return format_date(date_obj,
+    return format_date(date,
                        format=babel_abbreviated_month_format,
                        locale=base_locale)
 

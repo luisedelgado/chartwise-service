@@ -227,7 +227,7 @@ class AssistantManager:
                              email_manager: EmailManager,
                              request: Request,):
         try:
-            session_report_id = filtered_body['id']
+            session_notes_id = filtered_body['id']
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             report_query = await aws_db_client.select(
                 user_id=therapist_id,
@@ -235,7 +235,7 @@ class AssistantManager:
                 fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
-                    'id': session_report_id
+                    'id': session_notes_id
                 }
             )
             assert (0 != len(report_query)), "There isn't a match with the incoming session data."
@@ -265,7 +265,7 @@ class AssistantManager:
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload=session_update_payload,
                 filters={
-                    'id': session_report_id
+                    'id': session_notes_id
                 }
             )
             assert (0 != len(session_update_response)), "Update operation could not be completed"
@@ -274,7 +274,7 @@ class AssistantManager:
             if session_date_changed or session_text_changed:
                 background_tasks.add_task(
                     self._update_vectors_and_generate_insights,
-                    session_report_id=session_report_id,
+                    session_notes_id=session_notes_id,
                     therapist_id=therapist_id,
                     patient_id=patient_id,
                     notes_text=filtered_body.get('notes_text', current_session_text),
@@ -291,7 +291,7 @@ class AssistantManager:
 
             return {
                 "patient_id": report_query[0]['patient_id'],
-                "session_report_id": session_report_id
+                "session_report_id": session_notes_id
             }
         except Exception as e:
             raise Exception(e)
@@ -319,15 +319,12 @@ class AssistantManager:
             assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
             delete_result_data = delete_result_data[0]
 
-            therapist_id = delete_result_data['therapist_id']
-            patient_id = delete_result_data['patient_id']
+            therapist_id = str(delete_result_data['therapist_id'])
+            patient_id = str(delete_result_data['patient_id'])
             session_date = delete_result_data['session_date']
 
             # Delete vector embeddings
-            session_date_formatted = datetime_handler.convert_to_date_format_mm_dd_yyyy(
-                incoming_date=session_date,
-                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
-            )
+            session_date_formatted = session_date.strftime(datetime_handler.DATE_FORMAT)
             background_tasks.add_task(
                 self._delete_vectors_and_generate_insights,
                 therapist_id=therapist_id,
@@ -430,7 +427,7 @@ class AssistantManager:
                     # If pre_existing_history is not in `filtered_body` or if it's empty, we won't do anything
                     pass
 
-            # Load default question suggestions in a background thread
+            # Load default question suggestions
             await self._load_default_question_suggestions_for_new_patient(
                 language_code=language_code,
                 patient_id=patient_id,
@@ -606,14 +603,14 @@ class AssistantManager:
                 patient_first_name = self.cached_patient_query_data.patient_first_name
                 patient_last_name = self.cached_patient_query_data.patient_last_name
                 patient_gender = self.cached_patient_query_data.patient_gender
-                patient_last_session_date = self.cached_patient_query_data.last_session_date
                 language_code = self.cached_patient_query_data.response_language_code
+                patient_last_session_date: date = self.cached_patient_query_data.last_session_date
 
-            if len(patient_last_session_date or '') > 0:
+            if patient_last_session_date is not None:
                 session_date_override = PineconeQuerySessionDateOverride(
                     output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
                     output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                    session_date=patient_last_session_date
+                    session_date=patient_last_session_date.strftime(datetime_handler.DATE_FORMAT)
                 )
             else:
                 session_date_override = None
@@ -657,6 +654,20 @@ class AssistantManager:
             patient_first_name = patient_query[0]['first_name']
             patient_last_name = patient_query[0]['last_name']
             patient_gender = patient_query[0]['gender']
+            unique_active_years = patient_query[0]['unique_active_years']
+
+            if 0 == len(unique_active_years):
+                # There are no sessions for the patient. Load zero-state question suggestions.
+                await self._load_default_question_suggestions_for_new_patient(
+                    language_code=language_code,
+                    patient_id=patient_id,
+                    environment=environment,
+                    therapist_id=therapist_id,
+                    email_manager=email_manager,
+                    session_id=session_id,
+                    request=request,
+                )
+                return
 
             questions_json = await self.chartwise_assistant.create_question_suggestions(
                 language_code=language_code,
@@ -703,6 +714,7 @@ class AssistantManager:
                                      patient_id: str,
                                      environment: str,
                                      session_id: str,
+                                     language_code: str,
                                      email_manager: EmailManager,
                                      request: Request,):
         try:
@@ -718,9 +730,26 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME
             )
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-            patient_name = patient_query[0]['first_name']
+            patient_first_name = patient_query[0]['first_name']
             patient_gender = patient_query[0]['gender']
             session_count = patient_query[0]['total_sessions']
+            unique_active_years = patient_query[0]['unique_active_years']
+
+            if 0 == len(unique_active_years):
+                # There are no sessions for the patient. Load zero-state pre-session tray.
+                await self._load_default_pre_session_tray_for_new_patient(
+                    language_code=language_code,
+                    patient_id=patient_id,
+                    environment=environment,
+                    therapist_id=therapist_id,
+                    email_manager=email_manager,
+                    session_id=session_id,
+                    patient_first_name=patient_first_name,
+                    patient_gender=patient_gender,
+                    is_first_time_patient=patient_query[0]['onboarding_first_time_patient'],
+                    request=request,
+                )
+                return
 
             therapist_query = await aws_db_client.select(
                 user_id=therapist_id,
@@ -742,7 +771,7 @@ class AssistantManager:
                 environment=environment,
                 language_code=language_code,
                 session_id=session_id,
-                patient_name=patient_name,
+                patient_name=patient_first_name,
                 patient_gender=patient_gender,
                 therapist_name=therapist_name,
                 therapist_gender=therapist_gender,
@@ -801,7 +830,21 @@ class AssistantManager:
             patient_last_name = patient_query[0]['last_name']
             patient_gender = patient_query[0]['gender']
             patient_full_name = (" ".join([patient_first_name, patient_last_name]))
+            unique_active_years = patient_query[0]["unique_active_years"]
 
+            if 0 == len(unique_active_years):
+                # There are no sessions for the patient. Clear out recent topics data.
+                await aws_db_client.delete(
+                    user_id=therapist_id,
+                    request=request,
+                    table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+                    filters={
+                        "patient_id": patient_id
+                    }
+                )
+                return
+
+            # There are sessions associated with the patient. Regenerate recent topics.
             recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
                 language_code=language_code,
                 session_id=session_id,
@@ -878,6 +921,19 @@ class AssistantManager:
             assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
             patient_first_name = patient_query[0]['first_name']
             patient_gender = patient_query[0]['gender']
+            unique_active_years = patient_query[0]['unique_active_years']
+
+            if 0 == len(unique_active_years):
+                # There are no sessions for the patient. Clear out attendance insights data.
+                await aws_db_client.delete(
+                    user_id=therapist_id,
+                    request=request,
+                    table_name=ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+                    filters={
+                        "patient_id": patient_id
+                    }
+                )
+                return
 
             attendance_insights = await self.chartwise_assistant.generate_attendance_insights(
                 therapist_id=therapist_id,
@@ -922,7 +978,6 @@ class AssistantManager:
                                                                     environment: str,
                                                                     therapist_id: str,
                                                                     session_id: str,
-                                                                    language_code: str,
                                                                     email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
                                                                     request: Request,
@@ -968,44 +1023,6 @@ class AssistantManager:
                         'id': patient_id
                     }
                 )
-
-                if total_session_count == 0:
-                    # Load zero-state for this patient since we don't have any data from them anymore.
-                    patient_data = await aws_db_client.select(
-                        user_id=therapist_id,
-                        request=request,
-                        fields=["*"],
-                        table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                        filters={
-                            "id": patient_id
-                        }
-                    )
-                    assert len(patient_data) > 0, "No patient found with the incoming patient_id"
-
-                    # Load zero-state question suggestions in a background thread.
-                    await self._load_default_question_suggestions_for_new_patient(
-                        language_code=language_code,
-                        patient_id=patient_id,
-                        environment=environment,
-                        therapist_id=therapist_id,
-                        email_manager=email_manager,
-                        session_id=session_id,
-                        request=request,
-                    )
-
-                    # Load zero-state pre-session tray.
-                    await self._load_default_pre_session_tray_for_new_patient(
-                        language_code=language_code,
-                        patient_id=patient_id,
-                        environment=environment,
-                        therapist_id=therapist_id,
-                        email_manager=email_manager,
-                        session_id=session_id,
-                        patient_first_name=patient_data[0]['first_name'],
-                        patient_gender=patient_data[0]['gender'],
-                        is_first_time_patient=patient_data[0]['onboarding_first_time_patient'],
-                        request=request,
-                    )
                 return
 
             # The operation is either insert or update.
@@ -1221,7 +1238,6 @@ class AssistantManager:
             environment=environment,
             therapist_id=therapist_id,
             session_id=session_id,
-            language_code=language_code,
             email_manager=email_manager,
             operation=SessionCrudOperation.INSERT_COMPLETED,
             session_date=session_date,
@@ -1287,7 +1303,6 @@ class AssistantManager:
             patient_id=patient_id,
             therapist_id=therapist_id,
             session_id=session_id,
-            language_code=language_code,
             environment=environment,
             email_manager=email_manager,
             operation=SessionCrudOperation.UPDATE_COMPLETED,
@@ -1328,7 +1343,6 @@ class AssistantManager:
             patient_id=patient_id,
             therapist_id=therapist_id,
             session_id=session_id,
-            language_code=language_code,
             environment=environment,
             email_manager=email_manager,
             operation=SessionCrudOperation.DELETE_COMPLETED,
@@ -1383,6 +1397,7 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
+            language_code=language_code,
             email_manager=email_manager,
             request=request,
         )
@@ -1449,13 +1464,15 @@ class AssistantManager:
             assert (0 != len(strings_query)), "Did not find any strings data for the current scenario."
 
             default_question_suggestions = [item['value'] for item in strings_query]
-            await aws_client.insert(
-                request=request,
+            await aws_client.upsert(
                 user_id=therapist_id,
+                request=request,
+                conflict_columns=["patient_id"],
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 payload={
                     "patient_id": patient_id,
                     "therapist_id": therapist_id,
+                    "last_updated": datetime.now(),
                     "questions": eval(
                         json.dumps(
                             default_question_suggestions,
@@ -1521,11 +1538,13 @@ class AssistantManager:
                     user_first_name=therapist_first_name,
                     patient_first_name=patient_first_name
                 )
-                await aws_db_client.insert(
+                await aws_db_client.upsert(
                     user_id=therapist_id,
                     request=request,
+                    conflict_columns=["patient_id"],
                     table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                     payload={
+                        "last_updated": datetime.now(),
                         "patient_id": patient_id,
                         "therapist_id": therapist_id,
                         "briefing": eval(
@@ -1552,13 +1571,15 @@ class AssistantManager:
                 patient_first_name=patient_first_name
             )
 
-            await aws_db_client.insert(
+            await aws_db_client.upsert(
                 user_id=therapist_id,
                 request=request,
+                conflict_columns=["patient_id"],
                 table_name=ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                 payload={
                     "patient_id": patient_id,
                     "therapist_id": therapist_id,
+                    "last_updated": datetime.now(),
                     "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
                 }
             )
@@ -1627,6 +1648,7 @@ class AssistantManager:
                                           year: str):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            year_as_int = int(year)
             session_reports_data = await aws_db_client.select(
                 user_id=therapist_id,
                 request=request,
@@ -1634,8 +1656,8 @@ class AssistantManager:
                 fields=["*"],
                 filters={
                     "patient_id": patient_id,
-                    "session_date__gte": f"{year}-01-01",
-                    "session_date__lte": f"{year}-12-31",
+                    "session_date__gte": date(year_as_int, 1, 1),
+                    "session_date__lte": date(year_as_int, 12, 31),
                 },
                 order_by=("session_date", "desc"),
             )
@@ -1655,11 +1677,7 @@ class AssistantManager:
                 TimeRange.YEAR: 365,
                 TimeRange.FIVE_YEARS: 1825
             }
-            start_date = (now - timedelta(days=days_map[time_range])).strftime(
-                datetime_handler.DATE_FORMAT_YYYY_MM_DD
-            )
-            end_date = now.strftime(datetime_handler.DATE_FORMAT_YYYY_MM_DD)
-
+            start_date = (now - timedelta(days=days_map[time_range]))
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response_data = await aws_db_client.select(
                 user_id=therapist_id,
@@ -1668,7 +1686,7 @@ class AssistantManager:
                 filters={
                     "patient_id": patient_id,
                     "session_date__gte": start_date,
-                    "session_date__lte": end_date,
+                    "session_date__lte": now,
                 },
                 order_by=("session_date", "desc"),
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -1679,11 +1697,8 @@ class AssistantManager:
 
             if time_range == TimeRange.MONTH:
                 days = [
-                    datetime.strptime(
-                        item['session_date'],
-                        datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(
-                            datetime_handler.DAY_MONTH_SLASH_FORMAT
-                        ) for item in response_data
+                    item['session_date'].strftime(datetime_handler.DAY_MONTH_SLASH_FORMAT)
+                    for item in response_data
                 ]
                 day_counter = Counter(days)
                 return [{
@@ -1709,7 +1724,10 @@ class AssistantManager:
                     'sessions': month_counter.get(month, 0)
                 } for month in months_order]
             elif time_range == TimeRange.FIVE_YEARS:
-                years = [datetime.strptime(item['session_date'], datetime_handler.DATE_FORMAT_YYYY_MM_DD).strftime(datetime_handler.YEAR_FORMAT) for item in response_data]
+                years = [
+                    item['session_date'].strftime(datetime_handler.YEAR_FORMAT)
+                    for item in response_data
+                ]
                 year_counter = Counter(years)
                 max_year = max(map(int, years))
                 year_range = list(map(str, range(max_year - 4, max_year + 1)))

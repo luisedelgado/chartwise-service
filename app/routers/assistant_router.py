@@ -659,12 +659,12 @@ class AssistantRouter:
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
             tz_exists = len(client_timezone_identifier or '') > 0
-            date_is_valid = datetime_handler.is_valid_date(
+            lazy_date_is_valid = lambda: datetime_handler.is_valid_date(
                 date_input=body['session_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT,
                 tz_identifier=client_timezone_identifier
             )
-            assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
+            assert 'session_date' not in body or (tz_exists and lazy_date_is_valid()), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
@@ -680,7 +680,6 @@ class AssistantRouter:
                 auth_manager=self._auth_manager,
                 filtered_body=body,
                 session_id=session_id,
-                aws_db_client=aws_db_client,
                 email_manager=self._email_manager,
                 request=request,)
             )['patient_id']
@@ -774,7 +773,6 @@ class AssistantRouter:
                 background_tasks=background_tasks,
                 therapist_id=user_id,
                 session_report_id=session_report_id,
-                aws_db_client=aws_db_client,
                 request=request,
             ))['patient_id']
             request.state.patient_id = patient_id

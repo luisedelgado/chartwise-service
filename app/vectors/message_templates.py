@@ -1,7 +1,7 @@
 from enum import Enum
 
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
-from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT_YYYY_MM_DD
+from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT
 
 class PromptScenario(Enum):
     # keep sorted A-Z
@@ -178,7 +178,7 @@ class PromptCrafter:
             last_session_date_context = ""
         else:
             date_spell_out_month = convert_to_date_format_spell_out_month(session_date=last_session_date,
-                                                                          incoming_date_format=DATE_FORMAT_YYYY_MM_DD)
+                                                                          incoming_date_format=DATE_FORMAT)
             last_session_date_context = f"\nNote that {patient_name}'s last session with the practitioner was on {date_spell_out_month}."
 
         if chat_history_included:
