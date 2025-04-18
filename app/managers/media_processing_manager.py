@@ -51,7 +51,6 @@ class MediaProcessingManager(ABC):
         request – the upstream Request object.
         storage_filepath – the storage filepath where the backing file is stored in S3.
         """
-        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         await assistant_manager.update_session(
             therapist_id=therapist_id,
             language_code=language_code,
@@ -63,7 +62,6 @@ class MediaProcessingManager(ABC):
                 "processing_status": session_processing_status
             },
             session_id=session_id,
-            aws_db_client=aws_db_client,
             email_manager=email_manager,
             request=request,
         )
@@ -85,6 +83,7 @@ class MediaProcessingManager(ABC):
             # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
             today = datetime.now().date()
             today_formatted = today.strftime(DATE_TIME_FORMAT)
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             await aws_db_client.update(
                 user_id=therapist_id,
                 request=request,

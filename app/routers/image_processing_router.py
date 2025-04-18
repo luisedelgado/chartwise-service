@@ -142,12 +142,10 @@ class ImageProcessingRouter:
             )
 
         try:
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(
                 patient_id=patient_id,
                 therapist_id=user_id,
                 session_date=session_date,
-                aws_db_client=aws_db_client,
                 image=image,
                 template=template,
                 request=request,
@@ -159,7 +157,6 @@ class ImageProcessingRouter:
                 user_id,
                 session_id,
                 background_tasks,
-                aws_db_client,
                 request,
             )
 
@@ -189,7 +186,6 @@ class ImageProcessingRouter:
                                    therapist_id: str,
                                    session_id: str,
                                    background_tasks: BackgroundTasks,
-                                   aws_db_client: AwsDbBaseClass,
                                    request: Request,):
         """
         Processes the textraction job in the background after the image has been uploaded.
@@ -201,6 +197,7 @@ class ImageProcessingRouter:
         background_tasks – the background tasks manager for scheduling concurrent tasks.
         aws_db_client – the AWS database client for database operations.
         """
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         language_code = await general_utilities.get_user_language_code(
             user_id=therapist_id,
             aws_db_client=aws_db_client,
@@ -213,7 +210,6 @@ class ImageProcessingRouter:
             language_code=language_code,
             therapist_id=therapist_id,
             background_tasks=background_tasks,
-            aws_db_client=aws_db_client,
             auth_manager=self._auth_manager,
             assistant_manager=self._assistant_manager,
             email_manager=self._email_manager,

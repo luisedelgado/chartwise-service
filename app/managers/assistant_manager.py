@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from fastapi import BackgroundTasks, Request
 from pydantic import BaseModel
-from typing import AsyncIterable, List, Optional, Set
+from typing import AsyncIterable, Optional, Set
 
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -13,14 +13,15 @@ from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 from ..internal.internal_alert import EngineeringAlert
 from ..internal.schemas import (
-    Gender,
-    SessionProcessingStatus,
+    DATE_COLUMNS,
     ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
     ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
     ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
     ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
     ENCRYPTED_PATIENTS_TABLE_NAME,
     ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    Gender,
+    SessionProcessingStatus,
     TimeRange
 )
 from ..internal.utilities import datetime_handler, general_utilities
@@ -240,23 +241,21 @@ class AssistantManager:
             )
             assert (0 != len(report_query)), "There isn't a match with the incoming session data."
 
-            patient_id = report_query[0]['patient_id']
-            current_session_text = report_query[0]['notes_text']
-            current_session_date: date = report_query[0]['session_date']
-            current_session_date_formatted = current_session_date.strftime(datetime_handler.DATE_FORMAT)
-            session_text_changed = 'notes_text' in filtered_body and filtered_body['notes_text'] != current_session_text
-            session_date_changed = 'session_date' in filtered_body and filtered_body['session_date'] != current_session_date_formatted
-
             # Start populating payload for updating session.
-            now_timestamp = datetime.now()
             session_update_payload = {
-                "last_updated": now_timestamp
+                "last_updated": datetime.now()
             }
+
             for key, value in filtered_body.items():
                 if key == 'id':
                     continue
                 if isinstance(value, Enum):
                     value = value.value
+                elif key in DATE_COLUMNS:
+                    value = datetime.strptime(
+                        value,
+                        datetime_handler.DATE_FORMAT
+                    ).date()
                 session_update_payload[key] = value
 
             session_update_response = await aws_db_client.update(
@@ -270,16 +269,25 @@ class AssistantManager:
             )
             assert (0 != len(session_update_response)), "Update operation could not be completed"
 
+            current_session_text = report_query[0]['notes_text']
+            current_session_date: date = report_query[0]['session_date']
+            session_text_changed = 'notes_text' in session_update_payload and session_update_payload['notes_text'] != current_session_text
+            session_date_changed = (
+                'session_date' in session_update_payload and session_update_payload['session_date'] != current_session_date
+            )
+
             # Update the session vectors if needed
+            patient_id = report_query[0]['patient_id']
             if session_date_changed or session_text_changed:
+                old_session_date_as_string = current_session_date.strftime(datetime_handler.DATE_FORMAT)
                 background_tasks.add_task(
                     self._update_vectors_and_generate_insights,
                     session_notes_id=session_notes_id,
                     therapist_id=therapist_id,
                     patient_id=patient_id,
                     notes_text=filtered_body.get('notes_text', current_session_text),
-                    old_session_date=current_session_date_formatted,
-                    new_session_date=filtered_body.get('session_date', current_session_date_formatted),
+                    old_session_date=old_session_date_as_string,
+                    new_session_date=filtered_body.get('session_date', old_session_date_as_string),
                     session_id=session_id,
                     language_code=language_code,
                     environment=environment,
@@ -290,7 +298,7 @@ class AssistantManager:
                 )
 
             return {
-                "patient_id": report_query[0]['patient_id'],
+                "patient_id": patient_id,
                 "session_report_id": session_notes_id
             }
         except Exception as e:

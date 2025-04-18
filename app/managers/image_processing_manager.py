@@ -1,5 +1,6 @@
 import asyncio, os
 
+from datetime import datetime
 from fastapi import (
     BackgroundTasks,
     File,
@@ -56,7 +57,10 @@ class ImageProcessingManager(MediaProcessingManager):
                 payload={
                     "textraction_job_id": doc_id,
                     "template": template.value,
-                    "session_date": session_date,
+                    "session_date": datetime.strptime(
+                        session_date,
+                        datetime_handler.DATE_FORMAT
+                    ).date(),
                     "therapist_id": therapist_id,
                     "patient_id": patient_id,
                     "processing_status": SessionProcessingStatus.PROCESSING.value,
@@ -111,6 +115,7 @@ class ImageProcessingManager(MediaProcessingManager):
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_report_data = await aws_db_client.select(
+                request=request,
                 user_id=therapist_id,
                 fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -119,22 +124,19 @@ class ImageProcessingManager(MediaProcessingManager):
                 }
             )
             assert len(session_report_data) > 0, "Did not find data associated with the textraction job id"
-            session_report_data = session_report_data[0]
-            therapist_id = session_report_data['therapist_id']
-            patient_id = session_report_data['patient_id']
-            session_notes_id = session_report_data['id']
-            session_date = (None if 'session_date' not in session_report_data
-                            else datetime_handler.convert_to_date_format_mm_dd_yyyy(
-                                incoming_date=session_report_data['session_date'],
-                                incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
-                            )
+            therapist_id = str(session_report_data[0]['therapist_id'])
+            patient_id = str(session_report_data[0]['patient_id'])
+            session_notes_id = str(session_report_data[0]['id'])
+            session_date = (
+                None if 'session_date' not in session_report_data[0]
+                else session_report_data[0]['session_date'].strftime(datetime_handler.DATE_FORMAT)
             )
 
             # If the textraction has already been stored in our DB we can return early.
-            if len(session_report_data['notes_text'] or '') > 0:
+            if len(session_report_data[0]['notes_text'] or '') > 0:
                 return session_notes_id
 
-            if session_report_data['template'] == SessionNotesTemplate.SOAP.value:
+            if session_report_data[0]['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(
                     therapist_id=therapist_id,
                     session_id=session_id,
@@ -175,38 +177,6 @@ class ImageProcessingManager(MediaProcessingManager):
                 media_type=MediaType.IMAGE,
                 email_manager=email_manager,
                 request=request
-            )
-
-        except HTTPException as e:
-            # We want to synchronously log the failed processing status to avoid execution
-            # stoppage when the exception is raised.
-            if session_notes_id is not None:
-                await self._update_session_processing_status(
-                    assistant_manager=assistant_manager,
-                    language_code=language_code,
-                    environment=environment,
-                    background_tasks=background_tasks,
-                    auth_manager=auth_manager,
-                    session_id=session_id,
-                    therapist_id=therapist_id,
-                    session_processing_status=SessionProcessingStatus.FAILED.value,
-                    session_notes_id=session_notes_id,
-                    media_type=MediaType.IMAGE,
-                    email_manager=email_manager,
-                    request=request
-                )
-            alert = MediaJobProcessingAlert(
-                description=f"Textraction with job id {document_id} is still processing after maximum retries",
-                media_type=MediaType.IMAGE,
-                exception=e,
-                environment=environment,
-                therapist_id=therapist_id,
-                session_id=session_id
-            )
-            await email_manager.send_internal_alert(alert)
-            raise HTTPException(
-                status_code=e.status_code,
-                detail=e.detail
             )
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
