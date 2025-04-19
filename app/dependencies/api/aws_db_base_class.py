@@ -119,36 +119,6 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def get_user():
-        """
-        Retrieves the current user.
-        """
-        pass
-
-    @abstractmethod
-    async def get_current_user_id() -> str:
-        """
-        Retrieves the current user id.
-        """
-        pass
-
-    @abstractmethod
-    async def sign_out():
-        """
-        Signs out.
-        """
-        pass
-
-    @abstractmethod
-    async def delete_user(user_id: str):
-        """
-        Deletes a user from the authentication schema.
-        Arguments:
-        user_id – the user id to be deleted.
-        """
-        pass
-
-    @abstractmethod
     async def set_session_user_id(request: Request, user_id: str):
         """
         Sets the user ID for the incoming request session.

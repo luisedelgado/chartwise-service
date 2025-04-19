@@ -1,6 +1,7 @@
 import os
 
 from .fake.fake_async_openai import FakeAsyncOpenAI
+from .fake.fake_aws_cognito_client import FakeAwsCognitoClient
 from .fake.fake_aws_db_client import FakeAwsDbClient
 from .fake.fake_aws_kms_client import AwsKmsBaseClass, FakeAwsKmsClient
 from .fake.fake_aws_s3_client import FakeAwsS3Client
@@ -11,6 +12,7 @@ from .fake.fake_influx_client import FakeInfluxClient
 from .fake.fake_pinecone_client import FakePineconeClient
 from .fake.fake_resend_client import FakeResendClient
 from .fake.fake_stripe_client import FakeStripeClient
+from .implementation.aws_cognito_client import AwsCognitoBaseClass, AwsCognitoClient
 from .implementation.aws_db_client import AwsDbBaseClass, AwsDbClient
 from .implementation.aws_kms_client import AwsKmsClient
 from .implementation.aws_s3_client import AwsS3BaseClass, AwsS3Client
@@ -36,6 +38,7 @@ class DependencyContainer:
         self._stripe_client = None
         self._resend_client = None
         self._influx_client = None
+        self._aws_cognito_client = None
         self._aws_db_client = None
         self._aws_kms_client = None
         self._aws_s3_client = None
@@ -81,6 +84,11 @@ class DependencyContainer:
         if self._influx_client is None:
             self._influx_client = FakeInfluxClient() if self._testing_environment else InfluxClient(environment=self._environment)
         return self._influx_client
+
+    def inject_aws_cognito_client(self) -> AwsCognitoBaseClass:
+        if self._aws_cognito_client is None:
+            self._aws_cognito_client = FakeAwsCognitoClient() if self._testing_environment else AwsCognitoClient()
+        return self._aws_cognito_client
 
     def inject_aws_db_client(self) -> AwsDbBaseClass:
         if self._aws_db_client is None:

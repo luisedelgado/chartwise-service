@@ -282,40 +282,6 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Delete failed: {e}") from e
 
-    async def get_user(self):
-        # # Set the current user ID for satisfying RLS.
-        # await self.set_session_user_id(
-        #     conn=conn,
-        #     user_id=user_id
-        # )
-        pass
-
-    async def get_current_user_id(self) -> str:
-        # # Set the current user ID for satisfying RLS.
-        # await self.set_session_user_id(
-        #     conn=conn,
-        #     user_id=user_id
-        # )
-        pass
-
-    async def delete_user(self,
-                          request: Request,
-                          user_id: str):
-        # # Set the current user ID for satisfying RLS.
-        # await self.set_session_user_id(
-        #     conn=conn,
-        #     user_id=user_id
-        # )
-        pass
-
-    async def sign_out(self):
-        # # Set the current user ID for satisfying RLS.
-        # await self.set_session_user_id(
-        #     conn=conn,
-        #     user_id=user_id
-        # )
-        pass
-
     async def set_session_user_id(self,
                                   user_id: str,
                                   conn: asyncpg.Connection):

@@ -277,7 +277,7 @@ class AssistantManager:
             )
 
             # Update the session vectors if needed
-            patient_id = report_query[0]['patient_id']
+            patient_id = str(report_query[0]['patient_id'])
             if session_date_changed or session_text_changed:
                 old_session_date_as_string = current_session_date.strftime(datetime_handler.DATE_FORMAT)
                 background_tasks.add_task(

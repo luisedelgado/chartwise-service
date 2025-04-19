@@ -81,17 +81,5 @@ class FakeAwsDbClient(AwsDbBaseClass):
                      filters: dict[str, Any]) -> list[dict]:
         pass
 
-    async def get_user(self):
-        pass
-
-    async def get_current_user_id(self) -> str:
-        pass
-
-    async def sign_out(self):
-        pass
-
-    async def delete_user(self, user_id: str):
-        pass
-
     async def set_session_user_id(self, request: Request, user_id: str):
         pass

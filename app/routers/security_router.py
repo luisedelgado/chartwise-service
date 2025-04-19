@@ -512,7 +512,7 @@ class SecurityRouter:
         try:
             # Cancel Stripe subscription
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data_dict = await aws_db_client.select(
+            customer_data = await aws_db_client.select(
                 user_id=user_id,
                 request=request,
                 fields=["subscription_id"],
@@ -522,8 +522,8 @@ class SecurityRouter:
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
 
-            if len(customer_data_dict) > 0:
-                subscription_id = customer_data_dict['subscription_id']
+            if len(customer_data) > 0:
+                subscription_id = customer_data[0]['subscription_id']
 
                 stripe_client = dependency_container.inject_stripe_client()
                 stripe_client.delete_customer_subscription_immediately(subscription_id=subscription_id)
@@ -559,7 +559,7 @@ class SecurityRouter:
             )
 
             # Set therapist user as an inactive account.
-            disable_account_response_dict = await aws_db_client.update(
+            disable_account_response = await aws_db_client.update(
                 user_id=user_id,
                 request=request,
                 table_name="therapists",
@@ -570,14 +570,14 @@ class SecurityRouter:
                     'is_active_account': False
                 }
             )
-            assert len(disable_account_response_dict) > 0, "No therapist found with the incoming id"
+            assert len(disable_account_response) > 0, "No therapist found with the incoming id"
 
-            therapist_email = disable_account_response_dict['email']
+            therapist_email = disable_account_response[0]['email']
             alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
                                  "has canceled their subscription, and deleted all their account data.")
-            therapist_name = "".join([disable_account_response_dict['first_name'],
+            therapist_name = "".join([disable_account_response[0]['first_name'],
                                       " ",
-                                      disable_account_response_dict['last_name']])
+                                      disable_account_response[0]['last_name']])
             alert = CustomerRelationsAlert(
                 description=alert_description,
                 environment=os.environ.get('ENVIRONMENT'),
@@ -588,14 +588,11 @@ class SecurityRouter:
             )
             await self._email_manager.send_customer_relations_alert(alert)
 
-            # Remove the active session and clear Auth data from client storage.
-            await aws_db_client.sign_out()
-
             # Delete auth and session cookies
             self._auth_manager.logout(response)
 
-            # Delete user from our DB's Auth schema
-            await aws_db_client.delete_user(
+            # Delete user from Cognito's Auth schema
+            await dependency_container.inject_aws_cognito_client().delete_user(
                 request=request,
                 user_id=user_id,
             )

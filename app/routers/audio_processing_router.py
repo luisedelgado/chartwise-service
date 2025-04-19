@@ -4,7 +4,6 @@ from fastapi import (APIRouter,
                      Cookie,
                      Security,
                      Form,
-                     Header,
                      HTTPException,
                      Request,
                      Response,
@@ -16,7 +15,10 @@ from ..dependencies.dependency_container import (
     AwsDbBaseClass,
     dependency_container
 )
-from ..dependencies.api.aws_s3_base_class import AUDIO_FILES_PROCESSING_PENDING_BUCKET, AwsS3BaseClass
+from ..dependencies.api.aws_s3_base_class import (
+    AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+    AwsS3BaseClass
+)
 from ..internal.schemas import USER_ID_KEY
 from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
