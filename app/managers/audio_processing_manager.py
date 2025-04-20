@@ -17,7 +17,6 @@ from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 from ..vectors import data_cleaner
-
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
 class AudioProcessingManager(MediaProcessingManager):
