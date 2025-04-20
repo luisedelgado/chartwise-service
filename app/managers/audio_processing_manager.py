@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import BackgroundTasks, Request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
