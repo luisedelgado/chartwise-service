@@ -63,22 +63,6 @@ class AudioProcessingManager(MediaProcessingManager):
             assert (0 != len(session_report_creation_response)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response['id']
 
-            today = datetime.now().date()
-            today_formatted = today.strftime(datetime_handler.DATE_TIME_FORMAT)
-            await aws_db_client.insert(
-                user_id=therapist_id,
-                request=request,
-                table_name="pending_audio_jobs",
-                payload={
-                    "session_report_id": session_report_id,
-                    "therapist_id": therapist_id,
-                    "storage_filepath": file_path,
-                    "last_attempt_at_processing_date": today_formatted,
-                    "environment": environment,
-                    "job_type": "transcription" if not diarize else "diarization",
-                }
-            )
-
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             audio_file_url = aws_s3_client.get_audio_file_read_signed_url(
                 file_path=file_path,

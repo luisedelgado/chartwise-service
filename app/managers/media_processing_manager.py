@@ -80,23 +80,6 @@ class MediaProcessingManager(ABC):
             return
 
         if media_type == MediaType.AUDIO:
-            # Update tracking row from `pending_audio_jobs` table to reflect successful processing.
-            today = datetime.now().date()
-            today_formatted = today.strftime(DATE_TIME_FORMAT)
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            await aws_db_client.update(
-                user_id=therapist_id,
-                request=request,
-                table_name="pending_audio_jobs",
-                filters={
-                    "session_report_id": session_notes_id
-                },
-                payload={
-                    "last_attempt_at_processing_date": today_formatted,
-                    "successful_processing_date": today_formatted,
-                }
-            )
-
             # Delete the file from the processing bucket.
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             aws_s3_client.delete_file(
