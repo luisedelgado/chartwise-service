@@ -6,7 +6,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def get_audio_file_upload_signed_url(file_path: str,
-                                         bucket_name: str) -> str:
+                                         bucket_name: str) -> dict:
         """
         Returns a signed URL for uploading an audio file to S3.
         """
@@ -66,7 +66,7 @@ class AwsS3BaseClass(ABC):
     @abstractmethod
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
-                                       file_path: str) -> str:
+                                       file_path: str) -> dict:
         """
         Generates a signed url for reading an audio file.
 

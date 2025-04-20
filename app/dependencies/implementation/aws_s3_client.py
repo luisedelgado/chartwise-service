@@ -6,6 +6,7 @@ from ..api.aws_s3_base_class import AwsS3BaseClass
 
 class AwsS3Client(AwsS3BaseClass):
 
+    TEN_MIN_IN_SECONDS = 600
     FIFTEEN_MIN_IN_SECONDS = 900
 
     def __init__(self):
@@ -15,7 +16,7 @@ class AwsS3Client(AwsS3BaseClass):
 
     def get_audio_file_upload_signed_url(self,
                                          file_path: str,
-                                         bucket_name: str) -> str:
+                                         bucket_name: str) -> dict:
         try:
             content_type, _ = mimetypes.guess_type(file_path)
             if not content_type:
@@ -31,39 +32,65 @@ class AwsS3Client(AwsS3BaseClass):
                 },
                 ExpiresIn=self.FIFTEEN_MIN_IN_SECONDS,
             )
+            return {
+                "url": response,
+            }
         except Exception as e:
             raise Exception(f"Could not generate upload URL: {e}")
-
-        return {
-            "url": response,
-            "key": file_path,
-        }
 
     def delete_file(self,
                     source_bucket: str,
                     storage_filepath: str):
-        pass
+        try:
+            self.client.delete_object(
+                Bucket=source_bucket,
+                Key=storage_filepath
+            )
+        except Exception as e:
+            raise Exception(f"Could not delete file: {e}")
 
     def download_file(self,
                       source_bucket: str,
                       storage_filepath: str):
-        pass
+        try:
+            return self.client.download_file(
+                Bucket=source_bucket,
+                Key=storage_filepath,
+                Filename=storage_filepath
+            )
+        except Exception as e:
+            raise Exception(f"Could not download file: {e}")
 
     def upload_file(self,
                     destination_bucket: str,
                     storage_filepath: str,
                     content: str | bytes):
-        pass
+        try:
+            if isinstance(content, str):
+                content = content.encode('utf-8')
 
-    def move_file_between_buckets(self,
-                                  source_bucket: str,
-                                  destination_bucket: str,
-                                  file_path: str):
-        pass
+            self.client.put_object(
+                Bucket=destination_bucket,
+                Key=storage_filepath,
+                Body=content
+            )
+        except Exception as e:
+            raise Exception(f"Could not upload file: {e}")
 
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
-                                       file_path: str) -> str:
-        return {
-            "signedURL": "testUrl"
-        }
+                                       file_path: str) -> dict:
+        try:
+            response = self.client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': bucket_name,
+                    'Key': file_path,
+                },
+                ExpiresIn=self.TEN_MIN_IN_SECONDS,
+            )
+            return {
+                "url": response,
+            }
+        except Exception as e:
+            raise Exception(f"Could not generate read URL: {e}")

@@ -4,8 +4,8 @@ class FakeAwsS3Client(AwsS3BaseClass):
 
     def get_audio_file_upload_signed_url(self,
                                          file_path: str,
-                                         bucket_name: str) -> str:
-        return "myFakeUrl"
+                                         bucket_name: str) -> dict:
+        return {"url": "myFakeUrl"}
 
     def delete_file(self,
                     source_bucket: str,
@@ -31,7 +31,5 @@ class FakeAwsS3Client(AwsS3BaseClass):
 
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
-                                       file_path: str) -> str:
-        return {
-            "signedURL": "testUrl"
-        }
+                                       file_path: str) -> dict:
+        return {"url": "myFakeUrl"}
