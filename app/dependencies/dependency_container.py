@@ -38,6 +38,7 @@ class DependencyContainer:
         self._stripe_client = None
         self._resend_client = None
         self._influx_client = None
+        self._aws_secret_manager_client = None
         self._aws_cognito_client = None
         self._aws_db_client = None
         self._aws_kms_client = None
@@ -107,9 +108,9 @@ class DependencyContainer:
         return self._aws_s3_client
 
     def inject_aws_secret_manager_client(self) -> AwsSecretManagerBaseClass:
-        if self._aws_s3_client is None:
-            self._aws_s3_client = FakeAwsSecretManagerClient() if self._testing_environment else AwsSecretManagerClient()
-        return self._aws_s3_client
+        if self._aws_secret_manager_client is None:
+            self._aws_secret_manager_client = FakeAwsSecretManagerClient() if self._testing_environment else AwsSecretManagerClient()
+        return self._aws_secret_manager_client
 
     def inject_chartwise_encryptor(self) -> ChartWiseEncryptor:
         if self._chartwise_encryptor is None:

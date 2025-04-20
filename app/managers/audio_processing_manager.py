@@ -64,8 +64,8 @@ class AudioProcessingManager(MediaProcessingManager):
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             audio_file_url = aws_s3_client.get_audio_file_read_signed_url(
                 file_path=file_path,
-                bucket_name=MediaProcessingManager.AUDIO_FILES_PROCESSING_PENDING_BUCKET
-            ).get("signedURL")
+                bucket_name=AwsS3BaseClass.SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME
+            ).get("url")
 
             # Attempt immediate processing.
             if diarize:

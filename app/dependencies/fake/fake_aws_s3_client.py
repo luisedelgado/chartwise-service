@@ -23,12 +23,6 @@ class FakeAwsS3Client(AwsS3BaseClass):
                     content: str | bytes):
         pass
 
-    def move_file_between_buckets(self,
-                                  source_bucket: str,
-                                  destination_bucket: str,
-                                  file_path: str):
-        pass
-
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
                                        file_path: str) -> dict:

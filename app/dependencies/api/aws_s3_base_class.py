@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
-
 class AwsS3BaseClass(ABC):
+
+    SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME = "session-audio-files-processing"
 
     @abstractmethod
     def get_audio_file_upload_signed_url(file_path: str,
@@ -47,19 +47,6 @@ class AwsS3BaseClass(ABC):
         destination_bucket – the bucket where the file should be uploaded to.
         storage_filepath – the file path to be used for storing the file.
         content – the content to be uploaded in the form of bytes or a string filepath.
-        """
-        pass
-
-    @abstractmethod
-    def move_file_between_buckets(source_bucket: str,
-                                  destination_bucket: str,
-                                  file_path: str):
-        """
-        Move a file from one S3 bucket to another.
-
-        :param source_bucket: The name of the source bucket.
-        :param destination_bucket: The name of the destination bucket.
-        :param file_path: Path to the file in the source bucket.
         """
         pass
 

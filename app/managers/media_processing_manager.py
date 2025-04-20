@@ -5,7 +5,6 @@ from fastapi import BackgroundTasks, Request
 from .assistant_manager import AssistantManager
 from .auth_manager import AuthManager
 from .email_manager import EmailManager
-from ..dependencies.api.aws_db_base_class import AwsDbBaseClass
 from ..dependencies.api.aws_s3_base_class import AwsS3BaseClass
 from ..dependencies.dependency_container import dependency_container
 from ..internal.internal_alert import MediaJobProcessingAlert
@@ -13,8 +12,6 @@ from ..internal.schemas import MediaType, SessionProcessingStatus
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 
 class MediaProcessingManager(ABC):
-
-    AUDIO_FILES_PROCESSING_PENDING_BUCKET = "session-audio-files-processing-pending"
 
     def __init__(self):
         self._email_manager = EmailManager()
@@ -83,6 +80,6 @@ class MediaProcessingManager(ABC):
             # Delete the file from the processing bucket.
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             aws_s3_client.delete_file(
-                self.AUDIO_FILES_PROCESSING_PENDING_BUCKET,
+                AwsS3BaseClass.SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME,
                 storage_filepath=storage_filepath
             )

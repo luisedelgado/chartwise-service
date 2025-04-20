@@ -15,10 +15,7 @@ from ..dependencies.dependency_container import (
     AwsDbBaseClass,
     dependency_container
 )
-from ..dependencies.api.aws_s3_base_class import (
-    AUDIO_FILES_PROCESSING_PENDING_BUCKET,
-    AwsS3BaseClass
-)
+from ..dependencies.api.aws_s3_base_class import AwsS3BaseClass
 from ..internal.schemas import USER_ID_KEY
 from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
@@ -286,12 +283,10 @@ class AudioProcessingRouter:
             storage_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             response = storage_client.get_audio_file_upload_signed_url(
                 file_path=file_path,
-                bucket_name=AUDIO_FILES_PROCESSING_PENDING_BUCKET
+                bucket_name=AwsS3BaseClass.SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME
             )
             return {
-                "upload_token": response.get("token"),
-                "file_path": file_path,
-                "bucket_name": AUDIO_FILES_PROCESSING_PENDING_BUCKET
+                "url": response.get("url"),
             }
         except Exception as e:
             description = str(e)

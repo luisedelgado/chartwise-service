@@ -33,6 +33,7 @@ from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 
 class SignupPayload(BaseModel):
+    id: str
     email: str
     first_name: str
     last_name: str
