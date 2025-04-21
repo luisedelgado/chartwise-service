@@ -61,7 +61,7 @@ async def get_user_language_code(user_id: str,
             },
             table_name="therapists"
         )
-        assert (1 == len(therapist_query))
+        assert 1 == len(therapist_query), "Expected exactly one therapist to be returned"
         return therapist_query[0]["language_preference"]
     except Exception as e:
         raise RuntimeError(f"Encountered an issue while pulling user's language preference: {e}") from e

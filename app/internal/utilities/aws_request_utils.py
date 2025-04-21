@@ -16,7 +16,6 @@ def sign_and_send_aws_request(
     payload: dict,
     target_action: str,
     session: boto3.Session = None,
-    timeout: int = 5,
 ) -> dict:
     """
     Constructs and sends a SigV4-signed AWS API request, adjusting for clock skew.
@@ -55,7 +54,7 @@ def sign_and_send_aws_request(
         SigV4Auth(creds, service, region).add_auth(request)
 
         http_session = URLLib3Session()
-        response = http_session.send(request.prepare(), timeout=timeout)
+        response = http_session.send(request.prepare())
 
         if response.status_code != 200:
             raise Exception(f"[AWS Request] {response.status_code} {response.text}")

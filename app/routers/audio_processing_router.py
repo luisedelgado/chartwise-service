@@ -184,7 +184,10 @@ class AudioProcessingRouter:
                 therapist_id=user_id,
                 session_id=session_id,
                 file_path=file_path,
-                session_date=session_date,
+                session_date=datetime.strptime(
+                    session_date,
+                    datetime_handler.DATE_FORMAT
+                ).date(),
                 patient_id=patient_id,
                 environment=self._environment,
                 language_code=language_code,
@@ -287,6 +290,8 @@ class AudioProcessingRouter:
             )
             return {
                 "url": response.get("url"),
+                "content_type": response.get("content_type"),
+                "file_path": file_path,
             }
         except Exception as e:
             description = str(e)
@@ -388,7 +393,10 @@ class AudioProcessingRouter:
                 auth_manager=self._auth_manager,
                 template=template,
                 therapist_id=user_id,
-                session_date=session_date,
+                session_date=datetime.strptime(
+                    session_date,
+                    datetime_handler.DATE_FORMAT
+                ).date(),
                 patient_id=patient_id,
                 session_id=session_id,
                 file_path=file_path,
