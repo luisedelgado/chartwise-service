@@ -34,6 +34,7 @@ class AwsS3Client(AwsS3BaseClass):
             )
             return {
                 "url": response,
+                "content_type": content_type,
             }
         except Exception as e:
             raise Exception(f"Could not generate upload URL: {e}")

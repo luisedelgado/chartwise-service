@@ -450,7 +450,7 @@ class AwsDbClient(AwsDbBaseClass):
 
     async def get_stripe_reader_connection(self, secret_manager: AwsSecretManagerBaseClass):
         try:
-            secret = secret_manager.get_rds_secret(
+            secret = secret_manager.get_secret(
                 secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
             )
             password = secret.get(self.STRIPE_READER_ROLE_SECRET_KEY)

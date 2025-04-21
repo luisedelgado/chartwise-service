@@ -3,23 +3,27 @@ import json
 import os
 
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
+from ...internal.utilities.aws_request_utils import sign_and_send_aws_request
 
 class AwsSecretManagerClient(AwsSecretManagerBaseClass):
 
-    def get_rds_secret(self, secret_id: str) -> str:
-        region = os.environ.get("AWS_SERVICES_REGION")
-        session = boto3.session.Session()
-        client = session.client(
-            service_name="secretsmanager",
-            region_name=region
-        )
-
+    def get_secret(self, secret_id: str) -> str:
         try:
-            response = client.get_secret_value(
-                SecretId=secret_id
-            )
-        except Exception as e:
-            raise Exception(e)
+            region = os.environ.get("AWS_SERVICES_REGION")
+            session = boto3.Session()
 
-        secret = json.loads(response["SecretString"])
-        return secret
+            payload = {
+                "SecretId": secret_id
+            }
+
+            result = sign_and_send_aws_request(
+                service="secretsmanager",
+                region=region,
+                endpoint_url=f"https://secretsmanager.{region}.amazonaws.com/",
+                payload=payload,
+                target_action="secretsmanager.GetSecretValue",
+                session=session
+            )
+            return json.loads(result["SecretString"])
+        except Exception as e:
+            raise Exception(f"Error getting secret: {e}")
