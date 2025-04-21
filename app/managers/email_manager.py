@@ -80,7 +80,7 @@ class EmailManager:
                 alert_category=alert.category
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def send_customer_relations_alert(self, alert: InternalAlert):
         try:
@@ -118,4 +118,4 @@ class EmailManager:
                 alert_category=alert.category
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e

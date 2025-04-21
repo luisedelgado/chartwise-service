@@ -19,4 +19,4 @@ class AwsCognitoClient(AwsCognitoBaseClass):
                 Username=user_id
             )
         except Exception as e:
-            raise Exception(f"Error deleting user: {e}")
+            raise RuntimeError(f"Error deleting user: {e}") from e

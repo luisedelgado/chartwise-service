@@ -26,7 +26,7 @@ async def connect_pool(app: FastAPI, secret_manager: AwsSecretManagerBaseClass):
             timeout=10
         )
     except Exception as e:
-        raise Exception(f"Invalid database URL: {e}")
+        raise RuntimeError(f"Invalid database URL: {e}") from e
 
 async def disconnect_pool(app: FastAPI):
     await app.state.pool.close()

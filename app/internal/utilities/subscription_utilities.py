@@ -32,4 +32,4 @@ async def reached_subscription_tier_usage_limit(tier: str,
         )
         return len(session_reports_data) >= NUM_SESSIONS_IN_BASIC_PLAN
     except Exception as e:
-        raise Exception(e)
+        raise RuntimeError from e

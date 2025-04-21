@@ -64,7 +64,7 @@ async def get_user_language_code(user_id: str,
         assert (1 == len(therapist_query))
         return therapist_query[0]["language_preference"]
     except Exception as e:
-        raise Exception("Encountered an issue while pulling user's language preference.")
+        raise RuntimeError(f"Encountered an issue while pulling user's language preference: {e}") from e
 
 """
 Maps a language code to a language abbreviation.

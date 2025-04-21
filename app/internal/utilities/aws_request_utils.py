@@ -62,7 +62,7 @@ def sign_and_send_aws_request(
 
         return json.loads(response.content.decode("utf-8"))
     except Exception as e:
-        raise Exception(e)
+        raise RuntimeError from e
 
 def get_aws_clock_skew_offset() -> int:
     """

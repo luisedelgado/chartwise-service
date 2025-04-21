@@ -26,4 +26,4 @@ class AwsSecretManagerClient(AwsSecretManagerBaseClass):
             )
             return json.loads(result["SecretString"])
         except Exception as e:
-            raise Exception(f"Error getting secret: {e}")
+            raise RuntimeError(f"Error getting secret: {e}") from e

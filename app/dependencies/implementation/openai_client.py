@@ -61,7 +61,7 @@ class OpenAIClient(OpenAIBaseClass):
             response_text = response_message.content.strip()
             return response_text if not expects_json_response else eval(response_text)
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def stream_chat_completion(self,
                                      vector_context: str,
@@ -119,7 +119,7 @@ class OpenAIClient(OpenAIBaseClass):
                 try:
                     await fn
                 except Exception as e:
-                    raise Exception(e)
+                    raise RuntimeError from e
                 finally:
                     event.set()
 
@@ -148,7 +148,7 @@ class OpenAIClient(OpenAIBaseClass):
             await task
 
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def clear_chat_history(self):
         self.chat_history = []

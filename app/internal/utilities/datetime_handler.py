@@ -56,7 +56,7 @@ def retrieve_most_recent_date(first_date: str,
         second_is_most_recent_date = first_datetime.date() < second_datetime.date()
         return second_date if second_is_most_recent_date else first_date
     except Exception as e:
-        raise Exception("Invalid date formats")
+        raise RuntimeError from e
 
 """
 Returns a formatted version of the incoming date, for internal use.
@@ -66,8 +66,8 @@ def convert_to_date_format_mm_dd_yyyy(incoming_date: str, incoming_date_format: 
     try:
         session_date_as_date = datetime.strptime(incoming_date, incoming_date_format)
         return datetime.strftime(session_date_as_date, DATE_FORMAT)
-    except:
-        raise Exception("Something went wrong while formatting the incoming date.")
+    except Exception as e:
+        raise RuntimeError("Something went wrong while formatting the incoming date.") from e
 
 """
 Returns a formatted version of the incoming date as "Oct 10th, 2024".
@@ -77,7 +77,7 @@ def convert_to_date_format_spell_out_month(session_date: str, incoming_date_form
         session_date_as_date = datetime.strptime(session_date, incoming_date_format)
         return datetime.strftime(session_date_as_date, DATE_FORMAT_SPELL_OUT_MONTH)
     except Exception as e:
-        raise Exception(f"Something went wrong while formatting the incoming date: {e}")
+        raise RuntimeError(f"Something went wrong while formatting the incoming date: {e}") from e
 
 """
 Validates an incoming year value

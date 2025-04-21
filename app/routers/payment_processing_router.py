@@ -217,7 +217,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -293,7 +293,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -391,7 +391,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -464,7 +464,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
@@ -551,7 +551,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
@@ -609,7 +609,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -686,7 +686,7 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()

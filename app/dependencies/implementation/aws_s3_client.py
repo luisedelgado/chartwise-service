@@ -37,7 +37,7 @@ class AwsS3Client(AwsS3BaseClass):
                 "content_type": content_type,
             }
         except Exception as e:
-            raise Exception(f"Could not generate upload URL: {e}")
+            raise RuntimeError(f"Could not generate upload URL: {e}") from e
 
     def delete_file(self,
                     source_bucket: str,
@@ -48,7 +48,7 @@ class AwsS3Client(AwsS3BaseClass):
                 Key=storage_filepath
             )
         except Exception as e:
-            raise Exception(f"Could not delete file: {e}")
+            raise RuntimeError(f"Could not delete file: {e}") from e
 
     def download_file(self,
                       source_bucket: str,
@@ -60,7 +60,7 @@ class AwsS3Client(AwsS3BaseClass):
                 Filename=storage_filepath
             )
         except Exception as e:
-            raise Exception(f"Could not download file: {e}")
+            raise RuntimeError(f"Could not download file: {e}") from e
 
     def upload_file(self,
                     destination_bucket: str,
@@ -76,7 +76,7 @@ class AwsS3Client(AwsS3BaseClass):
                 Body=content
             )
         except Exception as e:
-            raise Exception(f"Could not upload file: {e}")
+            raise RuntimeError(f"Could not upload file: {e}") from e
 
     def get_audio_file_read_signed_url(self,
                                        bucket_name: str,
@@ -94,4 +94,4 @@ class AwsS3Client(AwsS3BaseClass):
                 "url": response,
             }
         except Exception as e:
-            raise Exception(f"Could not generate read URL: {e}")
+            raise RuntimeError(f"Could not generate read URL: {e}") from e

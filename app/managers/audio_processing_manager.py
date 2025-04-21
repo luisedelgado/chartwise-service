@@ -129,7 +129,7 @@ class AudioProcessingManager(MediaProcessingManager):
                     email_manager=email_manager,
                     request=request,
                 )
-            raise Exception(e)
+            raise RuntimeError from e
 
     # Private
 
@@ -180,7 +180,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 email_manager=email_manager,
                 request=request,
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
         # Generate summary for diarization
         try:
@@ -284,7 +284,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 email_manager=email_manager,
                 request=request,
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _transcribe_audio_and_save(self,
                                          session_report_id: str,
@@ -356,7 +356,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 email_manager=email_manager,
                 request=request,
             )
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _update_patient_metrics_after_processing_transcription_session(self,
                                                                              request: Request,
@@ -420,7 +420,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 }
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _chunk_diarization_and_summarize(self,
                                                encoding: Encoding,
@@ -495,4 +495,4 @@ class AudioProcessingManager(MediaProcessingManager):
             )
             return grand_summary
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e

@@ -121,7 +121,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def retrieve_session_reports(self,
                                        therapist_id: str,
@@ -155,7 +155,7 @@ class AssistantManager:
 
             raise ValueError("One of 'year', 'recent', or 'range' must be provided.")
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def process_new_session_data(self,
                                        environment: str,
@@ -215,7 +215,7 @@ class AssistantManager:
             )
             return session_notes_id
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_session(self,
                              therapist_id: str,
@@ -302,7 +302,7 @@ class AssistantManager:
                 "session_report_id": session_notes_id
             }
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def delete_session(self,
                              language_code: str,
@@ -351,7 +351,7 @@ class AssistantManager:
                 "session_report_id": session_report_id,
             }
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def retrieve_single_patient(self,
                                       therapist_id: str,
@@ -370,7 +370,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def retrieve_patients(self,
                                 therapist_id: str,
@@ -389,7 +389,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def add_patient(self,
                           background_tasks: BackgroundTasks,
@@ -462,7 +462,7 @@ class AssistantManager:
             )
             return patient_id
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_patient(self,
                              therapist_id: str,
@@ -532,7 +532,7 @@ class AssistantManager:
             )
             return soap_report
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     def delete_all_data_for_patient(self,
                                     therapist_id: str,
@@ -563,7 +563,7 @@ class AssistantManager:
                     patient_id=patient_id
                 )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def query_session(self,
                             query: AssistantQuery,
@@ -636,7 +636,7 @@ class AssistantManager:
             ):
                 yield part
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_question_suggestions(self,
                                           language_code: str,
@@ -715,7 +715,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_presession_tray(self,
                                      therapist_id: str,
@@ -811,7 +811,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_patient_recent_topics(self,
                                            language_code: str,
@@ -904,7 +904,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def generate_attendance_insights(self,
                                            language_code: str,
@@ -979,7 +979,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def update_patient_metrics_after_session_report_operation(self,
                                                                     patient_id: str,
@@ -1074,7 +1074,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def get_patient_active_session_years(self,
                                                therapist_id: str,
@@ -1138,7 +1138,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def retrieve_briefing(self,
                                 therapist_id: str,
@@ -1157,7 +1157,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def retrieve_question_suggestions(self,
                                             therapist_id: str,
@@ -1176,7 +1176,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def recent_topics_data(self,
                                  therapist_id: str,
@@ -1195,7 +1195,7 @@ class AssistantManager:
             )
             return [] if len(response) == 0 else response[0]
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     # Private
 
@@ -1499,7 +1499,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _load_default_pre_session_tray_for_new_patient(self,
                                                              language_code: str,
@@ -1601,7 +1601,7 @@ class AssistantManager:
                 patient_id=patient_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _update_session_notes_with_mini_summary(self,
                                                       session_notes_id: str,
@@ -1647,7 +1647,7 @@ class AssistantManager:
                 therapist_id=therapist_id
             )
             await email_manager.send_internal_alert(alert=eng_alert)
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _retrieve_sessions_for_year(self,
                                           therapist_id: str,
@@ -1671,7 +1671,7 @@ class AssistantManager:
             )
             return [] if len(session_reports_data) == 0 else session_reports_data
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _retrieve_sessions_in_range(self,
                                           request: Request,
@@ -1746,7 +1746,7 @@ class AssistantManager:
             else:
                 raise ValueError("Untracked time range value")
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def _retrieve_n_most_recent_sessions(self,
                                                therapist_id: str,
@@ -1768,4 +1768,4 @@ class AssistantManager:
             )
             return [] if len(session_reports_data) == 0 else session_reports_data
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e

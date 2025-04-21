@@ -114,7 +114,7 @@ class ChartWiseAssistant:
                 yield part
 
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def create_briefing(self,
                               user_id: str,
@@ -215,7 +215,7 @@ class ChartWiseAssistant:
                 }
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def create_question_suggestions(self,
                                           user_id: str,
@@ -304,7 +304,7 @@ class ChartWiseAssistant:
                 expects_json_response=True
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def fetch_recent_topics(self,
                                   user_id: str,
@@ -393,7 +393,7 @@ class ChartWiseAssistant:
                 expects_json_response=True
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def generate_recent_topics_insights(self,
                                               recent_topics_json: str,
@@ -484,7 +484,7 @@ class ChartWiseAssistant:
                 expects_json_response=False
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def generate_attendance_insights(self,
                                            therapist_id: str,
@@ -544,7 +544,7 @@ class ChartWiseAssistant:
                 expects_json_response=False
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def create_soap_report(self,
                                  text: str,
@@ -586,7 +586,7 @@ class ChartWiseAssistant:
                 expects_json_response=False
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def summarize_chunk(self,
                               user_id: str,
@@ -627,7 +627,7 @@ class ChartWiseAssistant:
                 expects_json_response=False
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def create_session_mini_summary(self,
                                           session_notes: str,
@@ -678,7 +678,7 @@ class ChartWiseAssistant:
                 expects_json_response=False
             )
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     # Private
 
@@ -711,4 +711,4 @@ class ChartWiseAssistant:
                 )
             return overrides
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e

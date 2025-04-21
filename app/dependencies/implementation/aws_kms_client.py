@@ -36,4 +36,4 @@ class AwsKmsClient(AwsKmsBaseClass):
             key_b64 = result["Plaintext"]
             return base64.b64decode(key_b64)
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e

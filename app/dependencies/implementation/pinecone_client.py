@@ -98,7 +98,7 @@ class PineconeClient(PineconeBaseClass):
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     async def insert_preexisting_history_vectors(self,
                                                  session_id: str,
@@ -154,7 +154,7 @@ class PineconeClient(PineconeBaseClass):
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     def delete_session_vectors(self,
                                user_id: str,
@@ -181,7 +181,7 @@ class PineconeClient(PineconeBaseClass):
         except NotFoundException as e:
             raise NotFoundException(e)
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     def delete_preexisting_history_vectors(self,
                                            user_id: str,
@@ -205,7 +205,7 @@ class PineconeClient(PineconeBaseClass):
         except NotFoundException as e:
             raise NotFoundException(e)
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     async def update_session_vectors(self,
                                      session_id: str,
@@ -235,7 +235,7 @@ class PineconeClient(PineconeBaseClass):
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     async def update_preexisting_history_vectors(self,
                                                  session_id: str,
@@ -259,7 +259,7 @@ class PineconeClient(PineconeBaseClass):
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
-            raise Exception(str(e))
+            raise RuntimeError from e
 
     async def get_vector_store_context(self,
                                        openai_client: OpenAIBaseClass,
@@ -429,7 +429,7 @@ class PineconeClient(PineconeBaseClass):
                         )
             return missing_session_data_error if len(reranked_context or '') == 0 else reranked_context
         except Exception as e:
-            raise Exception(e)
+            raise RuntimeError from e
 
     async def fetch_historical_context(self,
                                        index: Index,
