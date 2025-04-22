@@ -18,7 +18,7 @@ class Boto3SessionFactory:
 
         if cls._expiration is None or now >= cls._expiration:
             with cls._lock:
-                if cls._expiration is None or datetime.utcnow() >= cls._expiration:
+                if cls._expiration is None or datetime.now(timezone.utc) >= cls._expiration:
                     cls._refresh_credentials()
 
         return cls._session
