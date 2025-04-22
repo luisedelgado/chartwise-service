@@ -77,7 +77,6 @@ class TestingHarnessAudioProcessingRouter:
         dependency_container._docupanda_client = None
         dependency_container._stripe_client = None
         dependency_container._deepgram_client = None
-        dependency_container._supabase_client_factory = None
         dependency_container._resend_client = None
         dependency_container._influx_client = None
         dependency_container._testing_environment = "testing"
@@ -85,11 +84,7 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_deepgram_client = dependency_container.inject_deepgram_client()
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
-        self.fake_supabase_admin_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
-        self.fake_supabase_user_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=FAKE_ACCESS_TOKEN,
-                                                                                                                 refresh_token=FAKE_REFRESH_TOKEN)
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.fake_supabase_client_factory = dependency_container.inject_supabase_client_factory()
         self.auth_cookie, _ = AuthManager().create_auth_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT).router],
@@ -109,18 +104,13 @@ class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_soap_transcription_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                     data={
                                         "template": "soap",
                                         "patient_id": FAKE_PATIENT_ID,
                                         "session_date": "04-04-2022",
                                         "client_timezone_identifier": "UTC",
-                                        "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
+                                        "file_path": FAKE_SESSION_REPORT_ID
                                     },
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
@@ -134,18 +124,13 @@ class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_free_form_transcription_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
                                     "template": "soap",
                                     "patient_id": FAKE_PATIENT_ID,
                                     "session_date": "04-04-2022",
                                     "client_timezone_identifier": "UTC",
-                                    "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
+                                    "file_path": FAKE_REFRESH_TOKEN
                                 },
                                 headers={
                                     "store-access-token": FAKE_ACCESS_TOKEN,
@@ -169,10 +154,6 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 401
 
     def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": "",
@@ -191,10 +172,6 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 422
 
     def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
@@ -213,10 +190,6 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 400
 
     def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
@@ -236,18 +209,13 @@ class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_diarization_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
-        self.fake_supabase_user_client.return_authenticated_session = True
-        self.fake_supabase_user_client.fake_access_token = FAKE_ACCESS_TOKEN
-        self.fake_supabase_user_client.fake_refresh_token = FAKE_REFRESH_TOKEN
-        self.fake_supabase_user_client.select_returns_data = True
-
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": self.fake_supabase_user_client.FAKE_THERAPIST_ID
+                                   "file_path": FAKE_SESSION_REPORT_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,

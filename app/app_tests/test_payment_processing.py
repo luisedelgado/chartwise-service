@@ -26,7 +26,6 @@ class TestingHarnessPaymentProcessingRouter:
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
         dependency_container._docupanda_client = None
-        dependency_container._supabase_client_factory = None
         dependency_container._stripe_client = None
         dependency_container._resend_client = None
         dependency_container._influx_client = None
@@ -34,12 +33,8 @@ class TestingHarnessPaymentProcessingRouter:
 
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
-        self.fake_supabase_admin_client = dependency_container.inject_supabase_client_factory().supabase_admin_client()
         self.fake_stripe_client: FakeStripeClient = dependency_container.inject_stripe_client()
-        self.fake_supabase_user_client = dependency_container.inject_supabase_client_factory().supabase_user_client(access_token=FAKE_ACCESS_TOKEN,
-                                                                                                                 refresh_token=FAKE_REFRESH_TOKEN)
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.fake_supabase_client_factory = dependency_container.inject_supabase_client_factory()
         self.auth_cookie, _ = AuthManager().create_auth_token(user_id=FAKE_THERAPIST_ID)
         coordinator = EndpointServiceCoordinator(routers=[PaymentProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
@@ -128,7 +123,6 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_retrieve_subscriptions_success(self):
-        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -150,7 +144,6 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_delete_subscription_success(self):
-        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -188,7 +181,6 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 417
 
     def test_update_subscription_plan_success(self):
-        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -237,7 +229,6 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_generate_update_payment_method_session_url_success(self):
-        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
@@ -263,7 +254,6 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_retrieve_payment_history_success(self):
-        self.fake_supabase_user_client.select_returns_data = True
         response = self.client.get(PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
                                     cookies={
                                         "authorization": self.auth_cookie
