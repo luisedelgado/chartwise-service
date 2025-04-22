@@ -314,7 +314,7 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -424,7 +424,7 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -507,7 +507,7 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             # Cancel Stripe subscription

@@ -116,7 +116,7 @@ class ImageProcessingRouter:
                 patient_id=patient_id,
                 description=str(e)
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Didn't receive a valid document id."

@@ -81,7 +81,7 @@ class AuthManager:
                 "exp": exp
             }
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     async def refresh_session(self,
                               user_id: str,

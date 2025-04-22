@@ -30,7 +30,7 @@ class ResendClient(ResendBaseClass):
                              subject=subject,
                              html=html_content)
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def send_customer_relations_alert_email(self,
                                             subject: str,
@@ -45,7 +45,7 @@ class ResendClient(ResendBaseClass):
                              subject=subject,
                              html=html_content)
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Private
 

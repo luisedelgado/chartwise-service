@@ -46,7 +46,7 @@ class StripeClient(StripeBaseClass):
             )
             return checkout_session['url']
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def construct_webhook_event(self,
                                 payload,
@@ -173,4 +173,4 @@ class StripeClient(StripeBaseClass):
             )
             return update_payment_method_session['url']
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e

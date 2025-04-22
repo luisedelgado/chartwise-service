@@ -227,7 +227,7 @@ class PromptCrafter:
                 f"\nGiven this information, please respond the user's input: {query_input}\n"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Briefing Prompt
 
@@ -274,7 +274,7 @@ class PromptCrafter:
                     f"Ensure the headers for Most Recent Sessions, Historical Themes, and Suggestions for Next Session are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_briefing_user_message(self,
                                       patient_name: str,
@@ -291,7 +291,7 @@ class PromptCrafter:
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Question Suggestions
 
@@ -314,7 +314,7 @@ class PromptCrafter:
                 r"{'questions': ['When did we last talk about the divorce?', 'What was the last thing we discussed in session?']}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_question_suggestions_user_message(self,
                                                   language_code: str,
@@ -339,7 +339,7 @@ class PromptCrafter:
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Recent Topics
 
@@ -365,7 +365,7 @@ class PromptCrafter:
                 r"{'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_recent_topics_user_message(self,
                                            language_code: str,
@@ -390,7 +390,7 @@ class PromptCrafter:
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Session Entry Summary Prompt
 
@@ -412,7 +412,7 @@ class PromptCrafter:
             assert len(chunk_text or '') > 0, "Missing chunk_text param for building user message"
             return (f"Summarize the following chunk:\n\n{chunk_text}")
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # SOAP Template Prompt
 
@@ -436,7 +436,7 @@ class PromptCrafter:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return f"Adapt the following session notes into the SOAP format:\n\n{session_notes}."
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_session_mini_summary_system_message(self, language_code: str):
         try:
@@ -451,14 +451,14 @@ class PromptCrafter:
                 f"It is very important that your output is generated using language code {language_code}. "
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_session_mini_summary_user_message(self, session_notes: str):
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return (f"Summarize the following session notes:\n\n{session_notes}")
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Reformulate query
 
@@ -486,7 +486,7 @@ class PromptCrafter:
                 f"Latest User Input:\n{query_input}\n---------------------\n"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Topics Insights
 
@@ -525,7 +525,7 @@ class PromptCrafter:
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Attendance Insights
 
@@ -547,7 +547,7 @@ class PromptCrafter:
                     "\n\n"
                     f"Here is the set of dates: {patient_session_dates}")
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _create_attendance_insights_system_message(self,
                                                    language_code: str):
@@ -563,7 +563,7 @@ class PromptCrafter:
                     "2. Limit the output to 290 characters.\n"
                     f"3. Ensure the output is generated using language code {language_code}.\n")
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Summarize Diarization
 
@@ -588,7 +588,7 @@ class PromptCrafter:
                 "The session focused on exploring these feelings and potential coping strategies."
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _summarize_diarization_user_message(self, diarization: str) -> str:
         try:
@@ -599,7 +599,7 @@ class PromptCrafter:
                  f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     # Grand Summary of Diarization Chunks
 
@@ -614,7 +614,7 @@ class PromptCrafter:
                 f"It is very important that this grand summary is written using language code {language_code}."
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     def _summarize_diarization_chunks_user_message(self, diarization: str) -> str:
         try:
@@ -624,4 +624,4 @@ class PromptCrafter:
                  f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
             )
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e

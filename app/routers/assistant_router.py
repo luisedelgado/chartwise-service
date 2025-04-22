@@ -191,7 +191,7 @@ class AssistantRouter:
                     description=str(e),
                     session_id=session_id
                 )
-                raise RuntimeError from e
+                raise RuntimeError(e) from e
 
             try:
                 assert general_utilities.is_valid_uuid(query.patient_id or '') > 0, "Invalid patient_id in payload"
@@ -395,7 +395,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             if not session_report_id.strip():
@@ -471,7 +471,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             filters = [year, most_recent_n, time_range]
@@ -548,7 +548,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -650,7 +650,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -739,7 +739,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
@@ -868,7 +868,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             if not patient_id.strip():
@@ -934,7 +934,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             patients_data = await self._assistant_manager.retrieve_patients(
@@ -996,7 +996,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -1081,7 +1081,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             body = body.model_dump(exclude_unset=True)
@@ -1154,7 +1154,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
@@ -1241,7 +1241,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1305,7 +1305,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1369,7 +1369,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1433,7 +1433,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1500,7 +1500,7 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"

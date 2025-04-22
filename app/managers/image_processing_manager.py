@@ -74,7 +74,7 @@ class ImageProcessingManager(MediaProcessingManager):
             return (doc_id, session_notes_id)
         except Exception as e:
             await file_copiers.clean_up_files(files_to_clean)
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     async def process_textraction(self,
                                   document_id: str,
@@ -205,4 +205,4 @@ class ImageProcessingManager(MediaProcessingManager):
                 session_id=session_id
             )
             await email_manager.send_internal_alert(alert)
-            raise RuntimeError from e
+            raise RuntimeError(e) from e

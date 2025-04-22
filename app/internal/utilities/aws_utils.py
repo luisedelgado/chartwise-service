@@ -1,3 +1,4 @@
+import boto3
 import json
 import requests
 
@@ -5,6 +6,7 @@ from botocore.awsrequest import AWSRequest
 from botocore.auth import SigV4Auth
 from botocore.httpsession import URLLib3Session
 from datetime import datetime, timedelta, timezone
+from typing import Callable, Optional
 
 from .datetime_handler import DATE_TIME_TIMEZONE_FORMAT, WEEKDAY_DATE_TIME_TIMEZONE_FORMAT
 from ...dependencies.boto3_session_factory import Boto3SessionFactory
@@ -15,6 +17,7 @@ def sign_and_send_aws_request(
     endpoint_url: str,
     payload: dict,
     target_action: str,
+    on_error_callback: Optional[Callable[[Optional[Exception]], None]] = None,
 ) -> dict:
     """
     Constructs and sends a SigV4-signed AWS API request, adjusting for clock skew.
@@ -26,12 +29,19 @@ def sign_and_send_aws_request(
         payload: The request body (as a dict).
         target_action: e.g., 'TrentService.Decrypt' or 'secretsmanager.GetSecretValue'
         timeout: Timeout in seconds for the request.
+        on_error_callback: Optional callback function to be used on error.
 
     Returns:
         dict response parsed from JSON.
     """
     try:
         session = Boto3SessionFactory.get_session()
+    except Exception as e:
+        if on_error_callback:
+            on_error_callback(exception=e)
+        return
+
+    try:
         creds = session.get_credentials().get_frozen_credentials()
 
         clock_skew_offset = get_aws_clock_skew_offset()
@@ -55,12 +65,15 @@ def sign_and_send_aws_request(
         http_session = URLLib3Session()
         response = http_session.send(request.prepare())
 
-        if response.status_code != 200:
-            raise Exception(f"[AWS Request] {response.status_code} {response.text}")
+        if response.status_code == 200:
+            return json.loads(response.content.decode("utf-8"))
 
-        return json.loads(response.content.decode("utf-8"))
+        e = Exception(f"[AWS Request] {response.status_code} {response.text}")
+        if on_error_callback:
+            on_error_callback(exception=e)
+        raise e
     except Exception as e:
-        raise RuntimeError from e
+        raise RuntimeError(e) from e
 
 def get_aws_clock_skew_offset() -> int:
     """

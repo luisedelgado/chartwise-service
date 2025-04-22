@@ -74,4 +74,4 @@ class DocupandaClient(DocupandaBaseClass):
                 full_text = " ".join([full_text, section['text']])
             return status.HTTP_200_OK, full_text
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e

@@ -156,7 +156,7 @@ class AwsDbClient(AwsDbBaseClass):
                 )
                 return dict(row) if row else None
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
     async def select(self,
                      user_id: str,
@@ -469,4 +469,4 @@ class AwsDbClient(AwsDbBaseClass):
             )
             return conn
         except Exception as e:
-            raise RuntimeError from e
+            raise RuntimeError(e) from e

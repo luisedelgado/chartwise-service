@@ -157,7 +157,7 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert len(file_path or '') > 0, "Invalid file path value"
@@ -253,7 +253,7 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert is_valid_extension(file_extension), "Received invalid file extension."
@@ -355,7 +355,7 @@ class AudioProcessingRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError from e
+            raise RuntimeError(e) from e
 
         try:
             assert len(file_path or '') > 0, "Empty file path value"

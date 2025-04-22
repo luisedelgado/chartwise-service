@@ -57,7 +57,7 @@ def retrieve_most_recent_date(first_date: str,
         second_is_most_recent_date = first_datetime.date() < second_datetime.date()
         return second_date if second_is_most_recent_date else first_date
     except Exception as e:
-        raise RuntimeError from e
+        raise RuntimeError(e) from e
 
 """
 Returns a formatted version of the incoming date, for internal use.
