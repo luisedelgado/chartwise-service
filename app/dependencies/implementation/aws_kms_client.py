@@ -1,8 +1,6 @@
 import base64
 import os
 
-from botocore.session import get_session
-
 from ..api.aws_kms_base_class import AwsKmsBaseClass
 from ...internal.utilities.aws_utils import sign_and_send_aws_request
 
@@ -15,7 +13,6 @@ class AwsKmsClient(AwsKmsBaseClass):
 
         self.key_hex = key_hex
         self.region = os.environ.get("AWS_SERVICES_REGION")
-        self.botocore_session = get_session()
 
     def decrypt_encryption_key_ciphertext(self) -> str:
         try:
