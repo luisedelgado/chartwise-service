@@ -1,8 +1,7 @@
-import boto3
 import mimetypes
-import os
 
 from ..api.aws_s3_base_class import AwsS3BaseClass
+from ..boto3_client_factory import Boto3ClientFactory
 
 class AwsS3Client(AwsS3BaseClass):
 
@@ -10,9 +9,7 @@ class AwsS3Client(AwsS3BaseClass):
     FIFTEEN_MIN_IN_SECONDS = 900
 
     def __init__(self):
-        self.client = boto3.client('s3',
-            region_name=os.environ.get("AWS_SERVICES_REGION"),
-        )
+        self.client = Boto3ClientFactory.get_client("s3")
 
     def get_audio_file_upload_signed_url(self,
                                          file_path: str,

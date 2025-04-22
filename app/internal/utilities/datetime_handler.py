@@ -4,17 +4,18 @@ from babel.dates import format_date, get_month_names
 from datetime import datetime
 from pytz import timezone
 
-DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
-DATE_TIME_FORMAT_FILE = "%d-%m-%Y-%H-%M-%S"
+ABBREVIATED_MONTH_FORMAT = "%b"
 DATE_FORMAT = "%m-%d-%Y"
 DATE_FORMAT_SPELL_OUT_MONTH = "%b %d, %Y"
 DATE_FORMAT_YYYY_MM_DD = '%Y-%m-%d'
-MONTH_YEAR_FORMAT = "%B %Y"
-YEAR_FORMAT = "%Y"
-ABBREVIATED_MONTH_FORMAT = "%b"
-DAY_MONTH_SLASH_FORMAT = "%m/%d"
-WEEKDAY_DATE_TIME_TIMEZONE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
+DATE_TIME_FORMAT_FILE = "%d-%m-%Y-%H-%M-%S"
 DATE_TIME_TIMEZONE_FORMAT = "%Y%m%dT%H%M%SZ"
+DAY_MONTH_SLASH_FORMAT = "%m/%d"
+MONTH_YEAR_FORMAT = "%B %Y"
+UTC_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+WEEKDAY_DATE_TIME_TIMEZONE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+YEAR_FORMAT = "%Y"
 
 """
 Returns a flag representing whether or not the incoming date is valid.

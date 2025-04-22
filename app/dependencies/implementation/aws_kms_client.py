@@ -1,11 +1,10 @@
 import base64
-import boto3
 import os
 
 from botocore.session import get_session
 
 from ..api.aws_kms_base_class import AwsKmsBaseClass
-from ...internal.utilities.aws_request_utils import sign_and_send_aws_request
+from ...internal.utilities.aws_utils import sign_and_send_aws_request
 
 class AwsKmsClient(AwsKmsBaseClass):
     def __init__(self):
@@ -16,7 +15,6 @@ class AwsKmsClient(AwsKmsBaseClass):
 
         self.key_hex = key_hex
         self.region = os.environ.get("AWS_SERVICES_REGION")
-        self.session = boto3.Session()
         self.botocore_session = get_session()
 
     def decrypt_encryption_key_ciphertext(self) -> str:
@@ -31,7 +29,6 @@ class AwsKmsClient(AwsKmsBaseClass):
                 endpoint_url=f"https://kms.{self.region}.amazonaws.com/",
                 payload=payload,
                 target_action="TrentService.Decrypt",
-                session=self.session
             )
             key_b64 = result["Plaintext"]
             return base64.b64decode(key_b64)

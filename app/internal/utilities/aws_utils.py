@@ -1,4 +1,3 @@
-import boto3
 import json
 import requests
 
@@ -8,6 +7,7 @@ from botocore.httpsession import URLLib3Session
 from datetime import datetime, timedelta, timezone
 
 from .datetime_handler import DATE_TIME_TIMEZONE_FORMAT, WEEKDAY_DATE_TIME_TIMEZONE_FORMAT
+from ...dependencies.boto3_session_factory import Boto3SessionFactory
 
 def sign_and_send_aws_request(
     service: str,
@@ -15,7 +15,6 @@ def sign_and_send_aws_request(
     endpoint_url: str,
     payload: dict,
     target_action: str,
-    session: boto3.Session = None,
 ) -> dict:
     """
     Constructs and sends a SigV4-signed AWS API request, adjusting for clock skew.
@@ -26,15 +25,15 @@ def sign_and_send_aws_request(
         endpoint_url: Full HTTPS endpoint URL.
         payload: The request body (as a dict).
         target_action: e.g., 'TrentService.Decrypt' or 'secretsmanager.GetSecretValue'
-        session: Optional boto3.Session instance.
         timeout: Timeout in seconds for the request.
 
     Returns:
         dict response parsed from JSON.
     """
     try:
-        session = session or boto3.Session()
-        creds = session.get_credentials()
+        session = Boto3SessionFactory.get_session()
+        creds = session.get_credentials().get_frozen_credentials()
+
         clock_skew_offset = get_aws_clock_skew_offset()
         adjusted_time = datetime.now(timezone.utc) + timedelta(seconds=clock_skew_offset)
 
