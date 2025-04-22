@@ -54,11 +54,16 @@ class TestingHarnessSecurityRouter:
     def test_login_for_token_authenticated_success(self):
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
                                     headers={
-                                        "auth-token": "test@test.com",
+                                        "auth-token": FAKE_ACCESS_TOKEN,
                                     })
         assert response.status_code == 200
-        assert response.cookies.get("session_token") != None
+        assert response.cookies.get("session_token") is not None
         assert response.cookies.get("session_id") is not None
+
+        session_token = response.json()
+        assert session_token["token"]["session_token"] is not None
+        assert session_token["token"]["token_type"] is not None
+        assert session_token["token"]["expiration_timestamp"] is not None
 
     def test_refresh_token_without_previous_auth_session(self):
         response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
