@@ -32,10 +32,7 @@ class Boto3SessionFactory:
         )
 
         cls._creds = assumed["Credentials"]
-        cls._expiration = datetime.strptime(
-            cls._creds["Expiration"], UTC_DATETIME_FORMAT
-        ) - timedelta(minutes=2)
-
+        cls._expiration = cls._creds["Expiration"] - timedelta(minutes=2)
         cls._session = boto3.Session(
             aws_access_key_id=cls._creds["AccessKeyId"],
             aws_secret_access_key=cls._creds["SecretAccessKey"],

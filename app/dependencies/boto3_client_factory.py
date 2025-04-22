@@ -43,5 +43,5 @@ class Boto3ClientFactory:
         cls._creds = assumed["Credentials"]
 
         # Expires 2 minutes early to prevent "edge-case" failures if a request comes in while creds are expiring.
-        cls._expiration = datetime.strptime(cls._creds["Expiration"], UTC_DATETIME_FORMAT) - timedelta(minutes=2)
+        cls._expiration = cls._creds["Expiration"] - timedelta(minutes=2)
         cls._clients = {}  # Clear old clients that were tied to old creds
