@@ -5,10 +5,10 @@ from enum import Enum
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
+                     Depends,
                      HTTPException,
                      Request,
                      Response,
-                     Security,
                      status,)
 from langcodes import Language
 from typing import Annotated, Optional, Union
@@ -16,7 +16,6 @@ from pydantic import BaseModel
 
 from ..dependencies.dependency_container import dependency_container, AwsDbBaseClass
 from ..internal.internal_alert import CustomerRelationsAlert
-from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.schemas import (
     Gender,
@@ -28,6 +27,7 @@ from ..internal.schemas import (
 )
 from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
+from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
@@ -72,7 +72,7 @@ class SecurityRouter:
         @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def signin(response: Response,
                          request: Request,
-                         user_info: dict = Security(verify_cognito_token),
+                         user_info: dict = Depends(get_user_info),
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._signin_internal(
                 user_info=user_info,
@@ -84,7 +84,7 @@ class SecurityRouter:
         @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
-                                     _: dict = Security(verify_cognito_token),
+                                     _: dict = Depends(get_user_info),
                                      session_token: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._refresh_auth_token_internal(
@@ -98,7 +98,7 @@ class SecurityRouter:
         async def logout(request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
-                         _: dict = Security(verify_cognito_token),
+                         _: dict = Depends(get_user_info),
                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._logout_internal(
                 request=request,
@@ -111,7 +111,7 @@ class SecurityRouter:
         async def add_therapist(body: SignupPayload,
                                 request: Request,
                                 response: Response,
-                                _: dict = Security(verify_cognito_token),
+                                _: dict = Depends(get_user_info),
                                 session_token: Annotated[Union[str, None], Cookie()] = None,
                                 session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_therapist_internal(
@@ -126,7 +126,7 @@ class SecurityRouter:
         async def update_therapist(request: Request,
                                    response: Response,
                                    body: TherapistUpdatePayload,
-                                   _: dict = Security(verify_cognito_token),
+                                   _: dict = Depends(get_user_info),
                                    session_token: Annotated[Union[str, None], Cookie()] = None,
                                    session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_therapist_internal(
@@ -140,7 +140,7 @@ class SecurityRouter:
         @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
         async def delete_therapist(request: Request,
                                    response: Response,
-                                   _: dict = Security(verify_cognito_token),
+                                   _: dict = Depends(get_user_info),
                                    session_token: Annotated[Union[str, None], Cookie()] = None,
                                    session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_therapist_internal(

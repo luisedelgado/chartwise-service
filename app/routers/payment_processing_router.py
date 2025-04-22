@@ -4,10 +4,10 @@ from enum import Enum
 from datetime import datetime
 from fastapi import (APIRouter,
                      Cookie,
+                     Depends,
                      HTTPException,
                      Request,
                      Response,
-                     Security,
                      status)
 from pydantic import BaseModel
 from typing import Annotated, Optional, Union
@@ -26,10 +26,10 @@ from ..internal.schemas import (
     SUBSCRIPTION_STATUS_TABLE_NAME,
     USER_ID_KEY,
 )
-from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities import general_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
+from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
 
@@ -77,7 +77,7 @@ class PaymentProcessingRouter:
         async def create_checkout_session(request: Request,
                                           response: Response,
                                           payload: PaymentSessionPayload,
-                                          _: dict = Security(verify_cognito_token),
+                                          _: dict = Depends(get_user_info),
                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_checkout_session_internal(
@@ -97,7 +97,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_subscriptions(response: Response,
                                          request: Request,
-                                         _: dict = Security(verify_cognito_token),
+                                         _: dict = Depends(get_user_info),
                                          session_token: Annotated[Union[str, None], Cookie()] = None,
                                          session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_subscriptions_internal(
@@ -111,7 +111,7 @@ class PaymentProcessingRouter:
         async def update_subscription(payload: UpdateSubscriptionPayload,
                                       response: Response,
                                       request: Request,
-                                      _: dict = Security(verify_cognito_token),
+                                      _: dict = Depends(get_user_info),
                                       session_token: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_subscription_internal(
@@ -126,7 +126,7 @@ class PaymentProcessingRouter:
         @self.router.delete(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
         async def delete_subscription(response: Response,
                                       request: Request,
-                                      _: dict = Security(verify_cognito_token),
+                                      _: dict = Depends(get_user_info),
                                       session_token: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_subscription_internal(
@@ -139,7 +139,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
         async def retrieve_product_catalog(request: Request,
                                            response: Response,
-                                           _: dict = Security(verify_cognito_token),
+                                           _: dict = Depends(get_user_info),
                                            session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._retrieve_product_catalog_internal(
@@ -153,7 +153,7 @@ class PaymentProcessingRouter:
         async def create_update_payment_method_session(request: Request,
                                                        response: Response,
                                                        payload: UpdatePaymentMethodPayload,
-                                                       _: dict = Security(verify_cognito_token),
+                                                       _: dict = Depends(get_user_info),
                                                        session_token: Annotated[Union[str, None], Cookie()] = None,
                                                        session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._create_update_payment_method_session_internal(
@@ -167,7 +167,7 @@ class PaymentProcessingRouter:
         @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
         async def retrieve_payment_history(request: Request,
                                            response: Response,
-                                           _: dict = Security(verify_cognito_token),
+                                           _: dict = Depends(get_user_info),
                                            session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None,
                                            batch_size: int = 0,

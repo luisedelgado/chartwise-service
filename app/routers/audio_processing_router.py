@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import (APIRouter,
                      BackgroundTasks,
                      Cookie,
-                     Security,
+                     Depends,
                      Form,
                      HTTPException,
                      Request,
@@ -17,10 +17,10 @@ from ..dependencies.dependency_container import (
 )
 from ..dependencies.api.aws_s3_base_class import AwsS3BaseClass
 from ..internal.schemas import USER_ID_KEY
-from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities.general_utilities import is_valid_extension
 from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
@@ -57,7 +57,7 @@ class AudioProcessingRouter:
                                            patient_id: Annotated[str, Form()],
                                            session_date: Annotated[str, Form()],
                                            client_timezone_identifier: Annotated[str, Form()],
-                                           _: dict = Security(verify_cognito_token),
+                                           _: dict = Depends(get_user_info),
                                            session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transcribe_session_notes_internal(request=request,
@@ -80,7 +80,7 @@ class AudioProcessingRouter:
                                   patient_id: Annotated[str, Form()],
                                   session_date: Annotated[str, Form()],
                                   client_timezone_identifier: Annotated[str, Form()],
-                                  _: dict = Security(verify_cognito_token),
+                                  _: dict = Depends(get_user_info),
                                   session_token: Annotated[Union[str, None], Cookie()] = None,
                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._diarize_session_internal(request=request,
@@ -99,7 +99,7 @@ class AudioProcessingRouter:
                                             response: Response,
                                             patient_id: str = None,
                                             file_extension: str = None,
-                                            _: dict = Security(verify_cognito_token),
+                                            _: dict = Depends(get_user_info),
                                             session_token: Annotated[Union[str, None], Cookie()] = None,
                                             session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._generate_audio_upload_url_internal(file_extension=file_extension,

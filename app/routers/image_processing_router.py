@@ -2,10 +2,9 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Cookie,
-    Security,
+    Depends,
     File,
     Form,
-    Header,
     HTTPException,
     Request,
     Response,
@@ -17,9 +16,9 @@ from typing import Annotated, Union
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..internal.schemas import USER_ID_KEY
-from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
@@ -51,7 +50,7 @@ class ImageProcessingRouter:
                                session_date: Annotated[str, Form()],
                                template: Annotated[SessionNotesTemplate, Form()],
                                client_timezone_identifier: Annotated[str, Form()],
-                               _: dict = Security(verify_cognito_token),
+                               _: dict = Depends(get_user_info),
                                image: UploadFile = File(...),
                                session_token: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):

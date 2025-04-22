@@ -3,7 +3,7 @@ from fastapi import (
     BackgroundTasks,
     Body,
     Cookie,
-    Security,
+    Depends,
     HTTPException,
     Path,
     Query,
@@ -18,7 +18,6 @@ from typing import Annotated, AsyncIterable, Optional, Union
 
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..dependencies.api.templates import SessionNotesTemplate
-from ..internal.security.cognito_auth import verify_cognito_token
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.schemas import (
     Gender,
@@ -27,6 +26,7 @@ from ..internal.schemas import (
     USER_ID_KEY
 )
 from ..internal.utilities import datetime_handler, general_utilities
+from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import (
     AssistantManager,
     AssistantQuery,
@@ -74,7 +74,7 @@ class AssistantRouter:
         @self.router.get(self.SINGLE_SESSION_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
         async def retrieve_single_session_report(response: Response,
                                                  request: Request,
-                                                 _: dict = Security(verify_cognito_token),
+                                                 _: dict = Depends(get_user_info),
                                                  session_report_id: str = Path(..., min_length=1),
                                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -93,7 +93,7 @@ class AssistantRouter:
                                       most_recent_n: int = Query(None),
                                       time_range: Optional[TimeRange] = Query(None),
                                       patient_id: str = None,
-                                      _: dict = Security(verify_cognito_token),
+                                      _: dict = Depends(get_user_info),
                                       session_token: Annotated[Union[str, None], Cookie()] = None,
                                       session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_session_reports_internal(
@@ -112,7 +112,7 @@ class AssistantRouter:
                                      request: Request,
                                      response: Response,
                                      background_tasks: BackgroundTasks,
-                                     _: dict = Security(verify_cognito_token),
+                                     _: dict = Depends(get_user_info),
                                      client_timezone_identifier: Annotated[str, Body()] = None,
                                      session_token: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -131,7 +131,7 @@ class AssistantRouter:
                                  request: Request,
                                  response: Response,
                                  background_tasks: BackgroundTasks,
-                                 _: dict = Security(verify_cognito_token),
+                                 _: dict = Depends(get_user_info),
                                  client_timezone_identifier: Annotated[str, Body()] = None,
                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
@@ -150,7 +150,7 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  session_report_id: str = None,
-                                 _: dict = Security(verify_cognito_token),
+                                 _: dict = Depends(get_user_info),
                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_session_internal(
@@ -166,7 +166,7 @@ class AssistantRouter:
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
                                           response: Response,
-                                          _: dict = Security(verify_cognito_token),
+                                          _: dict = Depends(get_user_info),
                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             request.state.session_id = session_id
@@ -210,7 +210,7 @@ class AssistantRouter:
         async def get_single_patient(response: Response,
                                      request: Request,
                                      patient_id: str = Path(..., min_length=1),
-                                     _: dict = Security(verify_cognito_token),
+                                     _: dict = Depends(get_user_info),
                                      session_token: Annotated[Union[str, None], Cookie()] = None,
                                      session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_single_patient_internal(
@@ -224,7 +224,7 @@ class AssistantRouter:
         @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
         async def get_patients(response: Response,
                                request: Request,
-                               _: dict = Security(verify_cognito_token),
+                                _: dict = Depends(get_user_info),
                                session_token: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_patients_internal(
@@ -239,7 +239,7 @@ class AssistantRouter:
                               request: Request,
                               background_tasks: BackgroundTasks,
                               body: PatientInsertPayload,
-                              _: dict = Security(verify_cognito_token),
+                              _: dict = Depends(get_user_info),
                               session_token: Annotated[Union[str, None], Cookie()] = None,
                               session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._add_patient_internal(
@@ -256,7 +256,7 @@ class AssistantRouter:
                                  request: Request,
                                  background_tasks: BackgroundTasks,
                                  body: PatientUpdatePayload,
-                                 _: dict = Security(verify_cognito_token),
+                                 _: dict = Depends(get_user_info),
                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._update_patient_internal(
@@ -272,7 +272,7 @@ class AssistantRouter:
         async def delete_patient(request: Request,
                                  response: Response,
                                  patient_id: str = None,
-                                 _: dict = Security(verify_cognito_token),
+                                 _: dict = Depends(get_user_info),
                                  session_token: Annotated[Union[str, None], Cookie()] = None,
                                  session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._delete_patient_internal(
@@ -287,7 +287,7 @@ class AssistantRouter:
         async def get_attendance_insights(response: Response,
                                           request: Request,
                                           patient_id: str = None,
-                                          _: dict = Security(verify_cognito_token),
+                                          _: dict = Depends(get_user_info),
                                           session_token: Annotated[Union[str, None], Cookie()] = None,
                                           session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_attendance_insights_internal(
@@ -302,7 +302,7 @@ class AssistantRouter:
         async def get_briefing(response: Response,
                                request: Request,
                                patient_id: str = None,
-                               _: dict = Security(verify_cognito_token),
+                               _: dict = Depends(get_user_info),
                                session_token: Annotated[Union[str, None], Cookie()] = None,
                                session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_briefing_internal(
@@ -317,7 +317,7 @@ class AssistantRouter:
         async def get_question_suggestions(response: Response,
                                            request: Request,
                                            patient_id: str = None,
-                                           _: dict = Security(verify_cognito_token),
+                                           _: dict = Depends(get_user_info),
                                            session_token: Annotated[Union[str, None], Cookie()] = None,
                                            session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_question_suggestions_internal(
@@ -332,7 +332,7 @@ class AssistantRouter:
         async def get_recent_topics(response: Response,
                                     request: Request,
                                     patient_id: str = None,
-                                    _: dict = Security(verify_cognito_token),
+                                    _: dict = Depends(get_user_info),
                                     session_token: Annotated[Union[str, None], Cookie()] = None,
                                     session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._get_recent_topics_internal(
@@ -347,7 +347,7 @@ class AssistantRouter:
         async def transform_session_with_template(request: Request,
                                                   response: Response,
                                                   body: TemplatePayload,
-                                                  _: dict = Security(verify_cognito_token),
+                                                  _: dict = Depends(get_user_info),
                                                   session_token: Annotated[Union[str, None], Cookie()] = None,
                                                   session_id: Annotated[Union[str, None], Cookie()] = None):
             return await self._transform_session_with_template_internal(
