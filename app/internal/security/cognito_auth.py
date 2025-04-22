@@ -3,10 +3,10 @@ import jwt
 import os
 
 from jwt import PyJWKClient
-from fastapi import Header, HTTPException, status, Request
+from fastapi import Header, HTTPException, status
 from typing import Dict
 
-COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get("COGNITO_REGION")}.amazonaws.com/{os.environ.get("COGNITO_USER_POOL_ID")}"
+COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get('COGNITO_REGION')}.amazonaws.com/{os.environ.get('COGNITO_USER_POOL_ID')}"
 JWKS_URL = f"{COGNITO_ISSUER}/.well-known/jwks.json"
 JWKS_CACHE = None
 JWKS_CACHE_EXPIRATION = 0
