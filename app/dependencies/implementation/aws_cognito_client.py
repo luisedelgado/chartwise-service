@@ -21,14 +21,14 @@ class AwsCognitoClient(AwsCognitoBaseClass):
         self.user_pool_id = os.environ.get("AWS_COGNITO_USER_POOL_ID")
         self.client = Boto3ClientFactory.get_client("cognito-idp")
 
-    def verify_cognito_token(self, auth_header: str = Header(...)) -> Dict:
-        if not auth_header or not auth_header.lower().startswith("bearer "):
+    def verify_cognito_token(self, token: str) -> Dict:
+        if not token or not token.lower().startswith("bearer "):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Identity authorization header missing or invalid",
             )
 
-        cognito_token = auth_header.split(" ")[1]
+        cognito_token = token.split(" ")[1]
         decoded_cognito_token = self.decode_cognito_token(cognito_token)
 
         return {

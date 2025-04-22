@@ -5,11 +5,11 @@ from typing import Dict
 class AwsCognitoBaseClass(ABC):
 
     @abstractmethod
-    def verify_cognito_token(auth_header: str = Header(...)) -> Dict:
+    def verify_cognito_token(token: str) -> Dict:
         """
         Verifies the Cognito token.
         Arguments:
-        auth_header – the authorization header containing the Cognito token.
+        token – the authorization header containing the Cognito token.
         """
         pass
 

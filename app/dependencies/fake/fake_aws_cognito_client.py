@@ -5,18 +5,24 @@ from ..api.aws_cognito_base_class import AwsCognitoBaseClass
 
 class FakeAwsCognitoClient(AwsCognitoBaseClass):
 
-    def verify_cognito_token(self, auth_header: str = Header(...)) -> Dict:
-        return {
-            "sub": "test-user-id",
-            "email": "test@example.com",
-            "claims": {"cognito:groups": ["therapist"]}
-        }
+    FAKE_ENCODED_COGNITO_TOKEN = {
+        "sub": "test-user-id",
+        "email": "test@example.com",
+        "claims": {"cognito:groups": ["therapist"]}
+    }
+
+    FAKE_DECODED_COGNITO_TOKEN = {
+        "sub": "test-user-id",
+        "email": "test@example.com",
+    }
+
+    return_valid_tokens = True
+
+    def verify_cognito_token(self, token: str) -> Dict:
+        return self.FAKE_ENCODED_COGNITO_TOKEN if self.return_valid_tokens else {}
 
     def decode_cognito_token(self, token: str) -> Dict:
-        return {
-            "sub": "test-user-id",
-            "email": "test@example.com",
-        }
+        return self.FAKE_DECODED_COGNITO_TOKEN if self.return_valid_tokens else {}
 
     def get_jwk_client(self):
         pass

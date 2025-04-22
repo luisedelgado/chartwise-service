@@ -2,6 +2,7 @@ import os
 
 from fastapi.testclient import TestClient
 
+from ..dependencies.fake.fake_aws_cognito_client import FakeAwsCognitoClient
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_pinecone_client import FakePineconeClient
 from ..dependencies.dependency_container import dependency_container
@@ -33,6 +34,7 @@ class TestingHarnessSecurityRouter:
         dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
+        self.fake_cognito_client:FakeAwsCognitoClient = dependency_container.inject_aws_cognito_client()
         self.fake_openai_client:FakeAsyncOpenAI = dependency_container.inject_openai_client()
         self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
         self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
@@ -42,37 +44,34 @@ class TestingHarnessSecurityRouter:
         self.client = TestClient(coordinator.app)
 
     def test_login_for_token_unauthenticated(self):
+        self.fake_cognito_client.return_valid_tokens = False
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                               headers={
-                                   "user_info": "test@test.com",
-                               })
+                                    headers={
+                                        "auth-token": "myFakeToken",
+                                    })
         assert response.status_code == 401
 
     def test_login_for_token_authenticated_success(self):
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                                    json={
-                                        "email": "foo@foo.com"
-                                    },
                                     headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
+                                        "auth-token": "test@test.com",
                                     })
         assert response.status_code == 200
-        assert response.cookies.get("authorization") != None
+        assert response.cookies.get("session_token") != None
         assert response.cookies.get("session_id") is not None
 
     def test_refresh_token_without_previous_auth_session(self):
         response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
-                               headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
-                               })
+                                   headers={
+                                       "store-access-token": FAKE_ACCESS_TOKEN,
+                                       "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   })
         assert response.status_code == 401
 
     def test_refresh_token_success(self):
         response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie
+                                        "session_token": self.auth_cookie
                                     },
                                     headers={
                                         "store-access-token": FAKE_ACCESS_TOKEN,
@@ -99,7 +98,7 @@ class TestingHarnessSecurityRouter:
     def test_add_therapist_with_auth_token_but_missing_store_tokens(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                     cookies={
-                                        "authorization": self.auth_cookie
+                                        "session_token": self.auth_cookie
                                     },
                                     json={
                                     "email": "foo@foo.com",
@@ -118,7 +117,7 @@ class TestingHarnessSecurityRouter:
                                    "store-refresh-token": FAKE_REFRESH_TOKEN
                                },
                                cookies={
-                                        "authorization": self.auth_cookie
+                                        "session_token": self.auth_cookie
                                 },
                                 json={
                                     "email": "foo@foo.com",
@@ -133,7 +132,7 @@ class TestingHarnessSecurityRouter:
     def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                cookies={
-                                   "authorization": self.auth_cookie
+                                   "session_token": self.auth_cookie
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
@@ -152,7 +151,7 @@ class TestingHarnessSecurityRouter:
     def test_add_therapist_with_valid_credentials_but_invalid_gender_format(self):
         response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
                                 cookies={
-                                    "authorization": self.auth_cookie
+                                    "session_token": self.auth_cookie
                                 },
                                 headers={
                                     "store-access-token": FAKE_ACCESS_TOKEN,
@@ -175,7 +174,7 @@ class TestingHarnessSecurityRouter:
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             cookies={
-                                "authorization": self.auth_cookie
+                                "session_token": self.auth_cookie
                             },
                             json={
                                 "email": "foo@foo.com",
@@ -197,7 +196,7 @@ class TestingHarnessSecurityRouter:
                                 "store-refresh-token": FAKE_REFRESH_TOKEN
                             },
                             cookies={
-                                        "authorization": self.auth_cookie
+                                        "session_token": self.auth_cookie
                                     },
                             json={
                                 "email": "foo@foo.com",
@@ -227,7 +226,7 @@ class TestingHarnessSecurityRouter:
     def test_update_therapist_with_valid_credentials_but_undefined_gender(self):
         response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie
+                                "session_token": self.auth_cookie
                             },
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
@@ -246,7 +245,7 @@ class TestingHarnessSecurityRouter:
     def test_update_therapist_with_valid_credentials_but_invalid_date(self):
         response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie
+                                "session_token": self.auth_cookie
                             },
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
@@ -265,7 +264,7 @@ class TestingHarnessSecurityRouter:
     def test_update_therapist_with_valid_credentials_but_invalid_language_code(self):
         response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie
+                                "session_token": self.auth_cookie
                             },
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
@@ -284,7 +283,7 @@ class TestingHarnessSecurityRouter:
     def test_update_therapist_success(self):
         response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
                             cookies={
-                                "authorization": self.auth_cookie
+                                "session_token": self.auth_cookie
                             },
                             headers={
                                 "store-access-token": FAKE_ACCESS_TOKEN,
@@ -321,7 +320,7 @@ class TestingHarnessSecurityRouter:
     def test_delete_therapist_success(self):
         response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
                                         cookies={
-                                            "authorization": self.auth_cookie
+                                            "session_token": self.auth_cookie
                                         },
                                         headers={
                                             "store-access-token": FAKE_ACCESS_TOKEN,
