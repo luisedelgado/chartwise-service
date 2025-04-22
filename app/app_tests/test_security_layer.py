@@ -20,16 +20,22 @@ class TestingHarnessSecurityRouter:
 
     def setup_method(self):
         # Clear out any old state between tests
+        dependency_container._aws_cognito_client = None
+        dependency_container._aws_db_client = None
+        dependency_container._aws_kms_client = None
+        dependency_container._aws_s3_client = None
+        dependency_container._aws_secret_manager_client = None
+        dependency_container._chartwise_encryptor = None        
+        dependency_container._influx_client = None
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
-        dependency_container._stripe_client = None
         dependency_container._resend_client = None
-        dependency_container._influx_client = None
+        dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
         self.fake_openai_client:FakeAsyncOpenAI = dependency_container.inject_openai_client()
         self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
-        self.auth_cookie, _ = AuthManager().create_auth_token(user_id=FAKE_THERAPIST_ID)
+        self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[SecurityRouter().router],
                                                  environment=os.environ.get("ENVIRONMENT"))
@@ -37,8 +43,8 @@ class TestingHarnessSecurityRouter:
 
     def test_login_for_token_unauthenticated(self):
         response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                               json={
-                                   "email": "test@test.com",
+                               headers={
+                                   "user_info": "test@test.com",
                                })
         assert response.status_code == 401
 
