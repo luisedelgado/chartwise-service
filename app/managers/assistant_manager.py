@@ -251,7 +251,7 @@ class AssistantManager:
                     continue
                 if isinstance(value, Enum):
                     value = value.value
-                elif key in DATE_COLUMNS:
+                elif key in DATE_COLUMNS and type(value) == str:
                     value = datetime.strptime(
                         value,
                         datetime_handler.DATE_FORMAT
@@ -1040,13 +1040,7 @@ class AssistantManager:
                 assert session_date is not None, "Received an invalid session date"
                 patient_last_session_date = session_date
             else:
-                formatted_date = patient_last_session_date.strftime(datetime_handler.DATE_FORMAT)
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(
-                    first_date=session_date,
-                    first_date_format=datetime_handler.DATE_FORMAT,
-                    second_date=formatted_date,
-                    second_date_format=datetime_handler.DATE_FORMAT
-                )
+                patient_last_session_date = max(patient_last_session_date, session_date)
 
             await aws_db_client.update(
                 user_id=therapist_id,

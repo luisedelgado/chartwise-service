@@ -71,7 +71,7 @@ def get_aws_clock_skew_offset() -> int:
     Negative = local clock is ahead.
     """
     try:
-        response = requests.head("https://aws.amazon.com", timeout=2)
+        response = requests.head("https://sts.amazonaws.com", timeout=5)
         aws_time_str = response.headers["Date"]
         aws_time = datetime.strptime(aws_time_str, WEEKDAY_DATE_TIME_TIMEZONE_FORMAT).astimezone(timezone.utc)
         local_time = datetime.now(timezone.utc)

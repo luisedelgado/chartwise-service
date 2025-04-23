@@ -332,7 +332,7 @@ class SecurityRouter:
             for key, value in body.items():
                 if isinstance(value, Enum):
                     value = value.value
-                elif key in DATE_COLUMNS:
+                elif key in DATE_COLUMNS and type(value) == str:
                     value = datetime.strptime(
                         value,
                         datetime_handler.DATE_FORMAT
@@ -439,7 +439,7 @@ class SecurityRouter:
             for key, value in body.items():
                 if isinstance(value, Enum):
                     value = value.value
-                elif key in DATE_COLUMNS:
+                elif key in DATE_COLUMNS and type(value) == str:
                     value = datetime.strptime(
                         value,
                         datetime_handler.DATE_FORMAT

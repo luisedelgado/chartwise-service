@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import BackgroundTasks, Request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tiktoken import Encoding, get_encoding
@@ -34,7 +35,7 @@ class AudioProcessingManager(MediaProcessingManager):
                                     session_id: str,
                                     language_code: str,
                                     patient_id: str,
-                                    session_date: str,
+                                    session_date: date,
                                     environment: str,
                                     email_manager: EmailManager,
                                     diarize: bool,
@@ -361,7 +362,7 @@ class AudioProcessingManager(MediaProcessingManager):
     async def _update_patient_metrics_after_processing_transcription_session(self,
                                                                              request: Request,
                                                                              patient_id: str,
-                                                                             session_date: str,
+                                                                             session_date: date,
                                                                              therapist_id: str):
         try:
             # Fetch last session date
@@ -377,7 +378,14 @@ class AudioProcessingManager(MediaProcessingManager):
             )
             assert (0 != len(patient_query_data)), "Did not find any data for the patient"
 
+            # Determine the updated value for last_session_date depending on if the patient
+            # has met with the therapist before or not.
             patient_last_session_date = patient_query_data[0]['last_session_date']
+            if patient_last_session_date is None:
+                patient_last_session_date = session_date
+            else:
+                # Determine most recent date between `patient_last_session_date` and `session_date`.
+                patient_last_session_date = max(patient_last_session_date, session_date)
 
             # Fetch total sessions count
             session_reports_query = await aws_db_client.select(
@@ -390,22 +398,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
             )
             total_sessions_count = len(session_reports_query)
-
-            # Determine the updated value for last_session_date depending on if the patient
-            # has met with the therapist before or not.
-            if patient_last_session_date is None:
-                patient_last_session_date = session_date
-            else:
-                formatted_date = datetime_handler.convert_to_date_format_mm_dd_yyyy(
-                    incoming_date=patient_last_session_date,
-                    incoming_date_format=datetime_handler.DATE_FORMAT_YYYY_MM_DD
-                )
-                patient_last_session_date = datetime_handler.retrieve_most_recent_date(
-                    first_date=session_date,
-                    first_date_format=datetime_handler.DATE_FORMAT,
-                    second_date=formatted_date,
-                    second_date_format=datetime_handler.DATE_FORMAT
-                )
 
             await aws_db_client.update(
                 user_id=therapist_id,
