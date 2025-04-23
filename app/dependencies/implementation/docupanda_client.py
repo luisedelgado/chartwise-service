@@ -9,9 +9,11 @@ from ...internal.monitoring_proxy import use_monitoring_proxy
 
 class DocupandaClient(DocupandaBaseClass):
 
-    async def upload_image(self,
-                           image_filepath: str,
-                           image_filename: str) -> str:
+    async def upload_image(
+        self,
+        image_filepath: str,
+        image_filename: str
+    ) -> str:
         base_url = os.getenv("DOCUPANDA_BASE_URL")
         document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
         pdf_extension = "pdf"
@@ -47,7 +49,10 @@ class DocupandaClient(DocupandaBaseClass):
 
         return doc_id
 
-    async def retrieve_text_from_document(self, document_id) -> Tuple[int, str]:
+    async def retrieve_text_from_document(
+        self,
+        document_id
+    ) -> Tuple[int, str]:
         try:
             base_url = os.getenv("DOCUPANDA_BASE_URL")
             document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")

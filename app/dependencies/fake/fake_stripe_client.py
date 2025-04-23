@@ -13,13 +13,15 @@ class FakeStripeClient(StripeBaseClass):
     request_throws_exception = False
     request_returns_none = False
 
-    def generate_checkout_session(self,
-                                  session_id: str,
-                                  therapist_id: str,
-                                  price_id: str,
-                                  success_url: str,
-                                  cancel_url: str,
-                                  is_new_customer: bool) -> str | None:
+    def generate_checkout_session(
+        self,
+        session_id: str,
+        therapist_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        is_new_customer: bool
+    ) -> str | None:
         if self.request_returns_none:
             return None
 
@@ -28,10 +30,12 @@ class FakeStripeClient(StripeBaseClass):
 
         return "my fake url"
 
-    def construct_webhook_event(self,
-                                payload,
-                                sig_header,
-                                webhook_secret):
+    def construct_webhook_event(
+        self,
+        payload,
+        sig_header,
+        webhook_secret
+    ):
         if len(sig_header or '') == 0:
             raise SignatureVerificationError(message="invalid signature", sig_header=sig_header)
 
@@ -53,10 +57,12 @@ class FakeStripeClient(StripeBaseClass):
     def retrieve_invoice(self, invoice_id: str):
         pass
 
-    def retrieve_payment_intent_history(self,
-                                        customer_id: str,
-                                        limit: int,
-                                        starting_after: str | None):
+    def retrieve_payment_intent_history(
+        self,
+        customer_id: str,
+        limit: int,
+        starting_after: str | None
+    ):
         return {
             "data": [{
                 "status": "succeeded",
@@ -141,20 +147,26 @@ class FakeStripeClient(StripeBaseClass):
     def resume_cancelled_subscription(self, subscription_id: str):
         pass
 
-    def update_customer_subscription_plan(self,
-                                          subscription_id: str,
-                                          subscription_item_id: str,
-                                          price_id: str):
+    def update_customer_subscription_plan(
+        self,
+        subscription_id: str,
+        subscription_item_id: str,
+        price_id: str
+    ):
         pass
 
-    def attach_customer_payment_method(self,
-                                       customer_id: str,
-                                       payment_method_id: str):
+    def attach_customer_payment_method(
+        self,
+        customer_id: str,
+        payment_method_id: str
+    ):
         pass
 
-    def update_subscription_payment_method(self,
-                                           subscription_id: str,
-                                           payment_method_id: str):
+    def update_subscription_payment_method(
+        self,
+        subscription_id: str,
+        payment_method_id: str
+    ):
         pass
 
     def retrieve_product_catalog(self) -> list:
@@ -189,8 +201,10 @@ class FakeStripeClient(StripeBaseClass):
     def attach_invoice_metadata(self, invoice_id: str, metadata: dict):
         pass
 
-    def generate_payment_method_update_session(self,
-                                               customer_id: str,
-                                               success_url: str,
-                                               cancel_url) -> str:
+    def generate_payment_method_update_session(
+        self,
+        customer_id: str,
+        success_url: str,
+        cancel_url
+    ) -> str:
         return "fakePaymentMethodURL"

@@ -70,10 +70,12 @@ class SecurityRouter:
         Registers the set of routes that the class' router can access.
         """
         @self.router.post(type(self).SIGNIN_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
-        async def signin(response: Response,
-                         request: Request,
-                         user_info: dict = Depends(get_user_info),
-                         session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def signin(
+            response: Response,
+            request: Request,
+            user_info: dict = Depends(get_user_info),
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._signin_internal(
                 user_info=user_info,
                 request=request,
@@ -82,11 +84,13 @@ class SecurityRouter:
             )
 
         @self.router.put(type(self).SESSION_REFRESH_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
-        async def refresh_auth_token(request: Request,
-                                     response: Response,
-                                     _: dict = Depends(get_user_info),
-                                     session_token: Annotated[Union[str, None], Cookie()] = None,
-                                     session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def refresh_auth_token(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._refresh_auth_token_internal(
                 session_token=session_token,
                 request=request,
@@ -95,11 +99,13 @@ class SecurityRouter:
             )
 
         @self.router.post(type(self).LOGOUT_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
-        async def logout(request: Request,
-                         response: Response,
-                         background_tasks: BackgroundTasks,
-                         _: dict = Depends(get_user_info),
-                         session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def logout(
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            _: dict = Depends(get_user_info),
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._logout_internal(
                 request=request,
                 response=response,
@@ -108,12 +114,14 @@ class SecurityRouter:
             )
 
         @self.router.post(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
-        async def add_therapist(body: SignupPayload,
-                                request: Request,
-                                response: Response,
-                                _: dict = Depends(get_user_info),
-                                session_token: Annotated[Union[str, None], Cookie()] = None,
-                                session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def add_therapist(
+            body: SignupPayload,
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._add_therapist_internal(
                 session_token=session_token,
                 body=body,
@@ -123,12 +131,14 @@ class SecurityRouter:
             )
 
         @self.router.put(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
-        async def update_therapist(request: Request,
-                                   response: Response,
-                                   body: TherapistUpdatePayload,
-                                   _: dict = Depends(get_user_info),
-                                   session_token: Annotated[Union[str, None], Cookie()] = None,
-                                   session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def update_therapist(
+            request: Request,
+            response: Response,
+            body: TherapistUpdatePayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._update_therapist_internal(
                 request=request,
                 response=response,
@@ -138,11 +148,13 @@ class SecurityRouter:
             )
 
         @self.router.delete(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
-        async def delete_therapist(request: Request,
-                                   response: Response,
-                                   _: dict = Depends(get_user_info),
-                                   session_token: Annotated[Union[str, None], Cookie()] = None,
-                                   session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def delete_therapist(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._delete_therapist_internal(
                 request=request,
                 response=response,
@@ -150,11 +162,13 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-    async def _signin_internal(self,
-                               user_info: dict,
-                               request: Request,
-                               response: Response,
-                               session_id: Annotated[Union[str, None], Cookie()]):
+    async def _signin_internal(
+        self,
+        user_info: dict,
+        request: Request,
+        response: Response,
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Returns an oauth token to be used for invoking the endpoints.
 
@@ -213,11 +227,13 @@ class SecurityRouter:
                 status_code=status_code
             )
 
-    async def _refresh_auth_token_internal(self,
-                                           request: Request,
-                                           response: Response,
-                                           session_token: Annotated[Union[str, None], Cookie()],
-                                           session_id: Annotated[Union[str, None], Cookie()]):
+    async def _refresh_auth_token_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Refreshes an oauth token to be used for invoking the endpoints.
 
@@ -258,11 +274,13 @@ class SecurityRouter:
                 detail=description
             )
 
-    async def _logout_internal(self,
-                               request: Request,
-                               response: Response,
-                               background_tasks: BackgroundTasks,
-                               session_id: Annotated[Union[str, None], Cookie()]):
+    async def _logout_internal(
+        self,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Logs out the user.
 
@@ -277,12 +295,14 @@ class SecurityRouter:
         background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
         return {}
 
-    async def _add_therapist_internal(self,
-                                      body: SignupPayload,
-                                      request: Request,
-                                      response: Response,
-                                      session_token: Annotated[Union[str, None], Cookie()],
-                                      session_id: Annotated[Union[str, None], Cookie()]):
+    async def _add_therapist_internal(
+        self,
+        body: SignupPayload,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Adds a new therapist.
 
@@ -388,12 +408,14 @@ class SecurityRouter:
                 detail=description
             )
 
-    async def _update_therapist_internal(self,
-                                         request: Request,
-                                         response: Response,
-                                         body: TherapistUpdatePayload,
-                                         session_token: Annotated[Union[str, None], Cookie()],
-                                         session_id: Annotated[Union[str, None], Cookie()]):
+    async def _update_therapist_internal(
+        self,
+        request: Request,
+        response: Response,
+        body: TherapistUpdatePayload,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Updates data associated with a therapist.
 
@@ -473,11 +495,13 @@ class SecurityRouter:
                 detail=description
             )
 
-    async def _delete_therapist_internal(self,
-                                         request: Request,
-                                         response: Response,
-                                         session_token: Annotated[Union[str, None], Cookie()],
-                                         session_id: Annotated[Union[str, None], Cookie()]):
+    async def _delete_therapist_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Deletes all data associated with a therapist.
 
@@ -610,9 +634,11 @@ class SecurityRouter:
                 detail=description
             )
 
-    async def subscription_data(self,
-                                user_id: str,
-                                request: Request):
+    async def subscription_data(
+        self,
+        user_id: str,
+        request: Request
+    ):
         """
         Returns a JSON object representing the subscription status of the user.
         Arguments:

@@ -8,7 +8,10 @@ from ...dependencies.api.aws_secret_manager_base_class import AwsSecretManagerBa
 
 CHARTWISE_USER = "chartwise_user"
 
-async def connect_pool(app: FastAPI, secret_manager: AwsSecretManagerBaseClass):
+async def connect_pool(
+    app: FastAPI,
+    secret_manager: AwsSecretManagerBaseClass
+):
     try:
         chartwise_user_secret_id = os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE")
         secret = secret_manager.get_secret(
@@ -28,5 +31,7 @@ async def connect_pool(app: FastAPI, secret_manager: AwsSecretManagerBaseClass):
     except Exception as e:
         raise RuntimeError(f"Invalid database URL: {e}") from e
 
-async def disconnect_pool(app: FastAPI):
+async def disconnect_pool(
+    app: FastAPI
+):
     await app.state.pool.close()

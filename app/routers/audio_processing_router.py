@@ -35,7 +35,10 @@ class AudioProcessingRouter:
     NOTES_TRANSCRIPTION_ENDPOINT = "/v1/transcriptions"
     ROUTER_TAG = "audio-files"
 
-    def __init__(self, environment: str):
+    def __init__(
+        self,
+        environment: str
+    ):
             self._environment = environment
             self._auth_manager = AuthManager()
             self._assistant_manager = AssistantManager()
@@ -49,77 +52,91 @@ class AudioProcessingRouter:
         Registers the set of routes that the class' router can access.
         """
         @self.router.post(type(self).NOTES_TRANSCRIPTION_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def transcribe_session_notes(request: Request,
-                                           response: Response,
-                                           background_tasks: BackgroundTasks,
-                                           file_path: Annotated[str, Form()],
-                                           template: Annotated[SessionNotesTemplate, Form()],
-                                           patient_id: Annotated[str, Form()],
-                                           session_date: Annotated[str, Form()],
-                                           client_timezone_identifier: Annotated[str, Form()],
-                                           _: dict = Depends(get_user_info),
-                                           session_token: Annotated[Union[str, None], Cookie()] = None,
-                                           session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._transcribe_session_notes_internal(request=request,
-                                                                 response=response,
-                                                                 background_tasks=background_tasks,
-                                                                 template=template,
-                                                                 patient_id=patient_id,
-                                                                 session_date=session_date,
-                                                                 client_timezone_identifier=client_timezone_identifier,
-                                                                 file_path=file_path,
-                                                                 session_token=session_token,
-                                                                 session_id=session_id)
+        async def transcribe_session_notes(
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            file_path: Annotated[str, Form()],
+            template: Annotated[SessionNotesTemplate, Form()],
+            patient_id: Annotated[str, Form()],
+            session_date: Annotated[str, Form()],
+            client_timezone_identifier: Annotated[str, Form()],
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
+            return await self._transcribe_session_notes_internal(
+                request=request,
+                response=response,
+                background_tasks=background_tasks,
+                template=template,
+                patient_id=patient_id,
+                session_date=session_date,
+                client_timezone_identifier=client_timezone_identifier,
+                file_path=file_path,
+                session_token=session_token,
+                session_id=session_id
+            )
 
         @self.router.post(type(self).DIARIZATION_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def diarize_session(request: Request,
-                                  response: Response,
-                                  background_tasks: BackgroundTasks,
-                                  file_path: Annotated[str, Form()],
-                                  template: Annotated[SessionNotesTemplate, Form()],
-                                  patient_id: Annotated[str, Form()],
-                                  session_date: Annotated[str, Form()],
-                                  client_timezone_identifier: Annotated[str, Form()],
-                                  _: dict = Depends(get_user_info),
-                                  session_token: Annotated[Union[str, None], Cookie()] = None,
-                                  session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._diarize_session_internal(request=request,
-                                                        response=response,
-                                                        background_tasks=background_tasks,
-                                                        template=template,
-                                                        patient_id=patient_id,
-                                                        session_date=session_date,
-                                                        client_timezone_identifier=client_timezone_identifier,
-                                                        file_path=file_path,
-                                                        session_token=session_token,
-                                                        session_id=session_id)
+        async def diarize_session(
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            file_path: Annotated[str, Form()],
+            template: Annotated[SessionNotesTemplate, Form()],
+            patient_id: Annotated[str, Form()],
+            session_date: Annotated[str, Form()],
+            client_timezone_identifier: Annotated[str, Form()],
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
+            return await self._diarize_session_internal(
+                request=request,
+                response=response,
+                background_tasks=background_tasks,
+                template=template,
+                patient_id=patient_id,
+                session_date=session_date,
+                client_timezone_identifier=client_timezone_identifier,
+                file_path=file_path,
+                session_token=session_token,
+                session_id=session_id
+            )
 
         @self.router.get(type(self).UPLOAD_URL_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def generate_audio_upload_url(request: Request,
-                                            response: Response,
-                                            patient_id: str = None,
-                                            file_extension: str = None,
-                                            _: dict = Depends(get_user_info),
-                                            session_token: Annotated[Union[str, None], Cookie()] = None,
-                                            session_id: Annotated[Union[str, None], Cookie()] = None):
-            return await self._generate_audio_upload_url_internal(file_extension=file_extension,
-                                                                  patient_id=patient_id,
-                                                                  request=request,
-                                                                  response=response,
-                                                                  session_token=session_token,
-                                                                  session_id=session_id)
+        async def generate_audio_upload_url(
+            request: Request,
+            response: Response,
+            patient_id: str = None,
+            file_extension: str = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
+            return await self._generate_audio_upload_url_internal(
+                file_extension=file_extension,
+                patient_id=patient_id,
+                request=request,
+                response=response,
+                session_token=session_token,
+                session_id=session_id
+            )
 
-    async def _transcribe_session_notes_internal(self,
-                                                 request: Request,
-                                                 response: Response,
-                                                 background_tasks: BackgroundTasks,
-                                                 file_path: str,
-                                                 template: Annotated[SessionNotesTemplate, Form()],
-                                                 patient_id: Annotated[str, Form()],
-                                                 session_date: Annotated[str, Form()],
-                                                 client_timezone_identifier: Annotated[str, Form()],
-                                                 session_token: Annotated[Union[str, None], Cookie()],
-                                                 session_id: Annotated[Union[str, None], Cookie()]):
+    async def _transcribe_session_notes_internal(
+        self,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        file_path: str,
+        template: Annotated[SessionNotesTemplate, Form()],
+        patient_id: Annotated[str, Form()],
+        session_date: Annotated[str, Form()],
+        client_timezone_identifier: Annotated[str, Form()],
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Returns the transcription created from the incoming audio file.
 
@@ -228,13 +245,15 @@ class AudioProcessingRouter:
                 detail=description
             )
 
-    async def _generate_audio_upload_url_internal(self,
-                                                  file_extension: str,
-                                                  patient_id: str,
-                                                  request: Request,
-                                                  response: Response,
-                                                  session_token: Annotated[Union[str, None], Cookie()],
-                                                  session_id: Annotated[Union[str, None], Cookie()]):
+    async def _generate_audio_upload_url_internal(
+        self,
+        file_extension: str,
+        patient_id: str,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Generates a URL for the client to be able to upload an (audio) file.
 
@@ -323,17 +342,19 @@ class AudioProcessingRouter:
                 detail=description
             )
 
-    async def _diarize_session_internal(self,
-                                        request: Request,
-                                        response: Response,
-                                        file_path: str,
-                                        background_tasks: BackgroundTasks,
-                                        template: Annotated[SessionNotesTemplate, Form()],
-                                        patient_id: Annotated[str, Form()],
-                                        session_date: Annotated[str, Form()],
-                                        client_timezone_identifier: Annotated[str, Form()],
-                                        session_token: Annotated[Union[str, None], Cookie()],
-                                        session_id: Annotated[Union[str, None], Cookie()]):
+    async def _diarize_session_internal(
+        self,
+        request: Request,
+        response: Response,
+        file_path: str,
+        background_tasks: BackgroundTasks,
+        template: Annotated[SessionNotesTemplate, Form()],
+        patient_id: Annotated[str, Form()],
+        session_date: Annotated[str, Form()],
+        client_timezone_identifier: Annotated[str, Form()],
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Returns the transcription created from the incoming audio file.
 

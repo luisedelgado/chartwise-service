@@ -10,11 +10,13 @@ class OpenAIBaseClass(ABC):
     chat_history: list[BaseMessage] = []
 
     @abstractmethod
-    async def trigger_async_chat_completion(metadata: dict,
-                                            max_tokens: int,
-                                            messages: list,
-                                            expects_json_response: bool,
-                                            cache_configuration: dict = None):
+    async def trigger_async_chat_completion(
+        metadata: dict,
+        max_tokens: int,
+        messages: list,
+        expects_json_response: bool,
+        cache_configuration: dict = None
+    ):
         """
         Invokes a chat completion asynchronously.
 
@@ -28,14 +30,16 @@ class OpenAIBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def stream_chat_completion(vector_context: str,
-                                     language_code: str,
-                                     query_input: str,
-                                     is_first_message_in_conversation: bool,
-                                     patient_name: str,
-                                     patient_gender: str,
-                                     metadata: dict,
-                                     last_session_date: str = None) -> AsyncIterable[str]:
+    async def stream_chat_completion(
+        vector_context: str,
+        language_code: str,
+        query_input: str,
+        is_first_message_in_conversation: bool,
+        patient_name: str,
+        patient_gender: str,
+        metadata: dict,
+        last_session_date: str = None
+    ) -> AsyncIterable[str]:
         """
         Streams a chat completion asynchronously.
 

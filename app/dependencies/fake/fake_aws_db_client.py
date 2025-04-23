@@ -7,10 +7,6 @@ from typing import Any, List, Optional
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                                  ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                                  SUBSCRIPTION_STATUS_TABLE_NAME,
                                  THERAPISTS_TABLE_NAME,)
@@ -23,11 +19,13 @@ class FakeAwsDbClient(AwsDbBaseClass):
     select_returns_data: bool = True
     patient_unique_active_years_nonzero: bool = True
 
-    async def insert(self,
-                     user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def insert(
+        self,
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         if not self.select_returns_data:
             return {}
 
@@ -38,32 +36,38 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 "therapist_id": self.FAKE_THERAPIST_ID,
             }
 
-    async def update(self,
-                     user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     filters: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def update(
+        self,
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        filters: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         return {} if not self.select_returns_data else {
             "id": self.FAKE_SESSION_NOTES_ID
         }
 
-    async def upsert(self,
-                     user_id: str,
-                     request: Request,
-                     conflict_columns: List[str],
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def upsert(
+        self,
+        user_id: str,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         pass
 
-    async def select(self,
-                     user_id: str,
-                     request: Request,
-                     fields: list[str],
-                     filters: dict[str, Any],
-                     table_name: str,
-                     limit: Optional[int] = None,
-                     order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select(
+        self,
+        user_id: str,
+        request: Request,
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         if not self.select_returns_data:
             return {}
 
@@ -108,7 +112,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "last_name": "bar",
                     "gender": "female",
                     "total_sessions": 12,
-                    "last_session_date": "2024-10-10",
+                    "last_session_date": date(2024, 10, 10),
                     "onboarding_first_time_patient": True,
                     "unique_active_years": unique_active_years,
                 },
@@ -144,23 +148,27 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 },
             ]
 
-    async def select_with_stripe_connection(self,
-                                            fields: list[str],
-                                            filters: dict[str, Any],
-                                            table_name: str,
-                                            secret_manager: AwsSecretManagerBaseClass,
-                                            limit: Optional[int] = None,
-                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select_with_stripe_connection(
+        self,
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        secret_manager: AwsSecretManagerBaseClass,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         if not self.select_returns_data:
             return {}
 
         return {}
 
-    async def delete(self,
-                     user_id: str,
-                     request: Request,
-                     table_name: str,
-                     filters: dict[str, Any]) -> list[dict]:
+    async def delete(
+        self,
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any]
+    ) -> list[dict]:
         if not self.select_returns_data:
             return {}
 
@@ -171,5 +179,9 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 },
             ]
 
-    async def set_session_user_id(self, request: Request, user_id: str):
+    async def set_session_user_id(
+        self,
+        request: Request,
+        user_id: str
+    ):
         pass

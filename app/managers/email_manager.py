@@ -28,7 +28,10 @@ class EmailManager:
     CUSTOMER_RELATIONS_ACTIVITY_DETAILS = ("<li><b>Therapist Email:</b> {therapist_email}</li>"
                                            "<li><b>Therapist Name:</b> {therapist_name}</li>")
 
-    async def send_internal_alert(self, alert: InternalAlert):
+    async def send_internal_alert(
+        self,
+        alert: InternalAlert,
+    ):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
@@ -83,7 +86,10 @@ class EmailManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def send_customer_relations_alert(self, alert: InternalAlert):
+    async def send_customer_relations_alert(
+        self,
+        alert: InternalAlert,
+    ):
         try:
             resend_client: ResendBaseClass = dependency_container.inject_resend_client()
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"

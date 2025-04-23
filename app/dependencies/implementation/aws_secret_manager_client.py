@@ -6,7 +6,10 @@ from ...internal.utilities.aws_utils import sign_and_send_aws_request
 
 class AwsSecretManagerClient(AwsSecretManagerBaseClass):
 
-    def get_secret(self, secret_id: str) -> str:
+    def get_secret(
+        self,
+        secret_id: str
+    ) -> str:
         try:
             region = os.environ.get("AWS_SERVICES_REGION")
 

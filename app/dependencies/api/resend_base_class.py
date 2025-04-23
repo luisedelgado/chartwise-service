@@ -5,10 +5,11 @@ from ...internal.internal_alert import InternalAlertCategory
 class ResendBaseClass(ABC):
 
     @abstractmethod
-    def send_eng_team_internal_alert_email(self,
-                                           subject: str,
-                                           body: str,
-                                           alert_category: InternalAlertCategory):
+    def send_eng_team_internal_alert_email(
+        subject: str,
+        body: str,
+        alert_category: InternalAlertCategory
+    ):
         """
         Sends an internal notification email to our engineering team.
 
@@ -20,9 +21,11 @@ class ResendBaseClass(ABC):
         pass
 
     @abstractmethod
-    def send_customer_relations_alert_email(subject: str,
-                                            body: str,
-                                            alert_category: InternalAlertCategory):
+    def send_customer_relations_alert_email(
+        subject: str,
+        body: str,
+        alert_category: InternalAlertCategory
+    ):
         """
         Sends an internal notification email regarding customer relations.
 

@@ -1,7 +1,7 @@
 import os, stripe
 
 from ..api.stripe_base_class import StripeBaseClass
-from ...internal.utilities.general_utilities import format_currency_amount
+from ...internal.utilities.subscription_utilities import format_currency_amount
 
 class StripeClient(StripeBaseClass):
 
@@ -11,13 +11,15 @@ class StripeClient(StripeBaseClass):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
         self.environment = os.environ.get("ENVIRONMENT")
 
-    def generate_checkout_session(self,
-                                  session_id: str,
-                                  therapist_id: str,
-                                  price_id: str,
-                                  success_url: str,
-                                  cancel_url: str,
-                                  is_new_customer: bool) -> str | None:
+    def generate_checkout_session(
+        self,
+        session_id: str,
+        therapist_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        is_new_customer: bool
+    ) -> str | None:
         try:
             global_metadata = {
                 'session_id': str(session_id),
@@ -48,10 +50,12 @@ class StripeClient(StripeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def construct_webhook_event(self,
-                                payload,
-                                sig_header,
-                                webhook_secret):
+    def construct_webhook_event(
+        self,
+        payload,
+        sig_header,
+        webhook_secret
+    ):
         return stripe.Webhook.construct_event(
             payload=payload,
             sig_header=sig_header,
@@ -73,13 +77,17 @@ class StripeClient(StripeBaseClass):
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
         return stripe.Subscription.list(customer=customer_id)
 
-    def retrieve_payment_intent_history(self,
-                                        customer_id: str,
-                                        limit: int,
-                                        starting_after: str | None):
-        return stripe.PaymentIntent.list(customer=customer_id,
-                                         limit=limit,
-                                         starting_after=starting_after)
+    def retrieve_payment_intent_history(
+        self,
+        customer_id: str,
+        limit: int,
+        starting_after: str | None
+    ):
+        return stripe.PaymentIntent.list(
+            customer=customer_id,
+            limit=limit,
+            starting_after=starting_after
+        )
 
     def cancel_customer_subscription(self, subscription_id: str):
         return stripe.Subscription.modify(subscription_id,
@@ -89,25 +97,37 @@ class StripeClient(StripeBaseClass):
         return stripe.Subscription.cancel(subscription_id)
 
     def resume_cancelled_subscription(self, subscription_id: str):
-        return stripe.Subscription.modify(subscription_id,
-                                          cancel_at_period_end=False)
+        return stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=False
+        )
 
-    def update_customer_subscription_plan(self,
-                                          subscription_id: str,
-                                          subscription_item_id: str,
-                                          price_id: str):
-        stripe.Subscription.modify(subscription_id,
-                                   items=[{"id": subscription_item_id, "price": price_id}])
+    def update_customer_subscription_plan(
+        self,
+        subscription_id: str,
+        subscription_item_id: str,
+        price_id: str
+    ):
+        stripe.Subscription.modify(
+            subscription_id,
+            items=[{"id": subscription_item_id, "price": price_id}]
+        )
 
-    def attach_customer_payment_method(self,
-                                       customer_id: str,
-                                       payment_method_id: str):
-        stripe.PaymentMethod.attach(payment_method=payment_method_id,
-                                    customer=customer_id)
+    def attach_customer_payment_method(
+        self,
+        customer_id: str,
+        payment_method_id: str
+    ):
+        stripe.PaymentMethod.attach(
+            payment_method=payment_method_id,
+            customer=customer_id
+        )
 
-    def update_subscription_payment_method(self,
-                                           subscription_id: str,
-                                           payment_method_id: str):
+    def update_subscription_payment_method(
+        self,
+        subscription_id: str,
+        payment_method_id: str
+    ):
         return stripe.Subscription.modify(subscription_id,
                                           default_payment_method=payment_method_id)
 
@@ -118,8 +138,10 @@ class StripeClient(StripeBaseClass):
         for product in products['data']:
             price = stripe.Price.retrieve(product['default_price'])
             currency = price['currency']
-            formatted_price_amount = format_currency_amount(amount=float(price['unit_amount']),
-                                                            currency_code=currency)
+            formatted_price_amount = format_currency_amount(
+                amount=float(price['unit_amount']),
+                currency_code=currency
+            )
 
             product_prices[product['id']] = {
                 "name": product['name'],
@@ -159,10 +181,12 @@ class StripeClient(StripeBaseClass):
     def retrieve_invoice(self, invoice_id: str):
         return stripe.Invoice.retrieve(invoice_id)
 
-    def generate_payment_method_update_session(self,
-                                               customer_id: str,
-                                               success_url: str,
-                                               cancel_url) -> str:
+    def generate_payment_method_update_session(
+        self,
+        customer_id: str,
+        success_url: str,
+        cancel_url
+    ) -> str:
         try:
             update_payment_method_session = stripe.checkout.Session.create(
                 customer=customer_id,

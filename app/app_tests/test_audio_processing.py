@@ -185,16 +185,15 @@ class TestingHarnessAudioProcessingRouter:
                                     "file_path": FAKE_THERAPIST_ID
                                 },
                                 headers={
-                                    "store-access-token": FAKE_ACCESS_TOKEN,
-                                    "store-refresh-token": FAKE_REFRESH_TOKEN
+                                    "auth-token": "myFakeToken",
                                 },
                                 cookies={
-                                    "authorization": self.auth_cookie
+                                    "session_token": self.auth_cookie
                                 })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 
-    def test_invoke_diarization_with_no_auth(self):
+    def test_invoke_diarization_with_no_session_token(self):
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
                                    "patient_id": FAKE_PATIENT_ID,
@@ -202,7 +201,10 @@ class TestingHarnessAudioProcessingRouter:
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
                                    "file_path": FAKE_THERAPIST_ID
-                               })
+                               },
+                               headers={
+                                    "auth-token": "myFakeToken",
+                               },)
         assert response.status_code == 401
 
     def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
@@ -215,12 +217,11 @@ class TestingHarnessAudioProcessingRouter:
                                    "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "authorization": self.auth_cookie,
-                               })
+                                   "session_token": self.auth_cookie
+                               },)
         assert response.status_code == 422
 
     def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
@@ -233,12 +234,11 @@ class TestingHarnessAudioProcessingRouter:
                                    "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "authorization": self.auth_cookie,
-                               })
+                                   "session_token": self.auth_cookie
+                               },)
         assert response.status_code == 400
 
     def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
@@ -251,12 +251,11 @@ class TestingHarnessAudioProcessingRouter:
                                    "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "authorization": self.auth_cookie
-                               })
+                                   "session_token": self.auth_cookie
+                               },)
         assert response.status_code == 400
 
     def test_invoke_diarization_success(self):
@@ -270,12 +269,11 @@ class TestingHarnessAudioProcessingRouter:
                                    "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
+                                   "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "authorization": self.auth_cookie
-                               })
+                                   "session_token": self.auth_cookie
+                               },)
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 

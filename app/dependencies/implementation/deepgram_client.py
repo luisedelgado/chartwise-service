@@ -24,7 +24,10 @@ class DeepgramClient(DeepgramBaseClass):
     TRANSCRIPTION_POOL_TIMEOUT = 100
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
-    async def diarize_audio(self, audio_file_url: str) -> str:
+    async def diarize_audio(
+        self,
+        audio_file_url: str
+    ) -> str:
         if use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()
@@ -94,8 +97,10 @@ class DeepgramClient(DeepgramBaseClass):
 
         return diarization
 
-    async def transcribe_audio(self,
-                               audio_file_url: str) -> str:
+    async def transcribe_audio(
+        self,
+        audio_file_url: str
+    ) -> str:
         if use_monitoring_proxy():
             try:
                 monitoring_proxy_url = get_monitoring_proxy_url()

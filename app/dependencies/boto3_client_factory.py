@@ -12,7 +12,10 @@ class Boto3ClientFactory:
     _expiration = None
 
     @classmethod
-    def get_client(cls, service_name: str):
+    def get_client(
+        cls,
+        service_name: str
+    ):
         now = datetime.now(timezone.utc)
 
         # Check if credentials are missing or expired.

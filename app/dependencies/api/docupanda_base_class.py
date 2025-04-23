@@ -4,8 +4,10 @@ from typing import Tuple
 class DocupandaBaseClass(ABC):
 
     @abstractmethod
-    async def upload_image(image_filepath: str,
-                           image_filename: str) -> str:
+    async def upload_image(
+        image_filepath: str,
+        image_filename: str
+    ) -> str:
         """
         Uploads an image for future textraction. Returns the job id.
 

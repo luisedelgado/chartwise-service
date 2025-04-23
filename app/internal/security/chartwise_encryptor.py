@@ -9,7 +9,10 @@ class ChartWiseEncryptor:
     A utility class for encrypting and decrypting data using the AEAD (Authenticated Encryption with Associated Data) scheme. 
     This class leverages the `nacl.secret.Aead` library to provide secure encryption and decryption.
     """
-    def __init__(self, aws_kms_client: AwsKmsBaseClass):
+    def __init__(
+        self,
+        aws_kms_client: AwsKmsBaseClass
+    ):
         encryption_key = aws_kms_client.decrypt_encryption_key_ciphertext()
         if len(encryption_key) != Aead.KEY_SIZE:
             raise ValueError("Decrypted key is not 32 bytes")
@@ -23,7 +26,10 @@ class ChartWiseEncryptor:
     -------
     plaintext: The plaintext to be encrypted.
     """
-    def encrypt(self, plaintext: str) -> bytes:
+    def encrypt(
+        self,
+        plaintext: str
+    ) -> bytes:
         if plaintext is None:
             return plaintext
 
@@ -36,7 +42,10 @@ class ChartWiseEncryptor:
     -------
     ciphertext: The bytes to be decrypted.
     """
-    def decrypt(self, ciphertext: bytes) -> str:
+    def decrypt(
+        self,
+        ciphertext: bytes
+    ) -> str:
         if ciphertext is None:
             return None
 

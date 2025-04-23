@@ -21,7 +21,10 @@ class AwsCognitoClient(AwsCognitoBaseClass):
         self.user_pool_id = os.environ.get("AWS_COGNITO_USER_POOL_ID")
         self.client = Boto3ClientFactory.get_client("cognito-idp")
 
-    def verify_cognito_token(self, token: str) -> Dict:
+    def verify_cognito_token(
+        self,
+        token: str
+    ) -> Dict:
         if not token or not token.lower().startswith("bearer "):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -37,7 +40,10 @@ class AwsCognitoClient(AwsCognitoBaseClass):
             "claims": decoded_cognito_token
         }
 
-    def decode_cognito_token(self, token: str) -> Dict:
+    def decode_cognito_token(
+        self,
+        token: str
+    ) -> Dict:
         try:
             signing_key = self.get_jwk_client().get_signing_key_from_jwt(token)
             decoded_token = jwt.decode(
@@ -69,7 +75,10 @@ class AwsCognitoClient(AwsCognitoBaseClass):
 
         return cls.JWKS_CACHE
 
-    async def delete_user(self, user_id: str):
+    async def delete_user(
+        self,
+        user_id: str
+    ):
         try:
             self.client.admin_delete_user(
                 UserPoolId=self.user_pool_id,

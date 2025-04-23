@@ -17,18 +17,20 @@ UTC_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 WEEKDAY_DATE_TIME_TIMEZONE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 YEAR_FORMAT = "%Y"
 
-"""
-Returns a flag representing whether or not the incoming date is valid.
-The valid format is considered to be %m-%d-%Y
+def is_valid_date(
+    date_input: str,
+    incoming_date_format: str,
+    tz_identifier: str = None
+) -> bool:
+    """
+    Returns a flag representing whether or not the incoming date is valid.
+    The valid format is considered to be %m-%d-%Y
 
-Arguments:
-date_input – the date to be validated.
-incoming_date_format – the date format.
-tz_identifier – the (optional) client timezone identifier to be used for validation.
-"""
-def is_valid_date(date_input: str,
-                  incoming_date_format: str,
-                  tz_identifier: str = None) -> bool:
+    Arguments:
+    date_input – the date to be validated.
+    incoming_date_format – the date format.
+    tz_identifier – the (optional) client timezone identifier to be used for validation.
+    """
     try:
         if len(tz_identifier or '') == 0:
             return datetime.strptime(date_input, incoming_date_format).date() <= datetime.now().date()
@@ -38,44 +40,57 @@ def is_valid_date(date_input: str,
     except:
         return False
 
-"""
-Returns a formatted version of the incoming date as "Oct 10th, 2024".
-"""
-def convert_to_date_format_spell_out_month(session_date: str, incoming_date_format: str) -> str:
+def convert_to_date_format_spell_out_month(
+    session_date: str,
+    incoming_date_format: str
+) -> str:
+    """
+    Returns a formatted version of the incoming date as "Oct 10th, 2024".
+    """
     try:
         session_date_as_date = datetime.strptime(session_date, incoming_date_format)
         return datetime.strftime(session_date_as_date, DATE_FORMAT_SPELL_OUT_MONTH)
     except Exception as e:
         raise RuntimeError(f"Something went wrong while formatting the incoming date: {e}") from e
 
-"""
-Validates an incoming year value
-"""
-def validate_year(year: str):
+def validate_year(
+    year: str
+):
+    """
+    Validates an incoming year value
+    """
     try:
         datetime(year=int(year), month=1, day=1)
         return True
     except (ValueError, TypeError):
         return False
 
-def get_base_locale(language_code: str) -> str:
+def get_base_locale(
+    language_code: str
+) -> str:
     # Drop the country so that babel can consume it (i.e: 'es' instead of 'es-ES').
     return re.split(r'[-_]', language_code)[0]
 
-"""
-Returns the abbreviated version of month in the incoming date.
-"""
-def get_month_abbreviated(date: datetime.date, language_code: str):
+def get_month_abbreviated(
+    date: datetime.date,
+    language_code: str
+):
+    """
+    Returns the abbreviated version of month in the incoming date.
+    """
     base_locale = get_base_locale(language_code=language_code)
     babel_abbreviated_month_format = 'MMM'
     return format_date(date,
                        format=babel_abbreviated_month_format,
                        locale=base_locale)
 
-"""
-Returns the last 12 months (calendar-year)' abbreviated name using the incoming language code.
-"""
-def get_last_12_months_abbr(language_code: str):
+def get_last_12_months_abbr(
+    language_code: str
+):
+    """
+    Returns the last 12 months (calendar-year)' abbreviated name using the incoming language code.
+    For example: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    """
     base_locale = get_base_locale(language_code=language_code)
     now = datetime.now()
     months = []

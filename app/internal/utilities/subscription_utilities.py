@@ -1,3 +1,4 @@
+from babel.numbers import format_currency, get_currency_precision
 from datetime import datetime, timedelta
 
 from .datetime_handler import DATE_FORMAT
@@ -6,10 +7,12 @@ from ...dependencies.dependency_container import AwsDbBaseClass
 
 NUM_SESSIONS_IN_BASIC_PLAN = 20
 
-async def reached_subscription_tier_usage_limit(tier: str,
-                                                therapist_id: str,
-                                                aws_db_client: AwsDbBaseClass,
-                                                is_free_trial_active: bool) -> bool:
+async def reached_subscription_tier_usage_limit(
+    tier: str,
+    therapist_id: str,
+    aws_db_client: AwsDbBaseClass,
+    is_free_trial_active: bool
+) -> bool:
     if is_free_trial_active or tier == "premium":
         return False
 
@@ -33,3 +36,33 @@ async def reached_subscription_tier_usage_limit(tier: str,
         return len(session_reports_data) >= NUM_SESSIONS_IN_BASIC_PLAN
     except Exception as e:
         raise RuntimeError(e) from e
+
+def map_stripe_product_name_to_chartwise_tier(
+    stripe_plan: str
+) -> str:
+    """
+    Map a given Stripe product to a ChartWise tier.
+    """
+    if stripe_plan == "premium_plan_yearly" or stripe_plan == "premium_plan_monthly":
+        return "premium"
+    elif stripe_plan == "basic_plan_yearly" or stripe_plan == "basic_plan_monthly":
+        return "basic"
+    else:
+        raise Exception("Untracked Stripe product name")
+
+def format_currency_amount(
+    amount: float,
+    currency_code: str
+) -> str:
+    """
+    Formats a currency amount based on the incoming currency code.
+    """
+    # Get the currency precision (e.g., 2 for USD, 0 for JPY)
+    precision = get_currency_precision(currency_code.upper())
+
+    # Convert the amount to the main currency unit
+    divisor = 10 ** precision
+    amount = amount / divisor
+
+    # Format the currency
+    return format_currency(number=amount, currency=currency_code.upper(), locale='en_US')

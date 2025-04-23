@@ -8,10 +8,12 @@ from .aws_secret_manager_base_class import AwsSecretManagerBaseClass
 class AwsDbBaseClass(ABC):
 
     @abstractmethod
-    async def insert(user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def insert(
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         """
         Inserts payload into a table.
 
@@ -24,11 +26,13 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def update(user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     filters: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def update(
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        filters: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         """
         Updates a table with the incoming payload and filters.
 
@@ -42,11 +46,13 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def upsert(user_id: str,
-                     request: Request,
-                     conflict_columns: List[str],
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def upsert(
+        user_id: str,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         """
         Upserts into a table with the incoming data.
 
@@ -60,13 +66,15 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def select(user_id: str,
-                     request: Request,
-                     fields: list[str],
-                     filters: dict[str, Any],
-                     table_name: str,
-                     limit: Optional[int] = None,
-                     order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select(
+        user_id: str,
+        request: Request,
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         """
         Fetches data from a table based on the incoming params.
 
@@ -82,13 +90,14 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def select_with_stripe_connection(self,
-                                            fields: list[str],
-                                            filters: dict[str, Any],
-                                            table_name: str,
-                                            secret_manager: AwsSecretManagerBaseClass,
-                                            limit: Optional[int] = None,
-                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select_with_stripe_connection(
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        secret_manager: AwsSecretManagerBaseClass,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         """
         Fetches data from a table based on the incoming params, using a stripe_reader connection.
 
@@ -103,10 +112,12 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def delete(user_id: str,
-                     request: Request,
-                     table_name: str,
-                     filters: dict[str, Any]) -> list[dict]:
+    async def delete(
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any]
+    ) -> list[dict]:
         """
         Deletes from a table name based on the incoming params.
 
@@ -119,7 +130,10 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def set_session_user_id(request: Request, user_id: str):
+    async def set_session_user_id(
+        request: Request,
+        user_id: str
+    ):
         """
         Sets the user ID for the incoming request session.
         Arguments:

@@ -59,7 +59,10 @@ class AssistantRouter:
     ASSISTANT_ROUTER_TAG = "assistant"
     PATIENTS_ROUTER_TAG = "patients"
 
-    def __init__(self, environment: str):
+    def __init__(
+        self,
+        environment: str
+    ):
         self._environment = environment
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from datetime import date
 from pinecone import Index
 from typing import Callable
 
@@ -9,14 +9,16 @@ from ..api.openai_base_class import OpenAIBaseClass
 class PineconeBaseClass(ABC):
 
     @abstractmethod
-    async def insert_session_vectors(session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable,
-                                     therapy_session_date: str = None):
+    async def insert_session_vectors(
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable,
+        therapy_session_date: date = None
+    ):
         """
         Inserts a new record to the store leveraging the incoming data.
         The record is associated with information about a session.
@@ -34,12 +36,14 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def insert_preexisting_history_vectors(session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def insert_preexisting_history_vectors(
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         """
         Inserts a new record to the store leveraging the incoming data.
         The record is associated with information about pre-existing history.
@@ -55,9 +59,11 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def delete_session_vectors(user_id: str,
-                               patient_id: str,
-                               date: str = None):
+    def delete_session_vectors(
+        user_id: str,
+        patient_id: str,
+        date: date = None
+    ):
         """
         Deletes session vectors. If the date param is None, it deletes everything inside the namespace.
         Otherwise it deletes the vectors that match the date filtering prefix.
@@ -70,7 +76,10 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def delete_preexisting_history_vectors(user_id: str, patient_id: str):
+    def delete_preexisting_history_vectors(
+        user_id: str,
+        patient_id: str
+    ):
         """
         Deletes pre-existing history vectors.
 
@@ -81,15 +90,17 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def update_session_vectors(session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     old_date: str,
-                                     new_date: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable):
+    async def update_session_vectors(
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        old_date: date,
+        new_date: date,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         """
         Updates a session record leveraging the incoming data.
 
@@ -106,12 +117,14 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def update_preexisting_history_vectors(session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def update_preexisting_history_vectors(
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         """
         Updates a pre-existig history record leveraging the incoming data.
 
@@ -126,14 +139,16 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def get_vector_store_context(openai_client: OpenAIBaseClass,
-                                       query_input: str,
-                                       user_id: str,
-                                       patient_id: str,
-                                       query_top_k: int,
-                                       rerank_vectors: bool,
-                                       include_preexisting_history: bool = True,
-                                       session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
+    async def get_vector_store_context(
+        openai_client: OpenAIBaseClass,
+        query_input: str,
+        user_id: str,
+        patient_id: str,
+        query_top_k: int,
+        rerank_vectors: bool,
+        include_preexisting_history: bool = True,
+        session_dates_override: list[PineconeQuerySessionDateOverride] = None
+    ) -> str:
         """
         Retrieves the vector context associated with the incoming query_input.
 
@@ -150,8 +165,10 @@ class PineconeBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def fetch_historical_context(index: Index,
-                                       namespace: str):
+    async def fetch_historical_context(
+        index: Index,
+        namespace: str
+    ):
         """
         Retrieves the historical context associated with a patient, if exists.
 

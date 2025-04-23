@@ -5,16 +5,20 @@ class AwsS3BaseClass(ABC):
     SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME = "session-audio-files-processing"
 
     @abstractmethod
-    def get_audio_file_upload_signed_url(file_path: str,
-                                         bucket_name: str) -> dict:
+    def get_audio_file_upload_signed_url(
+        file_path: str,
+        bucket_name: str
+    ) -> dict:
         """
         Returns a signed URL for uploading an audio file to S3.
         """
         pass
 
     @abstractmethod
-    def delete_file(source_bucket: str,
-                    storage_filepath: str):
+    def delete_file(
+        source_bucket: str,
+        storage_filepath: str
+    ):
         """
         Deletes a file from S3 storage.
 
@@ -25,21 +29,11 @@ class AwsS3BaseClass(ABC):
         pass
 
     @abstractmethod
-    def download_file(source_bucket: str,
-                      storage_filepath: str):
-        """
-        Downloads a file from S3 storage.
-
-        Arguments:
-        source_bucket – the bucket from where the file should be downloaded.
-        storage_filepath – the file path to be used for storing the file.
-        """
-        pass
-
-    @abstractmethod
-    def upload_file(destination_bucket: str,
-                    storage_filepath: str,
-                    content: str | bytes):
+    def upload_file(
+        destination_bucket: str,
+        storage_filepath: str,
+        content: str | bytes
+    ):
         """
         Uploads a file to S3 for further processing.
 
@@ -51,9 +45,10 @@ class AwsS3BaseClass(ABC):
         pass
 
     @abstractmethod
-    def get_audio_file_read_signed_url(self,
-                                       bucket_name: str,
-                                       file_path: str) -> dict:
+    def get_audio_file_read_signed_url(
+        bucket_name: str,
+        file_path: str
+    ) -> dict:
         """
         Generates a signed url for reading an audio file.
 

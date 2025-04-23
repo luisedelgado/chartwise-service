@@ -11,9 +11,11 @@ class AwsS3Client(AwsS3BaseClass):
     def __init__(self):
         self.client = Boto3ClientFactory.get_client("s3")
 
-    def get_audio_file_upload_signed_url(self,
-                                         file_path: str,
-                                         bucket_name: str) -> dict:
+    def get_audio_file_upload_signed_url(
+        self,
+        file_path: str,
+        bucket_name: str
+    ) -> dict:
         try:
             content_type, _ = mimetypes.guess_type(file_path)
             if not content_type:
@@ -36,9 +38,11 @@ class AwsS3Client(AwsS3BaseClass):
         except Exception as e:
             raise RuntimeError(f"Could not generate upload URL: {e}") from e
 
-    def delete_file(self,
-                    source_bucket: str,
-                    storage_filepath: str):
+    def delete_file(
+        self,
+        source_bucket: str,
+        storage_filepath: str
+    ):
         try:
             self.client.delete_object(
                 Bucket=source_bucket,
@@ -47,22 +51,12 @@ class AwsS3Client(AwsS3BaseClass):
         except Exception as e:
             raise RuntimeError(f"Could not delete file: {e}") from e
 
-    def download_file(self,
-                      source_bucket: str,
-                      storage_filepath: str):
-        try:
-            return self.client.download_file(
-                Bucket=source_bucket,
-                Key=storage_filepath,
-                Filename=storage_filepath
-            )
-        except Exception as e:
-            raise RuntimeError(f"Could not download file: {e}") from e
-
-    def upload_file(self,
-                    destination_bucket: str,
-                    storage_filepath: str,
-                    content: str | bytes):
+    def upload_file(
+        self,
+        destination_bucket: str,
+        storage_filepath: str,
+        content: str | bytes
+    ):
         try:
             if isinstance(content, str):
                 content = content.encode('utf-8')
@@ -75,9 +69,11 @@ class AwsS3Client(AwsS3BaseClass):
         except Exception as e:
             raise RuntimeError(f"Could not upload file: {e}") from e
 
-    def get_audio_file_read_signed_url(self,
-                                       bucket_name: str,
-                                       file_path: str) -> dict:
+    def get_audio_file_read_signed_url(
+        self,
+        bucket_name: str,
+        file_path: str
+    ) -> dict:
         try:
             response = self.client.generate_presigned_url(
                 'get_object',

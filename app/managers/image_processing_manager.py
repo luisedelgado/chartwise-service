@@ -29,13 +29,15 @@ RETRY_DELAY = 3  # Delay in seconds
 
 class ImageProcessingManager(MediaProcessingManager):
 
-    async def upload_image_for_textraction(self,
-                                           patient_id: str,
-                                           therapist_id: str,
-                                           session_date: str,
-                                           template: SessionNotesTemplate,
-                                           request: Request,
-                                           image: UploadFile = File(...)) -> Tuple[str, str]:
+    async def upload_image_for_textraction(
+        self,
+        patient_id: str,
+        therapist_id: str,
+        session_date: str,
+        template: SessionNotesTemplate,
+        request: Request,
+        image: UploadFile = File(...)
+    ) -> Tuple[str, str]:
         files_to_clean = None
         try:
             image_copy_result: file_copiers.FileCopyResult = await file_copiers.make_image_pdf_copy(image)
@@ -76,17 +78,19 @@ class ImageProcessingManager(MediaProcessingManager):
             await file_copiers.clean_up_files(files_to_clean)
             raise RuntimeError from e
 
-    async def process_textraction(self,
-                                  document_id: str,
-                                  session_id: str,
-                                  environment: str,
-                                  language_code: str,
-                                  therapist_id: str,
-                                  background_tasks: BackgroundTasks,
-                                  auth_manager: AuthManager,
-                                  assistant_manager: AssistantManager,
-                                  email_manager: EmailManager,
-                                  request: Request) -> str:
+    async def process_textraction(
+        self,
+        document_id: str,
+        session_id: str,
+        environment: str,
+        language_code: str,
+        therapist_id: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        assistant_manager: AssistantManager,
+        email_manager: EmailManager,
+        request: Request
+    ) -> str:
         try:
             session_notes_id = None
 

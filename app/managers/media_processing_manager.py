@@ -15,20 +15,22 @@ class MediaProcessingManager(ABC):
     def __init__(self):
         self._email_manager = EmailManager()
 
-    async def _update_session_processing_status(self,
-                                                assistant_manager: AssistantManager,
-                                                language_code: str,
-                                                environment: str,
-                                                background_tasks: BackgroundTasks,
-                                                auth_manager: AuthManager,
-                                                session_id: str,
-                                                session_processing_status: str,
-                                                session_notes_id: str,
-                                                media_type: MediaType,
-                                                therapist_id: str,
-                                                email_manager: EmailManager,
-                                                request: Request,
-                                                storage_filepath: str = None):
+    async def _update_session_processing_status(
+        self,
+        assistant_manager: AssistantManager,
+        language_code: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        session_id: str,
+        session_processing_status: str,
+        session_notes_id: str,
+        media_type: MediaType,
+        therapist_id: str,
+        email_manager: EmailManager,
+        request: Request,
+        storage_filepath: str = None
+    ):
         """
         Updates the incoming session's processing status.
 

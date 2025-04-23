@@ -4,12 +4,14 @@ from stripe._error import SignatureVerificationError
 class StripeBaseClass(ABC):
 
     @abstractmethod
-    def generate_checkout_session(session_id: str,
-                                  therapist_id: str,
-                                  price_id: str,
-                                  success_url: str,
-                                  cancel_url: str,
-                                  is_new_customer: bool) -> str | None:
+    def generate_checkout_session(
+        session_id: str,
+        therapist_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        is_new_customer: bool
+    ) -> str | None:
         """
         Generates a checkout session URL for the customer.
 
@@ -23,9 +25,11 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def construct_webhook_event(payload,
-                                sig_header,
-                                webhook_secret):
+    def construct_webhook_event(
+        payload,
+        sig_header,
+        webhook_secret
+    ):
         """
         Constructs a webhook event from the incoming Stripe data to be handled internally.
 
@@ -47,9 +51,11 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_payment_intent_history(customer_id: str,
-                                        limit: int,
-                                        starting_after: str | None):
+    def retrieve_payment_intent_history(
+        customer_id: str,
+        limit: int,
+        starting_after: str | None
+    ):
         """
         Retrieves the payment history associated with the incoming customer id
 
@@ -61,7 +67,9 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_price(self, price_id: str):
+    def retrieve_price(
+        price_id: str
+    ):
         """
         Retrieves a price
 
@@ -152,9 +160,11 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def update_customer_subscription_plan(subscription_id: str,
-                                          subscription_item_id: str,
-                                          price_id: str):
+    def update_customer_subscription_plan(
+        subscription_id: str,
+        subscription_item_id: str,
+        price_id: str
+    ):
         """
         Updates the subscription associated with the incoming id
 
@@ -166,8 +176,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def attach_customer_payment_method(customer_id: str,
-                                       payment_method_id: str):
+    def attach_customer_payment_method(
+        customer_id: str,
+        payment_method_id: str
+    ):
         """
         Attaches an incoming payment method to the given customer.
 
@@ -178,8 +190,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def update_subscription_payment_method(subscription_id: str,
-                                           payment_method_id: str):
+    def update_subscription_payment_method(
+        subscription_id: str,
+        payment_method_id: str
+    ):
         """
         Updates the subscription's associated payment method
 
@@ -197,7 +211,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def attach_subscription_metadata(subscription_id: str, metadata: dict):
+    def attach_subscription_metadata(
+        subscription_id: str,
+        metadata: dict
+    ):
         """
         Attaches metadata to the subscription associated with the incoming ID
 
@@ -208,7 +225,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def attach_invoice_metadata(invoice_id: str, metadata: dict):
+    def attach_invoice_metadata(
+        invoice_id: str,
+        metadata: dict
+    ):
         """
         Attaches metadata to the invoice associated with the incoming ID
 
@@ -219,7 +239,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def attach_payment_intent_metadata(payment_intent_id: str, metadata: dict):
+    def attach_payment_intent_metadata(
+        payment_intent_id: str,
+        metadata: dict
+    ):
         """
         Attach metadata to the payment intent associated with the incoming ID
 
@@ -230,9 +253,11 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def generate_payment_method_update_session(customer_id: str,
-                                               success_url: str,
-                                               cancel_url) -> str:
+    def generate_payment_method_update_session(
+        customer_id: str,
+        success_url: str,
+        cancel_url
+    ) -> str:
         """
         Generates a 'update-payment-method' session URL for the customer.
 

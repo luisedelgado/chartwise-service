@@ -18,7 +18,10 @@ class InfluxClient(InfluxBaseClass):
                       "therapist_id",
                       "notes_template"]
 
-    def __init__(self, environment: str):
+    def __init__(
+        self,
+        environment: str
+    ):
         token = os.environ.get("INFLUXDB_TOKEN")
         host = os.environ.get("INFLUXDB_HOST")
 
@@ -30,10 +33,12 @@ class InfluxClient(InfluxBaseClass):
         self.environment = environment
         self.is_prod_environment = environment == "prod"
 
-    def log_api_request(self,
-                        endpoint_name: str,
-                        method: str,
-                        **kwargs):
+    def log_api_request(
+        self,
+        endpoint_name: str,
+        method: str,
+        **kwargs
+    ):
         if not self.is_prod_environment:
             return
 
@@ -54,11 +59,13 @@ class InfluxClient(InfluxBaseClass):
 
         self.client.write(record=point, database=cls.API_REQUESTS_BUCKET)
 
-    def log_api_response(self,
-                         endpoint_name: str,
-                         method: str,
-                         response_time: float,
-                         **kwargs):
+    def log_api_response(
+        self,
+        endpoint_name: str,
+        method: str,
+        response_time: float,
+        **kwargs
+    ):
         if not self.is_prod_environment:
             return
 
@@ -78,12 +85,14 @@ class InfluxClient(InfluxBaseClass):
 
         self.client.write(record=point, database=cls.API_RESPONSES_BUCKET)
 
-    def log_error(self,
-                  endpoint_name: str,
-                  method: str,
-                  error_code: int,
-                  description: str,
-                  **kwargs):
+    def log_error(
+        self,
+        endpoint_name: str,
+        method: str,
+        error_code: int,
+        description: str,
+        **kwargs
+    ):
         if not self.is_prod_environment:
             return
 

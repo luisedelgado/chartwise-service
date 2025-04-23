@@ -19,12 +19,14 @@ from ...vectors.message_templates import PromptCrafter, PromptScenario
 
 class OpenAIClient(OpenAIBaseClass):
 
-    async def trigger_async_chat_completion(self,
-                                            metadata: dict,
-                                            max_tokens: int,
-                                            messages: list,
-                                            expects_json_response: bool,
-                                            cache_configuration: dict = None):
+    async def trigger_async_chat_completion(
+        self,
+        metadata: dict,
+        max_tokens: int,
+        messages: list,
+        expects_json_response: bool,
+        cache_configuration: dict = None
+    ):
         try:
             if use_monitoring_proxy():
                 api_base = get_monitoring_proxy_url()
@@ -63,15 +65,17 @@ class OpenAIClient(OpenAIBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def stream_chat_completion(self,
-                                     vector_context: str,
-                                     language_code: str,
-                                     query_input: str,
-                                     is_first_message_in_conversation: bool,
-                                     patient_name: str,
-                                     patient_gender: str,
-                                     metadata: dict,
-                                     last_session_date: str = None) -> AsyncIterable[str]:
+    async def stream_chat_completion(
+        self,
+        vector_context: str,
+        language_code: str,
+        query_input: str,
+        is_first_message_in_conversation: bool,
+        patient_name: str,
+        patient_gender: str,
+        metadata: dict,
+        last_session_date: str = None
+    ) -> AsyncIterable[str]:
         try:
             if use_monitoring_proxy():
                 monitoring_proxy_url = get_monitoring_proxy_url()
@@ -168,8 +172,10 @@ class OpenAIClient(OpenAIBaseClass):
             flattened_chat_history = "\n".join([flattened_chat_history, chat_message_formatted])
         return flattened_chat_history
 
-    async def create_embeddings(self,
-                                text: str):
+    async def create_embeddings(
+        self,
+        text: str
+    ):
         if use_monitoring_proxy():
             portkey = Portkey(
                 api_key=os.environ.get("PORTKEY_API_KEY"),

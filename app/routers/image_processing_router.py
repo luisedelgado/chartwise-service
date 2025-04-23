@@ -29,7 +29,10 @@ class ImageProcessingRouter:
     TEXT_EXTRACTION_ENDPOINT = "/v1/textractions"
     ROUTER_TAG = "image-files"
 
-    def __init__(self, environment: str):
+    def __init__(
+        self,
+        environment: str
+    ):
         self._environment = environment
         self._assistant_manager = AssistantManager()
         self._auth_manager = AuthManager()
@@ -43,17 +46,19 @@ class ImageProcessingRouter:
         Registers the set of routes that the class' router can access.
         """
         @self.router.post(type(self).TEXT_EXTRACTION_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def extract_text(request: Request,
-                               response: Response,
-                               background_tasks: BackgroundTasks,
-                               patient_id: Annotated[str, Form()],
-                               session_date: Annotated[str, Form()],
-                               template: Annotated[SessionNotesTemplate, Form()],
-                               client_timezone_identifier: Annotated[str, Form()],
-                               _: dict = Depends(get_user_info),
-                               image: UploadFile = File(...),
-                               session_token: Annotated[Union[str, None], Cookie()] = None,
-                               session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def extract_text(
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            patient_id: Annotated[str, Form()],
+            session_date: Annotated[str, Form()],
+            template: Annotated[SessionNotesTemplate, Form()],
+            client_timezone_identifier: Annotated[str, Form()],
+            _: dict = Depends(get_user_info),
+            image: UploadFile = File(...),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._extract_text_internal(
                 request=request,
                 response=response,
@@ -67,17 +72,19 @@ class ImageProcessingRouter:
                 session_id=session_id
             )
 
-    async def _extract_text_internal(self,
-                                     request: Request,
-                                     response: Response,
-                                     background_tasks: BackgroundTasks,
-                                     image: UploadFile,
-                                     template: SessionNotesTemplate,
-                                     patient_id: str,
-                                     session_date: str,
-                                     client_timezone_identifier: str,
-                                     session_token: Annotated[Union[str, None], Cookie()],
-                                     session_id: Annotated[Union[str, None], Cookie()]):
+    async def _extract_text_internal(
+        self,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        image: UploadFile,
+        template: SessionNotesTemplate,
+        patient_id: str,
+        session_date: str,
+        client_timezone_identifier: str,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Performs the textraction on the incoming image file.
 
@@ -180,12 +187,14 @@ class ImageProcessingRouter:
                 detail=description
             )
 
-    async def _process_textraction(self,
-                                   job_id: str,
-                                   therapist_id: str,
-                                   session_id: str,
-                                   background_tasks: BackgroundTasks,
-                                   request: Request,):
+    async def _process_textraction(
+        self,
+        job_id: str,
+        therapist_id: str,
+        session_id: str,
+        background_tasks: BackgroundTasks,
+        request: Request,
+    ):
         """
         Processes the textraction job in the background after the image has been uploaded.
 

@@ -26,7 +26,10 @@ class AuthManager:
 
     # Authentication
 
-    def create_session_token(self, user_id: str) -> Tuple[str, str]:
+    def create_session_token(
+        self,
+        user_id: str,
+    ) -> Tuple[str, str]:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -52,7 +55,10 @@ class AuthManager:
             formatted_expiration_time
         )
 
-    def session_token_is_valid(self, access_token: str) -> bool:
+    def session_token_is_valid(
+        self,
+        access_token: str,
+    ) -> bool:
         try:
             token_data = self.extract_data_from_token(access_token)
             user_id: str = token_data.get("user_id")
@@ -68,7 +74,10 @@ class AuthManager:
         except Exception:
             return False
 
-    def extract_data_from_token(self, access_token: str) -> dict:
+    def extract_data_from_token(
+        self,
+        access_token: str,
+    ) -> dict:
         try:
             cls = type(self)
             payload = jwt.decode(
@@ -93,9 +102,11 @@ class AuthManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def refresh_session(self,
-                              user_id: str,
-                              response: Response) -> Token:
+    async def refresh_session(
+        self,
+        user_id: str,
+        response: Response,
+    ) -> Token:
         try:
             session_token, expiration_timestamp = self.create_session_token(user_id)
             cls = type(self)
@@ -119,7 +130,10 @@ class AuthManager:
                 status_code=status.HTTP_401_UNAUTHORIZED
             )
 
-    def logout(self, response: Response):
+    def logout(
+        self,
+        response: Response,
+    ):
         cls = type(self)
         response.delete_cookie(cls.SESSION_TOKEN_KEY)
         response.delete_cookie(cls.SESSION_ID_KEY)

@@ -11,14 +11,19 @@ FAKE_ASSISTANT_RESPONSE = "This is my fake response"
 
 class FakeOpenAICompletions:
 
-    def __init__(self, create_returns_data: bool):
+    def __init__(
+        self,
+        create_returns_data: bool
+    ):
         self.create_returns_data = create_returns_data
 
-    def create(self,
-               model: str,
-               messages: list,
-               temperature: int,
-               max_tokens: int):
+    def create(
+        self,
+        model: str,
+        messages: list,
+        temperature: int,
+        max_tokens: int
+    ):
         if not self.create_returns_data:
             return {}
 
@@ -44,12 +49,14 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
     def __init__(self):
         self._chat = FakeOpenAIChat(completions_return_data=True)
 
-    async def trigger_async_chat_completion(self,
-                                            metadata: dict,
-                                            max_tokens: int,
-                                            messages: list,
-                                            expects_json_response: bool,
-                                            cache_configuration: dict = None):
+    async def trigger_async_chat_completion(
+        self,
+        metadata: dict,
+        max_tokens: int,
+        messages: list,
+        expects_json_response: bool,
+        cache_configuration: dict = None
+    ):
         if self.throws_exception:
             raise Exception("Fake exception")
 
@@ -59,15 +66,17 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
             "topics": ["topic"]
         }
 
-    async def stream_chat_completion(self,
-                                     vector_context: str,
-                                     language_code: str,
-                                     query_input: str,
-                                     is_first_message_in_conversation: bool,
-                                     patient_name: str,
-                                     patient_gender: str,
-                                     metadata: dict,
-                                     last_session_date: str = None) -> AsyncIterable[str]:
+    async def stream_chat_completion(
+        self,
+        vector_context: str,
+        language_code: str,
+        query_input: str,
+        is_first_message_in_conversation: bool,
+        patient_name: str,
+        patient_gender: str,
+        metadata: dict,
+        last_session_date: str = None
+    ) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
                 try:
                     await fn
@@ -101,8 +110,10 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
     async def flatten_chat_history(self) -> str:
         pass
 
-    async def create_embeddings(self,
-                                text: str):
+    async def create_embeddings(
+        self,
+        text: str
+    ):
         return [""]
 
     @property
@@ -110,5 +121,8 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         return self._chat
 
     @chat.setter
-    def chat(self, returns_data: bool):
+    def chat(
+        self,
+        returns_data: bool,
+    ):
         self._chat = FakeOpenAIChat(completions_return_data=returns_data)

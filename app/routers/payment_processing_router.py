@@ -27,7 +27,7 @@ from ..internal.schemas import (
     USER_ID_KEY,
 )
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
-from ..internal.utilities import general_utilities
+from ..internal.utilities import general_utilities, subscription_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
@@ -62,7 +62,10 @@ class PaymentProcessingRouter:
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
 
-    def __init__(self, environment: str):
+    def __init__(
+        self,
+        environment: str
+    ):
         self._environment = environment
         self._auth_manager = AuthManager()
         self._email_manager = EmailManager()
@@ -74,12 +77,14 @@ class PaymentProcessingRouter:
         Registers the set of routes that the class' router can access.
         """
         @self.router.post(type(self).CHECKOUT_SESSION_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def create_checkout_session(request: Request,
-                                          response: Response,
-                                          payload: PaymentSessionPayload,
-                                          _: dict = Depends(get_user_info),
-                                          session_token: Annotated[Union[str, None], Cookie()] = None,
-                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def create_checkout_session(
+            request: Request,
+            response: Response,
+            payload: PaymentSessionPayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._create_checkout_session_internal(
                 session_token=session_token,
                 payload=payload,
@@ -89,17 +94,21 @@ class PaymentProcessingRouter:
             )
 
         @self.router.post(type(self).PAYMENT_EVENT_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def capture_payment_event(request: Request,):
+        async def capture_payment_event(
+            request: Request,
+        ):
             return await self._capture_payment_event_internal(
                 request=request
             )
 
         @self.router.get(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def retrieve_subscriptions(response: Response,
-                                         request: Request,
-                                         _: dict = Depends(get_user_info),
-                                         session_token: Annotated[Union[str, None], Cookie()] = None,
-                                         session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def retrieve_subscriptions(
+            response: Response,
+            request: Request,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._retrieve_subscriptions_internal(
                 session_token=session_token,
                 request=request,
@@ -108,12 +117,14 @@ class PaymentProcessingRouter:
             )
 
         @self.router.put(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def update_subscription(payload: UpdateSubscriptionPayload,
-                                      response: Response,
-                                      request: Request,
-                                      _: dict = Depends(get_user_info),
-                                      session_token: Annotated[Union[str, None], Cookie()] = None,
-                                      session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def update_subscription(
+            payload: UpdateSubscriptionPayload,
+            response: Response,
+            request: Request,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._update_subscription_internal(
                 session_token=session_token,
                 price_id=payload.new_price_tier_id,
@@ -124,11 +135,13 @@ class PaymentProcessingRouter:
             )
 
         @self.router.delete(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def delete_subscription(response: Response,
-                                      request: Request,
-                                      _: dict = Depends(get_user_info),
-                                      session_token: Annotated[Union[str, None], Cookie()] = None,
-                                      session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def delete_subscription(
+            response: Response,
+            request: Request,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._delete_subscription_internal(
                 session_token=session_token,
                 request=request,
@@ -137,11 +150,13 @@ class PaymentProcessingRouter:
             )
 
         @self.router.get(type(self).PRODUCT_CATALOG, tags=[type(self).ROUTER_TAG])
-        async def retrieve_product_catalog(request: Request,
-                                           response: Response,
-                                           _: dict = Depends(get_user_info),
-                                           session_token: Annotated[Union[str, None], Cookie()] = None,
-                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def retrieve_product_catalog(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._retrieve_product_catalog_internal(
                 session_token=session_token,
                 request=request,
@@ -150,12 +165,14 @@ class PaymentProcessingRouter:
             )
 
         @self.router.post(type(self).UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def create_update_payment_method_session(request: Request,
-                                                       response: Response,
-                                                       payload: UpdatePaymentMethodPayload,
-                                                       _: dict = Depends(get_user_info),
-                                                       session_token: Annotated[Union[str, None], Cookie()] = None,
-                                                       session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def create_update_payment_method_session(
+            request: Request,
+            response: Response,
+            payload: UpdatePaymentMethodPayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._create_update_payment_method_session_internal(
                 session_token=session_token,
                 request=request,
@@ -165,13 +182,15 @@ class PaymentProcessingRouter:
             )
 
         @self.router.get(type(self).PAYMENT_HISTORY_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def retrieve_payment_history(request: Request,
-                                           response: Response,
-                                           _: dict = Depends(get_user_info),
-                                           session_token: Annotated[Union[str, None], Cookie()] = None,
-                                           session_id: Annotated[Union[str, None], Cookie()] = None,
-                                           batch_size: int = 0,
-                                           pagination_last_item_id_retrieved: str = None):
+        async def retrieve_payment_history(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None,
+            batch_size: int = 0,
+            pagination_last_item_id_retrieved: str = None
+        ):
             return await self._retrieve_payment_history_internal(
                 session_token=session_token,
                 session_id=session_id,
@@ -181,12 +200,14 @@ class PaymentProcessingRouter:
                 starting_after=pagination_last_item_id_retrieved
             )
 
-    async def _create_checkout_session_internal(self,
-                                                session_token: str,
-                                                session_id: str,
-                                                request: Request,
-                                                response: Response,
-                                                payload: PaymentSessionPayload):
+    async def _create_checkout_session_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response,
+        payload: PaymentSessionPayload
+    ):
         """
         Creates a new checkout session.
 
@@ -259,11 +280,13 @@ class PaymentProcessingRouter:
 
         return {"payment_session_url": payment_session_url}
 
-    async def _retrieve_subscriptions_internal(self,
-                                               session_token: str,
-                                               session_id: str,
-                                               request: Request,
-                                               response: Response):
+    async def _retrieve_subscriptions_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response
+    ):
         """
         Retrieves the set of subscriptions associated with the incoming customer ID.
 
@@ -357,11 +380,13 @@ class PaymentProcessingRouter:
 
         return {"subscriptions": filtered_data}
 
-    async def _delete_subscription_internal(self,
-                                            session_token: str,
-                                            session_id: str,
-                                            request: Request,
-                                            response: Response):
+    async def _delete_subscription_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response
+    ):
         """
         Deletes the subscriptions associated with the incoming ID.
 
@@ -426,13 +451,15 @@ class PaymentProcessingRouter:
 
         return {}
 
-    async def _update_subscription_internal(self,
-                                            session_token: str,
-                                            session_id: str,
-                                            request: Request,
-                                            response: Response,
-                                            behavior: UpdateSubscriptionBehavior,
-                                            price_id: str):
+    async def _update_subscription_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response,
+        behavior: UpdateSubscriptionBehavior,
+        price_id: str
+    ):
         """
         Updates the incoming subscription ID with the incoming product information.
 
@@ -517,11 +544,13 @@ class PaymentProcessingRouter:
 
         return {}
 
-    async def _retrieve_product_catalog_internal(self,
-                                                 session_token: str,
-                                                 session_id: str,
-                                                 request: Request,
-                                                 response: Response):
+    async def _retrieve_product_catalog_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response
+    ):
         """
         Retrieves the product catalog for the current user (customer).
 
@@ -573,12 +602,14 @@ class PaymentProcessingRouter:
 
         return {"catalog": response}
 
-    async def _create_update_payment_method_session_internal(self,
-                                                             session_token: str,
-                                                             session_id: str,
-                                                             request: Request,
-                                                             response: Response,
-                                                             payload: UpdatePaymentMethodPayload):
+    async def _create_update_payment_method_session_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response,
+        payload: UpdatePaymentMethodPayload
+    ):
         """
         Generates a URL for updating a subscription's payment method with the incoming data.
 
@@ -648,13 +679,15 @@ class PaymentProcessingRouter:
 
         return { "update_payment_method_url": update_payment_method_url }
 
-    async def _retrieve_payment_history_internal(self,
-                                                 session_token: str,
-                                                 session_id: str,
-                                                 request: Request,
-                                                 response: Response,
-                                                 limit: int,
-                                                 starting_after: str | None):
+    async def _retrieve_payment_history_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response,
+        limit: int,
+        starting_after: str | None
+    ):
         """
         Retrieves the payment history for the current user (customer).
 
@@ -717,8 +750,10 @@ class PaymentProcessingRouter:
                     continue
 
                 # Format amount
-                formatted_price_amount = general_utilities.format_currency_amount(amount=float(intent["amount"]),
-                                                                                  currency_code=intent["currency"])
+                formatted_price_amount = subscription_utilities.format_currency_amount(
+                    amount=float(intent["amount"]),
+                    currency_code=intent["currency"]
+                )
 
                 # Format date
                 date_from_unix_timestamp = datetime.fromtimestamp(intent["created"])
@@ -751,8 +786,10 @@ class PaymentProcessingRouter:
 
         return {"payments": successful_payments}
 
-    async def _capture_payment_event_internal(self,
-                                              request: Request):
+    async def _capture_payment_event_internal(
+        self,
+        request: Request
+    ):
         """
         Webhook for handling Stripe events.
 
@@ -828,10 +865,12 @@ class PaymentProcessingRouter:
 
     # Private
 
-    async def _handle_stripe_event(self,
-                                   event,
-                                   request: Request,
-                                   stripe_client: StripeBaseClass,):
+    async def _handle_stripe_event(
+        self,
+        event,
+        request: Request,
+        stripe_client: StripeBaseClass,
+    ):
         """
         Internal funnel for specific handlings of Stripe events.
 
@@ -1021,15 +1060,17 @@ class PaymentProcessingRouter:
 
     # Private
 
-    """
-    Handles the upsert of a subscription, updating the subscription status in the database.
+    async def _handle_subscription_upsert(
+        self,
+        request: Request,
+        subscription_upsert_event: dict
+    ):
+        """
+        Handles the upsert of a subscription, updating the subscription status in the database.
 
-    Arguments:
-    subscription_upsert_event – the Stripe event containing the subscription data.
-    """
-    async def _handle_subscription_upsert(self,
-                                          request: Request,
-                                          subscription_upsert_event: dict):
+        Arguments:
+        subscription_upsert_event – the Stripe event containing the subscription data.
+        """
         subscription = subscription_upsert_event['data']['object']
         subscription_metadata = subscription.get('metadata', {})
 
@@ -1063,7 +1104,7 @@ class PaymentProcessingRouter:
             product_id = subscription['items']['data'][0]['price']['product']
             product_data = stripe_client.retrieve_product(product_id)
             stripe_product_name = product_data['metadata']['product_name']
-            tier_name = general_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
+            tier_name = subscription_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
             is_trialing = subscription['status'] == 'trialing'
             now_timestamp = datetime.now().date()
 

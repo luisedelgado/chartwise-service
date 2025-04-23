@@ -204,7 +204,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id,
                 notes_text=notes_text,
-                session_date=session_date.strftime(datetime_handler.DATE_FORMAT),
+                session_date=session_date,
                 session_id=session_id,
                 language_code=language_code,
                 environment=environment,
@@ -279,15 +279,21 @@ class AssistantManager:
             # Update the session vectors if needed
             patient_id = str(report_query[0]['patient_id'])
             if session_date_changed or session_text_changed:
-                old_session_date_as_string = current_session_date.strftime(datetime_handler.DATE_FORMAT)
+                new_session_date = filtered_body.get('session_date', None)
                 background_tasks.add_task(
                     self._update_vectors_and_generate_insights,
                     session_notes_id=session_notes_id,
                     therapist_id=therapist_id,
                     patient_id=patient_id,
                     notes_text=filtered_body.get('notes_text', current_session_text),
-                    old_session_date=old_session_date_as_string,
-                    new_session_date=filtered_body.get('session_date', old_session_date_as_string),
+                    old_session_date=current_session_date,
+                    new_session_date=(
+                        datetime.strptime(
+                            new_session_date,
+                            datetime_handler.DATE_FORMAT
+                        ).date() if new_session_date is not None
+                        else current_session_date
+                    ),
                     session_id=session_id,
                     language_code=language_code,
                     environment=environment,
@@ -332,12 +338,11 @@ class AssistantManager:
             session_date = delete_result_data['session_date']
 
             # Delete vector embeddings
-            session_date_formatted = session_date.strftime(datetime_handler.DATE_FORMAT)
             background_tasks.add_task(
                 self._delete_vectors_and_generate_insights,
                 therapist_id=therapist_id,
                 patient_id=patient_id,
-                session_date=session_date_formatted,
+                session_date=session_date,
                 session_id=session_id,
                 language_code=language_code,
                 environment=environment,
@@ -989,7 +994,7 @@ class AssistantManager:
                                                                     email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
                                                                     request: Request,
-                                                                    session_date: str = None):
+                                                                    session_date: date = None):
         try:
             # Fetch patient last session date and total session count
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -1047,10 +1052,7 @@ class AssistantManager:
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload={
-                    "last_session_date": datetime.strptime(
-                        patient_last_session_date,
-                        datetime_handler.DATE_FORMAT
-                    ).date(),
+                    "last_session_date": patient_last_session_date,
                     "total_sessions": total_session_count,
                     "unique_active_years": unique_active_years,
                 },
@@ -1198,7 +1200,7 @@ class AssistantManager:
                                                     therapist_id: str,
                                                     patient_id: str,
                                                     notes_text: str,
-                                                    session_date: str,
+                                                    session_date: date,
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,
@@ -1262,8 +1264,8 @@ class AssistantManager:
                                                     therapist_id: str,
                                                     patient_id: str,
                                                     notes_text: str,
-                                                    old_session_date: str,
-                                                    new_session_date: str,
+                                                    old_session_date: date,
+                                                    new_session_date: date,
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,
@@ -1326,7 +1328,7 @@ class AssistantManager:
     async def _delete_vectors_and_generate_insights(self,
                                                     therapist_id: str,
                                                     patient_id: str,
-                                                    session_date: str,
+                                                    session_date: date,
                                                     session_id: str,
                                                     language_code: str,
                                                     environment: str,

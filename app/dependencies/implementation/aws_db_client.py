@@ -29,15 +29,19 @@ class AwsDbClient(AwsDbBaseClass):
     STRIPE_READER_ROLE_SECRET_KEY = "username_pswd_stripe_reader_role"
     STRIPE_READER_ROLE = "stripe_reader"
 
-    def __init__(self,
-                 encryptor: ChartWiseEncryptor):
+    def __init__(
+        self,
+        encryptor: ChartWiseEncryptor
+    ):
         self.encryptor = encryptor
 
-    async def insert(self,
-                     user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def insert(
+        self,
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         try:
             payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
@@ -67,12 +71,14 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Insert failed: {e}") from e
 
-    async def upsert(self,
-                     user_id: str,
-                     request: Request,
-                     conflict_columns: List[str],
-                     payload: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def upsert(
+        self,
+        user_id: str,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         try:
             payload = self.encrypt_payload(payload, table_name)
             columns = list(payload.keys())
@@ -110,12 +116,14 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Upsert failed: {e}") from e
 
-    async def update(self,
-                     user_id: str,
-                     request: Request,
-                     payload: dict[str, Any],
-                     filters: dict[str, Any],
-                     table_name: str) -> Optional[dict]:
+    async def update(
+        self,
+        user_id: str,
+        request: Request,
+        payload: dict[str, Any],
+        filters: dict[str, Any],
+        table_name: str
+    ) -> Optional[dict]:
         try:
             payload = self.encrypt_payload(payload, table_name)
 
@@ -158,14 +166,16 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def select(self,
-                     user_id: str,
-                     request: Request,
-                     fields: list[str],
-                     filters: dict[str, Any],
-                     table_name: str,
-                     limit: Optional[int] = None,
-                     order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select(
+        self,
+        user_id: str,
+        request: Request,
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         try:
             where_clause, where_values = self.build_where_clause(filters)
             field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
@@ -213,13 +223,15 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Select failed: {e}") from e
 
-    async def select_with_stripe_connection(self,
-                                            fields: list[str],
-                                            filters: dict[str, Any],
-                                            table_name: str,
-                                            secret_manager: AwsSecretManagerBaseClass,
-                                            limit: Optional[int] = None,
-                                            order_by: Optional[tuple[str, str]] = None) -> list[dict]:
+    async def select_with_stripe_connection(
+        self,
+        fields: list[str],
+        filters: dict[str, Any],
+        table_name: str,
+        secret_manager: AwsSecretManagerBaseClass,
+        limit: Optional[int] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> list[dict]:
         try:
             where_clause, where_values = self.build_where_clause(filters)
             field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
@@ -252,11 +264,13 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Stripe select failed: {e}") from e
 
-    async def delete(self,
-                     user_id: str,
-                     request: Request,
-                     table_name: str,
-                     filters: dict[str, Any]) -> list[dict]:
+    async def delete(
+        self,
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any]
+    ) -> list[dict]:
         try:
             where_clause, where_values = self.build_where_clause(filters)
             delete_query = (
@@ -282,9 +296,11 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Delete failed: {e}") from e
 
-    async def set_session_user_id(self,
-                                  user_id: str,
-                                  conn: asyncpg.Connection):
+    async def set_session_user_id(
+        self,
+        user_id: str,
+        conn: asyncpg.Connection
+    ):
         try:
             # Validate and normalize
             parsed_user_id = str(uuid.UUID(user_id))
@@ -294,7 +310,11 @@ class AwsDbClient(AwsDbBaseClass):
 
     # Private
 
-    def encrypt_payload(self, payload: dict, table_name: str) -> dict:
+    def encrypt_payload(
+        self,
+        payload: dict,
+        table_name: str
+    ) -> dict:
         if table_name not in ENCRYPTED_TABLES:
             # Return payload untouched if no need for encryption
             return payload
@@ -340,7 +360,11 @@ class AwsDbClient(AwsDbBaseClass):
 
         raise Exception(f"Attempted to encrypt values for table {table_name}, which is not tracked.")
 
-    def decrypt_payload(self, payload: dict, table_name: str) -> dict:
+    def decrypt_payload(
+        self,
+        payload: dict,
+        table_name: str
+    ) -> dict:
         if table_name not in ENCRYPTED_TABLES:
             # Return payload untouched if no need for decryption
             return payload
@@ -399,7 +423,9 @@ class AwsDbClient(AwsDbBaseClass):
         raise Exception(f"Attempted to decrypt values for table {table_name}, which is not tracked.")
 
     @staticmethod
-    def build_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
+    def build_where_clause(
+        filters: dict[str, Any]
+    ) -> tuple[str, list[Any]]:
         operator_map = {
             "gte": ">=",
             "lte": "<=",
@@ -448,7 +474,10 @@ class AwsDbClient(AwsDbBaseClass):
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         return where_clause, values
 
-    async def get_stripe_reader_connection(self, secret_manager: AwsSecretManagerBaseClass):
+    async def get_stripe_reader_connection(
+        self,
+        secret_manager: AwsSecretManagerBaseClass
+    ):
         try:
             secret = secret_manager.get_secret(
                 secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")

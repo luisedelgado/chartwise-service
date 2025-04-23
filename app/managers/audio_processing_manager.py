@@ -13,7 +13,6 @@ from ..internal.schemas import (
     ENCRYPTED_PATIENTS_TABLE_NAME,
     ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 )
-from ..internal.utilities import datetime_handler
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
@@ -25,21 +24,23 @@ class AudioProcessingManager(MediaProcessingManager):
     DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
     DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME = "diarization_chunks_grand_summary"
 
-    async def transcribe_audio_file(self,
-                                    background_tasks: BackgroundTasks,
-                                    file_path: str,
-                                    auth_manager: AuthManager,
-                                    assistant_manager: AssistantManager,
-                                    template: SessionNotesTemplate,
-                                    therapist_id: str,
-                                    session_id: str,
-                                    language_code: str,
-                                    patient_id: str,
-                                    session_date: date,
-                                    environment: str,
-                                    email_manager: EmailManager,
-                                    diarize: bool,
-                                    request: Request) -> str:
+    async def transcribe_audio_file(
+        self,
+        background_tasks: BackgroundTasks,
+        file_path: str,
+        auth_manager: AuthManager,
+        assistant_manager: AssistantManager,
+        template: SessionNotesTemplate,
+        therapist_id: str,
+        session_id: str,
+        language_code: str,
+        patient_id: str,
+        session_date: date,
+        environment: str,
+        email_manager: EmailManager,
+        diarize: bool,
+        request: Request
+    ) -> str:
         session_report_id = None
 
         try:
@@ -134,21 +135,23 @@ class AudioProcessingManager(MediaProcessingManager):
 
     # Private
 
-    async def _diarize_audio_and_save(self,
-                                      session_report_id: str,
-                                      environment: str,
-                                      background_tasks: BackgroundTasks,
-                                      auth_manager: AuthManager,
-                                      assistant_manager: AssistantManager,
-                                      therapist_id: str,
-                                      patient_id: str,
-                                      language_code: str,
-                                      session_id: str,
-                                      template: SessionNotesTemplate,
-                                      storage_filepath: str,
-                                      email_manager: EmailManager,
-                                      audio_file_url: str,
-                                      request: Request):
+    async def _diarize_audio_and_save(
+        self,
+        session_report_id: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        assistant_manager: AssistantManager,
+        therapist_id: str,
+        patient_id: str,
+        language_code: str,
+        session_id: str,
+        template: SessionNotesTemplate,
+        storage_filepath: str,
+        email_manager: EmailManager,
+        audio_file_url: str,
+        request: Request
+    ):
         try:
             diarization = await dependency_container.inject_deepgram_client().diarize_audio(audio_file_url=audio_file_url)
             update_body = {
@@ -287,20 +290,22 @@ class AudioProcessingManager(MediaProcessingManager):
             )
             raise RuntimeError(e) from e
 
-    async def _transcribe_audio_and_save(self,
-                                         session_report_id: str,
-                                         environment: str,
-                                         background_tasks: BackgroundTasks,
-                                         auth_manager: AuthManager,
-                                         assistant_manager: AssistantManager,
-                                         therapist_id: str,
-                                         language_code: str,
-                                         session_id: str,
-                                         template: SessionNotesTemplate,
-                                         storage_filepath: str,
-                                         email_manager: EmailManager,
-                                         audio_file_url: str,
-                                         request: Request):
+    async def _transcribe_audio_and_save(
+        self,
+        session_report_id: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        assistant_manager: AssistantManager,
+        therapist_id: str,
+        language_code: str,
+        session_id: str,
+        template: SessionNotesTemplate,
+        storage_filepath: str,
+        email_manager: EmailManager,
+        audio_file_url: str,
+        request: Request
+    ):
         try:
             transcription = await dependency_container.inject_deepgram_client().transcribe_audio(audio_file_url=audio_file_url)
             if template == SessionNotesTemplate.SOAP:
@@ -359,11 +364,13 @@ class AudioProcessingManager(MediaProcessingManager):
             )
             raise RuntimeError(e) from e
 
-    async def _update_patient_metrics_after_processing_transcription_session(self,
-                                                                             request: Request,
-                                                                             patient_id: str,
-                                                                             session_date: date,
-                                                                             therapist_id: str):
+    async def _update_patient_metrics_after_processing_transcription_session(
+        self,
+        request: Request,
+        patient_id: str,
+        session_date: date,
+        therapist_id: str
+    ):
         try:
             # Fetch last session date
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -414,16 +421,18 @@ class AudioProcessingManager(MediaProcessingManager):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def _chunk_diarization_and_summarize(self,
-                                               encoding: Encoding,
-                                               diarization: list,
-                                               metadata: dict,
-                                               prompt_crafter: PromptCrafter,
-                                               summarize_chunk_system_prompt: str,
-                                               language_code: str,
-                                               patient_id: str,
-                                               therapist_id: str,
-                                               session_id: str):
+    async def _chunk_diarization_and_summarize(
+        self,
+        encoding: Encoding,
+        diarization: list,
+        metadata: dict,
+        prompt_crafter: PromptCrafter,
+        summarize_chunk_system_prompt: str,
+        language_code: str,
+        patient_id: str,
+        therapist_id: str,
+        session_id: str
+    ):
         try:
             splitter = RecursiveCharacterTextSplitter(
                 separators=["\n\n", "\n", " ", ""],

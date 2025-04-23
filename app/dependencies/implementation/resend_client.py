@@ -17,33 +17,45 @@ class ResendClient(ResendBaseClass):
         self.internal_eng_alert_template = env.get_template("internal_eng_alert.html")
         self.customer_relations_alert_template = env.get_template("customer_relations_alert.html")
 
-    def send_eng_team_internal_alert_email(self,
-                                           subject: str,
-                                           body: str,
-                                           alert_category: InternalAlertCategory):
+    def send_eng_team_internal_alert_email(
+        self,
+        subject: str,
+        body: str,
+        alert_category: InternalAlertCategory
+    ):
         try:
             from_address = "ChartWise Engineering <engineering@chartwise.ai>"
-            html_content = self.internal_eng_alert_template.render(problem_area=alert_category.value,
-                                                                   alert_content=body)
-            self._send_email(from_address=from_address,
-                             to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
-                             subject=subject,
-                             html=html_content)
+            html_content = self.internal_eng_alert_template.render(
+                problem_area=alert_category.value,
+                alert_content=body
+            )
+            self._send_email(
+                from_address=from_address,
+                to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
+                subject=subject,
+                html=html_content
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def send_customer_relations_alert_email(self,
-                                            subject: str,
-                                            body: str,
-                                            alert_category: InternalAlertCategory):
+    def send_customer_relations_alert_email(
+        self,
+        subject: str,
+        body: str,
+        alert_category: InternalAlertCategory
+    ):
         try:
             from_address = "ChartWise Customer Relations <customer_relations@chartwise.ai>"
-            html_content = self.customer_relations_alert_template.render(problem_area=alert_category.value,
-                                                                         alert_content=body)
-            self._send_email(from_address=from_address,
-                             to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
-                             subject=subject,
-                             html=html_content)
+            html_content = self.customer_relations_alert_template.render(
+                problem_area=alert_category.value,
+                alert_content=body
+            )
+            self._send_email(
+                from_address=from_address,
+                to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
+                subject=subject,
+                html=html_content
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -58,11 +70,13 @@ class ResendClient(ResendBaseClass):
     subject – the email subject to use.
     html – the html to use.
     """
-    def _send_email(self,
-                    from_address: str,
-                    to_addresses: list[str],
-                    subject: str,
-                    html: str):
+    def _send_email(
+        self,
+        from_address: str,
+        to_addresses: list[str],
+        subject: str,
+        html: str
+    ):
         params: resend.Emails.SendParams = {
             "from": from_address,
             "to": to_addresses,

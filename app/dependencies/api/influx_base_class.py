@@ -3,9 +3,11 @@ from abc import ABC, abstractmethod
 class InfluxBaseClass(ABC):
 
     @abstractmethod
-    def log_api_request(endpoint_name: str,
-                        method: str,
-                        **kwargs):
+    def log_api_request(
+        endpoint_name: str,
+        method: str,
+        **kwargs
+    ):
         """
         Logs data about an API request.
 
@@ -17,10 +19,12 @@ class InfluxBaseClass(ABC):
         pass
 
     @abstractmethod
-    def log_api_response(endpoint_name: str,
-                         method: str,
-                         response_time: float,
-                         **kwargs):
+    def log_api_response(
+        endpoint_name: str,
+        method: str,
+        response_time: float,
+        **kwargs
+    ):
         """
         Logs data about an API response.
 
@@ -33,11 +37,13 @@ class InfluxBaseClass(ABC):
         pass
 
     @abstractmethod
-    def log_error(endpoint_name: str,
-                  method: str,
-                  error_code: int,
-                  description: str,
-                  **kwargs):
+    def log_error(
+        endpoint_name: str,
+        method: str,
+        error_code: int,
+        description: str,
+        **kwargs
+    ):
         """
         Logs data about an API error.
 

@@ -31,11 +31,18 @@ class TimingMiddleware(BaseHTTPMiddleware):
     THIRTY_MIN_IN_SECONDS = 1800
     THIRTY_MIN_IDLE_THRESHOLD = timedelta(seconds=THIRTY_MIN_IN_SECONDS)
 
-    def __init__(self, app):
+    def __init__(
+        self,
+        app
+    ):
         super().__init__(app)
         self.last_request_time = None
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next
+    ):
         # Detect stale data, and clear if needed
         cls = type(self)
         if self.last_request_time is not None and (datetime.now() - self.last_request_time) > cls.THIRTY_MIN_IDLE_THRESHOLD:

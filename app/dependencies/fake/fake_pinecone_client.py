@@ -1,3 +1,4 @@
+from datetime import date
 from pinecone import Index
 from typing import Callable
 
@@ -13,72 +14,88 @@ class FakePineconeClient(PineconeBaseClass):
         self.update_preexisting_history_num_invocations = 0
         self.fake_vectors_insertion = None
 
-    async def insert_session_vectors(self,
-                                     session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable,
-                                     therapy_session_date: str = None):
+    async def insert_session_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable,
+        therapy_session_date: date = None
+    ):
         self.fake_vectors_insertion = text
 
-    async def insert_preexisting_history_vectors(self,
-                                                 session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def insert_preexisting_history_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
 
-    def delete_session_vectors(self,
-                               user_id: str,
-                               patient_id: str,
-                               date: str = None):
+    def delete_session_vectors(
+        self,
+        user_id: str,
+        patient_id: str,
+        date: date = None
+    ):
         pass
 
-    def delete_preexisting_history_vectors(self,
-                                           user_id: str,
-                                           patient_id: str):
+    def delete_preexisting_history_vectors(
+        self,
+        user_id: str,
+        patient_id: str
+    ):
         pass
 
-    async def update_session_vectors(self,
-                                     session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     old_date: str,
-                                     new_date: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable):
+    async def update_session_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        old_date: date,
+        new_date: date,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         pass
 
-    async def update_preexisting_history_vectors(self,
-                                                 session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def update_preexisting_history_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
 
-    async def get_vector_store_context(self,
-                                       openai_client: OpenAIBaseClass,
-                                       query_input: str,
-                                       user_id: str,
-                                       patient_id: str,
-                                       query_top_k: int,
-                                       rerank_vectors: bool,
-                                       include_preexisting_history: bool = True,
-                                       session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
+    async def get_vector_store_context(
+        self,
+        openai_client: OpenAIBaseClass,
+        query_input: str,
+        user_id: str,
+        patient_id: str,
+        query_top_k: int,
+        rerank_vectors: bool,
+        include_preexisting_history: bool = True,
+        session_dates_override: list[PineconeQuerySessionDateOverride] = None
+    ) -> str:
         if not self.vector_store_context_returns_data:
             return ""
         return "This is my fake vector context"
 
-    async def fetch_historical_context(self,
-                                       index: Index,
-                                       namespace: str):
+    async def fetch_historical_context(
+        self,
+        index: Index,
+        namespace: str
+    ):
         pass

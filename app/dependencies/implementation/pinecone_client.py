@@ -2,6 +2,7 @@ import base64
 import hashlib, os, uuid
 import tiktoken, torch
 
+from datetime import date
 from fastapi import HTTPException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
@@ -28,30 +29,42 @@ class PineconeClient(PineconeBaseClass):
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
     MAX_CHUNK_SIZE = 512
 
-    def __init__(self, encryptor: ChartWiseEncryptor):
+    def __init__(
+        self,
+        encryptor: ChartWiseEncryptor
+    ):
         self._pc = PineconeGRPC(api_key=os.environ.get('PINECONE_API_KEY'))
-        self._tokenizer = AutoTokenizer.from_pretrained(ELECTRA_MODEL_NAME,
-                                                       cache_dir=ELECTRA_MODEL_CACHE_DIR)
-        self._model = AutoModelForSequenceClassification.from_pretrained(ELECTRA_MODEL_NAME,
-                                                                         cache_dir=ELECTRA_MODEL_CACHE_DIR)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            ELECTRA_MODEL_NAME,
+            cache_dir=ELECTRA_MODEL_CACHE_DIR
+        )
+        self._model = AutoModelForSequenceClassification.from_pretrained(
+            ELECTRA_MODEL_NAME,
+            cache_dir=ELECTRA_MODEL_CACHE_DIR
+        )
         self._device = torch.device("cpu")
         self._model.to(self._device)
         self.encryptor = encryptor
 
-    async def insert_session_vectors(self,
-                                     session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable,
-                                     therapy_session_date: str = None):
+    async def insert_session_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable,
+        therapy_session_date: date = None
+    ):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self._pc.Index(bucket_index)
             vector_store = PineconeVectorStore(pinecone_index=index)
-            namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
+            namespace = self._get_namespace(
+                user_id=user_id,
+                patient_id=patient_id
+            )
 
             enc = tiktoken.get_encoding("o200k_base")
             splitter = RecursiveCharacterTextSplitter(
@@ -72,19 +85,22 @@ class PineconeClient(PineconeBaseClass):
                 encoded_chunk_ciphertext = base64.b64encode(encrypted_chunk_text).decode("utf-8")
                 doc.set_content(encoded_chunk_ciphertext)
 
-                chunk_summary = await summarize_chunk(user_id=user_id,
-                                                      session_id=session_id,
-                                                      chunk_text=chunk_text,
-                                                      openai_client=openai_client)
+                chunk_summary = await summarize_chunk(
+                    user_id=user_id,
+                    session_id=session_id,
+                    chunk_text=chunk_text,
+                    openai_client=openai_client
+                )
                 encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
                 encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
                 vector_store.namespace = namespace
-                doc_id = f"{therapy_session_date}-{chunk_index}-{uuid.uuid1()}"
+                therapy_session_date_formatted = therapy_session_date.strftime(datetime_handler.DATE_FORMAT)
+                doc_id = f"{therapy_session_date_formatted}-{chunk_index}-{uuid.uuid1()}"
                 vector_ids.append(doc_id)
                 doc.id_ = doc_id
                 doc.metadata.update({
-                    "session_date": therapy_session_date,
+                    "session_date": therapy_session_date_formatted,
                     "chunk_summary": encoded_chunk_summary_ciphertext,
                     "chunk_text": encoded_chunk_ciphertext,
                     "session_report_id": str(session_report_id)
@@ -100,13 +116,15 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def insert_preexisting_history_vectors(self,
-                                                 session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def insert_preexisting_history_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self._pc.Index(bucket_index)
@@ -130,14 +148,19 @@ class PineconeClient(PineconeBaseClass):
                 encoded_chunk_ciphertext = base64.b64encode(encrypted_chunk_text).decode("utf-8")
                 doc.set_content(encoded_chunk_ciphertext)
 
-                chunk_summary = await summarize_chunk(user_id=user_id,
-                                                      session_id=session_id,
-                                                      chunk_text=chunk_text,
-                                                      openai_client=openai_client)
+                chunk_summary = await summarize_chunk(
+                    user_id=user_id,
+                    session_id=session_id,
+                    chunk_text=chunk_text,
+                    openai_client=openai_client
+                )
                 encrypted_chunk_summary = self.encryptor.encrypt(chunk_summary)
                 encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
-                namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
+                namespace = self._get_namespace(
+                    user_id=user_id,
+                    patient_id=patient_id
+                )
                 cls = type(self)
                 vector_store.namespace = "".join([namespace,
                                                     "-",
@@ -157,24 +180,29 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def delete_session_vectors(self,
-                               user_id: str,
-                               patient_id: str,
-                               date: str = None):
+    def delete_session_vectors(
+        self,
+        user_id: str,
+        patient_id: str,
+        date: date = None
+    ):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self._pc.Index(bucket_index)
 
-            namespace = self._get_namespace(user_id=user_id,
-                                            patient_id=patient_id)
+            namespace = self._get_namespace(
+                user_id=user_id,
+                patient_id=patient_id
+            )
             ids_to_delete = []
-            if len(date or '') == 0:
+            if date is None:
                 # Delete all vectors inside namespace
                 for list_ids in index.list(namespace=namespace):
                     ids_to_delete = list_ids
             else:
                 # Delete the subset of data that matches the date prefix.
-                for list_ids in index.list(prefix=date, namespace=namespace):
+                date_formatted = date.strftime(datetime_handler.DATE_FORMAT)
+                for list_ids in index.list(prefix=date_formatted, namespace=namespace):
                     ids_to_delete = list_ids
 
             if len(ids_to_delete or '') > 0:
@@ -184,15 +212,19 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def delete_preexisting_history_vectors(self,
-                                           user_id: str,
-                                           patient_id: str):
+    def delete_preexisting_history_vectors(
+        self,
+        user_id: str,
+        patient_id: str
+    ):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
             index = self._pc.Index(bucket_index)
 
-            namespace = self._get_namespace(user_id=user_id,
-                                            patient_id=patient_id)
+            namespace = self._get_namespace(
+                user_id=user_id,
+                patient_id=patient_id
+            )
             namespace_with_suffix = "".join([namespace,
                                              "-",
                                              type(self).PRE_EXISTING_HISTORY_PREFIX])
@@ -208,69 +240,83 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def update_session_vectors(self,
-                                     session_id: str,
-                                     user_id: str,
-                                     patient_id: str,
-                                     text: str,
-                                     old_date: str,
-                                     new_date: str,
-                                     session_report_id: str,
-                                     openai_client: OpenAIBaseClass,
-                                     summarize_chunk: Callable):
+    async def update_session_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        old_date: date,
+        new_date: date,
+        session_report_id: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         try:
             # Delete the outdated data
-            self.delete_session_vectors(user_id=user_id,
-                                        patient_id=patient_id,
-                                        date=old_date)
+            self.delete_session_vectors(
+                user_id=user_id,
+                patient_id=patient_id,
+                date=old_date
+            )
 
             # Insert the fresh data
-            await self.insert_session_vectors(session_id=session_id,
-                                              user_id=user_id,
-                                              patient_id=patient_id,
-                                              text=text,
-                                              session_report_id=session_report_id,
-                                              openai_client=openai_client,
-                                              therapy_session_date=new_date,
-                                              summarize_chunk=summarize_chunk)
+            await self.insert_session_vectors(
+                session_id=session_id,
+                user_id=user_id,
+                patient_id=patient_id,
+                text=text,
+                session_report_id=session_report_id,
+                openai_client=openai_client,
+                therapy_session_date=new_date,
+                summarize_chunk=summarize_chunk
+            )
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def update_preexisting_history_vectors(self,
-                                                 session_id: str,
-                                                 user_id: str,
-                                                 patient_id: str,
-                                                 text: str,
-                                                 openai_client: OpenAIBaseClass,
-                                                 summarize_chunk: Callable):
+    async def update_preexisting_history_vectors(
+        self,
+        session_id: str,
+        user_id: str,
+        patient_id: str,
+        text: str,
+        openai_client: OpenAIBaseClass,
+        summarize_chunk: Callable
+    ):
         try:
             # Delete the outdated data
-            self.delete_preexisting_history_vectors(user_id=user_id,
-                                                    patient_id=patient_id)
+            self.delete_preexisting_history_vectors(
+                user_id=user_id,
+                patient_id=patient_id
+            )
 
             # Insert the fresh data
-            await self.insert_preexisting_history_vectors(user_id=user_id,
-                                                          session_id=session_id,
-                                                          patient_id=patient_id,
-                                                          text=text,
-                                                          openai_client=openai_client,
-                                                          summarize_chunk=summarize_chunk)
+            await self.insert_preexisting_history_vectors(
+                user_id=user_id,
+                session_id=session_id,
+                patient_id=patient_id,
+                text=text,
+                openai_client=openai_client,
+                summarize_chunk=summarize_chunk
+            )
         except PineconeApiException as e:
             raise HTTPException(status_code=e.status, detail=str(e))
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def get_vector_store_context(self,
-                                       openai_client: OpenAIBaseClass,
-                                       query_input: str,
-                                       user_id: str,
-                                       patient_id: str,
-                                       query_top_k: int,
-                                       rerank_vectors: bool,
-                                       include_preexisting_history: bool = True,
-                                       session_dates_override: list[PineconeQuerySessionDateOverride] = None) -> str:
+    async def get_vector_store_context(
+        self,
+        openai_client: OpenAIBaseClass,
+        query_input: str,
+        user_id: str,
+        patient_id: str,
+        query_top_k: int,
+        rerank_vectors: bool,
+        include_preexisting_history: bool = True,
+        session_dates_override: list[PineconeQuerySessionDateOverride] = None
+    ) -> str:
         try:
             missing_session_data_error = (
                 "There's no data from patient sessions. "
@@ -432,9 +478,11 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def fetch_historical_context(self,
-                                       index: Index,
-                                       namespace: str):
+    async def fetch_historical_context(
+        self,
+        index: Index,
+        namespace: str
+    ):
         historial_context_namespace = ("".join([
                     namespace,
                     "-",
@@ -475,10 +523,12 @@ class PineconeClient(PineconeBaseClass):
 
     # Private
 
-    def rerank_docs(self,
-                    query_input: str,
-                    retrieved_docs: list,
-                    batch_size: int) -> list:
+    def rerank_docs(
+        self,
+        query_input: str,
+        retrieved_docs: list,
+        batch_size: int
+    ) -> list:
         """
         Re-ranks a list of documents based on their relevance to a query input, using a
         cross-encoder model to compute relevance scores.
@@ -516,13 +566,17 @@ class PineconeClient(PineconeBaseClass):
         doc_score_pairs = list(zip(retrieved_docs, scores))
         return [doc for doc, _ in sorted(doc_score_pairs, key=lambda x: x[1], reverse=True)]
 
-    def _get_namespace(self,
-                       user_id: str,
-                       patient_id: str) -> str:
+    def _get_namespace(
+        self,
+        user_id: str,
+        patient_id: str
+    ) -> str:
         return f"{user_id}-{patient_id}"
 
-    def _get_bucket_for_user(self,
-                             user_id: str) -> str:
+    def _get_bucket_for_user(
+        self,
+        user_id: str
+    ) -> str:
         # Convert the user_id to an integer
         user_int = int(hashlib.md5(user_id.encode()).hexdigest(), 16)
 
