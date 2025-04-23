@@ -1,3 +1,5 @@
+import time
+
 from stripe._error import SignatureVerificationError
 
 from ..api.stripe_base_class import StripeBaseClass
@@ -99,7 +101,8 @@ class FakeStripeClient(StripeBaseClass):
                 {
                 "id": "su_1NXPiE2eZvKYlo2COk9fohqA",
                 "object": "subscription",
-                "status": "active",
+                "status": "trialing",
+                "trial_end": int(time.time()) + 7 * 24 * 60 * 60,
                 "application": "null",
                 "application_fee_percent": "null",
                 "automatic_tax": {

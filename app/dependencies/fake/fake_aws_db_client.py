@@ -69,6 +69,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 {
                     "subscription_id": self.FAKE_SESSION_NOTES_ID,
                     "is_active": True,
+                    "customer_id": "myFakeCustomerId",
                 },
             ]
 
@@ -79,7 +80,10 @@ class FakeAwsDbClient(AwsDbBaseClass):
                                             secret_manager: AwsSecretManagerBaseClass,
                                             limit: Optional[int] = None,
                                             order_by: Optional[tuple[str, str]] = None) -> list[dict]:
-        pass
+        if not self.select_returns_data:
+            return {}
+
+        return {}
 
     async def delete(self,
                      user_id: str,

@@ -26,7 +26,7 @@ class TestingHarnessSecurityRouter:
         dependency_container._aws_kms_client = None
         dependency_container._aws_s3_client = None
         dependency_container._aws_secret_manager_client = None
-        dependency_container._chartwise_encryptor = None        
+        dependency_container._chartwise_encryptor = None
         dependency_container._influx_client = None
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None

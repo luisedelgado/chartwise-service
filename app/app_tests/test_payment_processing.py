@@ -23,12 +23,18 @@ class TestingHarnessPaymentProcessingRouter:
 
     def setup_method(self):
         # Clear out any old state between tests
+        dependency_container._aws_cognito_client = None
+        dependency_container._aws_db_client = None
+        dependency_container._aws_kms_client = None
+        dependency_container._aws_s3_client = None
+        dependency_container._aws_secret_manager_client = None
+        dependency_container._chartwise_encryptor = None
+        dependency_container._docupanda_client = None
+        dependency_container._influx_client = None
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
-        dependency_container._docupanda_client = None
-        dependency_container._stripe_client = None
         dependency_container._resend_client = None
-        dependency_container._influx_client = None
+        dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
         self.fake_openai_client = dependency_container.inject_openai_client()
@@ -40,226 +46,251 @@ class TestingHarnessPaymentProcessingRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
-    def test_generate_checkout_session_without_auth_token(self):
-        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "price_id": FAKE_PRICE_ID,
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+    def test_generate_checkout_session_without_session_token(self):
+        response = self.client.post(
+            PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "price_id": FAKE_PRICE_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 401
 
     def test_generate_checkout_session_stripe_client_throws(self):
         self.fake_stripe_client.request_throws_exception = True
-        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "price_id": FAKE_PRICE_ID,
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+        response = self.client.post(
+            PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "price_id": FAKE_PRICE_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 417
 
     def test_generate_checkout_session_stripe_client_returns_none(self):
         self.fake_stripe_client.request_returns_none = True
-        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "price_id": FAKE_PRICE_ID,
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+        response = self.client.post(
+            PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "price_id": FAKE_PRICE_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 417
 
     def test_generate_checkout_session_stripe_client_returns_success(self):
-        response = self.client.post(PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "price_id": FAKE_PRICE_ID,
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+        response = self.client.post(
+            PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "price_id": FAKE_PRICE_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 200
         assert "payment_session_url" in response.json()
 
     def test_capture_payment_event_with_empty_stripe_signature(self):
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
-                                    headers={})
+        response = self.client.post(
+            PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
+            headers={}
+        )
         assert response.status_code == 401
 
     def test_capture_payment_event_with_valid_stripe_signature(self):
-        response = self.client.post(PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
-                                    headers={"stripe-signature": "my_signature"})
+        response = self.client.post(
+            PaymentProcessingRouter.PAYMENT_EVENT_ENDPOINT,
+            headers={
+                "stripe-signature": "my_signature"
+            }
+        )
         assert response.status_code == 200
 
-    def test_retrieve_subscriptions_without_auth_token(self):
-        response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+    def test_retrieve_subscriptions_without_session_token(self):
+        response = self.client.get(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 401
 
     def test_retrieve_subscriptions_success(self):
-        response = self.client.get(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+        response = self.client.get(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 200
         response_json = response.json()
         assert "subscriptions" in response_json
 
-    def test_delete_subscription_without_auth_token(self):
-        response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+    def test_delete_subscription_without_session_token(self):
+        response = self.client.delete(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 401
 
     def test_delete_subscription_success(self):
-        response = self.client.delete(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+        response = self.client.delete(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+        )
         assert response.status_code == 200
 
-    def test_update_subscription_plan_without_auth_token(self):
-        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "new_price_tier_id": FAKE_PRICE_ID,
-                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
-                                    })
+    def test_update_subscription_plan_without_session_token(self):
+        response = self.client.put(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "new_price_tier_id": FAKE_PRICE_ID,
+                "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
+            }
+        )
         assert response.status_code == 401
 
     def test_update_subscription_upgrade_without_new_tier_price_id(self):
-        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
-                                    })
+        response = self.client.put(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
+            }
+        )
         assert response.status_code == 417
 
     def test_update_subscription_plan_success(self):
-        response = self.client.put(PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value,
-                                        "new_price_tier_id": FAKE_PRICE_ID
-                                    })
+        response = self.client.put(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "new_price_tier_id": FAKE_PRICE_ID,
+                "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
+            }
+        )
         assert response.status_code == 200
 
-    def test_retrieve_product_catalog_without_auth_token(self):
-        response = self.client.get(PaymentProcessingRouter.PRODUCT_CATALOG,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+    def test_retrieve_product_catalog_without_session_token(self):
+        response = self.client.get(
+            PaymentProcessingRouter.PRODUCT_CATALOG,
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 401
 
     def test_retrieve_product_catalog_success(self):
-        response = self.client.get(PaymentProcessingRouter.PRODUCT_CATALOG,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+        response = self.client.get(
+            PaymentProcessingRouter.PRODUCT_CATALOG,
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 200
         assert "catalog" in response.json()
 
-    def test_generate_update_payment_method_session_url_without_auth_token(self):
-        response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "customer_id": FAKE_CUSTOMER_ID,
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+    def test_generate_update_payment_method_session_url_without_session_token(self):
+        response = self.client.post(
+            PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "customer_id": FAKE_CUSTOMER_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 401
 
     def test_generate_update_payment_method_session_url_success(self):
-        response = self.client.post(PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    json={
-                                        "success_callback_url": "https://www.chartwise.ai/payment-success",
-                                        "cancel_callback_url": "https://www.chartwise.ai",
-                                    })
+        response = self.client.post(
+            PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "customer_id": FAKE_CUSTOMER_ID,
+                "success_callback_url": "https://www.chartwise.ai/payment-success",
+                "cancel_callback_url": "https://www.chartwise.ai",
+            }
+        )
         assert response.status_code == 200
         response_json = response.json()
         assert "update_payment_method_url" in response_json
 
-    def test_retrieve_payment_history_without_auth_token(self):
-        response = self.client.get(PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+    def test_retrieve_payment_history_without_session_token(self):
+        response = self.client.get(
+            PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 401
 
     def test_retrieve_payment_history_success(self):
-        response = self.client.get(PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    }, headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+        response = self.client.get(
+            PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 200
         assert "payments" in response.json()
