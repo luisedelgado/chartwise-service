@@ -39,23 +39,29 @@ class TestingHarnessSecurityRouter:
         self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
         self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
-        coordinator = EndpointServiceCoordinator(routers=[SecurityRouter().router],
-                                                 environment=os.environ.get("ENVIRONMENT"))
+        coordinator = EndpointServiceCoordinator(
+            routers=[SecurityRouter().router],
+            environment=os.environ.get("ENVIRONMENT")
+        )
         self.client = TestClient(coordinator.app)
 
     def test_login_for_token_unauthenticated(self):
         self.fake_cognito_client.return_valid_tokens = False
-        response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                                    headers={
-                                        "auth-token": "myFakeToken",
-                                    })
+        response = self.client.post(
+            SecurityRouter.SIGNIN_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 401
 
     def test_login_for_token_authenticated_success(self):
-        response = self.client.post(SecurityRouter.SIGNIN_ENDPOINT,
-                                    headers={
-                                        "auth-token": FAKE_ACCESS_TOKEN,
-                                    })
+        response = self.client.post(
+            SecurityRouter.SIGNIN_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            }
+        )
         assert response.status_code == 200
         assert response.cookies.get("session_token") is not None
         assert response.cookies.get("session_id") is not None
@@ -65,272 +71,266 @@ class TestingHarnessSecurityRouter:
         assert session_token["token"]["token_type"] is not None
         assert session_token["token"]["expiration_timestamp"] is not None
 
-    def test_refresh_token_without_previous_auth_session(self):
-        response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
-                                   headers={
-                                       "store-access-token": FAKE_ACCESS_TOKEN,
-                                       "store-refresh-token": FAKE_REFRESH_TOKEN
-                                   })
+    def test_refresh_token_without_previous_session_token(self):
+        response = self.client.put(
+            SecurityRouter.SESSION_REFRESH_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            }
+        )
         assert response.status_code == 401
 
     def test_refresh_token_success(self):
-        response = self.client.put(SecurityRouter.SESSION_REFRESH_ENDPOINT,
-                                    cookies={
-                                        "session_token": self.auth_cookie
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
+        response = self.client.put(
+            SecurityRouter.SESSION_REFRESH_ENDPOINT,
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            }
+        )
         assert response.status_code == 200
 
         response_json = response.json()
         assert "token" in response_json
         assert "subscription_status" in response_json
 
-    def test_add_therapist_with_missing_store_tokens(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                               json={
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01/01/2000",
-                                    "language_preference": "es-419",
-                                    "gender": "male"
-                               })
-        assert response.status_code == 401
-
-    def test_add_therapist_with_auth_token_but_missing_store_tokens(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                                    cookies={
-                                        "session_token": self.auth_cookie
-                                    },
-                                    json={
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01/01/2000",
-                                    "language_preference": "es-419",
-                                    "gender": "male"
-                               })
+    def test_add_therapist_with_auth_token_but_missing_session_token(self):
+        response = self.client.post(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            json={
+                "id": FAKE_THERAPIST_ID,
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01/01/2000",
+                "language_preference": "es-419",
+                "gender": "male"
+            }
+        )
         assert response.status_code == 401
 
     def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                               headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
-                               },
-                               cookies={
-                                        "session_token": self.auth_cookie
-                                },
-                                json={
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01/01/2000",
-                                    "language_preference": "es-419",
-                                    "gender": "male"
-                               })
+        response = self.client.post(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "id": FAKE_THERAPIST_ID,
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01/01/2000",
+                "language_preference": "es-419",
+                "gender": "male"
+            }
+        )
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                               cookies={
-                                   "session_token": self.auth_cookie
-                               },
-                               headers={
-                                   "store-access-token": FAKE_ACCESS_TOKEN,
-                                   "store-refresh-token": FAKE_REFRESH_TOKEN
-                               },
-                               json={
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01/01/2000",
-                                    "language_preference": "brbrbrbrbr",
-                                    "gender": "male"
-                               })
+        response = self.client.post(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "id": FAKE_THERAPIST_ID,
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "brbrbrbr",
+                "gender": "male"
+            }
+        )
         assert response.status_code == 400
 
-    def test_add_therapist_with_valid_credentials_but_invalid_gender_format(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                                cookies={
-                                    "session_token": self.auth_cookie
-                                },
-                                headers={
-                                    "store-access-token": FAKE_ACCESS_TOKEN,
-                                    "store-refresh-token": FAKE_REFRESH_TOKEN
-                                },
-                                json={
-                                    "email": "foo@foo.com",
-                                    "first_name": "foo",
-                                    "last_name": "bar",
-                                    "birth_date": "01/01/2000",
-                                    "language_preference": "es-419",
-                                    "gender": "undefined"
-                                })
+    def test_add_therapist_with_valid_credentials_but_invalid_gender_value(self):
+        response = self.client.post(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "id": FAKE_THERAPIST_ID,
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "es-419",
+                "gender": "undefined"
+            }
+        )
         assert response.status_code == 400
 
-    def test_add_therapist_without_previous_auth_cookie_success(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            cookies={
-                                "session_token": self.auth_cookie
-                            },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "es-419",
-                                "gender": "male"
-                            })
+    def test_add_therapist_success(self):
+        response = self.client.post(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "id": FAKE_THERAPIST_ID,
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "es-419",
+                "gender": "male"
+            }
+        )
         assert response.status_code == 200
         response_json = response.json()
         assert response_json["therapist_id"] == FAKE_THERAPIST_ID
         assert response_json["token"] is not None
 
-    def test_add_therapist_with_existing_auth_cookie_success(self):
-        response = self.client.post(SecurityRouter.THERAPISTS_ENDPOINT,
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            cookies={
-                                        "session_token": self.auth_cookie
-                                    },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "es-419",
-                                "gender": "male"
-                            })
-        assert response.status_code == 200
-        response_json = response.json()
-        assert response_json["therapist_id"] == FAKE_THERAPIST_ID
-        assert response_json["token"] is not None
-
-    def test_update_therapist_with_invalid_credentials(self):
-        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "es-419",
-                                "gender": "male",
-                            })
+    def test_update_therapist_with_auth_token_but_missing_session_token(self):
+        response = self.client.put(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            json={
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "es-419",
+                "gender": "male",
+            }
+        )
         assert response.status_code == 401
 
     def test_update_therapist_with_valid_credentials_but_undefined_gender(self):
-        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
-                            cookies={
-                                "session_token": self.auth_cookie
-                            },
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "es-419",
-                                "gender": "undefined",
-                            })
+        response = self.client.put(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "es-419",
+                "gender": "undefined",
+            }
+        )
         assert response.status_code == 400
 
     def test_update_therapist_with_valid_credentials_but_invalid_date(self):
-        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
-                            cookies={
-                                "session_token": self.auth_cookie
-                            },
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01/01/2000",
-                                "language_preference": "es-419",
-                                "gender": "male",
-                            })
+        response = self.client.put(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01/01/2000",
+                "language_preference": "es-419",
+                "gender": "male",
+            }
+        )
         assert response.status_code == 400
 
     def test_update_therapist_with_valid_credentials_but_invalid_language_code(self):
-        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
-                            cookies={
-                                "session_token": self.auth_cookie
-                            },
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "brbrbrbr",
-                                "gender": "male",
-                            })
+        response = self.client.put(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "brbrbr",
+                "gender": "male",
+            }
+        )
         assert response.status_code == 400
 
     def test_update_therapist_success(self):
-        response = self.client.put(SecurityRouter.THERAPISTS_ENDPOINT,
-                            cookies={
-                                "session_token": self.auth_cookie
-                            },
-                            headers={
-                                "store-access-token": FAKE_ACCESS_TOKEN,
-                                "store-refresh-token": FAKE_REFRESH_TOKEN
-                            },
-                            json={
-                                "email": "foo@foo.com",
-                                "first_name": "foo",
-                                "last_name": "bar",
-                                "birth_date": "01-01-2000",
-                                "language_preference": "es-419",
-                                "gender": "male",
-                            })
+        response = self.client.put(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            json={
+                "email": "foo@foo.com",
+                "first_name": "foo",
+                "last_name": "bar",
+                "birth_date": "01-01-2000",
+                "language_preference": "es-419",
+                "gender": "male",
+            }
+        )
         assert response.status_code == 200
 
     def test_logout_success(self):
-        response = self.client.post(SecurityRouter.LOGOUT_ENDPOINT,
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    })
-
+        response = self.client.post(
+            SecurityRouter.LOGOUT_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+        )
         assert response.status_code == 200
         cookie_header = response.headers.get("set-cookie")
         assert cookie_header is not None
-        assert "authorization=" in cookie_header
+        assert "session_token=" in cookie_header
         assert "session_id=" in cookie_header
         assert "expires=" in cookie_header or "Max-Age=0" in cookie_header
 
-    def test_delete_therapist_with_missing_auth(self):
-        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT)
+    def test_delete_therapist_with_auth_token_but_missing_session_token(self):
+        response = self.client.delete(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+        )
         assert response.status_code == 401
 
     def test_delete_therapist_success(self):
-        response = self.client.delete(SecurityRouter.THERAPISTS_ENDPOINT,
-                                        cookies={
-                                            "session_token": self.auth_cookie
-                                        },
-                                        headers={
-                                            "store-access-token": FAKE_ACCESS_TOKEN,
-                                            "store-refresh-token": FAKE_REFRESH_TOKEN
-                                        })
+        response = self.client.delete(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+        )
         assert response.status_code == 200
 
     def encryption_base64_str_decryption_success(self):
