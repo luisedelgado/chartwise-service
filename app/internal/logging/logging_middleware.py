@@ -37,7 +37,8 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Detect stale data, and clear if needed
-        if self.last_request_time is not None and (datetime.now() - self.last_request_time) > self.THIRTY_MIN_IDLE_THRESHOLD:
+        cls = type(self)
+        if self.last_request_time is not None and (datetime.now() - self.last_request_time) > cls.THIRTY_MIN_IDLE_THRESHOLD:
             print("Clearing stale data.")
             await dependency_container.inject_openai_client().clear_chat_history()
         self.last_request_time = datetime.now()
@@ -49,13 +50,13 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         environment = os.environ.get("ENVIRONMENT")
         if (environment == PROD_ENVIRONMENT
-            and request_method in self.VALID_API_METHODS
-            and request_url_path not in self.IRRELEVANT_PATHS):
+            and request_method in cls.VALID_API_METHODS
+            and request_url_path not in cls.IRRELEVANT_PATHS):
             await run_in_threadpool(
                 influx_client.log_api_request,
                 endpoint_name=request_url_path,
                 method=request_method,
-                session_id=request.cookies.get(self.SESSION_ID_KEY)
+                session_id=request.cookies.get(cls.SESSION_ID_KEY)
             )
 
         # Process the request and get the response
@@ -67,28 +68,28 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         session_id = getattr(
             request.state,
-            self.SESSION_ID_KEY,
+            cls.SESSION_ID_KEY,
             None
         )
         therapist_id = getattr(
             request.state,
-            self.THERAPIST_ID_KEY,
+            cls.THERAPIST_ID_KEY,
             None
         )
         patient_id = (
             getattr(
                 request.state,
-                self.PATIENT_ID_KEY,
+                cls.PATIENT_ID_KEY,
                 None
             ) or request.query_params.get(
-                self.PATIENT_ID_KEY,
+                cls.PATIENT_ID_KEY,
                 None
             )
         )
 
         if (environment == PROD_ENVIRONMENT
-            and request_method in self.VALID_API_METHODS
-            and request_url_path not in self.IRRELEVANT_PATHS):
+            and request_method in cls.VALID_API_METHODS
+            and request_url_path not in cls.IRRELEVANT_PATHS):
             await run_in_threadpool(
                 influx_client.log_api_response,
                 endpoint_name=request_url_path,
@@ -98,7 +99,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 session_id=session_id,
                 session_report_id=getattr(
                     request.state,
-                    self.SESSION_REPORT_ID_KEY,
+                    cls.SESSION_REPORT_ID_KEY,
                     None
                 ),
                 patient_id=patient_id,
@@ -107,8 +108,8 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         # Log PHI activity
         if (environment == PROD_ENVIRONMENT
-            and request_method in self.VALID_API_METHODS
-            and request_url_path in self.PHI_ENDPOINTS):
+            and request_method in cls.VALID_API_METHODS
+            and request_url_path in cls.PHI_ENDPOINTS):
             try:
                 assert len(therapist_id or '') > 0, "Therapist ID is required."
             except Exception as e:

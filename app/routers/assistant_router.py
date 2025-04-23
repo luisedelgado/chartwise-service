@@ -71,7 +71,7 @@ class AssistantRouter:
         """
         Registers the set of routes that the class' router can access.
         """
-        @self.router.get(self.SINGLE_SESSION_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).SINGLE_SESSION_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def retrieve_single_session_report(response: Response,
                                                  request: Request,
                                                  _: dict = Depends(get_user_info),
@@ -86,7 +86,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def get_session_reports(response: Response,
                                       request: Request,
                                       year: str = Query(None),
@@ -107,7 +107,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.post(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def insert_new_session(insert_payload: SessionNotesInsert,
                                      request: Request,
                                      response: Response,
@@ -126,7 +126,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.put(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.put(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def update_session(update_payload: SessionNotesUpdate,
                                  request: Request,
                                  response: Response,
@@ -145,7 +145,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.delete(self.SESSIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.delete(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def delete_session(response: Response,
                                  request: Request,
                                  background_tasks: BackgroundTasks,
@@ -162,7 +162,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.QUERIES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.post(type(self).QUERIES_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def execute_assistant_query(query: AssistantQuery,
                                           request: Request,
                                           response: Response,
@@ -206,7 +206,7 @@ class AssistantRouter:
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-        @self.router.get(self.SINGLE_PATIENT_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        @self.router.get(type(self).SINGLE_PATIENT_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
         async def get_single_patient(response: Response,
                                      request: Request,
                                      patient_id: str = Path(..., min_length=1),
@@ -221,7 +221,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        @self.router.get(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
         async def get_patients(response: Response,
                                request: Request,
                                 _: dict = Depends(get_user_info),
@@ -234,7 +234,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        @self.router.post(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
         async def add_patient(response: Response,
                               request: Request,
                               background_tasks: BackgroundTasks,
@@ -251,7 +251,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.put(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        @self.router.put(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
         async def update_patient(response: Response,
                                  request: Request,
                                  background_tasks: BackgroundTasks,
@@ -268,7 +268,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.delete(self.PATIENTS_ENDPOINT, tags=[self.PATIENTS_ROUTER_TAG])
+        @self.router.delete(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
         async def delete_patient(request: Request,
                                  response: Response,
                                  patient_id: str = None,
@@ -283,7 +283,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.ATTENDANCE_INSIGHTS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).ATTENDANCE_INSIGHTS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def get_attendance_insights(response: Response,
                                           request: Request,
                                           patient_id: str = None,
@@ -298,7 +298,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.BRIEFINGS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).BRIEFINGS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def get_briefing(response: Response,
                                request: Request,
                                patient_id: str = None,
@@ -313,7 +313,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.QUESTION_SUGGESTIONS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).QUESTION_SUGGESTIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def get_question_suggestions(response: Response,
                                            request: Request,
                                            patient_id: str = None,
@@ -328,7 +328,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.RECENT_TOPICS_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.get(type(self).RECENT_TOPICS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def get_recent_topics(response: Response,
                                     request: Request,
                                     patient_id: str = None,
@@ -343,7 +343,7 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.TEMPLATES_ENDPOINT, tags=[self.ASSISTANT_ROUTER_TAG])
+        @self.router.post(type(self).TEMPLATES_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
         async def transform_session_with_template(request: Request,
                                                   response: Response,
                                                   body: TemplatePayload,

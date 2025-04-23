@@ -138,10 +138,11 @@ class PineconeClient(PineconeBaseClass):
                 encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
                 namespace = self._get_namespace(user_id=user_id, patient_id=patient_id)
+                cls = type(self)
                 vector_store.namespace = "".join([namespace,
                                                     "-",
-                                                    self.PRE_EXISTING_HISTORY_PREFIX])
-                doc.id_ = f"{self.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
+                                                    cls.PRE_EXISTING_HISTORY_PREFIX])
+                doc.id_ = f"{cls.PRE_EXISTING_HISTORY_PREFIX}-{uuid.uuid1()}"
                 doc.embedding = await openai_client.create_embeddings(text=chunk_summary)
                 doc.metadata.update({
                     "pre_existing_history_summary": encoded_chunk_summary_ciphertext,
@@ -194,7 +195,7 @@ class PineconeClient(PineconeBaseClass):
                                             patient_id=patient_id)
             namespace_with_suffix = "".join([namespace,
                                              "-",
-                                             self.PRE_EXISTING_HISTORY_PREFIX])
+                                             type(self).PRE_EXISTING_HISTORY_PREFIX])
 
             ids_to_delete = []
             for list_ids in index.list(namespace=namespace_with_suffix):
@@ -339,7 +340,7 @@ class PineconeClient(PineconeBaseClass):
 
                 reranked_context = ""
                 dates_contained = []
-                for doc in reranked_documents[:self.RERANK_TOP_N]:
+                for doc in reranked_documents[:type(self).RERANK_TOP_N]:
                     dates_contained.append(doc['session_date'])
                     formatted_date = datetime_handler.convert_to_date_format_spell_out_month(
                         session_date=doc['session_date'],
@@ -437,7 +438,7 @@ class PineconeClient(PineconeBaseClass):
         historial_context_namespace = ("".join([
                     namespace,
                     "-",
-                    self.PRE_EXISTING_HISTORY_PREFIX
+                    type(self).PRE_EXISTING_HISTORY_PREFIX
                 ]
             )
         )
@@ -504,7 +505,7 @@ class PineconeClient(PineconeBaseClass):
                 padding=True,
                 truncation=True,
                 return_tensors='pt',
-                max_length=self.MAX_CHUNK_SIZE
+                max_length=type(self).MAX_CHUNK_SIZE
             ).to(self._device)
 
             with torch.no_grad():
@@ -526,5 +527,5 @@ class PineconeClient(PineconeBaseClass):
         user_int = int(hashlib.md5(user_id.encode()).hexdigest(), 16)
 
         # Use modulo to determine the index
-        index_number = user_int % self.NUM_INDEXES
+        index_number = user_int % type(self).NUM_INDEXES
         return str(index_number)

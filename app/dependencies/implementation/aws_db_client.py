@@ -453,13 +453,13 @@ class AwsDbClient(AwsDbBaseClass):
             secret = secret_manager.get_secret(
                 secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
             )
-            password = secret.get(self.STRIPE_READER_ROLE_SECRET_KEY)
+            password = secret.get(type(self).STRIPE_READER_ROLE_SECRET_KEY)
             endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
             port = os.getenv("AWS_RDS_DB_PORT")
             db = os.getenv("AWS_RDS_DB_NAME")
 
             conn = await asyncpg.connect(
-                user=self.STRIPE_READER_ROLE,
+                user=type(self).STRIPE_READER_ROLE,
                 password=password,
                 database=db,
                 host=endpoint,

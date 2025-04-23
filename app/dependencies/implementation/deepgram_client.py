@@ -44,14 +44,15 @@ class DeepgramClient(DeepgramBaseClass):
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                options = "&".join([self.DG_QUERY_PARAMS, "diarize=true"])
+                cls = type(self)
+                options = "&".join([cls.DG_QUERY_PARAMS, "diarize=true"])
                 endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + options
 
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = requests.post(endpoint_configuration,
                                          headers=headers,
                                          json={"url": audio_file_url},
-                                         timeout=(self.CONNECT_TIMEOUT, self.DIARIZATION_READ_TIMEOUT))
+                                         timeout=(cls.CONNECT_TIMEOUT, cls.DIARIZATION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -75,12 +76,13 @@ class DeepgramClient(DeepgramBaseClass):
                 )
 
                 # Increase the timeout to 300 seconds (5 minutes).
+                cls = type(self)
                 response = await deepgram.listen.asyncrest.v("1").transcribe_url(source={"url": audio_file_url},
                                                                                  options=options,
-                                                                                 timeout=Timeout(connect=self.CONNECT_TIMEOUT,
-                                                                                                 read=self.DIARIZATION_READ_TIMEOUT,
-                                                                                                 write=self.DIARIZATION_WRITE_TIMEOUT,
-                                                                                                 pool=self.DIARIZATION_POOL_TIMEOUT))
+                                                                                 timeout=Timeout(connect=cls.CONNECT_TIMEOUT,
+                                                                                                 read=cls.DIARIZATION_READ_TIMEOUT,
+                                                                                                 write=cls.DIARIZATION_WRITE_TIMEOUT,
+                                                                                                 pool=cls.DIARIZATION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 utterances = json_response.get('results').get('utterances')
@@ -113,13 +115,14 @@ class DeepgramClient(DeepgramBaseClass):
                     "x-portkey-metadata": json.dumps({"hidden_provider": "deepgram"})
                 }
 
-                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + self.DG_QUERY_PARAMS
+                cls = type(self)
+                endpoint_configuration = portkey_gateway_url + listen_endpoint + "?" + cls.DG_QUERY_PARAMS
 
                 # Increase the timeout to 300 seconds (5 minutes).
                 response = requests.post(endpoint_configuration,
                                          headers=headers,
                                          json={"url": audio_file_url},
-                                         timeout=(self.CONNECT_TIMEOUT, self.TRANSCRIPTION_READ_TIMEOUT))
+                                         timeout=(cls.CONNECT_TIMEOUT, cls.TRANSCRIPTION_READ_TIMEOUT))
 
                 assert response.status_code == 200, f"{response.text}"
                 response_body = json.loads(response.text)
@@ -141,12 +144,13 @@ class DeepgramClient(DeepgramBaseClass):
                 )
 
                 # Increase the timeout to 300 seconds (5 minutes).
+                cls = type(self)
                 response = await deepgram.listen.asyncrest.v("1").transcribe_url(source={"url": audio_file_url},
                                                                                  options=options,
-                                                                                 timeout=Timeout(connect=self.CONNECT_TIMEOUT,
-                                                                                                 read=self.TRANSCRIPTION_READ_TIMEOUT,
-                                                                                                 write=self.TRANSCRIPTION_WRITE_TIMEOUT,
-                                                                                                 pool=self.TRANSCRIPTION_POOL_TIMEOUT))
+                                                                                 timeout=Timeout(connect=cls.CONNECT_TIMEOUT,
+                                                                                                 read=cls.TRANSCRIPTION_READ_TIMEOUT,
+                                                                                                 write=cls.TRANSCRIPTION_WRITE_TIMEOUT,
+                                                                                                 pool=cls.TRANSCRIPTION_POOL_TIMEOUT))
 
                 json_response = json.loads(response.to_json(indent=4))
                 transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']

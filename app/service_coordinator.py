@@ -37,7 +37,7 @@ class HSTSMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
         except Exception as e:
             return JSONResponse(
-                {"detail": "Internal server error in middleware."},
+                {"detail": str(e)},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -75,7 +75,7 @@ class EndpointServiceCoordinator:
         )
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=self.origins,
+            allow_origins=type(self).origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],

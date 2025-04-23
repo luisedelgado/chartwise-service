@@ -35,12 +35,13 @@ class EmailManager:
 
             assert hasattr(alert, "category")
 
+            cls = type(self)
             if alert.category == InternalAlertCategory.PAYMENTS_ACTIVITY:
                 alert: PaymentsActivityAlert = alert
                 subscription_id = alert.subscription_id if alert.subscription_id is not None else "N/A"
                 customer_id = alert.customer_id if alert.customer_id is not None else "N/A"
                 payment_method_id = alert.payment_method_id if alert.payment_method_id is not None else "N/A"
-                activity_details = self.PAYMENTS_ACTIVITY_DETAILS.format(
+                activity_details = cls.PAYMENTS_ACTIVITY_DETAILS.format(
                     subscription_id=subscription_id,
                     customer_id=customer_id,
                     payment_method_id=payment_method_id,
@@ -51,7 +52,7 @@ class EmailManager:
                 media_type = MediaType.AUDIO.value if alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING else MediaType.IMAGE.value
                 session_report_id = alert.session_report_id if alert.session_report_id is not None else "N/A"
                 storage_filepath = alert.storage_filepath if alert.storage_filepath is not None else "N/A"
-                activity_details = self.MEDIA_JOB_ACTIVITY_DETAILS.format(
+                activity_details = cls.MEDIA_JOB_ACTIVITY_DETAILS.format(
                     media_type=media_type,
                     session_report_id=session_report_id,
                     storage_filepath=storage_filepath,
@@ -64,7 +65,7 @@ class EmailManager:
             body = "".join([
                 f"<b>{alert.description}</b>",
                 "<ul>",
-                self.SESSION_DATA_DETAILS.format(
+                cls.SESSION_DATA_DETAILS.format(
                     therapist_id=therapist_id,
                     session_id=alert.session_id,
                     environment=alert.environment
@@ -75,7 +76,7 @@ class EmailManager:
             ])
 
             resend_client.send_eng_team_internal_alert_email(
-                subject=self.ENGINEERING_ALERT_SUBJECT,
+                subject=cls.ENGINEERING_ALERT_SUBJECT,
                 body=body,
                 alert_category=alert.category
             )
@@ -94,7 +95,8 @@ class EmailManager:
             therapist_email = alert.therapist_email if alert.therapist_email is not None else "N/A"
             therapist_name = alert.therapist_name if alert.therapist_name is not None else "N/A"
 
-            activity_details = self.CUSTOMER_RELATIONS_ACTIVITY_DETAILS.format(
+            cls = type(self)
+            activity_details = cls.CUSTOMER_RELATIONS_ACTIVITY_DETAILS.format(
                 therapist_email=therapist_email,
                 therapist_name=therapist_name
             )
@@ -102,7 +104,7 @@ class EmailManager:
             body = "".join([
                 f"<b>{alert.description}</b>",
                 "<ul>",
-                self.SESSION_DATA_DETAILS.format(
+                cls.SESSION_DATA_DETAILS.format(
                     therapist_id=therapist_id,
                     session_id=alert.session_id,
                     environment=alert.environment
@@ -113,7 +115,7 @@ class EmailManager:
             ])
 
             resend_client.send_customer_relations_alert_email(
-                subject=self.CUSTOMER_RELATIONS_ALERT_SUBJECT,
+                subject=cls.CUSTOMER_RELATIONS_ALERT_SUBJECT,
                 body=body,
                 alert_category=alert.category
             )

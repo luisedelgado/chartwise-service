@@ -188,7 +188,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 "user_id": therapist_id,
                 "patient_id": patient_id,
                 "session_id": str(session_id),
-                "action": self.DIARIZATION_SUMMARY_ACTION_NAME
+                "action": type(self).DIARIZATION_SUMMARY_ACTION_NAME
             }
 
             prompt_crafter = PromptCrafter()
@@ -482,7 +482,7 @@ class AudioProcessingManager(MediaProcessingManager):
                 "user_id": therapist_id,
                 "patient_id": patient_id,
                 "session_id": str(session_id),
-                "action": self.DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
+                "action": type(self).DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
             }
             grand_summary = await openai_client.trigger_async_chat_completion(
                 metadata=grand_summary_metadata,

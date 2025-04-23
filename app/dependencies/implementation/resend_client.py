@@ -26,7 +26,7 @@ class ResendClient(ResendBaseClass):
             html_content = self.internal_eng_alert_template.render(problem_area=alert_category.value,
                                                                    alert_content=body)
             self._send_email(from_address=from_address,
-                             to_addresses=[self.LUIS_CHARTWISE_EMAIL],
+                             to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
                              subject=subject,
                              html=html_content)
         except Exception as e:
@@ -41,7 +41,7 @@ class ResendClient(ResendBaseClass):
             html_content = self.customer_relations_alert_template.render(problem_area=alert_category.value,
                                                                          alert_content=body)
             self._send_email(from_address=from_address,
-                             to_addresses=[self.LUIS_CHARTWISE_EMAIL],
+                             to_addresses=[type(self).LUIS_CHARTWISE_EMAIL],
                              subject=subject,
                              html=html_content)
         except Exception as e:

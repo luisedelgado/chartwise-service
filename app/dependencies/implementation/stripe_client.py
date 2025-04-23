@@ -27,7 +27,7 @@ class StripeClient(StripeBaseClass):
 
             if is_new_customer:
                 subscription_data = {
-                    'trial_period_days': self.FREE_TRIAL_DURATION_IN_DAYS,
+                    'trial_period_days': type(self).FREE_TRIAL_DURATION_IN_DAYS,
                     'metadata': global_metadata
                 }
             else:

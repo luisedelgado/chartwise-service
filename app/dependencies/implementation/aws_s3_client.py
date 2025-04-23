@@ -27,7 +27,7 @@ class AwsS3Client(AwsS3BaseClass):
                     'Key': file_path,
                     'ContentType': content_type,
                 },
-                ExpiresIn=self.FIFTEEN_MIN_IN_SECONDS,
+                ExpiresIn=type(self).FIFTEEN_MIN_IN_SECONDS,
             )
             return {
                 "url": response,
@@ -85,7 +85,7 @@ class AwsS3Client(AwsS3BaseClass):
                     'Bucket': bucket_name,
                     'Key': file_path,
                 },
-                ExpiresIn=self.TEN_MIN_IN_SECONDS,
+                ExpiresIn=type(self).TEN_MIN_IN_SECONDS,
             )
             return {
                 "url": response,

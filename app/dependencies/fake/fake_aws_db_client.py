@@ -108,6 +108,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "last_name": "bar",
                     "gender": "female",
                     "total_sessions": 12,
+                    "last_session_date": "2024-10-10",
                     "onboarding_first_time_patient": True,
                     "unique_active_years": unique_active_years,
                 },

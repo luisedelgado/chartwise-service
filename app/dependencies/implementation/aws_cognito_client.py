@@ -45,7 +45,7 @@ class AwsCognitoClient(AwsCognitoBaseClass):
                 signing_key.key,
                 algorithms=["RS256"],
                 audience=os.environ.get("COGNITO_APP_CLIENT_ID"),
-                issuer=self.COGNITO_ISSUER,
+                issuer=type(self).COGNITO_ISSUER,
             )
 
             if decoded_token.get("token_use") != "id":
@@ -57,16 +57,17 @@ class AwsCognitoClient(AwsCognitoBaseClass):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
         except jwt.InvalidTokenError as e:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
     def get_jwk_client(self):
-        global JWKS_CACHE, JWKS_CACHE_EXPIRATION
-
         now = time.time()
-        if JWKS_CACHE is None or now >= JWKS_CACHE_EXPIRATION:
-            JWKS_CACHE = PyJWKClient(self.JWKS_URL)
-            JWKS_CACHE_EXPIRATION = now + self.JWKS_CACHE_TTL_SECONDS
+        cls = type(self)
+        if cls.JWKS_CACHE is None or now >= cls.JWKS_CACHE_EXPIRATION:
+            cls.JWKS_CACHE = PyJWKClient(cls.JWKS_URL)
+            cls.JWKS_CACHE_EXPIRATION = now + cls.JWKS_CACHE_TTL_SECONDS
 
-        return JWKS_CACHE
+        return cls.JWKS_CACHE
 
     async def delete_user(self, user_id: str):
         try:

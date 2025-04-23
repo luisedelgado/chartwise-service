@@ -42,7 +42,7 @@ class ImageProcessingRouter:
         """
         Registers the set of routes that the class' router can access.
         """
-        @self.router.post(self.TEXT_EXTRACTION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).TEXT_EXTRACTION_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def extract_text(request: Request,
                                response: Response,
                                background_tasks: BackgroundTasks,

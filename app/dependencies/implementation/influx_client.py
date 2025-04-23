@@ -37,8 +37,9 @@ class InfluxClient(InfluxBaseClass):
         if not self.is_prod_environment:
             return
 
+        cls = type(self)
         point = (
-            Point(self.API_REQUESTS_BUCKET)
+            Point(cls.API_REQUESTS_BUCKET)
             .tag("endpoint_name", endpoint_name)
             .tag("environment", self.environment)
             .tag("method", method)
@@ -46,12 +47,12 @@ class InfluxClient(InfluxBaseClass):
             .time(datetime.now(timezone.utc).isoformat())
         )
 
-        for tag in self._optional_tags:
+        for tag in cls._optional_tags:
             value = kwargs.get(tag)
             if value is not None:
                 point.tag(tag, str(value))
 
-        self.client.write(record=point, database=self.API_REQUESTS_BUCKET)
+        self.client.write(record=point, database=cls.API_REQUESTS_BUCKET)
 
     def log_api_response(self,
                          endpoint_name: str,
@@ -61,20 +62,21 @@ class InfluxClient(InfluxBaseClass):
         if not self.is_prod_environment:
             return
 
+        cls = type(self)
         point = (
-            Point(self.API_RESPONSES_BUCKET)
+            Point(cls.API_RESPONSES_BUCKET)
             .tag("endpoint_name", endpoint_name)
             .tag("environment", self.environment)
             .tag("method", method)
             .field("response_time", response_time)
         )
 
-        for tag in self._optional_tags:
+        for tag in cls._optional_tags:
             value = kwargs.get(tag)
             if value is not None:
                 point.tag(tag, str(value))
 
-        self.client.write(record=point, database=self.API_RESPONSES_BUCKET)
+        self.client.write(record=point, database=cls.API_RESPONSES_BUCKET)
 
     def log_error(self,
                   endpoint_name: str,
@@ -85,8 +87,9 @@ class InfluxClient(InfluxBaseClass):
         if not self.is_prod_environment:
             return
 
+        cls = type(self)
         point = (
-            Point(self.API_ERRORS_BUCKET)
+            Point(cls.API_ERRORS_BUCKET)
             .tag("endpoint_name", endpoint_name)
             .tag("environment", self.environment)
             .tag("method", method)
@@ -94,9 +97,9 @@ class InfluxClient(InfluxBaseClass):
             .field("description", description)
         )
 
-        for tag in self._optional_tags:
+        for tag in cls._optional_tags:
             value = kwargs.get(tag)
             if value is not None:
                 point.tag(tag, str(value))
 
-        self.client.write(record=point, database=self.API_ERRORS_BUCKET)
+        self.client.write(record=point, database=cls.API_ERRORS_BUCKET)

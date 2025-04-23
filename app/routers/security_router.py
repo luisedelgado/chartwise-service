@@ -69,7 +69,7 @@ class SecurityRouter:
         """
         Registers the set of routes that the class' router can access.
         """
-        @self.router.post(self.SIGNIN_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
+        @self.router.post(type(self).SIGNIN_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
         async def signin(response: Response,
                          request: Request,
                          user_info: dict = Depends(get_user_info),
@@ -81,7 +81,7 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-        @self.router.put(self.SESSION_REFRESH_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
+        @self.router.put(type(self).SESSION_REFRESH_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
         async def refresh_auth_token(request: Request,
                                      response: Response,
                                      _: dict = Depends(get_user_info),
@@ -94,7 +94,7 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.LOGOUT_ENDPOINT, tags=[self.AUTHENTICATION_ROUTER_TAG])
+        @self.router.post(type(self).LOGOUT_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
         async def logout(request: Request,
                          response: Response,
                          background_tasks: BackgroundTasks,
@@ -107,7 +107,7 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
+        @self.router.post(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
         async def add_therapist(body: SignupPayload,
                                 request: Request,
                                 response: Response,
@@ -122,7 +122,7 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-        @self.router.put(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
+        @self.router.put(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
         async def update_therapist(request: Request,
                                    response: Response,
                                    body: TherapistUpdatePayload,
@@ -137,7 +137,7 @@ class SecurityRouter:
                 session_id=session_id
             )
 
-        @self.router.delete(self.THERAPISTS_ENDPOINT, tags=[self.THERAPISTS_ROUTER_TAG])
+        @self.router.delete(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
         async def delete_therapist(request: Request,
                                    response: Response,
                                    _: dict = Depends(get_user_info),

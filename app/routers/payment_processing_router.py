@@ -73,7 +73,7 @@ class PaymentProcessingRouter:
         """
         Registers the set of routes that the class' router can access.
         """
-        @self.router.post(self.CHECKOUT_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).CHECKOUT_SESSION_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def create_checkout_session(request: Request,
                                           response: Response,
                                           payload: PaymentSessionPayload,
@@ -88,13 +88,13 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.PAYMENT_EVENT_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).PAYMENT_EVENT_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def capture_payment_event(request: Request,):
             return await self._capture_payment_event_internal(
                 request=request
             )
 
-        @self.router.get(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def retrieve_subscriptions(response: Response,
                                          request: Request,
                                          _: dict = Depends(get_user_info),
@@ -107,7 +107,7 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.put(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.put(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def update_subscription(payload: UpdateSubscriptionPayload,
                                       response: Response,
                                       request: Request,
@@ -123,7 +123,7 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.delete(self.SUBSCRIPTIONS_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.delete(type(self).SUBSCRIPTIONS_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def delete_subscription(response: Response,
                                       request: Request,
                                       _: dict = Depends(get_user_info),
@@ -136,7 +136,7 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.get(self.PRODUCT_CATALOG, tags=[self.ROUTER_TAG])
+        @self.router.get(type(self).PRODUCT_CATALOG, tags=[type(self).ROUTER_TAG])
         async def retrieve_product_catalog(request: Request,
                                            response: Response,
                                            _: dict = Depends(get_user_info),
@@ -149,7 +149,7 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.post(self.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def create_update_payment_method_session(request: Request,
                                                        response: Response,
                                                        payload: UpdatePaymentMethodPayload,
@@ -164,7 +164,7 @@ class PaymentProcessingRouter:
                 payload=payload
             )
 
-        @self.router.get(self.PAYMENT_HISTORY_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(type(self).PAYMENT_HISTORY_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def retrieve_payment_history(request: Request,
                                            response: Response,
                                            _: dict = Depends(get_user_info),
@@ -1081,7 +1081,7 @@ class PaymentProcessingRouter:
                 trial_end_date_from_timestamp = datetime.fromtimestamp(subscription['trial_end'])
                 payload["free_trial_end_date"] = trial_end_date_from_timestamp.date()
 
-            if (subscription.get('status', None) in self.ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end', None):
+            if (subscription.get('status', None) in type(self).ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end', None):
                 # Free trial is ongoing, or subscription is active.
                 payload['is_active'] = True
                 payload['free_trial_active'] = is_trialing

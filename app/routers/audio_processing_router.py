@@ -48,7 +48,7 @@ class AudioProcessingRouter:
         """
         Registers the set of routes that the class' router can access.
         """
-        @self.router.post(self.NOTES_TRANSCRIPTION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).NOTES_TRANSCRIPTION_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def transcribe_session_notes(request: Request,
                                            response: Response,
                                            background_tasks: BackgroundTasks,
@@ -71,7 +71,7 @@ class AudioProcessingRouter:
                                                                  session_token=session_token,
                                                                  session_id=session_id)
 
-        @self.router.post(self.DIARIZATION_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.post(type(self).DIARIZATION_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def diarize_session(request: Request,
                                   response: Response,
                                   background_tasks: BackgroundTasks,
@@ -94,7 +94,7 @@ class AudioProcessingRouter:
                                                         session_token=session_token,
                                                         session_id=session_id)
 
-        @self.router.get(self.UPLOAD_URL_ENDPOINT, tags=[self.ROUTER_TAG])
+        @self.router.get(type(self).UPLOAD_URL_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def generate_audio_upload_url(request: Request,
                                             response: Response,
                                             patient_id: str = None,
@@ -169,7 +169,22 @@ class AudioProcessingRouter:
                 incoming_date_format=datetime_handler.DATE_FORMAT,
                 tz_identifier=client_timezone_identifier
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,

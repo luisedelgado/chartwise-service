@@ -35,7 +35,7 @@ class OpenAIClient(OpenAIBaseClass):
                 proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
                                                                 caching_shard_key=caching_shard_key,
                                                                 cache_max_age=cache_max_age,
-                                                                llm_model=self.LLM_MODEL)
+                                                                llm_model=type(self).LLM_MODEL)
             else:
                 api_base = None
                 proxy_headers = None
@@ -46,7 +46,7 @@ class OpenAIClient(OpenAIBaseClass):
 
             response_format = "json_object" if expects_json_response else "text"
             response: Completion = await openai_client.chat.completions.create(
-                model=self.LLM_MODEL,
+                model=type(self).LLM_MODEL,
                 messages=messages,
                 temperature=0,
                 max_tokens=max_tokens,
@@ -79,7 +79,7 @@ class OpenAIClient(OpenAIBaseClass):
 
                 api_base = monitoring_proxy_url
                 proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                llm_model=self.LLM_MODEL)
+                                                                llm_model=type(self).LLM_MODEL)
             else:
                 api_base = None
                 proxy_headers = None
@@ -104,7 +104,7 @@ class OpenAIClient(OpenAIBaseClass):
 
             callback = AsyncIteratorCallbackHandler()
             llm_client = ChatOpenAI(
-                model=self.LLM_MODEL,
+                model=type(self).LLM_MODEL,
                 temperature=0,
                 streaming=True,
                 default_headers=proxy_headers,

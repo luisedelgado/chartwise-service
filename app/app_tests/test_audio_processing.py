@@ -72,13 +72,19 @@ class TestingHarnessAudioProcessingRouter:
 
     def setup_method(self):
         # Clear out any old state between tests
+        dependency_container._aws_cognito_client = None
+        dependency_container._aws_db_client = None
+        dependency_container._aws_kms_client = None
+        dependency_container._aws_s3_client = None
+        dependency_container._aws_secret_manager_client = None
+        dependency_container._chartwise_encryptor = None
+        dependency_container._deepgram_client = None
+        dependency_container._docupanda_client = None
+        dependency_container._influx_client = None
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
-        dependency_container._docupanda_client = None
-        dependency_container._stripe_client = None
-        dependency_container._deepgram_client = None
         dependency_container._resend_client = None
-        dependency_container._influx_client = None
+        dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
         self.fake_deepgram_client = dependency_container.inject_deepgram_client()
@@ -91,34 +97,80 @@ class TestingHarnessAudioProcessingRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
-    def test_invoke_transcription_with_no_auth(self):
-        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-                                    data={
-                                        "template": "soap",
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "04-04-2022",
-                                        "client_timezone_identifier": "UTC",
-                                        "file_path": FAKE_PATIENT_ID
-                                    })
+    def test_invoke_transcription_with_no_session_token(self):
+        response = self.client.post(
+            AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04-04-2022",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_PATIENT_ID
+            }
+        )
         assert response.status_code == 401
+
+    def test_invoke_soap_transcription_with_invalid_date_format(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        response = self.client.post(
+            AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04/04/2022",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_soap_transcription_with_invalid_timezone(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        response = self.client.post(
+            AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04-04-2022",
+                "client_timezone_identifier": "GHGNF",
+                "file_path": FAKE_THERAPIST_ID
+            }
+        )
+        assert response.status_code == 400
 
     def test_invoke_soap_transcription_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
-        response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-                                    data={
-                                        "template": "soap",
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "04-04-2022",
-                                        "client_timezone_identifier": "UTC",
-                                        "file_path": FAKE_SESSION_REPORT_ID
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    })
+        response = self.client.post(
+            AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04-04-2022",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            }
+        )
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 
@@ -130,7 +182,7 @@ class TestingHarnessAudioProcessingRouter:
                                     "patient_id": FAKE_PATIENT_ID,
                                     "session_date": "04-04-2022",
                                     "client_timezone_identifier": "UTC",
-                                    "file_path": FAKE_REFRESH_TOKEN
+                                    "file_path": FAKE_THERAPIST_ID
                                 },
                                 headers={
                                     "store-access-token": FAKE_ACCESS_TOKEN,
@@ -149,7 +201,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                                   "file_path": FAKE_THERAPIST_ID
                                })
         assert response.status_code == 401
 
@@ -160,7 +212,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                                   "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
@@ -178,7 +230,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10/24/2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                                   "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
@@ -196,7 +248,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "gfhhfhdfhhs",
-                                   "file_path": DUMMY_WAV_FILE_LOCATION
+                                   "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,
@@ -215,7 +267,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_date": "10-24-2020",
                                    "template": "soap",
                                    "client_timezone_identifier": "UTC",
-                                   "file_path": FAKE_SESSION_REPORT_ID
+                                   "file_path": FAKE_THERAPIST_ID
                                },
                                headers={
                                    "store-access-token": FAKE_ACCESS_TOKEN,

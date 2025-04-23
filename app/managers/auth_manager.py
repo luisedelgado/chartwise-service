@@ -34,14 +34,23 @@ class AuthManager:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        cls = type(self)
+        expiration_delta = timedelta(minutes=cls.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expiration_time = datetime.now(timezone.utc) + expiration_delta
+
         data = {"sub": user_id}
         to_encode = data.copy()
-        expiration_delta = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
-        expiration_time = datetime.now(timezone.utc) + expiration_delta
         to_encode.update({"exp": expiration_time})
 
         formatted_expiration_time = expiration_time.strftime(DATE_TIME_FORMAT)
-        return (jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM), formatted_expiration_time)
+        return (
+            jwt.encode(
+                to_encode,
+                cls.SECRET_KEY,
+                algorithm=cls.ALGORITHM
+            ),
+            formatted_expiration_time
+        )
 
     def session_token_is_valid(self, access_token: str) -> bool:
         try:
@@ -61,10 +70,11 @@ class AuthManager:
 
     def extract_data_from_token(self, access_token: str) -> dict:
         try:
+            cls = type(self)
             payload = jwt.decode(
                 jwt=access_token,
-                key=self.SECRET_KEY,
-                algorithms=[self.ALGORITHM]
+                key=cls.SECRET_KEY,
+                algorithms=[cls.ALGORITHM]
             )
             exp: float = payload.get("exp")
             user_id: str = payload.get("sub")
@@ -88,10 +98,11 @@ class AuthManager:
                               response: Response) -> Token:
         try:
             session_token, expiration_timestamp = self.create_session_token(user_id)
+            cls = type(self)
             response.set_cookie(
-                key=self.SESSION_TOKEN_KEY,
+                key=cls.SESSION_TOKEN_KEY,
                 value=session_token,
-                domain=self.APP_COOKIE_DOMAIN,
+                domain=cls.APP_COOKIE_DOMAIN,
                 httponly=True,
                 secure=True,
                 samesite="none"
@@ -109,5 +120,6 @@ class AuthManager:
             )
 
     def logout(self, response: Response):
-        response.delete_cookie(self.SESSION_TOKEN_KEY)
-        response.delete_cookie(self.SESSION_ID_KEY)
+        cls = type(self)
+        response.delete_cookie(cls.SESSION_TOKEN_KEY)
+        response.delete_cookie(cls.SESSION_ID_KEY)
