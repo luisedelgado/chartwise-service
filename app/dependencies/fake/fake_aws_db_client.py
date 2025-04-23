@@ -1,3 +1,6 @@
+import json
+
+from datetime import date
 from fastapi import Request
 from typing import Any, List, Optional
 
@@ -18,13 +21,22 @@ class FakeAwsDbClient(AwsDbBaseClass):
     FAKE_PATIENT_ID = "548a9c31-f5aa-4e42-b247-f43f24e53ef5"
     FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
     select_returns_data: bool = True
+    patient_unique_active_years_nonzero: bool = True
 
     async def insert(self,
                      user_id: str,
                      request: Request,
                      payload: dict[str, Any],
                      table_name: str) -> Optional[dict]:
-        pass
+        if not self.select_returns_data:
+            return {}
+
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
+            return {
+                "id": self.FAKE_SESSION_NOTES_ID,
+                "patient_id": self.FAKE_PATIENT_ID,
+                "therapist_id": self.FAKE_THERAPIST_ID,
+            }
 
     async def update(self,
                      user_id: str,
@@ -55,6 +67,62 @@ class FakeAwsDbClient(AwsDbBaseClass):
         if not self.select_returns_data:
             return {}
 
+        if table_name == "user_interface_strings":
+            return [
+                {
+                    "value": "myFakeValue",
+                },
+            ]
+        if table_name == "static_default_briefings":
+            inner_value = {
+                "briefings": {
+                    "has_different_pronouns": "true",
+                    "new_patient": {
+                        "male_pronouns": {
+                            "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                        },
+                        "female_pronouns": {
+                            "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                        }
+                    },
+                    "existing_patient": {
+                        "male_pronouns": {
+                            "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                        },
+                        "female_pronouns": {
+                            "value": r"Hi {user_first_name}, this is the fake briefing for {patient_first_name}"
+                        }
+                    }
+                }
+            }
+
+            return [{
+                "value": json.dumps(inner_value)
+            }]
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
+            unique_active_years = ["2023", "2024"] if self.patient_unique_active_years_nonzero else []
+            return [
+                {
+                    "id": self.FAKE_PATIENT_ID,
+                    "first_name": "foo",
+                    "last_name": "bar",
+                    "gender": "female",
+                    "total_sessions": 12,
+                    "onboarding_first_time_patient": True,
+                    "unique_active_years": unique_active_years,
+                },
+            ]
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                    "patient_id": self.FAKE_PATIENT_ID,
+                    "therapist_id": self.FAKE_THERAPIST_ID,
+                    "session_date": date(2024, 10, 10),
+                    "notes_text": "",
+                    "template": "soap"
+                }
+            ]
         if table_name == THERAPISTS_TABLE_NAME:
             return [
                 {
@@ -62,6 +130,8 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "email": "myFakeEmail",
                     "first_name": "foo",
                     "last_name": "bar",
+                    "language_preference": "en-US",
+                    "gender": "male",
                 },
             ]
         if table_name == SUBSCRIPTION_STATUS_TABLE_NAME:

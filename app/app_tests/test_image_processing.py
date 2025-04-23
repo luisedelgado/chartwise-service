@@ -2,7 +2,7 @@ import os
 
 from fastapi.testclient import TestClient
 
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import dependency_container, FakeAwsDbClient
 from ..internal.schemas import SessionProcessingStatus
 from ..managers.auth_manager import AuthManager
 from ..routers.image_processing_router import ImageProcessingRouter
@@ -18,20 +18,27 @@ DUMMY_PDF_FILE_LOCATION = "app/app_tests/data/test2.pdf"
 DUMMY_PNG_FILE_LOCATION = "app/app_tests/data/test2.png"
 IMAGE_PDF_FILETYPE = "application/pdf"
 IMAGE_PNG_FILETYPE = "image/png"
-ENVIRONMENT = os.environ.get("ENVIRONMENT")
+ENVIRONMENT = "testing"
 
 class TestingHarnessImageProcessingRouter:
 
     def setup_method(self):
         # Clear out any old state between tests
+        dependency_container._aws_cognito_client = None
+        dependency_container._aws_db_client = None
+        dependency_container._aws_kms_client = None
+        dependency_container._aws_s3_client = None
+        dependency_container._aws_secret_manager_client = None
+        dependency_container._chartwise_encryptor = None
+        dependency_container._docupanda_client = None
+        dependency_container._influx_client = None
         dependency_container._openai_client = None
         dependency_container._pinecone_client = None
-        dependency_container._docupanda_client = None
-        dependency_container._stripe_client = None
         dependency_container._resend_client = None
-        dependency_container._influx_client = None
+        dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
+        self.fake_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
@@ -40,103 +47,140 @@ class TestingHarnessImageProcessingRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
-    def test_invoke_textraction_with_no_auth(self):
+    def test_invoke_textraction_with_no_session_token(self):
         files = {
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTC",
-                                        "template": "soap"
-                                    })
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "soap"
+            }
+        )
         assert response.status_code == 401
 
     def test_invoke_textraction_with_auth_but_invalid_timezone(self):
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTCfdsgdsghds",
-                                        "template": "soap"
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie,
-                                    })
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "FhF",
+                "template": "soap"
+            }
+        )
         assert response.status_code == 400
 
-    def test_invoke_png_textraction_soap_format_success(self):
+    def test_invoke_png_textraction_soap_format_with_existing_patient_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTC",
-                                        "template": "soap"
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    })
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "soap"
+            }
+        )
+        assert response.status_code == 200
+        assert "session_report_id" in response.json()
+
+    def test_invoke_png_textraction_soap_format_with_new_patient_success(self):
+        self.fake_db_client.patient_unique_active_years_nonzero = False
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        files = {
+            "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
+        }
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "soap"
+            }
+        )
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 
     def test_invoke_png_textraction_free_format_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTC",
-                                        "template": "free_form"
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    })
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "free_form"
+            }
+        )
         assert response.status_code == 200
         assert "session_report_id" in response.json()
 
     def test_invoke_pdf_textraction_success(self):
+        self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
-        response = self.client.post(ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
-                                    files=files,
-                                    data={
-                                        "patient_id": FAKE_PATIENT_ID,
-                                        "session_date": "01-01-2000",
-                                        "client_timezone_identifier": "UTC",
-                                        "template": "soap"
-                                    },
-                                    headers={
-                                        "store-access-token": FAKE_ACCESS_TOKEN,
-                                        "store-refresh-token": FAKE_REFRESH_TOKEN
-                                    },
-                                    cookies={
-                                        "authorization": self.auth_cookie
-                                    })
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.auth_cookie
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "soap"
+            }
+        )
         assert response.status_code == 200
         assert "session_report_id" in response.json()

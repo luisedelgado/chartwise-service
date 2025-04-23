@@ -9,6 +9,7 @@ from fastapi import (
 from portkey_ai import createHeaders
 from pytz import timezone
 
+from ...internal.schemas import THERAPISTS_TABLE_NAME
 from ...dependencies.dependency_container import AwsDbBaseClass
 
 """
@@ -59,7 +60,7 @@ async def get_user_language_code(user_id: str,
             filters={
                 'id': user_id
             },
-            table_name="therapists"
+            table_name=THERAPISTS_TABLE_NAME
         )
         assert 1 == len(therapist_query), "Expected exactly one therapist to be returned"
         return therapist_query[0]["language_preference"]
