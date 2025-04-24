@@ -97,6 +97,8 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 417
 
     def test_generate_checkout_session_stripe_client_returns_success(self):
+        assert not self.fake_stripe_client.generate_checkout_session_invoked
+
         response = self.client.post(
             PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
             headers={
@@ -112,6 +114,7 @@ class TestingHarnessPaymentProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.generate_checkout_session_invoked
         assert "payment_session_url" in response.json()
 
     def test_capture_payment_event_with_empty_stripe_signature(self):
@@ -140,6 +143,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_retrieve_subscriptions_success(self):
+        assert not self.fake_stripe_client.retrieve_customer_subscriptions_invoked
         response = self.client.get(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             cookies={
@@ -150,6 +154,7 @@ class TestingHarnessPaymentProcessingRouter:
             },
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.retrieve_customer_subscriptions_invoked
         response_json = response.json()
         assert "subscriptions" in response_json
 
@@ -163,6 +168,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_delete_subscription_success(self):
+        assert not self.fake_stripe_client.subscription_cancellation_invoked
         response = self.client.delete(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
@@ -173,6 +179,7 @@ class TestingHarnessPaymentProcessingRouter:
             },
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.subscription_cancellation_invoked
 
     def test_update_subscription_plan_without_session_token(self):
         response = self.client.put(
@@ -202,7 +209,8 @@ class TestingHarnessPaymentProcessingRouter:
         )
         assert response.status_code == 417
 
-    def test_update_subscription_plan_success(self):
+    def test_update_subscription_plan_change_tier_success(self):
+        assert not self.fake_stripe_client.update_customer_subscription_plan_invoked
         response = self.client.put(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
@@ -217,6 +225,25 @@ class TestingHarnessPaymentProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.update_customer_subscription_plan_invoked
+
+    def test_update_subscription_plan_undo_cancellation_success(self):
+        assert not self.fake_stripe_client.resume_cancelled_subscription_invoked
+        response = self.client.put(
+            PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            cookies={
+                "session_token": self.session_token
+            },
+            json={
+                "new_price_tier_id": FAKE_PRICE_ID,
+                "behavior": UpdateSubscriptionBehavior.UNDO_CANCELLATION.value
+            }
+        )
+        assert response.status_code == 200
+        assert self.fake_stripe_client.resume_cancelled_subscription_invoked
 
     def test_retrieve_product_catalog_without_session_token(self):
         response = self.client.get(
@@ -228,6 +255,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_retrieve_product_catalog_success(self):
+        assert not self.fake_stripe_client.retrieve_product_catalog_invoked
         response = self.client.get(
             PaymentProcessingRouter.PRODUCT_CATALOG,
             cookies={
@@ -238,6 +266,7 @@ class TestingHarnessPaymentProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.retrieve_product_catalog_invoked
         assert "catalog" in response.json()
 
     def test_generate_update_payment_method_session_url_without_session_token(self):
@@ -255,6 +284,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_generate_update_payment_method_session_url_success(self):
+        assert not self.fake_stripe_client.generate_payment_method_update_session_invoked
         response = self.client.post(
             PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
             headers={
@@ -270,6 +300,7 @@ class TestingHarnessPaymentProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.generate_payment_method_update_session_invoked
         response_json = response.json()
         assert "update_payment_method_url" in response_json
 
@@ -283,6 +314,7 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_retrieve_payment_history_success(self):
+        assert not self.fake_stripe_client.retrieve_payment_intent_history_invoked
         response = self.client.get(
             PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
             cookies={
@@ -293,4 +325,5 @@ class TestingHarnessPaymentProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_stripe_client.retrieve_payment_intent_history_invoked
         assert "payments" in response.json()

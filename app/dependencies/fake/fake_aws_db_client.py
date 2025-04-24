@@ -68,6 +68,26 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "gender": "male",
                 },
             ]
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                    "patient_id": self.FAKE_PATIENT_ID,
+                    "therapist_id": self.FAKE_THERAPIST_ID,
+                    "session_date": date(2024, 10, 10),
+                    "notes_text": "These are my notes",
+                    "template": "soap"
+                }
+            ]
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_PATIENT_ID,
+                    "first_name": "foo",
+                    "last_name": "bar",
+                    "therapist_id": self.FAKE_THERAPIST_ID,
+                }
+            ]
         return []
 
     async def upsert(

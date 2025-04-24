@@ -13,6 +13,14 @@ class FakeStripeClient(StripeBaseClass):
     request_throws_exception = False
     request_returns_none = False
     subscription_deletion_invoked = False
+    generate_checkout_session_invoked = False
+    retrieve_customer_subscriptions_invoked = False
+    update_customer_subscription_plan_invoked = False
+    resume_cancelled_subscription_invoked = False
+    retrieve_product_catalog_invoked = False
+    generate_payment_method_update_session_invoked = False
+    retrieve_payment_intent_history_invoked = False
+    subscription_cancellation_invoked = False
 
     def generate_checkout_session(
         self,
@@ -23,6 +31,8 @@ class FakeStripeClient(StripeBaseClass):
         cancel_url: str,
         is_new_customer: bool
     ) -> str | None:
+        self.generate_checkout_session_invoked = True
+
         if self.request_returns_none:
             return None
 
@@ -64,6 +74,7 @@ class FakeStripeClient(StripeBaseClass):
         limit: int,
         starting_after: str | None
     ):
+        self.retrieve_payment_intent_history_invoked = True
         return {
             "data": [{
                 "status": "succeeded",
@@ -96,10 +107,12 @@ class FakeStripeClient(StripeBaseClass):
                 "data": [{
                     "id": FAKE_PAYMENT_METHOD_ID
                 }]
-            }
+            },
+            "status": "active",
         }
 
     def retrieve_customer_subscriptions(self, customer_id: str) -> dict:
+        self.retrieve_customer_subscriptions_invoked = True
         return {
             "object": "list",
             "url": "/v1/subscriptions",
@@ -140,13 +153,13 @@ class FakeStripeClient(StripeBaseClass):
         }
 
     def cancel_customer_subscription(self, subscription_id: str):
-        pass
+        self.subscription_cancellation_invoked = True
 
     def delete_customer_subscription_immediately(self, subscription_id: str):
         self.subscription_deletion_invoked = True
 
     def resume_cancelled_subscription(self, subscription_id: str):
-        pass
+        self.resume_cancelled_subscription_invoked = True
 
     def update_customer_subscription_plan(
         self,
@@ -154,7 +167,7 @@ class FakeStripeClient(StripeBaseClass):
         subscription_item_id: str,
         price_id: str
     ):
-        pass
+        self.update_customer_subscription_plan_invoked = True
 
     def attach_customer_payment_method(
         self,
@@ -171,6 +184,7 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def retrieve_product_catalog(self) -> list:
+        self.retrieve_product_catalog_invoked = True
         return {
                 "catalog": [{
                     "product": "myproduct",
@@ -208,4 +222,5 @@ class FakeStripeClient(StripeBaseClass):
         success_url: str,
         cancel_url
     ) -> str:
+        self.generate_payment_method_update_session_invoked = True
         return "fakePaymentMethodURL"

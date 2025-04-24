@@ -109,7 +109,7 @@ class TestingHarnessSecurityRouter:
         new_token_data = self.auth_manager.extract_data_from_token(new_token)
         old_token_data = self.auth_manager.extract_data_from_token(self.session_token)
 
-        assert new_token_data.get("exp") != old_token_data.get("exp")
+        assert new_token_data.get("exp") > old_token_data.get("exp")
         assert "subscription_status" in response_json
 
     def test_add_therapist_with_auth_token_but_missing_session_token(self):
