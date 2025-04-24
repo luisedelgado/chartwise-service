@@ -1117,7 +1117,7 @@ class AssistantManager:
         else:
             raise Exception("Unsupported language code")
 
-    async def retrieve_patient_insights(self,
+    async def retrieve_attendance_insights(self,
                                         therapist_id: str,
                                         patient_id: str,
                                         request: Request,):

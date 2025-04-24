@@ -557,6 +557,7 @@ class AssistantRouter:
             body = body.model_dump(exclude_unset=True)
             patient_id = body['patient_id']
 
+            assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED.value, "Invalid source parameter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id body param"
             assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
@@ -1249,7 +1250,7 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            attendance_insights_data = await self._assistant_manager.retrieve_patient_insights(
+            attendance_insights_data = await self._assistant_manager.retrieve_attendance_insights(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,

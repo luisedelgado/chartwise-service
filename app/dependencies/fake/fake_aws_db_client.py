@@ -6,10 +6,16 @@ from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
-from ...internal.schemas import (ENCRYPTED_PATIENTS_TABLE_NAME,
-                                 ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                 SUBSCRIPTION_STATUS_TABLE_NAME,
-                                 THERAPISTS_TABLE_NAME,)
+from ...internal.schemas import (
+    ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+    ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+    ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+    ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+    ENCRYPTED_PATIENTS_TABLE_NAME,
+    ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    SUBSCRIPTION_STATUS_TABLE_NAME,
+    THERAPISTS_TABLE_NAME,
+)
 
 class FakeAwsDbClient(AwsDbBaseClass):
 
@@ -29,6 +35,12 @@ class FakeAwsDbClient(AwsDbBaseClass):
         if not self.select_returns_data:
             return {}
 
+        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
+            return {
+                "id": self.FAKE_PATIENT_ID,
+                "first_name": "foo",
+                "last_name": "bar",
+            }
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             return {
                 "id": self.FAKE_SESSION_NOTES_ID,
@@ -103,6 +115,36 @@ class FakeAwsDbClient(AwsDbBaseClass):
             return [{
                 "value": json.dumps(inner_value)
             }]
+        if table_name == ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                },
+            ]
+        if table_name == ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                },
+            ]
+        if table_name == ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                }
+            ]
+        if table_name == ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                }
+            ]
+        if table_name == ENCRYPTED_PATIENT_TOPICS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                }
+            ]
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             unique_active_years = ["2023", "2024"] if self.patient_unique_active_years_nonzero else []
             return [
@@ -115,6 +157,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "last_session_date": date(2024, 10, 10),
                     "onboarding_first_time_patient": True,
                     "unique_active_years": unique_active_years,
+                    "pre_existing_history": "My fake history",
                 },
             ]
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
@@ -172,6 +215,15 @@ class FakeAwsDbClient(AwsDbBaseClass):
         if not self.select_returns_data:
             return {}
 
+        if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_SESSION_NOTES_ID,
+                    "patient_id": self.FAKE_PATIENT_ID,
+                    "therapist_id": self.FAKE_THERAPIST_ID,
+                    "session_date": date(2024, 10, 10),
+                },
+            ]
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
             return [
                 {
