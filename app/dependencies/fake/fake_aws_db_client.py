@@ -24,6 +24,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
     FAKE_THERAPIST_ID = "97fb3e40-df5b-4ca5-88d4-26d37d49fc8c"
     select_returns_data: bool = True
     patient_unique_active_years_nonzero: bool = True
+    invoked_delete_patients = False
 
     async def insert(
         self,
@@ -56,9 +57,18 @@ class FakeAwsDbClient(AwsDbBaseClass):
         filters: dict[str, Any],
         table_name: str
     ) -> Optional[dict]:
-        return {} if not self.select_returns_data else {
-            "id": self.FAKE_SESSION_NOTES_ID
-        }
+        if table_name == THERAPISTS_TABLE_NAME:
+            return [
+                {
+                    "id": self.FAKE_THERAPIST_ID,
+                    "email": "myFakeEmail",
+                    "first_name": "foo",
+                    "last_name": "bar",
+                    "language_preference": "en-US",
+                    "gender": "male",
+                },
+            ]
+        return []
 
     async def upsert(
         self,
@@ -188,6 +198,10 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "subscription_id": self.FAKE_SESSION_NOTES_ID,
                     "is_active": True,
                     "customer_id": "myFakeCustomerId",
+                    "subscription_status": "active",
+                    "current_tier": "premium",
+                    "free_trial_end_date": date(2024, 10, 10),
+                    "reached_tier_usage_limit": False,
                 },
             ]
 
@@ -225,6 +239,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 },
             ]
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
+            self.invoked_delete_patients = True
             return [
                 {
                     "id": self.FAKE_SESSION_NOTES_ID,

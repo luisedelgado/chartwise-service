@@ -88,7 +88,7 @@ class AuthManager:
             exp: float = payload.get("exp")
             user_id: str = payload.get("sub")
 
-            if user_id is None or len(user_id) == 0:
+            if len(user_id or '') == 0:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token: user ID not found",

@@ -12,6 +12,7 @@ class FakeStripeClient(StripeBaseClass):
 
     request_throws_exception = False
     request_returns_none = False
+    subscription_deletion_invoked = False
 
     def generate_checkout_session(
         self,
@@ -142,7 +143,7 @@ class FakeStripeClient(StripeBaseClass):
         pass
 
     def delete_customer_subscription_immediately(self, subscription_id: str):
-        pass
+        self.subscription_deletion_invoked = True
 
     def resume_cancelled_subscription(self, subscription_id: str):
         pass

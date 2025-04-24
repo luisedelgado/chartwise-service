@@ -41,7 +41,7 @@ class TestingHarnessPaymentProcessingRouter:
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_stripe_client: FakeStripeClient = dependency_container.inject_stripe_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
+        self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
         coordinator = EndpointServiceCoordinator(routers=[PaymentProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
@@ -68,7 +68,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -86,7 +86,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -103,7 +103,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -143,7 +143,7 @@ class TestingHarnessPaymentProcessingRouter:
         response = self.client.get(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -169,7 +169,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
         )
         assert response.status_code == 200
@@ -194,7 +194,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
@@ -209,7 +209,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "new_price_tier_id": FAKE_PRICE_ID,
@@ -231,7 +231,7 @@ class TestingHarnessPaymentProcessingRouter:
         response = self.client.get(
             PaymentProcessingRouter.PRODUCT_CATALOG,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -261,7 +261,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             json={
                 "customer_id": FAKE_CUSTOMER_ID,
@@ -286,7 +286,7 @@ class TestingHarnessPaymentProcessingRouter:
         response = self.client.get(
             PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",

@@ -17,6 +17,7 @@ class FakeAwsCognitoClient(AwsCognitoBaseClass):
     }
 
     return_valid_tokens = True
+    invoked_delete_user = False
 
     def verify_cognito_token(self, token: str) -> Dict:
         return self.FAKE_ENCODED_COGNITO_TOKEN if self.return_valid_tokens else {}
@@ -28,4 +29,4 @@ class FakeAwsCognitoClient(AwsCognitoBaseClass):
         pass
 
     async def delete_user(self, user_id: str):
-        pass
+        self.invoked_delete_user = True

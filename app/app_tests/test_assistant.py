@@ -39,7 +39,7 @@ class TestingHarnessAssistantRouter:
 
         self.fake_openai_client: FakeAsyncOpenAI = dependency_container.inject_openai_client()
         self.fake_pinecone_client: FakePineconeClient = dependency_container.inject_pinecone_client()
-        self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
+        self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
@@ -62,7 +62,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             url,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -87,7 +87,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -102,7 +102,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -119,7 +119,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -136,7 +136,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -153,7 +153,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -169,7 +169,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -185,7 +185,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -201,7 +201,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -217,7 +217,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -250,7 +250,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -272,7 +272,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -294,7 +294,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -317,7 +317,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -355,7 +355,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -376,7 +376,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -397,7 +397,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -420,7 +420,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -443,7 +443,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -476,7 +476,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -492,7 +492,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(
             AssistantRouter.SESSIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -520,7 +520,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -536,7 +536,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -553,7 +553,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -575,7 +575,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -594,7 +594,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -628,7 +628,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             url,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -641,7 +641,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             url,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -662,7 +662,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -693,7 +693,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -715,7 +715,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -737,7 +737,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -759,7 +759,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -782,7 +782,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -805,7 +805,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -828,7 +828,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -852,7 +852,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -878,7 +878,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -904,7 +904,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -930,7 +930,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -974,7 +974,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -997,7 +997,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1021,7 +1021,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.put(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1057,7 +1057,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1072,7 +1072,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.delete(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1104,7 +1104,7 @@ class TestingHarnessAssistantRouter:
                 "session_notes_text": ""
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1120,7 +1120,7 @@ class TestingHarnessAssistantRouter:
                 "session_notes_text": "My fake session notes"
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1144,7 +1144,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1159,7 +1159,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": ""
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1174,7 +1174,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": FAKE_PATIENT_ID
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1199,7 +1199,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.BRIEFINGS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1214,7 +1214,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": ""
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1229,7 +1229,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": FAKE_PATIENT_ID
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1254,7 +1254,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1269,7 +1269,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": ""
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1284,7 +1284,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": FAKE_PATIENT_ID
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1309,7 +1309,7 @@ class TestingHarnessAssistantRouter:
         response = self.client.get(
             AssistantRouter.RECENT_TOPICS_ENDPOINT,
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1324,7 +1324,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": ""
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",
@@ -1339,7 +1339,7 @@ class TestingHarnessAssistantRouter:
                 "patient_id": FAKE_PATIENT_ID
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             headers={
                 "auth-token": "myFakeToken",

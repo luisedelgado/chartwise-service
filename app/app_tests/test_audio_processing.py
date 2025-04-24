@@ -91,7 +91,7 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
+        self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
@@ -121,7 +121,7 @@ class TestingHarnessAudioProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -141,7 +141,7 @@ class TestingHarnessAudioProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -161,7 +161,7 @@ class TestingHarnessAudioProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -188,7 +188,7 @@ class TestingHarnessAudioProcessingRouter:
                                     "auth-token": "myFakeToken",
                                 },
                                 cookies={
-                                    "session_token": self.auth_cookie
+                                    "session_token": self.session_token
                                 })
         assert response.status_code == 200
         assert "session_report_id" in response.json()
@@ -220,7 +220,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "session_token": self.auth_cookie
+                                   "session_token": self.session_token
                                },)
         assert response.status_code == 422
 
@@ -237,7 +237,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "session_token": self.auth_cookie
+                                   "session_token": self.session_token
                                },)
         assert response.status_code == 400
 
@@ -254,7 +254,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "session_token": self.auth_cookie
+                                   "session_token": self.session_token
                                },)
         assert response.status_code == 400
 
@@ -272,7 +272,7 @@ class TestingHarnessAudioProcessingRouter:
                                    "auth-token": "myFakeToken",
                                },
                                cookies={
-                                   "session_token": self.auth_cookie
+                                   "session_token": self.session_token
                                },)
         assert response.status_code == 200
         assert "session_report_id" in response.json()

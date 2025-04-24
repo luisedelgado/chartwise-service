@@ -42,7 +42,7 @@ class TestingHarnessImageProcessingRouter:
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.auth_cookie, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
+        self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
         coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(environment=ENVIRONMENT).router],
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
@@ -77,7 +77,7 @@ class TestingHarnessImageProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -100,7 +100,7 @@ class TestingHarnessImageProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -125,7 +125,7 @@ class TestingHarnessImageProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -149,7 +149,7 @@ class TestingHarnessImageProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -173,7 +173,7 @@ class TestingHarnessImageProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             cookies={
-                "session_token": self.auth_cookie
+                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
