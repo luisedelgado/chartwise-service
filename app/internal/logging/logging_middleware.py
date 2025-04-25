@@ -7,7 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from ..internal_alert import EngineeringAlert
+from ..alerting.internal_alert import EngineeringAlert
 from ..schemas import PROD_ENVIRONMENT
 from ...dependencies.dependency_container import (dependency_container, AwsDbBaseClass)
 from ...managers.email_manager import EmailManager

@@ -8,6 +8,7 @@ from typing import Tuple
 from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ..internal.security.security_schema import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
+from ..internal.session_container import session_container
 
 class AuthManager:
 
@@ -108,6 +109,7 @@ class AuthManager:
         response: Response,
     ) -> Token:
         try:
+            session_container.user_id = user_id
             session_token, expiration_timestamp = self.create_session_token(user_id)
             cls = type(self)
             response.set_cookie(

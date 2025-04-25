@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from ..internal.schemas import MediaType
+from ...internal.schemas import MediaType
 
 class InternalAlertCategory(Enum):
     PAYMENTS_ACTIVITY = "payments activity"

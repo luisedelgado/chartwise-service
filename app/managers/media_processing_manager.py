@@ -7,7 +7,7 @@ from .auth_manager import AuthManager
 from .email_manager import EmailManager
 from ..dependencies.api.aws_s3_base_class import AwsS3BaseClass
 from ..dependencies.dependency_container import dependency_container
-from ..internal.internal_alert import MediaJobProcessingAlert
+from ..internal.alerting.internal_alert import MediaJobProcessingAlert
 from ..internal.schemas import MediaType, SessionProcessingStatus
 
 class MediaProcessingManager(ABC):

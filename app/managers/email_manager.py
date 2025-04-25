@@ -1,9 +1,8 @@
 from ..dependencies.dependency_container import (
     dependency_container,
     ResendBaseClass,
-    AwsDbBaseClass,
 )
-from ..internal.internal_alert import (
+from ..internal.alerting.internal_alert import (
     CustomerRelationsAlert,
     InternalAlert,
     InternalAlertCategory,

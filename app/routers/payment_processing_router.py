@@ -18,7 +18,7 @@ from ..dependencies.dependency_container import (
     AwsSecretManagerBaseClass,
     StripeBaseClass
 )
-from ..internal.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
+from ..internal.alerting.internal_alert import CustomerRelationsAlert, PaymentsActivityAlert
 from ..internal.schemas import (
     DEV_ENVIRONMENT,
     PROD_ENVIRONMENT,

@@ -11,7 +11,7 @@ from ..dependencies.dependency_container import AwsDbBaseClass, dependency_conta
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..managers.auth_manager import AuthManager
 from ..managers.email_manager import EmailManager
-from ..internal.internal_alert import EngineeringAlert
+from ..internal.alerting.internal_alert import EngineeringAlert
 from ..internal.schemas import (
     DATE_COLUMNS,
     ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,

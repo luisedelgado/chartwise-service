@@ -5,7 +5,7 @@ import resend
 from jinja2 import Environment, FileSystemLoader
 
 from ..api.resend_base_class import ResendBaseClass
-from ...internal.internal_alert import InternalAlertCategory
+from ...internal.alerting.internal_alert import InternalAlertCategory
 
 class ResendClient(ResendBaseClass):
 

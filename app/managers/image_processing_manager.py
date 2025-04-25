@@ -14,7 +14,7 @@ from typing import Tuple
 from .media_processing_manager import MediaProcessingManager
 from ..dependencies.api.templates import SessionNotesTemplate
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
-from ..internal.internal_alert import MediaJobProcessingAlert
+from ..internal.alerting.internal_alert import MediaJobProcessingAlert
 from ..internal.schemas import (MediaType,
                                 SessionProcessingStatus,
                                 ENCRYPTED_SESSION_REPORTS_TABLE_NAME)

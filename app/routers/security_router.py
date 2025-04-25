@@ -15,7 +15,7 @@ from typing import Annotated, Optional, Union
 from pydantic import BaseModel
 
 from ..dependencies.dependency_container import dependency_container, AwsDbBaseClass
-from ..internal.internal_alert import CustomerRelationsAlert
+from ..internal.alerting.internal_alert import CustomerRelationsAlert
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.schemas import (
     Gender,

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from ...internal.internal_alert import InternalAlertCategory
+from ...internal.alerting.internal_alert import InternalAlertCategory
 
 class ResendBaseClass(ABC):
 
