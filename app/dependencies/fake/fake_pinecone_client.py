@@ -87,7 +87,7 @@ class FakePineconeClient(PineconeBaseClass):
         summarize_chunk: Callable
     ):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
-        self.update_preexisting_history_vectors_invoked = False
+        self.update_preexisting_history_vectors_invoked = True
 
     async def get_vector_store_context(
         self,

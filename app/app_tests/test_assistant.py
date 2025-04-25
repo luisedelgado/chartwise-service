@@ -312,6 +312,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_insert_new_session_success(self):
+        assert not self.fake_pinecone_client.insert_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."
         response = self.client.post(
@@ -331,6 +332,7 @@ class TestingHarnessAssistantRouter:
                 },
                 "client_timezone_identifier": TZ_IDENTIFIER,
             })
+        assert self.fake_pinecone_client.insert_session_vectors_invoked
         assert response.status_code == 200
 
     def test_update_session_with_missing_session_token(self):
@@ -415,6 +417,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_update_session_with_different_text_success(self):
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         update_text = "new_text"
         response = self.client.put(
@@ -436,6 +439,7 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
 
     def test_update_session_with_same_text_success(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
@@ -488,6 +492,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_delete_session_success(self):
+        assert not self.fake_pinecone_client.delete_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.delete(
             AssistantRouter.SESSIONS_ENDPOINT,
@@ -502,6 +507,7 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.delete_session_vectors_invoked
 
     def test_session_query_with_missing_session_token(self):
         response = self.client.post(
@@ -549,6 +555,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_session_query_success(self):
+        assert not self.fake_pinecone_client.get_vector_store_context_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(
             AssistantRouter.QUERIES_ENDPOINT,
@@ -564,8 +571,10 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.get_vector_store_context_invoked
 
     def test_session_query_success_changing_patient_and_clearing_chat_history(self):
+        assert not self.fake_pinecone_client.get_vector_store_context_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
 
         MESSI_QUERY = "Quien es el jugador favorito de Lionel?"
@@ -589,6 +598,7 @@ class TestingHarnessAssistantRouter:
         assert len(self.fake_openai_client.chat_history) == 2
         assert MESSI_QUERY == self.fake_openai_client.chat_history[0].content
         assert CRISTIANO_QUERY != self.fake_openai_client.chat_history[1].content
+        assert self.fake_pinecone_client.get_vector_store_context_invoked
 
         # Now trigger a query for a different patient id
         response = self.client.post(
@@ -610,6 +620,7 @@ class TestingHarnessAssistantRouter:
         assert len(self.fake_openai_client.chat_history) == 2
         assert CRISTIANO_QUERY == self.fake_openai_client.chat_history[0].content
         assert MESSI_QUERY != self.fake_openai_client.chat_history[1].content
+        assert self.fake_pinecone_client.get_vector_store_context_invoked
 
     def test_get_single_patient_with_missing_session_token(self):
         url = AssistantRouter.SINGLE_PATIENT_ENDPOINT.format(
@@ -755,7 +766,7 @@ class TestingHarnessAssistantRouter:
         )
         assert response.status_code == 400
 
-    def test_add_male_patient_without_pre_existing_history_and_different_gender_pronouns(self):
+    def test_add_male_patient_without_pre_existing_history_and_different_gender_pronouns_success(self):
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -778,7 +789,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         assert "patient_id" in response.json()
 
-    def test_add_male_patient_without_pre_existing_history_and_not_different_gender_pronouns(self):
+    def test_add_male_patient_without_pre_existing_history_and_not_different_gender_pronouns_success(self):
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -801,7 +812,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         assert "patient_id" in response.json()
 
-    def test_add_female_patient_without_pre_existing_history_and_different_gender_pronouns(self):
+    def test_add_female_patient_without_pre_existing_history_and_different_gender_pronouns_success(self):
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -824,7 +835,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         assert "patient_id" in response.json()
 
-    def test_add_female_patient_without_pre_existing_history_and_not_different_gender_pronouns(self):
+    def test_add_female_patient_without_pre_existing_history_and_not_different_gender_pronouns_success(self):
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -847,8 +858,9 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         assert "patient_id" in response.json()
 
-    def test_add_male_patient_with_pre_existing_history_and_different_gender_pronouns(self):
+    def test_add_male_patient_with_pre_existing_history_and_different_gender_pronouns_success(self):
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -870,11 +882,13 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         assert "patient_id" in response.json()
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
 
-    def test_add_male_patient_with_pre_existing_history_and_not_different_gender_pronouns(self):
+    def test_add_male_patient_with_pre_existing_history_and_not_different_gender_pronouns_success(self):
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -896,11 +910,13 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         assert "patient_id" in response.json()
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
 
-    def test_add_female_patient_with_pre_existing_history_and_different_gender_pronouns(self):
+    def test_add_female_patient_with_pre_existing_history_and_different_gender_pronouns_success(self):
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -922,11 +938,13 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         assert "patient_id" in response.json()
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
 
-    def test_add_female_patient_with_pre_existing_history_and_not_different_gender_pronouns(self):
+    def test_add_female_patient_with_pre_existing_history_and_not_different_gender_pronouns_success(self):
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         response = self.client.post(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -948,6 +966,7 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.insert_preexisting_history_vectors_invoked
         assert "patient_id" in response.json()
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 1
 
@@ -994,6 +1013,7 @@ class TestingHarnessAssistantRouter:
 
     def test_update_patient_with_same_preexisting_history_success(self):
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.update_preexisting_history_vectors_invoked
         response = self.client.put(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -1015,9 +1035,11 @@ class TestingHarnessAssistantRouter:
         )
         assert response.status_code == 200
         assert self.fake_pinecone_client.insert_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.update_preexisting_history_vectors_invoked
 
     def test_update_patient_with_new_preexisting_history_success(self):
         assert self.fake_pinecone_client.update_preexisting_history_num_invocations == 0
+        assert not self.fake_pinecone_client.update_preexisting_history_vectors_invoked
         response = self.client.put(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -1039,6 +1061,7 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_preexisting_history_vectors_invoked
         assert self.fake_pinecone_client.update_preexisting_history_num_invocations == 1
 
     def test_delete_patient_with_missing_session_token(self):
@@ -1069,6 +1092,7 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 400
 
     def test_delete_patient_success(self):
+        assert not self.fake_pinecone_client.delete_preexisting_history_vectors_invoked
         response = self.client.delete(
             AssistantRouter.PATIENTS_ENDPOINT,
             cookies={
@@ -1082,6 +1106,7 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.delete_preexisting_history_vectors_invoked
 
     def test_transform_with_template_with_missing_session_token(self):
         response = self.client.post(
