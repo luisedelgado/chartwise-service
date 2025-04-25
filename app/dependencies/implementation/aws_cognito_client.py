@@ -7,7 +7,7 @@ from fastapi import Header, HTTPException, status
 from typing import Dict
 
 from ..api.aws_cognito_base_class import AwsCognitoBaseClass
-from ..boto3_client_factory import Boto3ClientFactory
+from ..core.boto3_client_factory import Boto3ClientFactory
 
 class AwsCognitoClient(AwsCognitoBaseClass):
 

@@ -4,8 +4,6 @@ import threading
 
 from datetime import datetime, timedelta, timezone
 
-from ..internal.utilities.datetime_handler import UTC_DATETIME_FORMAT
-
 class Boto3SessionFactory:
     _lock = threading.Lock()
     _session = None

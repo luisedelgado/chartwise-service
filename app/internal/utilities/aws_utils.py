@@ -6,10 +6,9 @@ from botocore.awsrequest import AWSRequest
 from botocore.auth import SigV4Auth
 from botocore.httpsession import URLLib3Session
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Optional
 
 from .datetime_handler import DATE_TIME_TIMEZONE_FORMAT, WEEKDAY_DATE_TIME_TIMEZONE_FORMAT
-from ...dependencies.boto3_session_factory import Boto3SessionFactory
+from ...dependencies.core.boto3_session_factory import Boto3SessionFactory
 
 def sign_and_send_aws_request(
     service: str,
