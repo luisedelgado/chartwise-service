@@ -30,7 +30,6 @@ from ..internal.utilities.subscription_utilities import reached_subscription_tie
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 
 class SignupPayload(BaseModel):
     id: str
@@ -61,7 +60,6 @@ class SecurityRouter:
     def __init__(self):
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
-        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -199,6 +197,7 @@ class SecurityRouter:
 
             auth_token = await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
             await dependency_container.inject_openai_client().clear_chat_history()
@@ -251,7 +250,11 @@ class SecurityRouter:
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
             request.state.therapist_id = user_id
 
-            token = await self._auth_manager.refresh_session(user_id=user_id, response=response)
+            token = await self._auth_manager.refresh_session(
+                user_id=user_id,
+                session_id=session_id,
+                response=response,
+            )
 
             subscription_data = await self.subscription_data(
                 user_id=user_id,
@@ -323,6 +326,7 @@ class SecurityRouter:
             request.state.therapist_id = user_id
             auth_token = await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -381,7 +385,7 @@ class SecurityRouter:
                 therapist_email=payload['email'],
                 therapist_name=therapist_name
             )
-            await self._email_manager.send_customer_relations_alert(alert)
+            dependency_container.inject_resend_client().send_customer_relations_alert(alert)
 
             response_payload = {
                 "therapist_id": user_id,
@@ -435,6 +439,7 @@ class SecurityRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -520,6 +525,7 @@ class SecurityRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -609,7 +615,7 @@ class SecurityRouter:
                 therapist_email=therapist_email,
                 therapist_name=therapist_name
             )
-            await self._email_manager.send_customer_relations_alert(alert)
+            dependency_container.inject_resend_client().send_customer_relations_alert(alert)
 
             # Delete auth and session cookies
             self._auth_manager.logout(response)

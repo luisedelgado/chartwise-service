@@ -38,7 +38,6 @@ from ..managers.assistant_manager import (
     SessionNotesUpdate
 )
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 
 class TemplatePayload(BaseModel):
     session_notes_text: str
@@ -66,7 +65,6 @@ class AssistantRouter:
         self._environment = environment
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
-        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -182,6 +180,7 @@ class AssistantRouter:
                 request.state.therapist_id = user_id
                 await self._auth_manager.refresh_session(
                     user_id=user_id,
+                    session_id=session_id,
                     response=response
                 )
             except Exception as e:
@@ -387,6 +386,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -463,6 +463,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -539,6 +540,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -591,7 +593,6 @@ class AssistantRouter:
                 background_tasks=background_tasks,
                 session_id=session_id,
                 therapist_id=user_id,
-                email_manager=self._email_manager,
                 request=request,
             )
             request.state.session_report_id = session_report_id
@@ -642,6 +643,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -684,7 +686,6 @@ class AssistantRouter:
                 auth_manager=self._auth_manager,
                 filtered_body=body,
                 session_id=session_id,
-                email_manager=self._email_manager,
                 request=request,)
             )['patient_id']
             request.state.patient_id = patient_id
@@ -731,6 +732,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -771,7 +773,6 @@ class AssistantRouter:
             )
             patient_id = (await self._assistant_manager.delete_session(
                 language_code=language_code,
-                email_manager=self._email_manager,
                 environment=self._environment,
                 session_id=session_id,
                 background_tasks=background_tasks,
@@ -861,6 +862,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -927,6 +929,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -989,6 +992,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1024,7 +1028,6 @@ class AssistantRouter:
                 filtered_body=body,
                 therapist_id=user_id,
                 session_id=session_id,
-                email_manager=self._email_manager,
                 request=request,
             )
             request.state.patient_id = patient_id
@@ -1073,6 +1076,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1146,6 +1150,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1234,6 +1239,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1298,6 +1304,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1362,6 +1369,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1426,6 +1434,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1493,6 +1502,7 @@ class AssistantRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:

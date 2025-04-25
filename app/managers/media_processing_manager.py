@@ -1,19 +1,14 @@
 from abc import ABC
-from datetime import datetime
 from fastapi import BackgroundTasks, Request
 
 from .assistant_manager import AssistantManager
 from .auth_manager import AuthManager
-from .email_manager import EmailManager
 from ..dependencies.api.aws_s3_base_class import AwsS3BaseClass
 from ..dependencies.dependency_container import dependency_container
 from ..internal.alerting.internal_alert import MediaJobProcessingAlert
 from ..internal.schemas import MediaType, SessionProcessingStatus
 
 class MediaProcessingManager(ABC):
-
-    def __init__(self):
-        self._email_manager = EmailManager()
 
     async def _update_session_processing_status(
         self,
@@ -27,7 +22,6 @@ class MediaProcessingManager(ABC):
         session_notes_id: str,
         media_type: MediaType,
         therapist_id: str,
-        email_manager: EmailManager,
         request: Request,
         storage_filepath: str = None
     ):
@@ -45,7 +39,6 @@ class MediaProcessingManager(ABC):
         session_notes_id – the id of the session to be updated.
         media_type – the type of media that was processed.
         therapist_id – the therapist id.
-        email_manager – the email manager object.
         request – the upstream Request object.
         storage_filepath – the storage filepath where the backing file is stored in S3.
         """
@@ -60,7 +53,6 @@ class MediaProcessingManager(ABC):
                 "processing_status": session_processing_status
             },
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -74,7 +66,7 @@ class MediaProcessingManager(ABC):
                 storage_filepath=storage_filepath,
                 therapist_id=therapist_id
             )
-            await self._email_manager.send_internal_alert(alert=internal_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=internal_alert)
             return
 
         if media_type == MediaType.AUDIO:

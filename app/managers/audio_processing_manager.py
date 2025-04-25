@@ -15,7 +15,6 @@ from ..internal.schemas import (
 )
 from ..managers.assistant_manager import AssistantManager, SessionNotesSource
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 from ..vectors import data_cleaner
 from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
@@ -37,7 +36,6 @@ class AudioProcessingManager(MediaProcessingManager):
         patient_id: str,
         session_date: date,
         environment: str,
-        email_manager: EmailManager,
         diarize: bool,
         request: Request
     ) -> str:
@@ -84,7 +82,6 @@ class AudioProcessingManager(MediaProcessingManager):
                     session_id=session_id,
                     template=template,
                     storage_filepath=file_path,
-                    email_manager=email_manager,
                     audio_file_url=audio_file_url,
                     request=request,
                 )
@@ -101,7 +98,6 @@ class AudioProcessingManager(MediaProcessingManager):
                         session_id=session_id,
                         template=template,
                         storage_filepath=file_path,
-                        email_manager=email_manager,
                         audio_file_url=audio_file_url,
                         request=request,
                     )
@@ -128,7 +124,6 @@ class AudioProcessingManager(MediaProcessingManager):
                     session_processing_status=SessionProcessingStatus.FAILED.value,
                     session_notes_id=session_report_id,
                     media_type=MediaType.AUDIO,
-                    email_manager=email_manager,
                     request=request,
                 )
             raise RuntimeError(e) from e
@@ -148,7 +143,6 @@ class AudioProcessingManager(MediaProcessingManager):
         session_id: str,
         template: SessionNotesTemplate,
         storage_filepath: str,
-        email_manager: EmailManager,
         audio_file_url: str,
         request: Request
     ):
@@ -166,7 +160,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 auth_manager=auth_manager,
                 filtered_body=update_body,
                 session_id=session_id,
-                email_manager=email_manager,
                 request=request,
             )
         except Exception as e:
@@ -181,7 +174,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_processing_status=SessionProcessingStatus.FAILED.value,
                 session_notes_id=session_report_id,
                 media_type=MediaType.AUDIO,
-                email_manager=email_manager,
                 request=request,
             )
             raise RuntimeError(e) from e
@@ -254,7 +246,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 auth_manager=auth_manager,
                 filtered_body=update_summary_body,
                 session_id=session_id,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -270,7 +261,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_notes_id=session_report_id,
                 media_type=MediaType.AUDIO,
                 storage_filepath=storage_filepath,
-                email_manager=email_manager,
                 request=request,
             )
         except Exception as e:
@@ -285,7 +275,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_processing_status=SessionProcessingStatus.FAILED.value,
                 session_notes_id=session_report_id,
                 media_type=MediaType.AUDIO,
-                email_manager=email_manager,
                 request=request,
             )
             raise RuntimeError(e) from e
@@ -302,7 +291,6 @@ class AudioProcessingManager(MediaProcessingManager):
         session_id: str,
         template: SessionNotesTemplate,
         storage_filepath: str,
-        email_manager: EmailManager,
         audio_file_url: str,
         request: Request
     ):
@@ -328,7 +316,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 auth_manager=auth_manager,
                 filtered_body=update_body,
                 session_id=session_id,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -344,7 +331,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_notes_id=session_report_id,
                 media_type=MediaType.AUDIO,
                 storage_filepath=storage_filepath,
-                email_manager=email_manager,
                 request=request,
             )
         except Exception as e:
@@ -359,7 +345,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_processing_status=SessionProcessingStatus.FAILED.value,
                 session_notes_id=session_report_id,
                 media_type=MediaType.AUDIO,
-                email_manager=email_manager,
                 request=request,
             )
             raise RuntimeError(e) from e

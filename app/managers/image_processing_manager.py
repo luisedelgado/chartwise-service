@@ -22,7 +22,6 @@ from ..internal.utilities import datetime_handler, file_copiers
 from ..managers.assistant_manager import (AssistantManager,
                                           SessionNotesSource)
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 
 MAX_RETRIES = 5
 RETRY_DELAY = 3  # Delay in seconds
@@ -88,7 +87,6 @@ class ImageProcessingManager(MediaProcessingManager):
         background_tasks: BackgroundTasks,
         auth_manager: AuthManager,
         assistant_manager: AssistantManager,
-        email_manager: EmailManager,
         request: Request
     ) -> str:
         try:
@@ -108,7 +106,7 @@ class ImageProcessingManager(MediaProcessingManager):
                             therapist_id=therapist_id,
                             session_id=session_id
                         )
-                        await email_manager.send_internal_alert(alert)
+                        dependency_container.inject_resend_client().send_internal_alert(alert)
                         raise HTTPException(
                             status_code=status.HTTP_408_REQUEST_TIMEOUT,
                             detail="Textraction is still processing after maximum retries"
@@ -164,7 +162,6 @@ class ImageProcessingManager(MediaProcessingManager):
                 auth_manager=auth_manager,
                 filtered_body=filtered_body,
                 session_id=session_id,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -179,7 +176,6 @@ class ImageProcessingManager(MediaProcessingManager):
                 session_notes_id=session_notes_id,
                 therapist_id=therapist_id,
                 media_type=MediaType.IMAGE,
-                email_manager=email_manager,
                 request=request
             )
         except Exception as e:
@@ -197,7 +193,6 @@ class ImageProcessingManager(MediaProcessingManager):
                     session_processing_status=SessionProcessingStatus.FAILED.value,
                     session_notes_id=session_notes_id,
                     media_type=MediaType.IMAGE,
-                    email_manager=email_manager,
                     request=request,
                 )
             alert = MediaJobProcessingAlert(
@@ -208,5 +203,5 @@ class ImageProcessingManager(MediaProcessingManager):
                 therapist_id=therapist_id,
                 session_id=session_id
             )
-            await email_manager.send_internal_alert(alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert)
             raise RuntimeError from e

@@ -1,4 +1,3 @@
-import asyncio
 import os
 import time
 
@@ -10,7 +9,6 @@ from starlette.requests import Request
 from ..alerting.internal_alert import EngineeringAlert
 from ..schemas import PROD_ENVIRONMENT
 from ...dependencies.dependency_container import (dependency_container, AwsDbBaseClass)
-from ...managers.email_manager import EmailManager
 from ...routers.assistant_router import AssistantRouter
 from ...routers.audio_processing_router import AudioProcessingRouter
 from ...routers.image_processing_router import ImageProcessingRouter
@@ -146,18 +144,15 @@ class TimingMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 # Fail silently but send an internal alert.
                 description = f"Failed to log PHI activity ({request.method} {request_url_path}). Exception raised: {str(e)}"
-                asyncio.create_task(
-                    EmailManager().send_internal_alert(
-                        alert=EngineeringAlert(
-                            description=description,
-                            session_id=session_id,
-                            environment=environment,
-                            exception=e,
-                            therapist_id=therapist_id,
-                            patient_id=patient_id,
-                        )
+                dependency_container.inject_resend_client().send_internal_alert(
+                    alert=EngineeringAlert(
+                        description=description,
+                        session_id=session_id,
+                        environment=environment,
+                        exception=e,
+                        therapist_id=therapist_id,
+                        patient_id=patient_id,
                     )
                 )
                 pass
-
         return response

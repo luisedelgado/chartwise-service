@@ -8,6 +8,7 @@ from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
+from ..api.resend_base_class import ResendBaseClass
 from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
                                  ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
                                  ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
@@ -225,6 +226,7 @@ class AwsDbClient(AwsDbBaseClass):
 
     async def select_with_stripe_connection(
         self,
+        resend_client: ResendBaseClass,
         fields: list[str],
         filters: dict[str, Any],
         table_name: str,
@@ -254,7 +256,10 @@ class AwsDbClient(AwsDbBaseClass):
                 """
             )
             select_query = " ".join(select_query.split())
-            conn = await self.get_stripe_reader_connection(secret_manager=secret_manager)
+            conn = await self.get_stripe_reader_connection(
+                secret_manager=secret_manager,
+                resend_client=resend_client,
+            )
 
             try:
                 rows = await conn.fetch(select_query, *where_values)
@@ -476,11 +481,13 @@ class AwsDbClient(AwsDbBaseClass):
 
     async def get_stripe_reader_connection(
         self,
-        secret_manager: AwsSecretManagerBaseClass
+        secret_manager: AwsSecretManagerBaseClass,
+        resend_client: ResendBaseClass,
     ):
         try:
             secret = secret_manager.get_secret(
-                secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
+                secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE"),
+                resend_client=resend_client,
             )
             password = secret.get(type(self).STRIPE_READER_ROLE_SECRET_KEY)
             endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")

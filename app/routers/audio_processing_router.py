@@ -24,7 +24,6 @@ from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 
 UUID_LENGTH = 36
 
@@ -43,7 +42,6 @@ class AudioProcessingRouter:
             self._auth_manager = AuthManager()
             self._assistant_manager = AssistantManager()
             self._audio_processing_manager = AudioProcessingManager()
-            self._email_manager = EmailManager()
             self.router = APIRouter()
             self._register_routes()
 
@@ -162,6 +160,7 @@ class AudioProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -224,7 +223,6 @@ class AudioProcessingRouter:
                 environment=self._environment,
                 language_code=language_code,
                 diarize=False,
-                email_manager=self._email_manager,
                 request=request,
             )
 
@@ -275,6 +273,7 @@ class AudioProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -380,6 +379,7 @@ class AudioProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -439,7 +439,6 @@ class AudioProcessingRouter:
                 environment=self._environment,
                 language_code=language_code,
                 diarize=True,
-                email_manager=self._email_manager,
                 request=request,
             )
             request.state.session_report_id = session_report_id

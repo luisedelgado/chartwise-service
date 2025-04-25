@@ -4,6 +4,10 @@ import threading
 
 from datetime import datetime, timedelta, timezone
 
+from ...dependencies.api.resend_base_class import ResendBaseClass
+from ...internal.alerting.internal_alert import EngineeringAlert
+from ...internal.session_container import session_container
+
 class Boto3SessionFactory:
     _lock = threading.Lock()
     _session = None
@@ -11,21 +15,27 @@ class Boto3SessionFactory:
     _creds = None
 
     @classmethod
-    def get_session(cls) -> boto3.Session:
+    def get_session(
+        cls,
+        resend_client: ResendBaseClass,
+    ) -> boto3.Session:
         try:
             now = datetime.now(timezone.utc)
 
             if cls._expiration is None or now >= cls._expiration:
                 with cls._lock:
                     if cls._expiration is None or datetime.now(timezone.utc) >= cls._expiration:
-                        cls._refresh_credentials()
+                        cls._refresh_credentials(resend_client=resend_client)
 
             return cls._session
         except Exception as e:
             raise RuntimeError(e) from e
 
     @classmethod
-    def _refresh_credentials(cls):
+    def _refresh_credentials(
+        cls,
+        resend_client: ResendBaseClass,
+    ):
         try:
             sts = boto3.client("sts")
             assumed = sts.assume_role(
@@ -44,4 +54,15 @@ class Boto3SessionFactory:
 
             print(f"[Boto3SessionFactory] Assumed ChartWise role, expires at {cls._expiration.isoformat()} UTC")
         except Exception as e:
-            raise RuntimeError(f"[Boto3SessionFactory] Error assuming ChartWise role: {e}") from e
+            error_message = f"[Boto3SessionFactory] Error assuming ChartWise role: {e}"
+            eng_alert = EngineeringAlert(
+                description=error_message,
+                session_id=session_container.session_id,
+                exception=e,
+                environment=session_container.environment,
+                therapist_id=session_container.user_id,
+            )
+            resend_client.send_internal_alert(
+                alert=eng_alert
+            )
+            raise RuntimeError(error_message) from e

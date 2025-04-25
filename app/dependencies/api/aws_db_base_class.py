@@ -4,6 +4,7 @@ from fastapi import Request
 from typing import Any, List, Optional
 
 from .aws_secret_manager_base_class import AwsSecretManagerBaseClass
+from .resend_base_class import ResendBaseClass
 
 class AwsDbBaseClass(ABC):
 
@@ -91,6 +92,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def select_with_stripe_connection(
+        resend_client: ResendBaseClass,
         fields: list[str],
         filters: dict[str, Any],
         table_name: str,

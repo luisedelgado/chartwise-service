@@ -31,7 +31,6 @@ from ..internal.utilities import general_utilities, subscription_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 
 class PaymentSessionPayload(BaseModel):
     price_id: str
@@ -68,7 +67,6 @@ class PaymentProcessingRouter:
     ):
         self._environment = environment
         self._auth_manager = AuthManager()
-        self._email_manager = EmailManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -227,6 +225,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -305,6 +304,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -405,6 +405,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -480,6 +481,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -569,6 +571,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -629,6 +632,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -708,6 +712,7 @@ class PaymentProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -1020,6 +1025,7 @@ class PaymentProcessingRouter:
                     },
                     table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
                     secret_manager=secret_manager,
+                    resend_client=dependency_container.inject_resend_client(),
                 )
                 assert (0 != len(customer_data)), "No therapist data found for incoming customer ID."
                 therapist_id = str(customer_data[0]['therapist_id'])
@@ -1053,7 +1059,7 @@ class PaymentProcessingRouter:
                             subscription_id=subscription.get('id', None),
                             payment_method_id=payment_method_id,
                             customer_id=customer_id)
-                        await self._email_manager.send_internal_alert(alert=internal_alert)
+                        dependency_container.inject_resend_client().send_internal_alert(alert=internal_alert)
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
@@ -1153,7 +1159,7 @@ class PaymentProcessingRouter:
                     therapist_name=therapist_name,
                     therapist_email=therapist_query_data[0]['email']
                 )
-                await self._email_manager.send_customer_relations_alert(alert)
+                dependency_container.inject_resend_client().send_customer_relations_alert(alert)
         except Exception as e:
             internal_alert = PaymentsActivityAlert(
                 description="(customer.subscription.updated) Failure caught in subscription update.",
@@ -1164,4 +1170,4 @@ class PaymentProcessingRouter:
                 subscription_id=subscription_id,
                 customer_id=customer_id
             )
-            await self._email_manager.send_internal_alert(alert=internal_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=internal_alert)

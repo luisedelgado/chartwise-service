@@ -2,6 +2,7 @@ import base64
 import os
 
 from ..api.aws_kms_base_class import AwsKmsBaseClass
+from ..api.resend_base_class import ResendBaseClass
 from ...internal.utilities.aws_utils import sign_and_send_aws_request
 
 class AwsKmsClient(AwsKmsBaseClass):
@@ -14,7 +15,10 @@ class AwsKmsClient(AwsKmsBaseClass):
         self.key_hex = key_hex
         self.region = os.environ.get("AWS_SERVICES_REGION")
 
-    def decrypt_encryption_key_ciphertext(self) -> str:
+    def decrypt_encryption_key_ciphertext(
+        self,
+        resend_client: ResendBaseClass,
+    ) -> str:
         try:
             encrypted_key_bytes = base64.b64decode(self.key_hex)
             payload = {
@@ -26,6 +30,7 @@ class AwsKmsClient(AwsKmsBaseClass):
                 endpoint_url=f"https://kms.{self.region}.amazonaws.com/",
                 payload=payload,
                 target_action="TrentService.Decrypt",
+                resend_client=resend_client,
             )
             key_b64 = result["Plaintext"]
             return base64.b64decode(key_b64)

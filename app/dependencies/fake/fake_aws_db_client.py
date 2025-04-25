@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
+from ..api.resend_base_class import ResendBaseClass
 from ...internal.schemas import (
     ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
     ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
@@ -227,6 +228,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
 
     async def select_with_stripe_connection(
         self,
+        resend_client: ResendBaseClass,
         fields: list[str],
         filters: dict[str, Any],
         table_name: str,

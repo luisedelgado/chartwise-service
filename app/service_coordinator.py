@@ -13,9 +13,11 @@ from .data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     secret_manager = dependency_container.inject_aws_secret_manager_client()
+    resend_client = dependency_container.inject_resend_client()
     await connect_pool(
         app=app,
-        secret_manager=secret_manager
+        secret_manager=secret_manager,
+        resend_client=resend_client,
     )
     print("Loading model and tokenizer...")
     AutoTokenizer.from_pretrained(

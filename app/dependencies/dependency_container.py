@@ -114,7 +114,10 @@ class DependencyContainer:
 
     def inject_chartwise_encryptor(self) -> ChartWiseEncryptor:
         if self._chartwise_encryptor is None:
-            self._chartwise_encryptor = ChartWiseEncryptor(aws_kms_client=self.inject_aws_kms_client())
+            self._chartwise_encryptor = ChartWiseEncryptor(
+                aws_kms_client=self.inject_aws_kms_client(),
+                resend_client=self.inject_resend_client(),
+            )
         return self._chartwise_encryptor
 
 dependency_container = DependencyContainer()

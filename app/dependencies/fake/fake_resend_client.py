@@ -1,20 +1,16 @@
 from ..api.resend_base_class import ResendBaseClass
-from ...internal.alerting.internal_alert import InternalAlertCategory
+from ...internal.alerting.internal_alert import InternalAlert
 
 class FakeResendClient(ResendBaseClass):
 
-    def send_eng_team_internal_alert_email(
+    def send_internal_alert(
         self,
-        subject: str,
-        body: str,
-        alert_category: InternalAlertCategory
+        alert: InternalAlert,
     ):
         pass
 
-    def send_customer_relations_alert_email(
+    def send_customer_relations_alert(
         self,
-        subject: str,
-        body: str,
-        alert_category: InternalAlertCategory
+        alert: InternalAlert,
     ):
         pass

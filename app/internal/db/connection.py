@@ -5,17 +5,20 @@ from fastapi import FastAPI
 from urllib.parse import quote_plus
 
 from ...dependencies.api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
+from ...dependencies.api.resend_base_class import ResendBaseClass
 
 CHARTWISE_USER = "chartwise_user"
 
 async def connect_pool(
     app: FastAPI,
-    secret_manager: AwsSecretManagerBaseClass
+    secret_manager: AwsSecretManagerBaseClass,
+    resend_client: ResendBaseClass,
 ):
     try:
         chartwise_user_secret_id = os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE")
         secret = secret_manager.get_secret(
-            secret_id=chartwise_user_secret_id
+            secret_id=chartwise_user_secret_id,
+            resend_client=resend_client,
         )
         password = quote_plus(secret.get(CHARTWISE_USER))
         endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")

@@ -10,7 +10,6 @@ from typing import AsyncIterable, Optional, Set
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 from ..internal.alerting.internal_alert import EngineeringAlert
 from ..internal.schemas import (
     DATE_COLUMNS,
@@ -168,7 +167,6 @@ class AssistantManager:
                                        source: SessionNotesSource,
                                        session_id: str,
                                        therapist_id: str,
-                                       email_manager: EmailManager,
                                        request: Request,
                                        diarization: str = None) -> str:
         try:
@@ -210,7 +208,6 @@ class AssistantManager:
                 environment=environment,
                 background_tasks=background_tasks,
                 auth_manager=auth_manager,
-                email_manager=email_manager,
                 request=request,
             )
             return session_notes_id
@@ -225,7 +222,6 @@ class AssistantManager:
                              auth_manager: AuthManager,
                              filtered_body: dict,
                              session_id: str,
-                             email_manager: EmailManager,
                              request: Request,):
         try:
             session_notes_id = filtered_body['id']
@@ -299,7 +295,6 @@ class AssistantManager:
                     environment=environment,
                     background_tasks=background_tasks,
                     auth_manager=auth_manager,
-                    email_manager=email_manager,
                     request=request,
                 )
 
@@ -312,7 +307,6 @@ class AssistantManager:
 
     async def delete_session(self,
                              language_code: str,
-                             email_manager: EmailManager,
                              environment: str,
                              session_id: str,
                              background_tasks: BackgroundTasks,
@@ -347,7 +341,6 @@ class AssistantManager:
                 language_code=language_code,
                 environment=environment,
                 background_tasks=background_tasks,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -402,7 +395,6 @@ class AssistantManager:
                           filtered_body: dict,
                           therapist_id: str,
                           session_id: str,
-                          email_manager: EmailManager,
                           request: Request,) -> str:
         try:
             environment = os.environ.get('ENVIRONMENT')
@@ -446,7 +438,6 @@ class AssistantManager:
                 patient_id=patient_id,
                 environment=environment,
                 therapist_id=therapist_id,
-                email_manager=email_manager,
                 session_id=session_id,
                 request=request,
             )
@@ -458,7 +449,6 @@ class AssistantManager:
                 patient_id=patient_id,
                 environment=environment,
                 therapist_id=therapist_id,
-                email_manager=email_manager,
                 session_id=session_id,
                 patient_first_name=filtered_body['first_name'],
                 patient_gender=gender,
@@ -649,7 +639,6 @@ class AssistantManager:
                                           patient_id: str,
                                           environment: str,
                                           session_id: str,
-                                          email_manager: EmailManager,
                                           request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -676,7 +665,6 @@ class AssistantManager:
                     patient_id=patient_id,
                     environment=environment,
                     therapist_id=therapist_id,
-                    email_manager=email_manager,
                     session_id=session_id,
                     request=request,
                 )
@@ -719,7 +707,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def update_presession_tray(self,
@@ -728,7 +716,6 @@ class AssistantManager:
                                      environment: str,
                                      session_id: str,
                                      language_code: str,
-                                     email_manager: EmailManager,
                                      request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -755,7 +742,6 @@ class AssistantManager:
                     patient_id=patient_id,
                     environment=environment,
                     therapist_id=therapist_id,
-                    email_manager=email_manager,
                     session_id=session_id,
                     patient_first_name=patient_first_name,
                     patient_gender=patient_gender,
@@ -815,7 +801,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def update_patient_recent_topics(self,
@@ -824,7 +810,6 @@ class AssistantManager:
                                            patient_id: str,
                                            environment: str,
                                            session_id: str,
-                                           email_manager: EmailManager,
                                            request: Request,):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -908,12 +893,11 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def generate_attendance_insights(self,
                                            language_code: str,
-                                           email_manager: EmailManager,
                                            therapist_id: str,
                                            patient_id: str,
                                            session_id: str,
@@ -983,7 +967,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def update_patient_metrics_after_session_report_operation(self,
@@ -991,7 +975,6 @@ class AssistantManager:
                                                                     environment: str,
                                                                     therapist_id: str,
                                                                     session_id: str,
-                                                                    email_manager: EmailManager,
                                                                     operation: SessionCrudOperation,
                                                                     request: Request,
                                                                     session_date: date = None):
@@ -1069,7 +1052,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def get_patient_active_session_years(self,
@@ -1206,7 +1189,6 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    email_manager: EmailManager,
                                                     request: Request,):
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
@@ -1220,7 +1202,6 @@ class AssistantManager:
                 environment=environment,
                 background_tasks=background_tasks,
                 patient_id=patient_id,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -1242,7 +1223,6 @@ class AssistantManager:
             environment=environment,
             therapist_id=therapist_id,
             session_id=session_id,
-            email_manager=email_manager,
             operation=SessionCrudOperation.INSERT_COMPLETED,
             session_date=session_date,
             request=request,
@@ -1255,7 +1235,6 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -1271,7 +1250,6 @@ class AssistantManager:
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
                                                     auth_manager: AuthManager,
-                                                    email_manager: EmailManager,
                                                     request: Request,):
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
@@ -1285,7 +1263,6 @@ class AssistantManager:
                 environment=environment,
                 background_tasks=background_tasks,
                 patient_id=patient_id,
-                email_manager=email_manager,
                 request=request,
             )
 
@@ -1308,7 +1285,6 @@ class AssistantManager:
             therapist_id=therapist_id,
             session_id=session_id,
             environment=environment,
-            email_manager=email_manager,
             operation=SessionCrudOperation.UPDATE_COMPLETED,
             session_date=new_session_date,
             request=request,
@@ -1321,7 +1297,6 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -1333,7 +1308,6 @@ class AssistantManager:
                                                     language_code: str,
                                                     environment: str,
                                                     background_tasks: BackgroundTasks,
-                                                    email_manager: EmailManager,
                                                     request: Request,):
         dependency_container.inject_pinecone_client().delete_session_vectors(
             user_id=therapist_id,
@@ -1348,7 +1322,6 @@ class AssistantManager:
             therapist_id=therapist_id,
             session_id=session_id,
             environment=environment,
-            email_manager=email_manager,
             operation=SessionCrudOperation.DELETE_COMPLETED,
             session_date=None,
             request=request,
@@ -1361,7 +1334,6 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -1371,7 +1343,6 @@ class AssistantManager:
                                              patient_id: str,
                                              environment: str,
                                              session_id: str,
-                                             email_manager: EmailManager,
                                              request: Request,):
         # Clean patient query cache
         self.cached_patient_query_data = None
@@ -1391,7 +1362,6 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -1402,7 +1372,6 @@ class AssistantManager:
             environment=environment,
             session_id=session_id,
             language_code=language_code,
-            email_manager=email_manager,
             request=request,
         )
 
@@ -1413,14 +1382,12 @@ class AssistantManager:
             patient_id=patient_id,
             environment=environment,
             session_id=session_id,
-            email_manager=email_manager,
             request=request,
         )
 
         # Update attendance insights
         await self.generate_attendance_insights(
             language_code=language_code,
-            email_manager=email_manager,
             therapist_id=therapist_id,
             patient_id=patient_id,
             session_id=session_id,
@@ -1449,7 +1416,6 @@ class AssistantManager:
                                                                  patient_id: str,
                                                                  therapist_id: str,
                                                                  environment: str,
-                                                                 email_manager: EmailManager,
                                                                  session_id: str,
                                                                  request: Request,):
         try:
@@ -1494,7 +1460,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def _load_default_pre_session_tray_for_new_patient(self,
@@ -1502,7 +1468,6 @@ class AssistantManager:
                                                              patient_id: str,
                                                              therapist_id: str,
                                                              environment: str,
-                                                             email_manager: EmailManager,
                                                              session_id: str,
                                                              patient_first_name: str,
                                                              is_first_time_patient: bool,
@@ -1596,7 +1561,7 @@ class AssistantManager:
                 therapist_id=therapist_id,
                 patient_id=patient_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def _update_session_notes_with_mini_summary(self,
@@ -1609,7 +1574,6 @@ class AssistantManager:
                                                       environment: str,
                                                       background_tasks: BackgroundTasks,
                                                       patient_id: str,
-                                                      email_manager: EmailManager,
                                                       request: Request,):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(
@@ -1631,7 +1595,6 @@ class AssistantManager:
                     "notes_mini_summary": mini_summary
                 },
                 session_id=session_id,
-                email_manager=email_manager,
                 request=request,
             )
         except Exception as e:
@@ -1642,7 +1605,7 @@ class AssistantManager:
                 environment=environment,
                 therapist_id=therapist_id
             )
-            await email_manager.send_internal_alert(alert=eng_alert)
+            dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
     async def _retrieve_sessions_for_year(self,

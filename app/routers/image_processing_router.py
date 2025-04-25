@@ -21,7 +21,6 @@ from ..internal.utilities import datetime_handler, general_utilities
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
-from ..managers.email_manager import EmailManager
 from ..managers.image_processing_manager import ImageProcessingManager
 
 class ImageProcessingRouter:
@@ -36,7 +35,6 @@ class ImageProcessingRouter:
         self._environment = environment
         self._assistant_manager = AssistantManager()
         self._auth_manager = AuthManager()
-        self._email_manager = EmailManager()
         self._image_processing_manager = ImageProcessingManager()
         self.router = APIRouter()
         self._register_routes()
@@ -110,6 +108,7 @@ class ImageProcessingRouter:
             request.state.therapist_id = user_id
             await self._auth_manager.refresh_session(
                 user_id=user_id,
+                session_id=session_id,
                 response=response
             )
         except Exception as e:
@@ -220,6 +219,5 @@ class ImageProcessingRouter:
             background_tasks=background_tasks,
             auth_manager=self._auth_manager,
             assistant_manager=self._assistant_manager,
-            email_manager=self._email_manager,
             request=request,
         )

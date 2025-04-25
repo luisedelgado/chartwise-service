@@ -1,8 +1,7 @@
-import base64
-
 from nacl.secret import Aead
 
 from ...dependencies.api.aws_kms_base_class import AwsKmsBaseClass
+from ...dependencies.api.resend_base_class import ResendBaseClass
 
 class ChartWiseEncryptor:
     """
@@ -11,9 +10,12 @@ class ChartWiseEncryptor:
     """
     def __init__(
         self,
-        aws_kms_client: AwsKmsBaseClass
+        aws_kms_client: AwsKmsBaseClass,
+        resend_client: ResendBaseClass,
     ):
-        encryption_key = aws_kms_client.decrypt_encryption_key_ciphertext()
+        encryption_key = aws_kms_client.decrypt_encryption_key_ciphertext(
+            resend_client=resend_client,
+        )
         if len(encryption_key) != Aead.KEY_SIZE:
             raise ValueError("Decrypted key is not 32 bytes")
 

@@ -106,10 +106,12 @@ class AuthManager:
     async def refresh_session(
         self,
         user_id: str,
+        session_id: str,
         response: Response,
     ) -> Token:
         try:
             session_container.user_id = user_id
+            session_container.session_id = session_id
             session_token, expiration_timestamp = self.create_session_token(user_id)
             cls = type(self)
             response.set_cookie(

@@ -1,37 +1,19 @@
 from abc import ABC, abstractmethod
 
-from ...internal.alerting.internal_alert import InternalAlertCategory
+from ...internal.alerting.internal_alert import InternalAlert
 
 class ResendBaseClass(ABC):
 
     @abstractmethod
-    def send_eng_team_internal_alert_email(
-        subject: str,
-        body: str,
-        alert_category: InternalAlertCategory
-    ):
+    def send_internal_alert(alert: InternalAlert):
         """
-        Sends an internal notification email to our engineering team.
-
-        Arguments:
-        subject – the email subject.
-        body – the email body.
-        alert_category – the alert category.
+        Sends an internal alert through the Resend service.
         """
         pass
 
     @abstractmethod
-    def send_customer_relations_alert_email(
-        subject: str,
-        body: str,
-        alert_category: InternalAlertCategory
-    ):
+    def send_customer_relations_alert(alert: InternalAlert):
         """
-        Sends an internal notification email regarding customer relations.
-
-        Arguments:
-        subject – the email subject.
-        body – the email body.
-        alert_category – the alert category.
+        Sends a customer relations alert through the Resend service.
         """
         pass
