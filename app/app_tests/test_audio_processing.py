@@ -1,7 +1,12 @@
 from fastapi.testclient import TestClient
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import (
+    dependency_container,
+    FakeAwsS3Client,
+    FakeDeepgramClient,
+    FakePineconeClient,
+)
 from ..managers.auth_manager import AuthManager
 from ..routers.audio_processing_router import AudioProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -87,7 +92,9 @@ class TestingHarnessAudioProcessingRouter:
         dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
-        self.fake_deepgram_client = dependency_container.inject_deepgram_client()
+        self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
+        self.fake_aws_s3_client:FakeAwsS3Client = dependency_container.inject_aws_s3_client()
+        self.fake_deepgram_client:FakeDeepgramClient = dependency_container.inject_deepgram_client()
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
@@ -154,6 +161,9 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 400
 
     def test_invoke_soap_transcription_success(self):
+        assert not self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
+        assert not self.fake_deepgram_client.transcribe_audio_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
@@ -172,9 +182,15 @@ class TestingHarnessAudioProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
+        assert self.fake_deepgram_client.transcribe_audio_invoked
+        assert self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
         assert "session_report_id" in response.json()
 
     def test_invoke_free_form_transcription_success(self):
+        assert not self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
+        assert not self.fake_deepgram_client.transcribe_audio_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
                                data={
@@ -191,6 +207,9 @@ class TestingHarnessAudioProcessingRouter:
                                     "session_token": self.session_token
                                 })
         assert response.status_code == 200
+        assert self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
+        assert self.fake_deepgram_client.transcribe_audio_invoked
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert "session_report_id" in response.json()
 
     def test_invoke_diarization_with_no_session_token(self):
@@ -259,6 +278,9 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 400
 
     def test_invoke_diarization_success(self):
+        assert not self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
+        assert not self.fake_deepgram_client.diarize_audio_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
                                data={
@@ -275,6 +297,9 @@ class TestingHarnessAudioProcessingRouter:
                                    "session_token": self.session_token
                                },)
         assert response.status_code == 200
+        assert self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
+        assert self.fake_deepgram_client.diarize_audio_invoked
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert "session_report_id" in response.json()
 
     def test_diarization_cleaner_internal_formatting(self):

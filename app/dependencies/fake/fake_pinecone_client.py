@@ -13,6 +13,14 @@ class FakePineconeClient(PineconeBaseClass):
         self.insert_preexisting_history_num_invocations = 0
         self.update_preexisting_history_num_invocations = 0
         self.fake_vectors_insertion = None
+        self.insert_session_vectors_invoked = False
+        self.insert_preexisting_history_vectors_invoked = False
+        self.update_session_vectors_invoked = False
+        self.update_preexisting_history_vectors_invoked = False
+        self.delete_session_vectors_invoked = False
+        self.delete_preexisting_history_vectors_invoked = False
+        self.get_vector_store_context_invoked = False
+        self.fetch_historical_context_invoked = False
 
     async def insert_session_vectors(
         self,
@@ -26,6 +34,7 @@ class FakePineconeClient(PineconeBaseClass):
         therapy_session_date: date = None
     ):
         self.fake_vectors_insertion = text
+        self.insert_session_vectors_invoked = True
 
     async def insert_preexisting_history_vectors(
         self,
@@ -37,6 +46,7 @@ class FakePineconeClient(PineconeBaseClass):
         summarize_chunk: Callable
     ):
         self.insert_preexisting_history_num_invocations = self.insert_preexisting_history_num_invocations + 1
+        self.insert_preexisting_history_vectors_invoked = True
 
     def delete_session_vectors(
         self,
@@ -44,14 +54,14 @@ class FakePineconeClient(PineconeBaseClass):
         patient_id: str,
         date: date = None
     ):
-        pass
+        self.delete_session_vectors_invoked = True
 
     def delete_preexisting_history_vectors(
         self,
         user_id: str,
         patient_id: str
     ):
-        pass
+        self.delete_preexisting_history_vectors_invoked = True
 
     async def update_session_vectors(
         self,
@@ -65,7 +75,7 @@ class FakePineconeClient(PineconeBaseClass):
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable
     ):
-        pass
+        self.update_session_vectors_invoked = True
 
     async def update_preexisting_history_vectors(
         self,
@@ -77,6 +87,7 @@ class FakePineconeClient(PineconeBaseClass):
         summarize_chunk: Callable
     ):
         self.update_preexisting_history_num_invocations = self.update_preexisting_history_num_invocations + 1
+        self.update_preexisting_history_vectors_invoked = False
 
     async def get_vector_store_context(
         self,
@@ -89,6 +100,7 @@ class FakePineconeClient(PineconeBaseClass):
         include_preexisting_history: bool = True,
         session_dates_override: list[PineconeQuerySessionDateOverride] = None
     ) -> str:
+        self.get_vector_store_context_invoked = True
         if not self.vector_store_context_returns_data:
             return ""
         return "This is my fake vector context"
@@ -98,4 +110,4 @@ class FakePineconeClient(PineconeBaseClass):
         index: Index,
         namespace: str
     ):
-        pass
+        self.fetch_historical_context_invoked = True

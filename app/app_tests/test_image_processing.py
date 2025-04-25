@@ -2,7 +2,12 @@ import os
 
 from fastapi.testclient import TestClient
 
-from ..dependencies.dependency_container import dependency_container, FakeAwsDbClient, FakeDocupandaClient
+from ..dependencies.dependency_container import (
+    dependency_container,
+    FakeAwsDbClient,
+    FakeDocupandaClient,
+    FakePineconeClient,
+)
 from ..managers.auth_manager import AuthManager
 from ..routers.image_processing_router import ImageProcessingRouter
 from ..service_coordinator import EndpointServiceCoordinator
@@ -37,6 +42,7 @@ class TestingHarnessImageProcessingRouter:
         dependency_container._stripe_client = None
         dependency_container._testing_environment = "testing"
 
+        self.fake_pinecone_client: FakePineconeClient = dependency_container.inject_pinecone_client()
         self.fake_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client:FakeDocupandaClient = dependency_container.inject_docupanda_client()
@@ -90,6 +96,7 @@ class TestingHarnessImageProcessingRouter:
     def test_invoke_png_textraction_soap_format_with_existing_patient_success(self):
         assert not self.fake_docupanda_client.upload_image_invoked
         assert not self.fake_docupanda_client.retrieve_text_from_document_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
@@ -111,6 +118,7 @@ class TestingHarnessImageProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert self.fake_docupanda_client.upload_image_invoked
         assert self.fake_docupanda_client.retrieve_text_from_document_invoked
         assert "session_report_id" in response.json()
@@ -118,6 +126,7 @@ class TestingHarnessImageProcessingRouter:
     def test_invoke_png_textraction_soap_format_with_new_patient_success(self):
         assert not self.fake_docupanda_client.upload_image_invoked
         assert not self.fake_docupanda_client.retrieve_text_from_document_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_db_client.patient_unique_active_years_nonzero = False
         self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
@@ -140,6 +149,7 @@ class TestingHarnessImageProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert self.fake_docupanda_client.upload_image_invoked
         assert self.fake_docupanda_client.retrieve_text_from_document_invoked
         assert "session_report_id" in response.json()
@@ -147,6 +157,7 @@ class TestingHarnessImageProcessingRouter:
     def test_invoke_png_textraction_free_format_success(self):
         assert not self.fake_docupanda_client.upload_image_invoked
         assert not self.fake_docupanda_client.retrieve_text_from_document_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
@@ -168,6 +179,7 @@ class TestingHarnessImageProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert self.fake_docupanda_client.upload_image_invoked
         assert self.fake_docupanda_client.retrieve_text_from_document_invoked
         assert "session_report_id" in response.json()
@@ -175,6 +187,7 @@ class TestingHarnessImageProcessingRouter:
     def test_invoke_pdf_textraction_success(self):
         assert not self.fake_docupanda_client.upload_image_invoked
         assert not self.fake_docupanda_client.retrieve_text_from_document_invoked
+        assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
         files = {
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
@@ -196,6 +209,7 @@ class TestingHarnessImageProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert self.fake_pinecone_client.update_session_vectors_invoked
         assert self.fake_docupanda_client.upload_image_invoked
         assert self.fake_docupanda_client.retrieve_text_from_document_invoked
         assert "session_report_id" in response.json()
