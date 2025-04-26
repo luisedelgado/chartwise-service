@@ -7,8 +7,6 @@ from urllib.parse import quote_plus
 from ...dependencies.api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 from ...dependencies.api.resend_base_class import ResendBaseClass
 
-CHARTWISE_USER = "chartwise_user"
-
 async def connect_pool(
     app: FastAPI,
     secret_manager: AwsSecretManagerBaseClass,
@@ -20,11 +18,12 @@ async def connect_pool(
             secret_id=chartwise_user_secret_id,
             resend_client=resend_client,
         )
-        password = quote_plus(secret.get(CHARTWISE_USER))
-        endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
-        port = os.getenv("AWS_RDS_DB_PORT")
-        database_name = os.getenv("AWS_RDS_DB_NAME")
-        database_url = f"postgresql://{CHARTWISE_USER}:{password}@{endpoint}:{port}/{database_name}"
+        username = secret.get("username")
+        password = quote_plus(secret.get("password"))
+        endpoint = secret.get("host") or os.getenv("AWS_RDS_DATABASE_ENDPOINT")
+        port = secret.get("port") or os.getenv("AWS_RDS_DB_PORT")
+        database_name = secret.get("dbname") or os.getenv("AWS_RDS_DB_NAME")
+        database_url = f"postgresql://{username}:{password}@{endpoint}:{port}/{database_name}"
 
         app.state.pool = await asyncpg.create_pool(
             dsn=database_url,

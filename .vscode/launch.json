@@ -5,17 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: FastAPI app",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload"
-            ],
-            "jinja": true
-        },
-        {
             "name": "Docker-compose Remote Attach: FastAPI app",
             "type": "debugpy",
             "request": "attach",
@@ -30,21 +19,6 @@
               }
             ],
             "justMyCode": true
-        },
-        {
-          "name": "Docker-compose Remote Attach: Pending Jobs Script",
-          "type": "debugpy",
-          "request": "attach",
-          "connect": {
-            "host": "localhost",
-            "port": 5679
-          },
-          "pathMappings": [
-            {
-              "localRoot": "${workspaceFolder}",
-              "remoteRoot": "/app"
-            }
-          ]
         },
         {
           "name": "Python Debugger: Single File",
