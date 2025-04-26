@@ -11,7 +11,7 @@ from ..core.boto3_client_factory import Boto3ClientFactory
 
 class AwsCognitoClient(AwsCognitoBaseClass):
 
-    COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get('COGNITO_REGION')}.amazonaws.com/{os.environ.get('COGNITO_USER_POOL_ID')}"
+    COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get('AWS_SERVICES_REGION')}.amazonaws.com/{os.environ.get('AWS_COGNITO_USER_POOL_ID')}"
     JWKS_URL = f"{COGNITO_ISSUER}/.well-known/jwks.json"
     JWKS_CACHE = None
     JWKS_CACHE_EXPIRATION = 0
