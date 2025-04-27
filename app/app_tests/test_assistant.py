@@ -1395,3 +1395,32 @@ class TestingHarnessAssistantRouter:
         assert response.status_code == 200
         response_json = response.json()
         assert response_json["greetings_data"] is not None
+
+    def test_get_ui_strings_with_auth_token_but_missing_session_token(self):
+        response = self.client.get(
+            AssistantRouter.USER_INTERFACE_STRINGS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            params={
+                "ids": ["foo", "bar"]
+            }
+        )
+        assert response.status_code == 401
+
+    def test_get_ui_strings_success(self):
+        response = self.client.get(
+            AssistantRouter.USER_INTERFACE_STRINGS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.session_token
+            },
+            params={
+                "ids": ["foo", "bar"]
+            }
+        )
+        assert response.status_code == 200
+        response_json = response.json()
+        assert response_json["user_interface_strings_data"] is not None

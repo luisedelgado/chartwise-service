@@ -56,6 +56,7 @@ class AssistantRouter:
     BRIEFINGS_ENDPOINT = "/v1/briefings"
     QUESTION_SUGGESTIONS_ENDPOINT = "/v1/question-suggestions"
     RECENT_TOPICS_ENDPOINT = "/v1/recent-topics"
+    USER_INTERFACE_STRINGS_ENDPOINT = "/v1/user-interface-strings"
     ASSISTANT_ROUTER_TAG = "assistant"
     PATIENTS_ROUTER_TAG = "patients"
 
@@ -374,6 +375,23 @@ class AssistantRouter:
                 request=request,
                 response=response,
                 session_token=session_token,
+                session_id=session_id
+            )
+
+        @self.router.get(type(self).USER_INTERFACE_STRINGS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
+        async def retrieve_user_interface_strings(
+            response: Response,
+            request: Request,
+            ids: list[str] = Query(None),
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
+            return await self._retrieve_user_interface_strings_internal(
+                response=response,
+                request=request,
+                session_token=session_token,
+                ids_to_fetch=ids,
                 session_id=session_id
             )
 
@@ -1606,6 +1624,77 @@ class AssistantRouter:
             )
             assert len(greetings_data) > 0, "Greetings not found."
             return {"greetings_data": greetings_data}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
+
+    async def _retrieve_user_interface_strings_internal(
+        self,
+        request: Request,
+        response: Response,
+        ids_to_fetch: list[str],
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
+        """
+        Retrieves the user interface strings associated with the incoming IDs.
+
+        Arguments:
+        request – the request object.
+        response – the response model used for the final response that will be returned.
+        ids_to_fetch – the list of IDs to fetch.
+        session_token – the session_token cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        """
+        request.state.session_id = session_id
+
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
+
+        try:
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                session_id=session_id,
+                response=response
+            )
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=str(e)
+            )
+            raise RuntimeError(e) from e
+
+        try:
+            assert len(ids_to_fetch) > 0, "Empty ids_to_fetch param"
+
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            user_interface_strings_data = await aws_db_client.select(
+                user_id=user_id,
+                request=request,
+                fields=["*"],
+                filters={
+                    "id": ids_to_fetch
+                },
+                table_name="user_interface_strings",
+            )
+            return {"user_interface_strings_data": user_interface_strings_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
