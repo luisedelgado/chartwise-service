@@ -120,12 +120,6 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "value": "myFakeValue",
                 },
             ]
-        if table_name == THERAPISTS_TABLE_NAME:
-            return [
-                {
-                    "id": "myFakeValue",
-                },
-            ]
         if table_name == "static_default_briefings":
             inner_value = {
                 "briefings": {

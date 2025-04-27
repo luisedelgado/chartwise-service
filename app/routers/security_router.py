@@ -365,7 +365,7 @@ class SecurityRouter:
                 table_name=THERAPISTS_TABLE_NAME
             )
             assert len(therapist_data) == 1, "Single therapist not found."
-            return {"therapist_data": therapist_data[0]}
+            return {"therapist_data": therapist_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
