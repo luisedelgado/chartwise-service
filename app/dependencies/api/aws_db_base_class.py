@@ -71,8 +71,8 @@ class AwsDbBaseClass(ABC):
         user_id: str,
         request: Request,
         fields: list[str],
-        filters: dict[str, Any],
         table_name: str,
+        filters: dict[str, Any] = None,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:

@@ -172,8 +172,8 @@ class AwsDbClient(AwsDbBaseClass):
         user_id: str,
         request: Request,
         fields: list[str],
-        filters: dict[str, Any],
         table_name: str,
+        filters: dict[str, Any] = None,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
@@ -431,6 +431,10 @@ class AwsDbClient(AwsDbBaseClass):
     def build_where_clause(
         filters: dict[str, Any]
     ) -> tuple[str, list[Any]]:
+        values = []
+        if filters is None:
+            return ("", values)
+
         operator_map = {
             "gte": ">=",
             "lte": "<=",
@@ -441,7 +445,6 @@ class AwsDbClient(AwsDbBaseClass):
         }
 
         conditions = []
-        values = []
         param_index = 1
 
         for key, val in filters.items():

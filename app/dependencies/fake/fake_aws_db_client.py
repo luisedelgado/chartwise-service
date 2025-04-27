@@ -106,8 +106,8 @@ class FakeAwsDbClient(AwsDbBaseClass):
         user_id: str,
         request: Request,
         fields: list[str],
-        filters: dict[str, Any],
         table_name: str,
+        filters: dict[str, Any] = None,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
@@ -211,6 +211,15 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "last_name": "bar",
                     "language_preference": "en-US",
                     "gender": "male",
+                },
+            ]
+        if table_name == "greetings":
+            return [
+                {
+                    "id": self.FAKE_THERAPIST_ID,
+                    "values": {
+                        "greeting": "Hello",
+                    },
                 },
             ]
         if table_name == SUBSCRIPTION_STATUS_TABLE_NAME:

@@ -1372,3 +1372,26 @@ class TestingHarnessAssistantRouter:
         )
         assert response.status_code == 200
         assert "recent_topics_data" in response.json()
+
+    def test_get_greetings_with_auth_token_but_missing_session_token(self):
+        response = self.client.get(
+            AssistantRouter.GREETINGS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+        )
+        assert response.status_code == 401
+
+    def test_get_greetings_success(self):
+        response = self.client.get(
+            AssistantRouter.GREETINGS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.session_token
+            },
+        )
+        assert response.status_code == 200
+        response_json = response.json()
+        assert response_json["greetings_data"] is not None
