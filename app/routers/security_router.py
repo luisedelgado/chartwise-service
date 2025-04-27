@@ -111,6 +111,21 @@ class SecurityRouter:
                 session_id=session_id
             )
 
+        @self.router.get(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
+        async def retrieve_therapist(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
+            return await self._retrieve_therapist_internal(
+                session_token=session_token,
+                request=request,
+                response=response,
+                session_id=session_id
+            )
+
         @self.router.post(type(self).THERAPISTS_ENDPOINT, tags=[type(self).THERAPISTS_ROUTER_TAG])
         async def add_therapist(
             body: SignupPayload,
@@ -297,6 +312,74 @@ class SecurityRouter:
         self._auth_manager.logout(response)
         background_tasks.add_task(dependency_container.inject_openai_client().clear_chat_history)
         return {}
+
+    async def _retrieve_therapist_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
+        """
+        Retrieves the therapist associated with the incoming token.
+
+        Arguments:
+        request – the request object.
+        response – the response object to be used for creating the final response.
+        session_token – the session token cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        """
+        request.state.session_id = session_id
+
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
+
+        try:
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                session_id=session_id,
+                response=response
+            )
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=str(e)
+            )
+            raise RuntimeError(e) from e
+
+        try:
+            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+            therapist_data = await aws_db_client.select(
+                user_id=user_id,
+                request=request,
+                fields=["*"],
+                filters={
+                    'id': user_id,
+                },
+                table_name=THERAPISTS_TABLE_NAME
+            )
+            assert len(therapist_data) == 1, "Single therapist not found."
+            return {"therapist_data": therapist_data[0]}
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
     async def _add_therapist_internal(
         self,

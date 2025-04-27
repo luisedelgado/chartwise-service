@@ -112,6 +112,29 @@ class TestingHarnessSecurityRouter:
         assert new_token_data.get("exp") > old_token_data.get("exp")
         assert "subscription_status" in response_json
 
+    def test_get_therapist_with_auth_token_but_missing_session_token(self):
+        response = self.client.get(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+        )
+        assert response.status_code == 401
+
+    def test_get_therapist_success(self):
+        response = self.client.get(
+            SecurityRouter.THERAPISTS_ENDPOINT,
+            headers={
+                "auth-token": FAKE_ACCESS_TOKEN,
+            },
+            cookies={
+                "session_token": self.session_token
+            },
+        )
+        assert response.status_code == 200
+        response_json = response.json()
+        assert response_json["therapist_data"] is not None
+
     def test_add_therapist_with_auth_token_but_missing_session_token(self):
         response = self.client.post(
             SecurityRouter.THERAPISTS_ENDPOINT,
