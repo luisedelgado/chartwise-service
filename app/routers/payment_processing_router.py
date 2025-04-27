@@ -31,6 +31,7 @@ from ..internal.utilities import general_utilities, subscription_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
+from ..managers.subscription_manager import SubscriptionManager
 
 class PaymentSessionPayload(BaseModel):
     price_id: str
@@ -57,7 +58,8 @@ class PaymentProcessingRouter:
     PAYMENT_EVENT_ENDPOINT = "/v1/payment-event"
     UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT = "/v1/payment-method-session"
     PAYMENT_HISTORY_ENDPOINT = "/v1/payment-history"
-    PRODUCT_CATALOG = "/v1/product-catalog"
+    PRODUCT_CATALOG_ENDPOINT = "/v1/product-catalog"
+    SUBSCRIPTION_STATUS_ENDPOINT = "/v1/subscription_status"
     ROUTER_TAG = "payments"
     ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
 
@@ -67,6 +69,7 @@ class PaymentProcessingRouter:
     ):
         self._environment = environment
         self._auth_manager = AuthManager()
+        self._subscription_manager = SubscriptionManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -147,7 +150,7 @@ class PaymentProcessingRouter:
                 session_id=session_id
             )
 
-        @self.router.get(type(self).PRODUCT_CATALOG, tags=[type(self).ROUTER_TAG])
+        @self.router.get(type(self).PRODUCT_CATALOG_ENDPOINT, tags=[type(self).ROUTER_TAG])
         async def retrieve_product_catalog(
             request: Request,
             response: Response,
@@ -196,6 +199,21 @@ class PaymentProcessingRouter:
                 response=response,
                 limit=batch_size,
                 starting_after=pagination_last_item_id_retrieved
+            )
+
+        @self.router.get(type(self).SUBSCRIPTION_STATUS_ENDPOINT, tags=[type(self).ROUTER_TAG])
+        async def retrieve_subscription_current_status(
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None,
+        ):
+            return await self._retrieve_subscription_current_status_internal(
+                session_token=session_token,
+                session_id=session_id,
+                request=request,
+                response=response,
             )
 
     async def _create_checkout_session_internal(
@@ -868,6 +886,67 @@ class PaymentProcessingRouter:
 
         return {}
 
+    async def _retrieve_subscription_current_status_internal(
+        self,
+        session_token: str,
+        session_id: str,
+        request: Request,
+        response: Response,
+    ):
+        """
+        Retrieves the current status of the subscription for the incoming user.
+
+        Arguments:
+        session_token – the session_token cookie, if exists.
+        session_id – the session_id cookie, if exists.
+        request – the request object.
+        response – the response model with which to create the final response.
+        """
+        request.state.session_id = session_id
+
+        if not self._auth_manager.session_token_is_valid(session_token):
+            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
+
+        try:
+            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
+            request.state.therapist_id = user_id
+            await self._auth_manager.refresh_session(
+                user_id=user_id,
+                session_id=session_id,
+                response=response
+            )
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=str(e)
+            )
+            raise RuntimeError(e) from e
+
+        try:
+            subscription_status = await self._subscription_manager.subscription_data(
+                user_id=user_id,
+                request=request
+            )
+            return subscription_status
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
+
     # Private
 
     async def _handle_stripe_event(
@@ -1063,8 +1142,6 @@ class PaymentProcessingRouter:
 
         else:
             print(f"[Stripe Event] Unhandled event type: '{event_type}'")
-
-    # Private
 
     async def _handle_subscription_upsert(
         self,
