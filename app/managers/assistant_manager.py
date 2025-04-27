@@ -80,6 +80,7 @@ class SessionNotesUpdate(BaseModel):
     notes_text: Optional[str] = None
     session_date: Optional[str] = None
     diarization: Optional[str] = None
+    is_read: Optional[bool] = None
 
 class CachedPatientQueryData:
     def __init__(self,
