@@ -38,6 +38,7 @@ from ..managers.assistant_manager import (
     SessionNotesUpdate
 )
 from ..managers.auth_manager import AuthManager
+from ..managers.subscription_manager import SubscriptionManager
 
 class TemplatePayload(BaseModel):
     session_notes_text: str
@@ -67,6 +68,7 @@ class AssistantRouter:
         self._environment = environment
         self._auth_manager = AuthManager()
         self._assistant_manager = AssistantManager()
+        self._subscription_manager = SubscriptionManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -186,7 +188,10 @@ class AssistantRouter:
                     response=response
                 )
             except Exception as e:
-                status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+                status_code = general_utilities.extract_status_code(
+                    e,
+                    fallback=status.HTTP_400_BAD_REQUEST
+                )
                 dependency_container.inject_influx_client().log_error(
                     endpoint_name=request.url.path,
                     method=request.method,
@@ -424,7 +429,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -450,7 +458,10 @@ class AssistantRouter:
             return {"session_report_data": session_report_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -501,7 +512,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -530,7 +544,10 @@ class AssistantRouter:
             return {"session_reports_data": session_reports_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -578,7 +595,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -604,6 +624,9 @@ class AssistantRouter:
                 tz_identifier=client_timezone_identifier
             )
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
+
+            subscription_data = self._subscription_manager.subscription_data()
+            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
@@ -633,7 +656,10 @@ class AssistantRouter:
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -681,7 +707,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -726,7 +755,10 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -770,7 +802,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -785,7 +820,10 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -818,7 +856,10 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -864,7 +905,10 @@ class AssistantRouter:
                 endpoint_name=request.url.path,
                 method=request.method,
                 patient_id=query.patient_id,
-                error_code=general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST),
+                error_code=general_utilities.extract_status_code(
+                    e,
+                    fallback=status.HTTP_400_BAD_REQUEST
+                ),
                 description=str(e),
                 session_id=session_id
             )
@@ -900,7 +944,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -925,7 +972,10 @@ class AssistantRouter:
             return {"patient_data": patient_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -967,7 +1017,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -985,7 +1038,10 @@ class AssistantRouter:
             return {"patients_data": patients_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1030,7 +1086,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1068,7 +1127,10 @@ class AssistantRouter:
             return {"patient_id": patient_id}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1114,7 +1176,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1146,7 +1211,10 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1188,7 +1256,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1234,7 +1305,10 @@ class AssistantRouter:
             return {}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1277,7 +1351,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1299,7 +1376,10 @@ class AssistantRouter:
             return {"attendance_insights_data": attendance_insights_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1342,7 +1422,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1364,7 +1447,10 @@ class AssistantRouter:
             return {"briefing_data": briefing_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1407,7 +1493,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1429,7 +1518,10 @@ class AssistantRouter:
             return {"question_suggestions_data": question_suggestions_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1472,7 +1564,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1494,7 +1589,10 @@ class AssistantRouter:
             return {"recent_topics_data": recent_topics_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1540,7 +1638,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1562,7 +1663,10 @@ class AssistantRouter:
             return {"soap_notes": soap_notes}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -1604,7 +1708,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -1626,7 +1733,10 @@ class AssistantRouter:
             return {"greetings_data": greetings_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -1671,7 +1781,10 @@ class AssistantRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -1697,7 +1810,10 @@ class AssistantRouter:
             return {"user_interface_strings_data": user_interface_strings_data}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,

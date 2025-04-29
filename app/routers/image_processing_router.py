@@ -22,6 +22,7 @@ from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.auth_manager import AuthManager
 from ..managers.image_processing_manager import ImageProcessingManager
+from ..managers.subscription_manager import SubscriptionManager
 
 class ImageProcessingRouter:
 
@@ -36,6 +37,7 @@ class ImageProcessingRouter:
         self._assistant_manager = AssistantManager()
         self._auth_manager = AuthManager()
         self._image_processing_manager = ImageProcessingManager()
+        self._subscription_manager = SubscriptionManager()
         self.router = APIRouter()
         self._register_routes()
 
@@ -112,7 +114,10 @@ class ImageProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -132,7 +137,10 @@ class ImageProcessingRouter:
                 tz_identifier=client_timezone_identifier
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             description = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -147,6 +155,9 @@ class ImageProcessingRouter:
             )
 
         try:
+            subscription_data = self._subscription_manager.subscription_data()
+            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
+
             job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(
                 patient_id=patient_id,
                 therapist_id=user_id,

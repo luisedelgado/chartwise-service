@@ -247,7 +247,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -281,7 +284,10 @@ class PaymentProcessingRouter:
             )
             assert len(payment_session_url or '') > 0, "Received invalid checkout URL"
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -326,7 +332,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -382,7 +391,10 @@ class PaymentProcessingRouter:
                 filtered_data.append(current_subscription)
 
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -427,7 +439,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -454,7 +469,10 @@ class PaymentProcessingRouter:
             stripe_client = dependency_container.inject_stripe_client()
             stripe_client.cancel_customer_subscription(subscription_id=subscription_id)
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -503,7 +521,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -548,7 +569,10 @@ class PaymentProcessingRouter:
                 raise Exception("Untracked update behavior")
 
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -593,7 +617,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -607,7 +634,10 @@ class PaymentProcessingRouter:
             stripe_client = dependency_container.inject_stripe_client()
             response = stripe_client.retrieve_product_catalog()
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -654,7 +684,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -685,7 +718,10 @@ class PaymentProcessingRouter:
                 cancel_url=payload.cancel_callback_url
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -734,7 +770,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
@@ -793,7 +832,10 @@ class PaymentProcessingRouter:
                 })
 
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             message = str(e)
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
@@ -916,7 +958,10 @@ class PaymentProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -934,7 +979,10 @@ class PaymentProcessingRouter:
             return subscription_status
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,

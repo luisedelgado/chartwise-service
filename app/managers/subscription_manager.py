@@ -7,6 +7,8 @@ from ..internal.utilities.subscription_utilities import reached_subscription_tie
 
 class SubscriptionManager():
 
+    REACHED_TIER_USAGE_LIMIT_KEY = "reached_tier_usage_limit"
+
     async def subscription_data(
         self,
         user_id: str,
@@ -59,7 +61,7 @@ class SubscriptionManager():
                     "is_free_trial_active": is_free_trial_active,
                     "is_subscription_active": is_subscription_active,
                     "tier": tier,
-                    "reached_tier_usage_limit": reached_tier_usage_limit
+                    self.REACHED_TIER_USAGE_LIMIT_KEY: reached_tier_usage_limit
                 }
             }
         except Exception as e:

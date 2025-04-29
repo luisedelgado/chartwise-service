@@ -24,6 +24,7 @@ from ..internal.utilities.route_verification import get_user_info
 from ..managers.assistant_manager import AssistantManager
 from ..managers.audio_processing_manager import AudioProcessingManager
 from ..managers.auth_manager import AuthManager
+from ..managers.subscription_manager import SubscriptionManager
 
 UUID_LENGTH = 36
 
@@ -42,6 +43,7 @@ class AudioProcessingRouter:
             self._auth_manager = AuthManager()
             self._assistant_manager = AssistantManager()
             self._audio_processing_manager = AudioProcessingManager()
+            self._subscription_manager = SubscriptionManager()
             self.router = APIRouter()
             self._register_routes()
 
@@ -164,7 +166,10 @@ class AudioProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -187,7 +192,10 @@ class AudioProcessingRouter:
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -201,6 +209,9 @@ class AudioProcessingRouter:
             )
 
         try:
+            subscription_data = self._subscription_manager.subscription_data()
+            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
+
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
@@ -230,7 +241,10 @@ class AudioProcessingRouter:
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -277,7 +291,10 @@ class AudioProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -293,7 +310,10 @@ class AudioProcessingRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id value"
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -304,6 +324,9 @@ class AudioProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
+            subscription_data = self._subscription_manager.subscription_data()
+            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
+
             current_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT_FILE)
             file_path = "".join(
                 [
@@ -328,7 +351,10 @@ class AudioProcessingRouter:
             }
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -383,7 +409,10 @@ class AudioProcessingRouter:
                 response=response
             )
         except Exception as e:
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_401_UNAUTHORIZED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_401_UNAUTHORIZED
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -412,7 +441,10 @@ class AudioProcessingRouter:
             )
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_400_BAD_REQUEST)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 session_id=session_id,
@@ -423,6 +455,9 @@ class AudioProcessingRouter:
             raise HTTPException(status_code=status_code, detail=description)
 
         try:
+            subscription_data = self._subscription_manager.subscription_data()
+            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
+
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,
                 assistant_manager=self._assistant_manager,
@@ -445,7 +480,10 @@ class AudioProcessingRouter:
             return {"session_report_id": session_report_id}
         except Exception as e:
             description = str(e)
-            status_code = general_utilities.extract_status_code(e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_417_EXPECTATION_FAILED
+            )
             dependency_container.inject_influx_client().log_error(endpoint_name=request.url.path,
                                                                   session_id=session_id,
                                                                   method=request.method,

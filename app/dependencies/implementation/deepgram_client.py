@@ -62,7 +62,10 @@ class DeepgramClient(DeepgramBaseClass):
                 utterances = response_body['results']['utterances']
                 diarization = DiarizationCleaner().clean_transcription(raw_diarization=utterances)
             except Exception as e:
-                status_code = general_utilities.extract_status_code(exception=e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+                status_code = general_utilities.extract_status_code(
+                    exception=e,
+                    fallback=status.HTTP_417_EXPECTATION_FAILED
+                )
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
         else:
@@ -91,7 +94,10 @@ class DeepgramClient(DeepgramBaseClass):
                 utterances = json_response.get('results').get('utterances')
                 diarization = DiarizationCleaner().clean_transcription(raw_diarization=utterances)
             except Exception as e:
-                status_code = general_utilities.extract_status_code(exception=e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+                status_code = general_utilities.extract_status_code(
+                    exception=e,
+                    fallback=status.HTTP_417_EXPECTATION_FAILED
+                )
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
 
@@ -133,7 +139,10 @@ class DeepgramClient(DeepgramBaseClass):
                 response_body = json.loads(response.text)
                 transcript = response_body['results']['channels'][0]['alternatives'][0]['transcript']
             except Exception as e:
-                status_code = general_utilities.extract_status_code(exception=e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+                status_code = general_utilities.extract_status_code(
+                    exception=e,
+                    fallback=status.HTTP_417_EXPECTATION_FAILED
+                )
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
         else:
@@ -160,7 +169,10 @@ class DeepgramClient(DeepgramBaseClass):
                 json_response = json.loads(response.to_json(indent=4))
                 transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']
             except Exception as e:
-                status_code = general_utilities.extract_status_code(exception=e, fallback=status.HTTP_417_EXPECTATION_FAILED)
+                status_code = general_utilities.extract_status_code(
+                    exception=e,
+                    fallback=status.HTTP_417_EXPECTATION_FAILED
+                )
                 raise HTTPException(status_code=status_code,
                                     detail=str(e))
 
