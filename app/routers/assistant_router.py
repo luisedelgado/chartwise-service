@@ -625,8 +625,12 @@ class AssistantRouter:
             )
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
-            subscription_data = self._subscription_manager.subscription_data()
-            assert not subscription_data[SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], "Reached usage limit for basic subscription"
+            subscription_data = await self._subscription_manager.subscription_data(
+                user_id=user_id,
+                request=request,
+            )
+            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
+                "Reached usage limit for basic subscription")
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
