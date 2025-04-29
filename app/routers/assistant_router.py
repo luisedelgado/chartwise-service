@@ -629,8 +629,8 @@ class AssistantRouter:
                 user_id=user_id,
                 request=request,
             )
-            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
-                "Reached usage limit for basic subscription")
+            assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
+                "Reached usage limit for basic subscription"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(

@@ -213,8 +213,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
-                "Reached usage limit for basic subscription")
+            assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
+                "Reached usage limit for basic subscription"
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
@@ -332,8 +332,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
-                "Reached usage limit for basic subscription")
+            assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
+                "Reached usage limit for basic subscription"
 
             current_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT_FILE)
             file_path = "".join(
@@ -467,8 +467,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
-                "Reached usage limit for basic subscription")
+            assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
+                "Reached usage limit for basic subscription"
 
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,

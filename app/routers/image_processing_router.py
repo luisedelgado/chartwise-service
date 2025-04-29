@@ -159,8 +159,8 @@ class ImageProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-            assert (not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY],
-                "Reached usage limit for basic subscription")
+            assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
+                "Reached usage limit for basic subscription"
 
             job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(
                 patient_id=patient_id,
