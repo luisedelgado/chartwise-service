@@ -1,6 +1,30 @@
-# All environment variables for this lambda are stored directly in AWS Lambda
+# Session Processing Update - Lambda
 
-# Commands to run after updating lambda_function.py:
+## All environment variables for this lambda are stored directly in AWS Lambda
+
+## Commands to run after updating lambda_function.py:
 docker run --name lambda-zip-runner --entrypoint "" lambda-zip-packager zip -r9 lambda_payload.zip .
 docker cp lambda-zip-runner:/app/lambda_payload.zip .
 docker rm lambda-zip-runner
+
+# ----------------------------------------------------------------------------
+
+# Connecting to Staging RDS via Bastion Host
+
+## Prerequisites
+- SSH private key: `staging-bastion-host-key-pair.pem`
+- Bastion Host Public IP: `3.133.158.153`
+- RDS Endpoint: `chartwise-database-instance-staging.cx44ewmqqt62.us-east-2.rds.amazonaws.com`
+
+## SSH Tunnel Command
+
+```
+ssh -i staging-bastion-host-key-pair.pem -N -L 5433:chartwise-database-instance-staging.cx44ewmqqt62.us-east-2.rds.amazonaws.com:5432 ec2-user@3.133.158.153
+```
+
+## Connection in TablePlus
+Host: 127.0.0.1
+Port: 5433
+User: your RDS database user
+Password: your RDS password
+Database: your RDS database name
