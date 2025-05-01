@@ -4,7 +4,7 @@
 KEY_PATH=./staging-bastion-host-key-pair.pem
 
 # Bastion public IP
-BASTION_HOST=3.133.158.153
+BASTION_HOST=3.134.187.106
 
 # RDS private endpoint
 RDS_ENDPOINT=chartwise-database-instance-staging.cx44ewmqqt62.us-east-2.rds.amazonaws.com
