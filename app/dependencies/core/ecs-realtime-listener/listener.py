@@ -1,3 +1,5 @@
+print("🔥 Listener container booting up")
+
 import boto3
 import os
 import json
