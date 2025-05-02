@@ -29,7 +29,6 @@ def lambda_handler(event, context):
     try:
         token = auth_header.replace("Bearer ", "")
         signing_key = get_jwk_client().get_signing_key_from_jwt(token)
-        print(f"signing_key: {signing_key}")
         decoded_token = jwt.decode(
             token,
             signing_key.key,
@@ -37,7 +36,6 @@ def lambda_handler(event, context):
             audience=os.environ.get("COGNITO_APP_CLIENT_ID"),
             issuer=COGNITO_ISSUER,
         )
-        print(f"decoded_token: {decoded_token}")
         therapist_id = decoded_token["sub"]
     except Exception as e:
         print(f"Exception thrown: {e}")
