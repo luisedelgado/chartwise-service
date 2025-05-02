@@ -53,9 +53,41 @@ def fetch_row(conn, id):
         }
 
 def publish_to_external_service(payload):
-    print("Publishing payload:", payload)
-    # For now, just log it or forward to WebSocket/SNS/etc.
-    # requests.post(YOUR_ENDPOINT, json=payload)
+    try:
+        therapist_id = payload["user_id"]
+
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(os.environ.get("WEBSOCKET_CONNECTIONS_TABLE"))
+
+        # Fetch all connections for the therapist
+        response = table.query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
+        )
+        connections = response.get("Items", [])
+
+        if not connections:
+            print(f"No active WebSocket connections for therapist_id: {therapist_id}")
+            return
+
+        domain = os.environ.get("WEBSOCKET_DOMAIN")
+        stage = os.environ.get("WEBSOCKET_STAGE")
+
+        gatewayapi = boto3.client(
+            "apigatewaymanagementapi",
+            endpoint_url=f"https://{domain}/{stage}"
+        )
+
+        for connection in connections:
+            conn_id = connection["connection_id"]
+            gatewayapi.post_to_connection(
+                ConnectionId=conn_id,
+                Data=json.dumps(payload).encode("utf-8")
+            )
+            print(f"✅ Sent update to connection {conn_id}")
+    except gatewayapi.exceptions.GoneException:
+        print(f"⚠️ Connection {conn_id} is stale (GoneException) — should be cleaned up by $disconnect.")
+    except Exception as e:
+        print(f"❌ Failed to send to {conn_id}: {e}")
 
 def main():
     print("[Listener] Starting realtime listener.")
