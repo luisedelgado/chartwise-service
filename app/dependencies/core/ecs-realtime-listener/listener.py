@@ -28,7 +28,7 @@ def get_secret(secret_name: str) -> dict:
         raise RuntimeError(error_msg) from e
 
 def get_db_connection():
-    secret = get_secret(os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE"))
+    secret = get_secret(os.environ.get("AWS_SECRET_MANAGER_PROCESSING_STATUS_UPDATER_ROLE"))
     print("[get_db_connection] Retrieved secret successfully")
     return psycopg2.connect(
         host=secret.get("host"),
