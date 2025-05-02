@@ -8,7 +8,12 @@ SECRET_STRING_KEY = "SecretString"
 
 def get_secret(secret_name: str) -> dict:
     try:
-        client = boto3.client("secretsmanager", region_name=os.environ.get("AWS_SERVICES_REGION"))
+        client = boto3.client(
+            "secretsmanager",
+            region_name=os.environ.get("AWS_SERVICES_REGION"),
+            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        )
         response = client.get_secret_value(SecretId=secret_name)
 
         assert SECRET_STRING_KEY in response, f"Failed to find {SECRET_STRING_KEY} in secretsmanager response"
@@ -22,6 +27,7 @@ def get_secret(secret_name: str) -> dict:
 
 def get_db_connection():
     secret = get_secret(os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE"))
+    print("[get_db_connection] Retrieved secret successfully")
     return psycopg2.connect(
         host=secret.get("host"),
         dbname=secret.get("dbname"),
