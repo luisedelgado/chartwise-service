@@ -13,8 +13,6 @@ def get_secret(secret_name: str) -> dict:
         client = boto3.client(
             "secretsmanager",
             region_name=os.environ.get("AWS_SERVICES_REGION"),
-            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
         )
         response = client.get_secret_value(SecretId=secret_name)
 
