@@ -59,35 +59,38 @@ def publish_to_external_service(payload):
         dynamodb = boto3.resource("dynamodb")
         table = dynamodb.Table(os.environ.get("WEBSOCKET_CONNECTIONS_TABLE"))
 
-        # Fetch all connections for the therapist
+        # Query all connections for the therapist
         response = table.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
         )
-        connections = response.get("Items", [])
+        all_connections = response.get("Items", [])
+
+        # Filter to authenticated ones only
+        connections = [c for c in all_connections if c.get("authenticated") is True]
 
         if not connections:
-            print(f"No active WebSocket connections for therapist_id: {therapist_id}")
+            print(f"No authenticated WebSocket connections for therapist_id: {therapist_id}")
             return
-
-        domain = os.environ.get("WEBSOCKET_DOMAIN")
-        stage = os.environ.get("WEBSOCKET_STAGE")
 
         gatewayapi = boto3.client(
             "apigatewaymanagementapi",
-            endpoint_url=f"https://{domain}/{stage}"
+            endpoint_url=f"https://{os.environ.get('WEBSOCKET_DOMAIN')}/{os.environ.get('WEBSOCKET_STAGE')}"
         )
 
         for connection in connections:
             conn_id = connection["connection_id"]
-            gatewayapi.post_to_connection(
-                ConnectionId=conn_id,
-                Data=json.dumps(payload).encode("utf-8")
-            )
-            print(f"✅ Sent update to connection {conn_id}")
-    except gatewayapi.exceptions.GoneException:
-        print(f"⚠️ Connection {conn_id} is stale (GoneException) — should be cleaned up by $disconnect.")
+            try:
+                gatewayapi.post_to_connection(
+                    ConnectionId=conn_id,
+                    Data=json.dumps(payload).encode("utf-8")
+                )
+                print(f"✅ Sent update to connection {conn_id}")
+            except gatewayapi.exceptions.GoneException:
+                print(f"⚠️ Connection {conn_id} is stale — should be cleaned up by $disconnect.")
+            except Exception as e:
+                print(f"❌ Failed to send to {conn_id}: {e}")
     except Exception as e:
-        print(f"❌ Failed to send to {conn_id}: {e}")
+        print(f"[publish_to_external_service] Unexpected error: {e}")
 
 def main():
     print("[Listener] Starting realtime listener.")
