@@ -1,4 +1,4 @@
-# Building listener docker image
+# Building app Docker image
 
 ## Authenticate with ECR
 aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 637423642366.dkr.ecr.us-east-2.amazonaws.com
@@ -7,7 +7,7 @@ aws ecr get-login-password --region us-east-2 | docker login --username AWS --pa
 ```
 export TAG=staging-v1-$(date +%Y%m%d%H%M) && docker buildx build \
   --platform linux/amd64 \
-  -t 637423642366.dkr.ecr.us-east-2.amazonaws.com/staging-chartwise-realtime-listener:$TAG \
+  -t 637423642366.dkr.ecr.us-east-2.amazonaws.com/staging-chartwise-app:$TAG \
   --push \
   .
 ```
@@ -16,7 +16,7 @@ export TAG=staging-v1-$(date +%Y%m%d%H%M) && docker buildx build \
 ```
 export TAG=prod-v1-$(date +%Y%m%d%H%M) && docker buildx build \
   --platform linux/amd64 \
-  -t 637423642366.dkr.ecr.us-east-2.amazonaws.com/prod-chartwise-realtime-listener:$TAG \
+  -t 637423642366.dkr.ecr.us-east-2.amazonaws.com/prod-chartwise-app:$TAG \
   --push \
   .
 ```
