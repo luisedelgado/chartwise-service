@@ -28,7 +28,8 @@ async def connect_pool(
         app.state.pool = await asyncpg.create_pool(
             dsn=database_url,
             ssl='require',
-            timeout=10
+            timeout=30,
+            command_timeout=30,
         )
     except Exception as e:
         raise RuntimeError(f"Invalid database URL: {e}") from e
