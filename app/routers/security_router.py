@@ -52,9 +52,11 @@ class SecurityRouter:
 
     AUTHENTICATION_ROUTER_TAG = "authentication"
     THERAPISTS_ROUTER_TAG = "therapists"
+    HEALTH_ROUTER_TAG = "health"
     LOGOUT_ENDPOINT = "/v1/logout"
     THERAPISTS_ENDPOINT = "/v1/therapists"
     SIGNIN_ENDPOINT = "/v1/signin"
+    HEALTH_ENDPOINT = "/v1/health"
     SESSION_REFRESH_ENDPOINT = "/v1/session-refresh"
 
     def __init__(self):
@@ -68,6 +70,13 @@ class SecurityRouter:
         """
         Registers the set of routes that the class' router can access.
         """
+        @self.router.get(type(self).HEALTH_ENDPOINT, tags=[type(self).HEALTH_ROUTER_TAG])
+        async def health(
+            response: Response,
+            request: Request,
+        ):
+            return {}
+
         @self.router.post(type(self).SIGNIN_ENDPOINT, tags=[type(self).AUTHENTICATION_ROUTER_TAG])
         async def signin(
             response: Response,
