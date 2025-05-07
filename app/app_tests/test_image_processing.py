@@ -75,14 +75,12 @@ class TestingHarnessImageProcessingRouter:
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
             files=files,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -101,14 +99,12 @@ class TestingHarnessImageProcessingRouter:
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
             files=files,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -132,14 +128,12 @@ class TestingHarnessImageProcessingRouter:
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
             files=files,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -162,14 +156,12 @@ class TestingHarnessImageProcessingRouter:
         files = {
             "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
         }
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
             files=files,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,
@@ -192,14 +184,12 @@ class TestingHarnessImageProcessingRouter:
         files = {
             "image": (DUMMY_PDF_FILE_LOCATION, open(DUMMY_PDF_FILE_LOCATION, 'rb'), IMAGE_PDF_FILETYPE)
         }
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
             files=files,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "patient_id": FAKE_PATIENT_ID,

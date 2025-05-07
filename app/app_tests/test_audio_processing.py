@@ -122,13 +122,11 @@ class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_soap_transcription_with_invalid_date_format(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -142,13 +140,11 @@ class TestingHarnessAudioProcessingRouter:
 
     def test_invoke_soap_transcription_with_invalid_timezone(self):
         self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -165,13 +161,11 @@ class TestingHarnessAudioProcessingRouter:
         assert not self.fake_deepgram_client.transcribe_audio_invoked
         assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             data={
                 "template": "soap",
@@ -192,20 +186,19 @@ class TestingHarnessAudioProcessingRouter:
         assert not self.fake_deepgram_client.transcribe_audio_invoked
         assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
-                               data={
-                                    "template": "soap",
-                                    "patient_id": FAKE_PATIENT_ID,
-                                    "session_date": "04-04-2022",
-                                    "client_timezone_identifier": "UTC",
-                                    "file_path": FAKE_THERAPIST_ID
-                                },
-                                headers={
-                                    "auth-token": "myFakeToken",
-                                },
-                                cookies={
-                                    "session_token": self.session_token
-                                })
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04-04-2022",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 200
         assert self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
         assert self.fake_deepgram_client.transcribe_audio_invoked
@@ -227,54 +220,51 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 401
 
     def test_invoke_diarization_with_valid_auth_but_empty_patient_id(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-                               data={
-                                   "patient_id": "",
-                                   "session_date": "10-24-2020",
-                                   "template": "soap",
-                                   "client_timezone_identifier": "UTC",
-                                   "file_path": FAKE_THERAPIST_ID
-                               },
-                               headers={
-                                   "auth-token": "myFakeToken",
-                               },
-                               cookies={
-                                   "session_token": self.session_token
-                               },)
+            data={
+                "patient_id": "",
+                "session_date": "10-24-2020",
+                "template": "soap",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 422
 
     def test_invoke_diarization_with_valid_auth_but_invalid_date_format(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-                               data={
-                                   "patient_id": FAKE_PATIENT_ID,
-                                   "session_date": "10/24/2020",
-                                   "template": "soap",
-                                   "client_timezone_identifier": "UTC",
-                                   "file_path": FAKE_THERAPIST_ID
-                               },
-                               headers={
-                                   "auth-token": "myFakeToken",
-                               },
-                               cookies={
-                                   "session_token": self.session_token
-                               },)
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "10/24/2020",
+                "template": "soap",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 400
 
     def test_invoke_diarization_with_valid_tokens_but_invalid_timezone_identifier(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-                               data={
-                                   "patient_id": FAKE_PATIENT_ID,
-                                   "session_date": "10-24-2020",
-                                   "template": "soap",
-                                   "client_timezone_identifier": "gfhhfhdfhhs",
-                                   "file_path": FAKE_THERAPIST_ID
-                               },
-                               headers={
-                                   "auth-token": "myFakeToken",
-                               },
-                               cookies={
-                                   "session_token": self.session_token
-                               },)
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "10-24-2020",
+                "template": "soap",
+                "client_timezone_identifier": "gfhhfhdfhhs",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
         assert response.status_code == 400
 
     def test_invoke_diarization_success(self):
@@ -282,20 +272,20 @@ class TestingHarnessAudioProcessingRouter:
         assert not self.fake_deepgram_client.diarize_audio_invoked
         assert not self.fake_pinecone_client.update_session_vectors_invoked
         self.fake_pinecone_client.vector_store_context_returns_data = True
-        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
-                               data={
-                                   "patient_id": FAKE_PATIENT_ID,
-                                   "session_date": "10-24-2020",
-                                   "template": "soap",
-                                   "client_timezone_identifier": "UTC",
-                                   "file_path": FAKE_THERAPIST_ID
-                               },
-                               headers={
-                                   "auth-token": "myFakeToken",
-                               },
-                               cookies={
-                                   "session_token": self.session_token
-                               },)
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.DIARIZATION_ENDPOINT,
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "10-24-2020",
+                "template": "soap",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            }
+        )
         assert response.status_code == 200
         assert self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
         assert self.fake_deepgram_client.diarize_audio_invoked

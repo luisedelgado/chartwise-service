@@ -91,11 +91,9 @@ class TestingHarnessSecurityRouter:
         # Need to add a delay to ensure exp difference
         time.sleep(1)
 
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             SecurityRouter.SESSION_REFRESH_ENDPOINT,
-            cookies={
-                "session_token": self.session_token
-            },
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
             }
@@ -122,13 +120,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 401
 
     def test_get_therapist_success(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.get(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
         )
         assert response.status_code == 200
@@ -154,13 +150,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 401
 
     def test_add_therapist_with_valid_credentials_but_invalid_birthdate_format(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "id": FAKE_THERAPIST_ID,
@@ -175,13 +169,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_language_preference(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "id": FAKE_THERAPIST_ID,
@@ -196,13 +188,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_add_therapist_with_valid_credentials_but_invalid_gender_value(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "id": FAKE_THERAPIST_ID,
@@ -217,13 +207,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_add_therapist_success(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "id": FAKE_THERAPIST_ID,
@@ -258,13 +246,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 401
 
     def test_update_therapist_with_valid_credentials_but_undefined_gender(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "email": "foo@foo.com",
@@ -278,13 +264,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_update_therapist_with_valid_credentials_but_invalid_date(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "email": "foo@foo.com",
@@ -298,13 +282,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_update_therapist_with_valid_credentials_but_invalid_language_code(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "email": "foo@foo.com",
@@ -318,13 +300,11 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 400
 
     def test_update_therapist_success(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "email": "foo@foo.com",
@@ -338,12 +318,10 @@ class TestingHarnessSecurityRouter:
         assert response.status_code == 200
 
     def test_logout_success(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.client.cookies.set("session_id", FAKE_SESSION_REPORT_ID)
         response = self.client.post(
             SecurityRouter.LOGOUT_ENDPOINT,
-            cookies={
-                "session_token": self.session_token,
-                "session_id": FAKE_SESSION_REPORT_ID
-            },
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
             },
@@ -368,14 +346,11 @@ class TestingHarnessSecurityRouter:
         assert not self.fake_cognito_client.invoked_delete_user
         assert not self.fake_stripe_client.subscription_deletion_invoked
         assert not self.fake_db_client.invoked_delete_patients
-
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.delete(
             SecurityRouter.THERAPISTS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
         )
 

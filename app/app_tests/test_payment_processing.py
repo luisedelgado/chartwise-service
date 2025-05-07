@@ -1,5 +1,3 @@
-import os
-
 from fastapi.testclient import TestClient
 
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
@@ -62,13 +60,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_generate_checkout_session_stripe_client_throws(self):
         self.fake_stripe_client.request_throws_exception = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -80,13 +76,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_generate_checkout_session_stripe_client_returns_none(self):
         self.fake_stripe_client.request_returns_none = True
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -98,14 +92,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_generate_checkout_session_stripe_client_returns_success(self):
         assert not self.fake_stripe_client.generate_checkout_session_invoked
-
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             PaymentProcessingRouter.CHECKOUT_SESSION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "price_id": FAKE_PRICE_ID,
@@ -144,11 +135,9 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_retrieve_subscriptions_success(self):
         assert not self.fake_stripe_client.retrieve_customer_subscriptions_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.get(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
-            cookies={
-                "session_token": self.session_token
-            },
             headers={
                 "auth-token": "myFakeToken",
             },
@@ -169,13 +158,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_delete_subscription_success(self):
         assert not self.fake_stripe_client.subscription_cancellation_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.delete(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
         )
         assert response.status_code == 200
@@ -195,13 +182,11 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_update_subscription_upgrade_without_new_tier_price_id(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
@@ -211,13 +196,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_update_subscription_plan_change_tier_success(self):
         assert not self.fake_stripe_client.update_customer_subscription_plan_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "new_price_tier_id": FAKE_PRICE_ID,
@@ -229,13 +212,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_update_subscription_plan_undo_cancellation_success(self):
         assert not self.fake_stripe_client.resume_cancelled_subscription_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.put(
             PaymentProcessingRouter.SUBSCRIPTIONS_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "new_price_tier_id": FAKE_PRICE_ID,
@@ -256,11 +237,9 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_retrieve_product_catalog_success(self):
         assert not self.fake_stripe_client.retrieve_product_catalog_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.get(
             PaymentProcessingRouter.PRODUCT_CATALOG_ENDPOINT,
-            cookies={
-                "session_token": self.session_token
-            },
             headers={
                 "auth-token": "myFakeToken",
             }
@@ -285,13 +264,11 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_generate_update_payment_method_session_url_success(self):
         assert not self.fake_stripe_client.generate_payment_method_update_session_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.post(
             PaymentProcessingRouter.UPDATE_PAYMENT_METHOD_SESSION_ENDPOINT,
             headers={
                 "auth-token": "myFakeToken",
-            },
-            cookies={
-                "session_token": self.session_token
             },
             json={
                 "customer_id": FAKE_CUSTOMER_ID,
@@ -315,11 +292,9 @@ class TestingHarnessPaymentProcessingRouter:
 
     def test_retrieve_payment_history_success(self):
         assert not self.fake_stripe_client.retrieve_payment_intent_history_invoked
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.get(
             PaymentProcessingRouter.PAYMENT_HISTORY_ENDPOINT,
-            cookies={
-                "session_token": self.session_token
-            },
             headers={
                 "auth-token": "myFakeToken",
             }
@@ -338,13 +313,11 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 401
 
     def test_get_subscription_status_success(self):
+        self.client.cookies.set("session_token", self.session_token)
         response = self.client.get(
             PaymentProcessingRouter.SUBSCRIPTION_STATUS_ENDPOINT,
             headers={
                 "auth-token": FAKE_ACCESS_TOKEN,
-            },
-            cookies={
-                "session_token": self.session_token
             },
         )
         assert response.status_code == 200
