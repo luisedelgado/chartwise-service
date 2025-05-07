@@ -51,11 +51,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
 
     async def trigger_async_chat_completion(
         self,
-        metadata: dict,
         max_tokens: int,
         messages: list,
         expects_json_response: bool,
-        cache_configuration: dict = None
     ):
         if self.throws_exception:
             raise Exception("Fake exception")
@@ -74,7 +72,6 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        metadata: dict,
         last_session_date: str = None
     ) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):

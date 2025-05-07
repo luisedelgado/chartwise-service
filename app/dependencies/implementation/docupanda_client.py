@@ -1,11 +1,9 @@
 import base64, os, requests
 
 from fastapi import status
-from portkey_ai import Portkey
 from typing import Tuple
 
 from ..api.docupanda_base_class import DocupandaBaseClass
-from ...internal.monitoring_proxy import use_monitoring_proxy
 
 class DocupandaClient(DocupandaBaseClass):
 
@@ -24,28 +22,15 @@ class DocupandaClient(DocupandaBaseClass):
             "filename": file_name + pdf_extension
         }}
 
-        if use_monitoring_proxy():
-            portkey = Portkey(
-                api_key=os.environ.get("PORTKEY_API_KEY"),
-                virtual_key=os.environ.get("PORTKEY_DOCUPANDA_VIRTUAL_KEY"),
-                custom_host=base_url,
-                metadata={
-                    "hidden_provider": "docupanda"
-                }
-            )
-            response = portkey.post(document_endpoint, document=payload)
-            response_as_dict = response.dict()
-            doc_id = response_as_dict["documentId"]
-        else:
-            headers = {
-                "accept": "application/json",
-                "content-type": "application/json",
-                "X-API-Key": os.getenv("DOCUPANDA_API_KEY"),
-            }
-            url = base_url + document_endpoint
-            response = requests.post(url, json={"document": payload}, headers=headers)
-            assert response.status_code == 200, f"Got HTTP code {response.status} while uploading the image"
-            doc_id = response.json()['documentId']
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "X-API-Key": os.getenv("DOCUPANDA_API_KEY"),
+        }
+        url = base_url + document_endpoint
+        response = requests.post(url, json={"document": payload}, headers=headers)
+        assert response.status_code == 200, f"Got HTTP code {response.status} while uploading the image"
+        doc_id = response.json()['documentId']
 
         return doc_id
 

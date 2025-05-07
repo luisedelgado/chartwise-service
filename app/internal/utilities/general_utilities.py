@@ -1,11 +1,10 @@
-import os, re, uuid
+import re, uuid
 
 from fastapi import (
     HTTPException,
     status,
     Request
 )
-from portkey_ai import createHeaders
 from pytz import timezone
 
 from ...internal.schemas import THERAPISTS_TABLE_NAME
@@ -87,57 +86,6 @@ def map_language_code_to_language(
         return "es"
     else:
         raise Exception ("Untracked language code")
-
-def create_monitoring_proxy_config(
-    llm_model,
-    cache_max_age = None
-):
-    """
-    Creates a proxy config for the monitoring layer.
-    """
-    config = {
-        "provider": "openai",
-        "virtual_key": os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
-        "retry": {
-            "attempts": 2,
-        },
-        "override_params": {
-            "model": llm_model,
-            "temperature": 0,
-        }
-    }
-    if cache_max_age is not None:
-        config["cache"] = {
-            "mode": "semantic",
-            "max_age": cache_max_age,
-        }
-    return config
-
-def create_monitoring_proxy_headers(
-    **kwargs
-):
-    """
-    Creates proxy headers for the monitoring layer.
-    """
-    caching_shard_key = None if "caching_shard_key" not in kwargs else kwargs["caching_shard_key"]
-    cache_max_age = None if "cache_max_age" not in kwargs else kwargs["cache_max_age"]
-    llm_model = None if "llm_model" not in kwargs else kwargs["llm_model"]
-    metadata = None if "metadata" not in kwargs else kwargs["metadata"]
-
-    if cache_max_age is not None and caching_shard_key is not None:
-        monitoring_proxy_config = create_monitoring_proxy_config(cache_max_age=cache_max_age,
-                                                                 llm_model=llm_model)
-        return createHeaders(trace_id=uuid.uuid4(),
-                             api_key=os.environ.get("PORTKEY_API_KEY"),
-                             config=monitoring_proxy_config,
-                             cache_namespace=caching_shard_key,
-                             metadata=metadata)
-
-    monitoring_proxy_config = create_monitoring_proxy_config(llm_model=llm_model)
-    return createHeaders(trace_id=uuid.uuid4(),
-                         api_key=os.environ.get("PORTKEY_API_KEY"),
-                         config=monitoring_proxy_config,
-                         metadata=metadata)
 
 def is_valid_extension(
     ext: str

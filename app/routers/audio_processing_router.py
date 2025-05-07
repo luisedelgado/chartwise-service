@@ -213,6 +213,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
+            assert subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY], \
+                "Subscription is inactive. Unable to add new session."
             assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
                 "Reached usage limit for basic subscription"
 
@@ -332,6 +334,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
+            assert subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY], \
+                "Subscription is inactive. Unable to add new session."
             assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
                 "Reached usage limit for basic subscription"
 
@@ -467,6 +471,8 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
+            assert subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY], \
+                "Subscription is inactive. Unable to add new session."
             assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
                 "Reached usage limit for basic subscription"
 

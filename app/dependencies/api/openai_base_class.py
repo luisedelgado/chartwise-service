@@ -11,21 +11,17 @@ class OpenAIBaseClass(ABC):
 
     @abstractmethod
     async def trigger_async_chat_completion(
-        metadata: dict,
         max_tokens: int,
         messages: list,
         expects_json_response: bool,
-        cache_configuration: dict = None
     ):
         """
         Invokes a chat completion asynchronously.
 
         Arguments:
-        metadata – the metadata to be used when logging.
         max_tokens – the max tokens allowed for the response output.
         messages – the set of message prompts.
         expects_json_response – a flag representing whether or not the response is expected to be in json format.
-        cache_configuration – the optional cache configuration.
         """
         pass
 
@@ -37,7 +33,6 @@ class OpenAIBaseClass(ABC):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        metadata: dict,
         last_session_date: str = None
     ) -> AsyncIterable[str]:
         """
@@ -50,7 +45,6 @@ class OpenAIBaseClass(ABC):
         is_first_message_in_conversation – flag tracking whether it's the first message being sent in the conversation.
         patient_name – the patient name.
         patient_gender – the patient gender.
-        metadata – the metadata associated with the completion request.
         last_session_date – the optional last session date for further contextualizing the prompts.
         """
         pass

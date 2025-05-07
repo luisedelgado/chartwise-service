@@ -140,8 +140,6 @@ class ImageProcessingManager(MediaProcessingManager):
 
             if session_report_data[0]['template'] == SessionNotesTemplate.SOAP.value:
                 textraction = await assistant_manager.adapt_session_notes_to_soap(
-                    therapist_id=therapist_id,
-                    session_id=session_id,
                     session_notes_text=textraction
             )
 

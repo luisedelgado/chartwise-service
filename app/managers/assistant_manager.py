@@ -104,10 +104,12 @@ class AssistantManager:
     def __init__(self):
         self.chartwise_assistant = ChartWiseAssistant()
 
-    async def retrieve_single_session_report(self,
-                                             therapist_id: str,
-                                             session_report_id: str,
-                                             request: Request,):
+    async def retrieve_single_session_report(
+        self,
+        therapist_id: str,
+        session_report_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -123,13 +125,15 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def retrieve_session_reports(self,
-                                       therapist_id: str,
-                                       patient_id: str,
-                                       year: str,
-                                       time_range: TimeRange,
-                                       most_recent: int,
-                                       request: Request,):
+    async def retrieve_session_reports(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        year: str,
+        time_range: TimeRange,
+        most_recent: int,
+        request: Request,
+    ):
         try:
             if year:
                 return await self._retrieve_sessions_for_year(
@@ -157,19 +161,21 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def process_new_session_data(self,
-                                       environment: str,
-                                       language_code: str,
-                                       background_tasks: BackgroundTasks,
-                                       auth_manager: AuthManager,
-                                       patient_id: str,
-                                       notes_text: str,
-                                       session_date: date,
-                                       source: SessionNotesSource,
-                                       session_id: str,
-                                       therapist_id: str,
-                                       request: Request,
-                                       diarization: str = None) -> str:
+    async def process_new_session_data(
+        self,
+        environment: str,
+        language_code: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        patient_id: str,
+        notes_text: str,
+        session_date: date,
+        source: SessionNotesSource,
+        session_id: str,
+        therapist_id: str,
+        request: Request,
+        diarization: str = None
+    ) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
             now_timestamp = datetime.now()
@@ -215,15 +221,17 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def update_session(self,
-                             therapist_id: str,
-                             language_code: str,
-                             environment: str,
-                             background_tasks: BackgroundTasks,
-                             auth_manager: AuthManager,
-                             filtered_body: dict,
-                             session_id: str,
-                             request: Request,):
+    async def update_session(
+        self,
+        therapist_id: str,
+        language_code: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        filtered_body: dict,
+        session_id: str,
+        request: Request,
+    ):
         try:
             session_notes_id = filtered_body['id']
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -306,14 +314,16 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def delete_session(self,
-                             language_code: str,
-                             environment: str,
-                             session_id: str,
-                             background_tasks: BackgroundTasks,
-                             therapist_id: str,
-                             session_report_id: str,
-                             request: Request,):
+    async def delete_session(
+        self,
+        language_code: str,
+        environment: str,
+        session_id: str,
+        background_tasks: BackgroundTasks,
+        therapist_id: str,
+        session_report_id: str,
+        request: Request,
+    ):
         try:
             # Delete the session notes from DB
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -352,10 +362,12 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def retrieve_single_patient(self,
-                                      therapist_id: str,
-                                      patient_id: str,
-                                      request: Request,):
+    async def retrieve_single_patient(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -371,9 +383,11 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def retrieve_patients(self,
-                                therapist_id: str,
-                                request: Request,):
+    async def retrieve_patients(
+        self,
+        therapist_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -390,13 +404,15 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def add_patient(self,
-                          background_tasks: BackgroundTasks,
-                          language_code: str,
-                          filtered_body: dict,
-                          therapist_id: str,
-                          session_id: str,
-                          request: Request,) -> str:
+    async def add_patient(
+        self,
+        background_tasks: BackgroundTasks,
+        language_code: str,
+        filtered_body: dict,
+        therapist_id: str,
+        session_id: str,
+        request: Request,
+    ) -> str:
         try:
             environment = os.environ.get('ENVIRONMENT')
             payload = {"therapist_id": therapist_id}
@@ -460,12 +476,14 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def update_patient(self,
-                             therapist_id: str,
-                             filtered_body: dict,
-                             session_id: str,
-                             background_tasks: BackgroundTasks,
-                             request: Request,):
+    async def update_patient(
+        self,
+        therapist_id: str,
+        filtered_body: dict,
+        session_id: str,
+        background_tasks: BackgroundTasks,
+        request: Request,
+    ):
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         patient_query = await aws_db_client.select(
             user_id=therapist_id,
@@ -516,23 +534,23 @@ class AssistantManager:
         # New pre-existing history content means we should clear any existing conversation.
         await openai_client.clear_chat_history()
 
-    async def adapt_session_notes_to_soap(self,
-                                          therapist_id: str,
-                                          session_notes_text: str,
-                                          session_id: str) -> str:
+    async def adapt_session_notes_to_soap(
+        self,
+        session_notes_text: str,
+    ) -> str:
         try:
             soap_report = await self.chartwise_assistant.create_soap_report(
                 text=session_notes_text,
-                therapist_id=therapist_id,
-                session_id=session_id
             )
             return soap_report
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def delete_all_data_for_patient(self,
-                                    therapist_id: str,
-                                    patient_id: str):
+    def delete_all_data_for_patient(
+        self,
+        therapist_id: str,
+        patient_id: str
+    ):
         try:
             pinecone_client = dependency_container.inject_pinecone_client()
             pinecone_client.delete_session_vectors(
@@ -548,9 +566,11 @@ class AssistantManager:
             # data in our vector db
             pass
 
-    def delete_all_sessions_for_therapist(self,
-                                          user_id: str,
-                                          patient_ids: list[str]):
+    def delete_all_sessions_for_therapist(
+        self,
+        user_id: str,
+        patient_ids: list[str]
+    ):
         try:
             pinecone_client = dependency_container.inject_pinecone_client()
             for patient_id in patient_ids:
@@ -561,12 +581,12 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def query_session(self,
-                            query: AssistantQuery,
-                            therapist_id: str,
-                            session_id: str,
-                            environment: str,
-                            request: Request,) -> AsyncIterable[str]:
+    async def query_session(
+        self,
+        query: AssistantQuery,
+        therapist_id: str,
+        request: Request,
+    ) -> AsyncIterable[str]:
         try:
             # If we don't have cached data about this patient, or if the therapist has
             # asked a question about a different patient, go fetch data.
@@ -626,21 +646,21 @@ class AssistantManager:
                 patient_gender=patient_gender,
                 query_input=query.text,
                 response_language_code=language_code,
-                session_id=session_id,
-                environment=environment,
                 session_date_override=session_date_override
             ):
                 yield part
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def update_question_suggestions(self,
-                                          language_code: str,
-                                          therapist_id: str,
-                                          patient_id: str,
-                                          environment: str,
-                                          session_id: str,
-                                          request: Request,):
+    async def update_question_suggestions(
+        self,
+        language_code: str,
+        therapist_id: str,
+        patient_id: str,
+        environment: str,
+        session_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = await aws_db_client.select(
@@ -673,10 +693,8 @@ class AssistantManager:
 
             questions_json = await self.chartwise_assistant.create_question_suggestions(
                 language_code=language_code,
-                session_id=session_id,
                 user_id=therapist_id,
                 patient_id=patient_id,
-                environment=environment,
                 patient_name=(" ".join([patient_first_name, patient_last_name])),
                 patient_gender=patient_gender,
                 request=request,
@@ -711,13 +729,15 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def update_presession_tray(self,
-                                     therapist_id: str,
-                                     patient_id: str,
-                                     environment: str,
-                                     session_id: str,
-                                     language_code: str,
-                                     request: Request,):
+    async def update_presession_tray(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        environment: str,
+        session_id: str,
+        language_code: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = await aws_db_client.select(
@@ -768,9 +788,7 @@ class AssistantManager:
             briefing = await self.chartwise_assistant.create_briefing(
                 user_id=therapist_id,
                 patient_id=patient_id,
-                environment=environment,
                 language_code=language_code,
-                session_id=session_id,
                 patient_name=patient_first_name,
                 patient_gender=patient_gender,
                 therapist_name=therapist_name,
@@ -805,13 +823,15 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def update_patient_recent_topics(self,
-                                           language_code: str,
-                                           therapist_id: str,
-                                           patient_id: str,
-                                           environment: str,
-                                           session_id: str,
-                                           request: Request,):
+    async def update_patient_recent_topics(
+        self,
+        language_code: str,
+        therapist_id: str,
+        patient_id: str,
+        environment: str,
+        session_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = await aws_db_client.select(
@@ -846,10 +866,8 @@ class AssistantManager:
             # There are sessions associated with the patient. Regenerate recent topics.
             recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
                 language_code=language_code,
-                session_id=session_id,
                 user_id=therapist_id,
                 patient_id=patient_id,
-                environment=environment,
                 patient_name=patient_full_name,
                 patient_gender=patient_gender,
                 request=request,
@@ -860,9 +878,7 @@ class AssistantManager:
                 recent_topics_json=recent_topics_json,
                 user_id=therapist_id,
                 patient_id=patient_id,
-                environment=environment,
                 language_code=language_code,
-                session_id=session_id,
                 patient_name=patient_first_name,
                 patient_gender=patient_gender,
                 request=request,
@@ -897,13 +913,15 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def generate_attendance_insights(self,
-                                           language_code: str,
-                                           therapist_id: str,
-                                           patient_id: str,
-                                           session_id: str,
-                                           environment: str,
-                                           request: Request,):
+    async def generate_attendance_insights(
+        self,
+        language_code: str,
+        therapist_id: str,
+        patient_id: str,
+        session_id: str,
+        environment: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             patient_query = await aws_db_client.select(
@@ -938,9 +956,7 @@ class AssistantManager:
                 patient_id=patient_id,
                 patient_gender=patient_gender,
                 patient_name=patient_first_name,
-                environment=environment,
                 language_code=language_code,
-                session_id=session_id,
                 request=request,
             )
 
@@ -971,14 +987,16 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def update_patient_metrics_after_session_report_operation(self,
-                                                                    patient_id: str,
-                                                                    environment: str,
-                                                                    therapist_id: str,
-                                                                    session_id: str,
-                                                                    operation: SessionCrudOperation,
-                                                                    request: Request,
-                                                                    session_date: date = None):
+    async def update_patient_metrics_after_session_report_operation(
+        self,
+        patient_id: str,
+        environment: str,
+        therapist_id: str,
+        session_id: str,
+        operation: SessionCrudOperation,
+        request: Request,
+        session_date: date = None
+    ):
         try:
             # Fetch patient last session date and total session count
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -1056,10 +1074,12 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def get_patient_active_session_years(self,
-                                               therapist_id: str,
-                                               patient_id: str,
-                                               request: Request,) -> Set[str]:
+    async def get_patient_active_session_years(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ) -> Set[str]:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         session_dates = await aws_db_client.select(
             user_id=therapist_id,
@@ -1077,9 +1097,11 @@ class AssistantManager:
 
         return sorted(unique_active_years)
 
-    async def default_streaming_error_message(self,
-                                              user_id: str,
-                                              request: Request):
+    async def default_streaming_error_message(
+        self,
+        user_id: str,
+        request: Request
+    ):
         if self.cached_patient_query_data is None:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
@@ -1101,10 +1123,12 @@ class AssistantManager:
         else:
             raise Exception("Unsupported language code")
 
-    async def retrieve_attendance_insights(self,
-                                        therapist_id: str,
-                                        patient_id: str,
-                                        request: Request,):
+    async def retrieve_attendance_insights(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -1120,10 +1144,12 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def retrieve_briefing(self,
-                                therapist_id: str,
-                                patient_id: str,
-                                request: Request,):
+    async def retrieve_briefing(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -1139,10 +1165,12 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def retrieve_question_suggestions(self,
-                                            therapist_id: str,
-                                            patient_id: str,
-                                            request: Request,):
+    async def retrieve_question_suggestions(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -1158,10 +1186,12 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def recent_topics_data(self,
-                                 therapist_id: str,
-                                 patient_id: str,
-                                 request: Request,):
+    async def recent_topics_data(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        request: Request,
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             response = await aws_db_client.select(
@@ -1179,18 +1209,20 @@ class AssistantManager:
 
     # Private
 
-    async def _insert_vectors_and_generate_insights(self,
-                                                    session_notes_id: str,
-                                                    therapist_id: str,
-                                                    patient_id: str,
-                                                    notes_text: str,
-                                                    session_date: date,
-                                                    session_id: str,
-                                                    language_code: str,
-                                                    environment: str,
-                                                    background_tasks: BackgroundTasks,
-                                                    auth_manager: AuthManager,
-                                                    request: Request,):
+    async def _insert_vectors_and_generate_insights(
+        self,
+        session_notes_id: str,
+        therapist_id: str,
+        patient_id: str,
+        notes_text: str,
+        session_date: date,
+        session_id: str,
+        language_code: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        request: Request,
+    ):
         # Update session notes entry with minisummary if needed
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(
@@ -1202,7 +1234,6 @@ class AssistantManager:
                 session_id=session_id,
                 environment=environment,
                 background_tasks=background_tasks,
-                patient_id=patient_id,
                 request=request,
             )
 
@@ -1239,19 +1270,21 @@ class AssistantManager:
             request=request,
         )
 
-    async def _update_vectors_and_generate_insights(self,
-                                                    session_notes_id: str,
-                                                    therapist_id: str,
-                                                    patient_id: str,
-                                                    notes_text: str,
-                                                    old_session_date: date,
-                                                    new_session_date: date,
-                                                    session_id: str,
-                                                    language_code: str,
-                                                    environment: str,
-                                                    background_tasks: BackgroundTasks,
-                                                    auth_manager: AuthManager,
-                                                    request: Request,):
+    async def _update_vectors_and_generate_insights(
+        self,
+        session_notes_id: str,
+        therapist_id: str,
+        patient_id: str,
+        notes_text: str,
+        old_session_date: date,
+        new_session_date: date,
+        session_id: str,
+        language_code: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        auth_manager: AuthManager,
+        request: Request,
+    ):
         # We only have to generate a new mini_summary if the session text changed.
         if len(notes_text) > 0:
             await self._update_session_notes_with_mini_summary(
@@ -1263,7 +1296,6 @@ class AssistantManager:
                 session_id=session_id,
                 environment=environment,
                 background_tasks=background_tasks,
-                patient_id=patient_id,
                 request=request,
             )
 
@@ -1301,15 +1333,17 @@ class AssistantManager:
             request=request,
         )
 
-    async def _delete_vectors_and_generate_insights(self,
-                                                    therapist_id: str,
-                                                    patient_id: str,
-                                                    session_date: date,
-                                                    session_id: str,
-                                                    language_code: str,
-                                                    environment: str,
-                                                    background_tasks: BackgroundTasks,
-                                                    request: Request,):
+    async def _delete_vectors_and_generate_insights(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        session_date: date,
+        session_id: str,
+        language_code: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        request: Request,
+    ):
         dependency_container.inject_pinecone_client().delete_session_vectors(
             user_id=therapist_id,
             patient_id=patient_id,
@@ -1338,13 +1372,15 @@ class AssistantManager:
             request=request,
         )
 
-    async def _generate_metrics_and_insights(self,
-                                             language_code: str,
-                                             therapist_id: str,
-                                             patient_id: str,
-                                             environment: str,
-                                             session_id: str,
-                                             request: Request,):
+    async def _generate_metrics_and_insights(
+        self,
+        language_code: str,
+        therapist_id: str,
+        patient_id: str,
+        environment: str,
+        session_id: str,
+        request: Request,
+    ):
         # Clean patient query cache
         self.cached_patient_query_data = None
 
@@ -1396,7 +1432,10 @@ class AssistantManager:
             request=request,
         )
 
-    def _default_question_suggestions_ids_for_new_patient(self, language_code: str):
+    def _default_question_suggestions_ids_for_new_patient(
+        self,
+        language_code: str
+    ):
         if language_code.startswith('es'):
             # Spanish
             return [
@@ -1412,13 +1451,15 @@ class AssistantManager:
         else:
             raise Exception("Unsupported language code")
 
-    async def _load_default_question_suggestions_for_new_patient(self,
-                                                                 language_code: str,
-                                                                 patient_id: str,
-                                                                 therapist_id: str,
-                                                                 environment: str,
-                                                                 session_id: str,
-                                                                 request: Request,):
+    async def _load_default_question_suggestions_for_new_patient(
+        self,
+        language_code: str,
+        patient_id: str,
+        therapist_id: str,
+        environment: str,
+        session_id: str,
+        request: Request,
+    ):
         try:
             # Insert default question suggestions for patient without any session data
             default_question_suggestions = self._default_question_suggestions_ids_for_new_patient(language_code)
@@ -1464,16 +1505,18 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def _load_default_pre_session_tray_for_new_patient(self,
-                                                             language_code: str,
-                                                             patient_id: str,
-                                                             therapist_id: str,
-                                                             environment: str,
-                                                             session_id: str,
-                                                             patient_first_name: str,
-                                                             is_first_time_patient: bool,
-                                                             request: Request,
-                                                             patient_gender: str = None):
+    async def _load_default_pre_session_tray_for_new_patient(
+        self,
+        language_code: str,
+        patient_id: str,
+        therapist_id: str,
+        environment: str,
+        session_id: str,
+        patient_first_name: str,
+        is_first_time_patient: bool,
+        request: Request,
+        patient_gender: str = None
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             therapist_data_query = await aws_db_client.select(
@@ -1565,24 +1608,22 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def _update_session_notes_with_mini_summary(self,
-                                                      session_notes_id: str,
-                                                      notes_text: str,
-                                                      therapist_id: str,
-                                                      language_code: str,
-                                                      auth_manager: AuthManager,
-                                                      session_id: str,
-                                                      environment: str,
-                                                      background_tasks: BackgroundTasks,
-                                                      patient_id: str,
-                                                      request: Request,):
+    async def _update_session_notes_with_mini_summary(
+        self,
+        session_notes_id: str,
+        notes_text: str,
+        therapist_id: str,
+        language_code: str,
+        auth_manager: AuthManager,
+        session_id: str,
+        environment: str,
+        background_tasks: BackgroundTasks,
+        request: Request,
+    ):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(
                 session_notes=notes_text,
-                therapist_id=therapist_id,
                 language_code=language_code,
-                session_id=session_id,
-                patient_id=patient_id
             )
 
             await self.update_session(
@@ -1609,11 +1650,13 @@ class AssistantManager:
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e
 
-    async def _retrieve_sessions_for_year(self,
-                                          therapist_id: str,
-                                          request: Request,
-                                          patient_id: str,
-                                          year: str):
+    async def _retrieve_sessions_for_year(
+        self,
+        therapist_id: str,
+        request: Request,
+        patient_id: str,
+        year: str
+    ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             year_as_int = int(year)
@@ -1633,11 +1676,13 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def _retrieve_sessions_in_range(self,
-                                          request: Request,
-                                          patient_id: str,
-                                          time_range: TimeRange,
-                                          therapist_id: str):
+    async def _retrieve_sessions_in_range(
+        self,
+        request: Request,
+        patient_id: str,
+        time_range: TimeRange,
+        therapist_id: str
+    ):
         try:
             now = datetime.now()
             days_map = {
@@ -1708,11 +1753,13 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def _retrieve_n_most_recent_sessions(self,
-                                               therapist_id: str,
-                                               request: Request,
-                                               patient_id: str,
-                                               most_recent_n: int) -> list[PineconeQuerySessionDateOverride]:
+    async def _retrieve_n_most_recent_sessions(
+        self,
+        therapist_id: str,
+        request: Request,
+        patient_id: str,
+        most_recent_n: int
+    ) -> list[PineconeQuerySessionDateOverride]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = await aws_db_client.select(

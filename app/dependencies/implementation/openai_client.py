@@ -10,10 +10,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 from openai.types import Completion
-from portkey_ai import Portkey
 
-from ...internal.monitoring_proxy import get_monitoring_proxy_url, use_monitoring_proxy
-from ...internal.utilities.general_utilities import create_monitoring_proxy_headers
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...vectors.message_templates import PromptCrafter, PromptScenario
 
@@ -21,31 +18,12 @@ class OpenAIClient(OpenAIBaseClass):
 
     async def trigger_async_chat_completion(
         self,
-        metadata: dict,
         max_tokens: int,
         messages: list,
         expects_json_response: bool,
-        cache_configuration: dict = None
     ):
         try:
-            if use_monitoring_proxy():
-                api_base = get_monitoring_proxy_url()
-                cache_max_age = (None if (cache_configuration is None or 'cache_max_age' not in cache_configuration)
-                                    else cache_configuration['cache_max_age'])
-                caching_shard_key = (None if (cache_configuration is None or 'caching_shard_key' not in cache_configuration)
-                                        else cache_configuration['caching_shard_key'])
-                proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                caching_shard_key=caching_shard_key,
-                                                                cache_max_age=cache_max_age,
-                                                                llm_model=type(self).LLM_MODEL)
-            else:
-                api_base = None
-                proxy_headers = None
-
-            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"),
-                                        default_headers=proxy_headers,
-                                        base_url=api_base)
-
+            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
             response_format = "json_object" if expects_json_response else "text"
             response: Completion = await openai_client.chat.completions.create(
                 model=type(self).LLM_MODEL,
@@ -73,36 +51,30 @@ class OpenAIClient(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        metadata: dict,
         last_session_date: str = None
     ) -> AsyncIterable[str]:
         try:
-            if use_monitoring_proxy():
-                monitoring_proxy_url = get_monitoring_proxy_url()
-                assert len(monitoring_proxy_url or '') > 0, "Missing monitoring proxy url"
-
-                api_base = monitoring_proxy_url
-                proxy_headers = create_monitoring_proxy_headers(metadata=metadata,
-                                                                llm_model=type(self).LLM_MODEL)
-            else:
-                api_base = None
-                proxy_headers = None
-
             prompt_crafter = PromptCrafter()
-            user_prompt = prompt_crafter.get_user_message_for_scenario(scenario=PromptScenario.QUERY,
-                                                                       context=vector_context,
-                                                                       language_code=language_code,
-                                                                       query_input=query_input)
+            user_prompt = prompt_crafter.get_user_message_for_scenario(
+                scenario=PromptScenario.QUERY,
+                context=vector_context,
+                language_code=language_code,
+                query_input=query_input
+            )
 
-            system_prompt = prompt_crafter.get_system_message_for_scenario(PromptScenario.QUERY,
-                                                                           patient_gender=patient_gender,
-                                                                           patient_name=patient_name,
-                                                                           last_session_date=last_session_date,
-                                                                           chat_history_included=(not is_first_message_in_conversation))
+            system_prompt = prompt_crafter.get_system_message_for_scenario(
+                PromptScenario.QUERY,
+                patient_gender=patient_gender,
+                patient_name=patient_name,
+                last_session_date=last_session_date,
+                chat_history_included=(not is_first_message_in_conversation)
+            )
 
-            input_window_content = "\n".join([system_prompt,
-                                              (await self.flatten_chat_history()),
-                                              user_prompt])
+            input_window_content = "\n".join(
+                [system_prompt,
+                (await self.flatten_chat_history()),
+                user_prompt]
+            )
             prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{input_window_content}"))
             max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
@@ -111,8 +83,6 @@ class OpenAIClient(OpenAIBaseClass):
                 model=type(self).LLM_MODEL,
                 temperature=0,
                 streaming=True,
-                default_headers=proxy_headers,
-                base_url=api_base,
                 verbose=True,
                 max_tokens=max_tokens,
                 callbacks=[callback],
@@ -176,26 +146,12 @@ class OpenAIClient(OpenAIBaseClass):
         self,
         text: str
     ):
-        if use_monitoring_proxy():
-            portkey = Portkey(
-                api_key=os.environ.get("PORTKEY_API_KEY"),
-                virtual_key=os.environ.get("PORTKEY_OPENAI_VIRTUAL_KEY"),
-            )
-
-            query_data = portkey.embeddings.create(
-                encoding_format='float',
-                input=text,
-                model=self.EMBEDDING_MODEL
-            ).data
-            embeddings = []
-            for item in query_data:
-                embeddings.extend(item.embedding)
-            return embeddings
-        else:
-            openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-            response = await openai_client.embeddings.create(input=[text],
-                                                             model=self.EMBEDDING_MODEL)
-            embeddings = []
-            for item in response.model_dump()['data']:
-                embeddings.extend(item['embedding'])
-            return embeddings
+        openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        response = await openai_client.embeddings.create(
+            input=[text],
+            model=self.EMBEDDING_MODEL
+        )
+        embeddings = []
+        for item in response.model_dump()['data']:
+            embeddings.extend(item['embedding'])
+        return embeddings

@@ -629,6 +629,8 @@ class AssistantRouter:
                 user_id=user_id,
                 request=request,
             )
+            assert subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY], \
+                "Subscription is inactive. Unable to add new session."
             assert not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY], \
                 "Reached usage limit for basic subscription"
 
@@ -894,9 +896,7 @@ class AssistantRouter:
         try:
             async for part in self._assistant_manager.query_session(
                 query=query,
-                session_id=session_id,
                 therapist_id=therapist_id,
-                environment=self._environment,
                 request=request,
             ):
                 yield part
@@ -1660,8 +1660,6 @@ class AssistantRouter:
             assert template != SessionNotesTemplate.FREE_FORM, "free_form is not a template that can be applied"
 
             soap_notes = await self._assistant_manager.adapt_session_notes_to_soap(
-                therapist_id=user_id,
-                session_id=session_id,
                 session_notes_text=session_notes_text
             )
             return {"soap_notes": soap_notes}

@@ -20,9 +20,6 @@ from ..vectors.chartwise_assistant import PromptCrafter, PromptScenario
 
 class AudioProcessingManager(MediaProcessingManager):
 
-    DIARIZATION_SUMMARY_ACTION_NAME = "diarization_summary"
-    DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME = "diarization_chunks_grand_summary"
-
     async def transcribe_audio_file(
         self,
         background_tasks: BackgroundTasks,
@@ -180,13 +177,6 @@ class AudioProcessingManager(MediaProcessingManager):
 
         # Generate summary for diarization
         try:
-            metadata = {
-                "user_id": therapist_id,
-                "patient_id": patient_id,
-                "session_id": str(session_id),
-                "action": type(self).DIARIZATION_SUMMARY_ACTION_NAME
-            }
-
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(
                 scenario=PromptScenario.DIARIZATION_SUMMARY,
@@ -207,7 +197,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 session_summary = await self._chunk_diarization_and_summarize(
                     encoding=encoding,
                     diarization=diarization,
-                    metadata=metadata,
                     prompt_crafter=prompt_crafter,
                     summarize_chunk_system_prompt=system_prompt,
                     language_code=language_code,
@@ -217,7 +206,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 )
             else:
                 session_summary = await openai_client.trigger_async_chat_completion(
-                    metadata=metadata,
                     max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -228,9 +216,7 @@ class AudioProcessingManager(MediaProcessingManager):
 
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(
-                    therapist_id=therapist_id,
                     session_notes_text=session_summary,
-                    session_id=session_id
                 )
 
             update_summary_body = {
@@ -298,9 +284,7 @@ class AudioProcessingManager(MediaProcessingManager):
             transcription = await dependency_container.inject_deepgram_client().transcribe_audio(audio_file_url=audio_file_url)
             if template == SessionNotesTemplate.SOAP:
                 transcription = await assistant_manager.adapt_session_notes_to_soap(
-                    therapist_id=therapist_id,
                     session_notes_text=transcription,
-                    session_id=session_id
                 )
 
             update_body = {
@@ -410,7 +394,6 @@ class AudioProcessingManager(MediaProcessingManager):
         self,
         encoding: Encoding,
         diarization: list,
-        metadata: dict,
         prompt_crafter: PromptCrafter,
         summarize_chunk_system_prompt: str,
         language_code: str,
@@ -441,7 +424,6 @@ class AudioProcessingManager(MediaProcessingManager):
                 openai_client = dependency_container.inject_openai_client()
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
                 current_chunk_summary = await openai_client.trigger_async_chat_completion(
-                    metadata=metadata,
                     max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": summarize_chunk_system_prompt},
@@ -464,14 +446,7 @@ class AudioProcessingManager(MediaProcessingManager):
             prompt_tokens = len(encoding.encode(f"{summarize_chunk_system_prompt}\n{user_prompt}"))
             max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            grand_summary_metadata = {
-                "user_id": therapist_id,
-                "patient_id": patient_id,
-                "session_id": str(session_id),
-                "action": type(self).DIARIZATION_CHUNKS_GRAND_SUMMARY_ACTION_NAME
-            }
             grand_summary = await openai_client.trigger_async_chat_completion(
-                metadata=grand_summary_metadata,
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": grand_summary_system_prompt},

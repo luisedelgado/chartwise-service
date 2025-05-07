@@ -9,6 +9,7 @@ class SubscriptionManager():
 
     REACHED_TIER_USAGE_LIMIT_KEY = "reached_tier_usage_limit"
     SUBSCRIPTION_STATUS_KEY = "subscription_status"
+    IS_SUBSCRIPTION_ACTIVE_KEY = "is_subscription_active"
 
     async def subscription_data(
         self,
@@ -60,7 +61,7 @@ class SubscriptionManager():
             return {
                 self.SUBSCRIPTION_STATUS_KEY : {
                     "is_free_trial_active": is_free_trial_active,
-                    "is_subscription_active": is_subscription_active,
+                    self.IS_SUBSCRIPTION_ACTIVE_KEY: is_subscription_active,
                     "tier": tier,
                     self.REACHED_TIER_USAGE_LIMIT_KEY: reached_tier_usage_limit
                 }

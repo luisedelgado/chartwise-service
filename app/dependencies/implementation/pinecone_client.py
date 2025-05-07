@@ -86,8 +86,6 @@ class PineconeClient(PineconeBaseClass):
                 doc.set_content(encoded_chunk_ciphertext)
 
                 chunk_summary = await summarize_chunk(
-                    user_id=user_id,
-                    session_id=session_id,
                     chunk_text=chunk_text,
                     openai_client=openai_client
                 )
@@ -149,8 +147,6 @@ class PineconeClient(PineconeBaseClass):
                 doc.set_content(encoded_chunk_ciphertext)
 
                 chunk_summary = await summarize_chunk(
-                    user_id=user_id,
-                    session_id=session_id,
                     chunk_text=chunk_text,
                     openai_client=openai_client
                 )
