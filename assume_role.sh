@@ -24,14 +24,15 @@ fi
 # Define role ARN based on environment
 if [[ "$ENVIRONMENT" == "staging" ]]; then
   ROLE_ARN="arn:aws:iam::637423642366:role/ChartWiseUserStaging"
+  SESSION_NAME="chartwise-session-staging"
 elif [[ "$ENVIRONMENT" == "prod" ]]; then
   ROLE_ARN="arn:aws:iam::637423642366:role/ChartWiseUserProd"
+  SESSION_NAME="chartwise-session-prod"
 else
   echo "Invalid environment: $ENVIRONMENT. Use 'staging' or 'prod'."
   exit 1
 fi
 
-SESSION_NAME="chartwise-dev-session"
 CREDS_JSON=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$SESSION_NAME" --output json)
 
 if [[ $? -ne 0 ]]; then
