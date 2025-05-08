@@ -101,6 +101,17 @@ class FakeAwsDbClient(AwsDbBaseClass):
     ) -> Optional[dict]:
         pass
 
+    async def upsert_with_stripe_connection(
+        self,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str,
+        resend_client: ResendBaseClass,
+        secret_manager: AwsSecretManagerBaseClass,
+    ) -> Optional[dict]:
+        pass
+
     async def select(
         self,
         user_id: str,
@@ -242,6 +253,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         filters: dict[str, Any],
         table_name: str,
         secret_manager: AwsSecretManagerBaseClass,
+        request: Request,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:

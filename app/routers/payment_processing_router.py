@@ -868,24 +868,33 @@ class PaymentProcessingRouter:
         logging.info(f"Received webhook for environment: {environment}")
 
         try:
+            webhook_secret = ''
             if environment == DEV_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_DEBUG")
             elif environment == STAGING_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
             elif environment == PROD_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid environment"
-                )
+            assert len(webhook_secret) > 0, "Empty webhook secret due to invalid environment value"
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e)
+            )
 
+        try:
             payload = await request.body()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_417_EXPECTATION_FAILED,
+                detail=str(e)
+            )
+
+        try:
             sig_header = request.headers.get("stripe-signature")
             event = stripe_client.construct_webhook_event(payload=payload,
                                                           sig_header=sig_header,
                                                           webhook_secret=webhook_secret)
-
             logging.info("Successfully constructed Stripe event")
 
             # In deployed environments, block requests from localhost
@@ -1153,6 +1162,7 @@ class PaymentProcessingRouter:
                     table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
                     secret_manager=secret_manager,
                     resend_client=dependency_container.inject_resend_client(),
+                    request=request,
                 )
                 assert (0 != len(customer_data)), "No therapist data found for incoming customer ID."
                 therapist_id = str(customer_data[0]['therapist_id'])
@@ -1217,12 +1227,15 @@ class PaymentProcessingRouter:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
 
         try:
-            therapist_query_data = await aws_db_client.select(
-                user_id=therapist_id,
-                request=request,
+            secret_manager = dependency_container.inject_aws_secret_manager_client()
+            resend_client = dependency_container.inject_resend_client()
+            therapist_query_data = await aws_db_client.select_with_stripe_connection(
+                resend_client=resend_client,
                 fields=["*"],
                 filters={ 'id': therapist_id },
-                table_name="therapists"
+                table_name="therapists",
+                secret_manager=secret_manager,
+                request=request,
             )
             is_new_customer = (0 == len(therapist_query_data))
 
@@ -1262,12 +1275,13 @@ class PaymentProcessingRouter:
                 payload['is_active'] = False
                 payload['free_trial_active'] = False
 
-            await aws_db_client.upsert(
-                user_id=therapist_id,
+            await aws_db_client.upsert_with_stripe_connection(
                 request=request,
                 conflict_columns=["therapist_id"],
                 payload=payload,
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME,
+                resend_client=resend_client,
+                secret_manager=secret_manager,
             )
 
             if is_new_customer:

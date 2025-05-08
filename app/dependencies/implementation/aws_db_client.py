@@ -4,7 +4,13 @@ import os
 import uuid
 
 from fastapi import Request
-from typing import Any, List, Optional
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional
+)
 
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
@@ -27,9 +33,6 @@ from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class AwsDbClient(AwsDbBaseClass):
 
-    STRIPE_READER_ROLE_SECRET_KEY = "username_pswd_stripe_reader_role"
-    STRIPE_READER_ROLE = "stripe_reader"
-
     def __init__(
         self,
         encryptor: ChartWiseEncryptor
@@ -44,7 +47,7 @@ class AwsDbClient(AwsDbBaseClass):
         table_name: str
     ) -> Optional[dict]:
         try:
-            payload = self.encrypt_payload(payload, table_name)
+            payload = self._encrypt_payload(payload, table_name)
             columns = list(payload.keys())
             values = list(payload.values())
             placeholders = ', '.join([f"${i+1}" for i in range(len(values))])
@@ -80,42 +83,42 @@ class AwsDbClient(AwsDbBaseClass):
         payload: dict[str, Any],
         table_name: str
     ) -> Optional[dict]:
-        try:
-            payload = self.encrypt_payload(payload, table_name)
-            columns = list(payload.keys())
-            values = list(payload.values())
-            placeholders = ', '.join([f"${i+1}" for i in range(len(values))])
-            column_names = ', '.join([f'"{col}"' for col in columns])
+        async def connection_provider():
+            conn = await request.app.state.pool.acquire()
+            await self.set_session_user_id(conn=conn, user_id=user_id)
+            return (conn, False) # False indicates "don't close after use"
 
-            conflict_clause = ', '.join([f'"{col}"' for col in conflict_columns])
-            on_conflict_columns_to_update = [col for col in columns if col not in conflict_columns]
-            update_expr = ', '.join([
-                f'"{col}" = EXCLUDED."{col}"' for col in on_conflict_columns_to_update
-            ])
+        return await self._upsert_common(
+            request=request,
+            conflict_columns=conflict_columns,
+            payload=payload,
+            table_name=table_name,
+            connection_provider=connection_provider,
+        )
 
-            upsert_query = (
-                f"""
-                INSERT INTO "{table_name}" ({column_names})
-                VALUES ({placeholders})
-                ON CONFLICT ({conflict_clause})
-                DO UPDATE SET {update_expr}
-                RETURNING *
-                """
+    async def upsert_with_stripe_connection(
+        self,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str,
+        resend_client: ResendBaseClass,
+        secret_manager: AwsSecretManagerBaseClass,
+    ) -> Optional[dict]:
+        async def connection_provider():
+            conn = await self._get_stripe_writer_connection(
+                secret_manager=secret_manager,
+                resend_client=resend_client,
             )
+            return (conn, True) # True indicates "close after use"
 
-            async with request.app.state.pool.acquire() as conn:
-                # Set the current user ID for satisfying RLS.
-                await self.set_session_user_id(
-                    conn=conn,
-                    user_id=user_id
-                )
-                row = await conn.fetchrow(
-                    upsert_query,
-                    *values
-                )
-                return dict(row) if row else None
-        except Exception as e:
-            raise RuntimeError(f"Upsert failed: {e}") from e
+        return await self._upsert_common(
+            request=request,
+            conflict_columns=conflict_columns,
+            payload=payload,
+            table_name=table_name,
+            connection_provider=connection_provider,
+        )
 
     async def update(
         self,
@@ -126,7 +129,7 @@ class AwsDbClient(AwsDbBaseClass):
         table_name: str
     ) -> Optional[dict]:
         try:
-            payload = self.encrypt_payload(payload, table_name)
+            payload = self._encrypt_payload(payload, table_name)
 
             set_columns = list(payload.keys())
             set_values = list(payload.values())
@@ -177,97 +180,48 @@ class AwsDbClient(AwsDbBaseClass):
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
-        try:
-            where_clause, where_values = self.build_where_clause(filters)
-            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
-            limit_clause = f"LIMIT {limit}" if limit is not None else ""
-            order_clause = ""
+        async def connection_provider():
+            conn = await request.app.state.pool.acquire()
+            await self.set_session_user_id(conn=conn, user_id=user_id)
+            return (conn, False) # False indicates "don't close after use"
 
-            if order_by:
-                col, direction = order_by
-                direction = direction.upper()
-                if direction not in {"ASC", "DESC"}:
-                    raise ValueError(f"Invalid order direction: {direction}")
-                order_clause = f'ORDER BY "{col}" {direction}'
-
-            select_query = (
-                f"""
-                SELECT {field_expr} FROM "{table_name}"
-                {where_clause}
-                {order_clause}
-                {limit_clause}
-                """
-            )
-            select_query = " ".join(select_query.split())
-
-            async with request.app.state.pool.acquire() as conn:
-                # Set the current user ID for satisfying RLS.
-                await self.set_session_user_id(
-                    conn=conn,
-                    user_id=user_id
-                )
-                rows = await conn.fetch(
-                    select_query,
-                    *where_values
-                )
-
-                if table_name not in ENCRYPTED_TABLES or (0 == len(rows)):
-                    # Return response untouched if no need for decryption, or if no data was returned
-                    return [dict(row) for row in rows]
-
-                decrypted_payload = []
-                for row in rows:
-                    decrypted_row = self.decrypt_payload(dict(row), table_name)
-                    decrypted_payload.append(decrypted_row)
-
-                return decrypted_payload
-        except Exception as e:
-            raise RuntimeError(f"Select failed: {e}") from e
+        return await self._select_common(
+            fields=fields,
+            table_name=table_name,
+            filters=filters,
+            limit=limit,
+            order_by=order_by,
+            connection_provider=connection_provider,
+            request=request,
+        )
 
     async def select_with_stripe_connection(
         self,
-        resend_client: ResendBaseClass,
         fields: list[str],
         filters: dict[str, Any],
         table_name: str,
+        resend_client: ResendBaseClass,
         secret_manager: AwsSecretManagerBaseClass,
+        request: Request,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
-        try:
-            where_clause, where_values = self.build_where_clause(filters)
-            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
-            limit_clause = f"LIMIT {limit}" if limit is not None else ""
-            order_clause = ""
-
-            if order_by:
-                col, direction = order_by
-                direction = direction.upper()
-                if direction not in {"ASC", "DESC"}:
-                    raise ValueError(f"Invalid order direction: {direction}")
-                order_clause = f'ORDER BY "{col}" {direction}'
-
-            select_query = (
-                f"""
-                SELECT {field_expr} FROM "{table_name}"
-                {where_clause}
-                {order_clause}
-                {limit_clause}
-                """
-            )
-            select_query = " ".join(select_query.split())
-            conn = await self.get_stripe_reader_connection(
+        async def connection_provider():
+            conn = await self._get_stripe_reader_connection(
                 secret_manager=secret_manager,
                 resend_client=resend_client,
             )
+            return (conn, True) # True indicates "close after use"
 
-            try:
-                rows = await conn.fetch(select_query, *where_values)
-                return [dict(row) for row in rows]
-            finally:
-                await conn.close()
-        except Exception as e:
-            raise RuntimeError(f"Stripe select failed: {e}") from e
+        return await self._select_common(
+            fields=fields,
+            table_name=table_name,
+            filters=filters,
+            limit=limit,
+            order_by=order_by,
+            connection_provider=connection_provider,
+            request=request,
+        )
 
     async def delete(
         self,
@@ -277,7 +231,7 @@ class AwsDbClient(AwsDbBaseClass):
         filters: dict[str, Any]
     ) -> list[dict]:
         try:
-            where_clause, where_values = self.build_where_clause(filters)
+            where_clause, where_values = type(self)._build_where_clause(filters)
             delete_query = (
                 f"""
                 DELETE FROM "{table_name}"
@@ -315,7 +269,7 @@ class AwsDbClient(AwsDbBaseClass):
 
     # Private
 
-    def encrypt_payload(
+    def _encrypt_payload(
         self,
         payload: dict,
         table_name: str
@@ -365,7 +319,7 @@ class AwsDbClient(AwsDbBaseClass):
 
         raise Exception(f"Attempted to encrypt values for table {table_name}, which is not tracked.")
 
-    def decrypt_payload(
+    def _decrypt_payload(
         self,
         payload: dict,
         table_name: str
@@ -428,7 +382,7 @@ class AwsDbClient(AwsDbBaseClass):
         raise Exception(f"Attempted to decrypt values for table {table_name}, which is not tracked.")
 
     @staticmethod
-    def build_where_clause(
+    def _build_where_clause(
         filters: dict[str, Any]
     ) -> tuple[str, list[Any]]:
         values = []
@@ -482,24 +436,46 @@ class AwsDbClient(AwsDbBaseClass):
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         return where_clause, values
 
-    async def get_stripe_reader_connection(
+    async def _get_stripe_reader_connection(
         self,
+        secret_manager: AwsSecretManagerBaseClass,
+        resend_client: ResendBaseClass,
+    ):
+        return await self._get_db_connection_for_stripe(
+            stripe_role=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE"),
+            secret_manager=secret_manager,
+            resend_client=resend_client
+        )
+
+    async def _get_stripe_writer_connection(
+        self,
+        secret_manager: AwsSecretManagerBaseClass,
+        resend_client: ResendBaseClass,
+    ):
+        return await self._get_db_connection_for_stripe(
+            stripe_role=os.environ.get("AWS_SECRET_MANAGER_STRIPE_WRITER_ROLE"),
+            secret_manager=secret_manager,
+            resend_client=resend_client
+        )
+
+    async def _get_db_connection_for_stripe(
+        self,
+        stripe_role: str,
         secret_manager: AwsSecretManagerBaseClass,
         resend_client: ResendBaseClass,
     ):
         try:
             secret = secret_manager.get_secret(
-                secret_id=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE"),
+                secret_id=stripe_role,
                 resend_client=resend_client,
             )
-            password = secret.get(type(self).STRIPE_READER_ROLE_SECRET_KEY)
             endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
             port = os.getenv("AWS_RDS_DB_PORT")
             db = os.getenv("AWS_RDS_DB_NAME")
 
             conn = await asyncpg.connect(
-                user=type(self).STRIPE_READER_ROLE,
-                password=password,
+                user=secret.get("username", None),
+                password=secret.get("password", None),
                 database=db,
                 host=endpoint,
                 port=port,
@@ -509,3 +485,95 @@ class AwsDbClient(AwsDbBaseClass):
             return conn
         except Exception as e:
             raise RuntimeError(e) from e
+
+    async def _select_common(
+        self,
+        fields: list[str],
+        table_name: str,
+        filters: dict[str, Any],
+        limit: Optional[int],
+        order_by: Optional[tuple[str, str]],
+        connection_provider: Callable[[], Awaitable[tuple[Any, bool]]],
+        request: Request,
+    ) -> list[dict]:
+        try:
+            where_clause, where_values = type(self)._build_where_clause(filters)
+            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
+            limit_clause = f"LIMIT {limit}" if limit is not None else ""
+            order_clause = ""
+
+            if order_by:
+                col, direction = order_by
+                direction = direction.upper()
+                if direction not in {"ASC", "DESC"}:
+                    raise ValueError(f"Invalid order direction: {direction}")
+                order_clause = f'ORDER BY "{col}" {direction}'
+
+            query = f"""
+                SELECT {field_expr} FROM "{table_name}"
+                {where_clause}
+                {order_clause}
+                {limit_clause}
+            """
+            query = " ".join(query.split())
+
+            conn, should_close = await connection_provider()
+            try:
+                rows = await conn.fetch(query, *where_values)
+                result = [dict(row) for row in rows]
+                if table_name in ENCRYPTED_TABLES and rows:
+                    result = [self._decrypt_payload(row, table_name) for row in result]
+                return result
+            finally:
+                if should_close:
+                    await conn.close()
+                else:
+                    await request.app.state.pool.release(conn)
+        except Exception as e:
+            raise RuntimeError(f"Select failed: {e}") from e
+
+    async def _upsert_common(
+        self,
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str,
+        connection_provider: Callable[[], Awaitable[tuple[Any, bool]]],
+    ) -> Optional[dict]:
+        try:
+            payload = self._encrypt_payload(payload, table_name)
+            columns = list(payload.keys())
+            values = list(payload.values())
+            placeholders = ', '.join([f"${i+1}" for i in range(len(values))])
+            column_names = ', '.join([f'"{col}"' for col in columns])
+
+            conflict_clause = ', '.join([f'"{col}"' for col in conflict_columns])
+            on_conflict_columns_to_update = [col for col in columns if col not in conflict_columns]
+            update_expr = ', '.join([
+                f'"{col}" = EXCLUDED."{col}"' for col in on_conflict_columns_to_update
+            ])
+
+            upsert_query = (
+                f"""
+                INSERT INTO "{table_name}" ({column_names})
+                VALUES ({placeholders})
+                ON CONFLICT ({conflict_clause})
+                DO UPDATE SET {update_expr}
+                RETURNING *
+                """
+            )
+
+            conn, should_close = await connection_provider()
+            try:
+                row = await conn.fetchrow(
+                    upsert_query,
+                    *values
+                )
+                return dict(row) if row else None
+            finally:
+                if should_close:
+                    await conn.close()
+                else:
+                    await request.app.state.pool.release(conn)
+        except Exception as e:
+            raise RuntimeError(f"Upsert failed: {e}") from e

@@ -66,6 +66,27 @@ class AwsDbBaseClass(ABC):
         """
         pass
 
+    async def upsert_with_stripe_connection(
+        request: Request,
+        conflict_columns: List[str],
+        payload: dict[str, Any],
+        table_name: str,
+        resend_client: ResendBaseClass,
+        secret_manager: AwsSecretManagerBaseClass,
+    ) -> Optional[dict]:
+        """
+        Upserts into a table with the incoming data using a stripe_writer connection.
+
+        Arguments:
+        request – the FastAPI request associated with the upsert operation.
+        conflict_columns – the key to be used to update the table if a conflict arises.
+        payload – the payload to be updated.
+        table_name – the table that should be updated.
+        resend_client – the resend client to use for sending emails.
+        secret_manager – the secret manager object to be used internally.
+        """
+        pass
+
     @abstractmethod
     async def select(
         user_id: str,
@@ -97,6 +118,7 @@ class AwsDbBaseClass(ABC):
         filters: dict[str, Any],
         table_name: str,
         secret_manager: AwsSecretManagerBaseClass,
+        request: Request,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
@@ -104,10 +126,12 @@ class AwsDbBaseClass(ABC):
         Fetches data from a table based on the incoming params, using a stripe_reader connection.
 
         Arguments:
+        resend_client – the resend client to use for sending emails.
         fields – the fields to be retrieved from a table.
         filters – the set of filters to be applied to the table.
         table_name – the table to be queried.
         secret_manager – the secret manager object to be used internally.
+        request – the FastAPI request associated with the select operation.
         limit – the optional cap for count of results to be returned.
         order_by – the optional specification for column to sort by, and sort style.
         """
