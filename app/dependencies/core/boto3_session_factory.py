@@ -22,11 +22,16 @@ class Boto3SessionFactory:
         try:
             now = datetime.now(timezone.utc)
 
-            if cls._expiration is None or now >= cls._expiration:
+            if os.environ.get("ENVIRONMENT") not in ["staging", "prod"] and (
+                cls._expiration is None or now >= cls._expiration
+            ):
                 with cls._lock:
                     if cls._expiration is None or datetime.now(timezone.utc) >= cls._expiration:
                         cls._refresh_credentials(resend_client=resend_client)
 
+            # If we're running in ECS and we have IAM creds, let's use them to create a new session.
+            if cls._session is None:
+                cls._session = boto3.Session(region_name=os.environ["AWS_SERVICES_REGION"])
             return cls._session
         except Exception as e:
             raise RuntimeError(e) from e
