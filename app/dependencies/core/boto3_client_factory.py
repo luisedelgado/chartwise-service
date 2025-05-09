@@ -4,12 +4,13 @@ import threading
 
 from datetime import datetime, timedelta, timezone
 
-from ...internal.utilities.datetime_handler import UTC_DATETIME_FORMAT
+from ...internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 
 class Boto3ClientFactory:
     _lock = threading.Lock()
     _clients = {}
     _expiration = None
+    _creds = None
 
     @classmethod
     def get_client(
@@ -18,20 +19,27 @@ class Boto3ClientFactory:
     ):
         now = datetime.now(timezone.utc)
 
-        # Check if credentials are missing or expired.
-        if cls._expiration is None or now >= cls._expiration:
-            with cls._lock:
-                # Re-check inside the lock in case another thread already refreshed.
-                if cls._expiration is None or now >= cls._expiration:
-                    # Credentials are missing or expired.
-                    cls._refresh_credentials()
+        # Local dev: use assume_role with expiration check
+        if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:
+            if cls._expiration is None or now >= cls._expiration:
+                with cls._lock:
+                    if cls._expiration is None or now >= cls._expiration:
+                        cls._refresh_credentials()
 
+            if service_name not in cls._clients:
+                cls._clients[service_name] = boto3.client(
+                    service_name,
+                    aws_access_key_id=cls._creds['AccessKeyId'],
+                    aws_secret_access_key=cls._creds['SecretAccessKey'],
+                    aws_session_token=cls._creds['SessionToken'],
+                    region_name=os.environ["AWS_SERVICES_REGION"]
+                )
+            return cls._clients[service_name]
+
+        # ECS/staging/prod: use default creds
         if service_name not in cls._clients:
             cls._clients[service_name] = boto3.client(
                 service_name,
-                aws_access_key_id=cls._creds['AccessKeyId'],
-                aws_secret_access_key=cls._creds['SecretAccessKey'],
-                aws_session_token=cls._creds['SessionToken'],
                 region_name=os.environ["AWS_SERVICES_REGION"]
             )
         return cls._clients[service_name]
@@ -44,7 +52,5 @@ class Boto3ClientFactory:
             RoleSessionName=os.environ["AWS_CHARTWISE_ROLE_SESSION_NAME"]
         )
         cls._creds = assumed["Credentials"]
-
-        # Expires 2 minutes early to prevent "edge-case" failures if a request comes in while creds are expiring.
         cls._expiration = cls._creds["Expiration"] - timedelta(minutes=2)
-        cls._clients = {}  # Clear old clients that were tied to old creds
+        cls._clients = {}  # Clear old clients

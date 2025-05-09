@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from ...dependencies.api.resend_base_class import ResendBaseClass
 from ...internal.alerting.internal_alert import EngineeringAlert
+from ...internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ...internal.session_container import session_container
 
 class Boto3SessionFactory:
@@ -22,7 +23,7 @@ class Boto3SessionFactory:
         try:
             now = datetime.now(timezone.utc)
 
-            if os.environ.get("ENVIRONMENT") not in ["staging", "prod"] and (
+            if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT] and (
                 cls._expiration is None or now >= cls._expiration
             ):
                 with cls._lock:
