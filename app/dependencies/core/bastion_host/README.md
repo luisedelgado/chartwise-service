@@ -2,7 +2,7 @@
 
 ## Prerequisites
 - SSH private key: `staging-bastion-host-key-pair.pem`
-- Bastion Host Public IP: `3.133.158.153`
+- Bastion Host Public IP: `3.145.210.176`
 - RDS Endpoint: `chartwise-database-instance-staging.cx44ewmqqt62.us-east-2.rds.amazonaws.com`
 
 ## SSH Tunnel Command
