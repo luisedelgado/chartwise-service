@@ -37,22 +37,9 @@ def get_db_connection():
         sslmode="require",
     )
 
-def fetch_row(conn, id):
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, processing_status, therapist_id FROM encrypted_session_reports WHERE id = %s",
-            (id,)
-        )
-        row = cur.fetchone()
-        return {
-            "id": row[0],
-            "new_value": row[1],
-            "user_id": row[2],
-        }
-
 def publish_to_external_service(payload):
     try:
-        therapist_id = payload["user_id"]
+        therapist_id = payload["therapist_id"]
 
         dynamodb = boto3.resource("dynamodb")
         table = dynamodb.Table(os.environ.get("WEBSOCKET_CONNECTIONS_TABLE"))
@@ -95,8 +82,8 @@ def main():
     conn = get_db_connection()
     conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
     cur = conn.cursor()
-    cur.execute("LISTEN processing_status_update_channel;")
-    print("[Listener] Listening on 'processing_status_update_channel'...")
+    cur.execute("LISTEN session_report_update_channel;")
+    print("[Listener] Listening on 'session_report_update_channel'...")
 
     while True:
         if select.select([conn], [], [], 5) == ([], [], []):
@@ -106,8 +93,9 @@ def main():
             notify = conn.notifies.pop(0)
             try:
                 data = json.loads(notify.payload)
-                row = fetch_row(conn, data["id"])
-                publish_to_external_service(row)
+                event_type = data.get("event_type")
+                print(f"[Listener] Received event: {event_type} for session_id: {data.get('id')}")
+                publish_to_external_service(data)
             except Exception as e:
                 print(f"[Listener Error] {e}")
 
