@@ -15,9 +15,14 @@ class Boto3ClientFactory:
     @classmethod
     def get_client(
         cls,
-        service_name: str
+        service_name: str,
+        region_name: str = None,
     ):
         now = datetime.now(timezone.utc)
+        client_region_name = (
+            region_name if region_name is not None
+            else os.environ["AWS_SERVICES_REGION"]
+        )
 
         # Local dev: use assume_role with expiration check
         if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:
@@ -32,7 +37,7 @@ class Boto3ClientFactory:
                     aws_access_key_id=cls._creds['AccessKeyId'],
                     aws_secret_access_key=cls._creds['SecretAccessKey'],
                     aws_session_token=cls._creds['SessionToken'],
-                    region_name=os.environ["AWS_SERVICES_REGION"]
+                    region_name=client_region_name
                 )
             return cls._clients[service_name]
 
@@ -40,7 +45,7 @@ class Boto3ClientFactory:
         if service_name not in cls._clients:
             cls._clients[service_name] = boto3.client(
                 service_name,
-                region_name=os.environ["AWS_SERVICES_REGION"]
+                region_name=client_region_name
             )
         return cls._clients[service_name]
 
