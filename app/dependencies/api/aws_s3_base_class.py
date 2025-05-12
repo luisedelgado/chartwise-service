@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 
 class AwsS3BaseClass(ABC):
 
-    SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME = "session-audio-files-processing"
-
     @abstractmethod
     def get_audio_file_upload_signed_url(
         file_path: str,

@@ -11,7 +11,6 @@ class AwsS3Client(AwsS3BaseClass):
     def __init__(self):
         self.client = Boto3ClientFactory.get_client(
             service_name="s3",
-            region_name="us-east-1",
         )
 
     def get_audio_file_upload_signed_url(

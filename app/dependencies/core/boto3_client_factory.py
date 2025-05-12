@@ -16,13 +16,9 @@ class Boto3ClientFactory:
     def get_client(
         cls,
         service_name: str,
-        region_name: str = None,
     ):
         now = datetime.now(timezone.utc)
-        client_region_name = (
-            region_name if region_name is not None
-            else os.environ["AWS_SERVICES_REGION"]
-        )
+        client_region_name = (os.environ["AWS_SERVICES_REGION"])
 
         # Local dev: use assume_role with expiration check
         if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:

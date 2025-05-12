@@ -1,3 +1,5 @@
+import os
+
 from datetime import datetime
 from fastapi import (APIRouter,
                      BackgroundTasks,
@@ -354,7 +356,7 @@ class AudioProcessingRouter:
             storage_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             response = storage_client.get_audio_file_upload_signed_url(
                 file_path=file_path,
-                bucket_name=AwsS3BaseClass.SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME
+                bucket_name=os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME")
             )
             return {
                 "url": response.get("url"),

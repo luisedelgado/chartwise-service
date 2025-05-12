@@ -1,3 +1,5 @@
+import os
+
 from abc import ABC
 from fastapi import BackgroundTasks, Request
 
@@ -73,6 +75,6 @@ class MediaProcessingManager(ABC):
             # Delete the file from the processing bucket.
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             aws_s3_client.delete_file(
-                type(aws_s3_client).SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME,
+                os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME"),
                 storage_filepath=storage_filepath
             )

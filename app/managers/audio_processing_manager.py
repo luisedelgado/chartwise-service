@@ -1,3 +1,5 @@
+import os
+
 from datetime import date
 from fastapi import BackgroundTasks, Request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -61,7 +63,7 @@ class AudioProcessingManager(MediaProcessingManager):
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
             audio_file_url = aws_s3_client.get_audio_file_read_signed_url(
                 file_path=file_path,
-                bucket_name=AwsS3BaseClass.SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME
+                bucket_name=os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME")
             ).get("url")
 
             # Attempt immediate processing.
