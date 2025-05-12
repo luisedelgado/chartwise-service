@@ -20,24 +20,17 @@ class AwsS3Client(AwsS3BaseClass):
         bucket_name: str
     ) -> dict:
         try:
-            content_type, _ = mimetypes.guess_type(file_path)
-            if not content_type:
-                # Default to audio/wav if content type cannot be guessed
-                content_type = "audio/wav"
-
             response = self.client.generate_presigned_url(
                 'put_object',
                 Params={
                     'Bucket': bucket_name,
                     'Key': file_path,
-                    'ContentType': content_type,
                 },
                 ExpiresIn=type(self).FIFTEEN_MIN_IN_SECONDS,
             )
 
             return {
                 "url": response,
-                "content_type": content_type,
             }
         except Exception as e:
             raise RuntimeError(f"Could not generate upload URL: {e}") from e
