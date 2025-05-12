@@ -171,7 +171,7 @@ def deploy_fastapi_app(env):
         cluster_name = "staging-chartwise-app-cluster" if env == STAGING_ENVIRONMENT else "prod-chartwise-app-cluster"
         service_name = "staging-chartwise-main-app-task-service" if env == STAGING_ENVIRONMENT else "prod-chartwise-main-app-task-service"
 
-        print(f"Updating ECS service '{service_name}' in cluster '{cluster_name}' to use new image 🔄")
+        print(f"\nUpdating ECS service '{service_name}' in cluster '{cluster_name}' to use new image 🔄")
         subprocess.run(
             [
                 "aws",
@@ -186,8 +186,8 @@ def deploy_fastapi_app(env):
                 "--force-new-deployment"
             ],
             check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            capture_output=True,
+            text=True
         )
 
         os.remove("new_task_def.json")
