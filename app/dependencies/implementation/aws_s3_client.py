@@ -25,26 +25,22 @@ class AwsS3Client(AwsS3BaseClass):
                 # Default to audio/wav if content type cannot be guessed
                 content_type = "audio/wav"
 
-            presigned_post = self.client.generate_presigned_post(
-                Bucket=bucket_name,
-                Key=file_path,
-                Fields={
-                    "Content-Type": content_type,
+            response = self.client.generate_presigned_url(
+                'put_object',
+                Params={
+                    'Bucket': bucket_name,
+                    'Key': file_path,
+                    'ContentType': content_type,
                 },
-                Conditions=[
-                    {"Content-Type": content_type},
-                    ["starts-with", "$key", ""]
-                ],
                 ExpiresIn=type(self).FIFTEEN_MIN_IN_SECONDS,
             )
 
             return {
-                "url": presigned_post["url"],
-                "fields": presigned_post["fields"],
+                "url": response,
                 "content_type": content_type,
             }
         except Exception as e:
-            raise RuntimeError(f"Could not generate upload POST: {e}") from e
+            raise RuntimeError(f"Could not generate upload URL: {e}") from e
 
     def delete_file(
         self,
