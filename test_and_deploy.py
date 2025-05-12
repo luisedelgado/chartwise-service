@@ -60,8 +60,8 @@ def deploy_fastapi_app(env):
         exit()
 
     print("All tests passed! ✅\n")
-
     try:
+        assume_role(env)
         print("Logging into ECR 🔐")
         profile_name = "chartwise-staging" if env == STAGING_ENVIRONMENT else "chartwise-prod"
         deploy_process(
@@ -130,6 +130,8 @@ def deploy_fastapi_app(env):
             "requiresCompatibilities",
             "cpu",
             "memory",
+            "enableFaultInjection",
+            "runtimePlatform",
         ]
         task_def_input = {k: task_def[k] for k in keys_to_keep if k in task_def}
 
@@ -139,14 +141,17 @@ def deploy_fastapi_app(env):
 
         # Register new revision
         print("Registering new task definition pointing to the new image's URI 🐳")
-        deploy_process(
+        subprocess.run(
             [
                 "aws",
                 "ecs",
                 "register-task-definition",
                 "--cli-input-json",
                 f"file://new_task_def.json"
-            ]
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
         )
 
         result = subprocess.run(
@@ -167,8 +172,8 @@ def deploy_fastapi_app(env):
         service_name = "staging-chartwise-main-app-task-service" if env == STAGING_ENVIRONMENT else "prod-chartwise-main-app-task-service"
 
         print(f"Updating ECS service '{service_name}' in cluster '{cluster_name}' to use new image 🔄")
-        deploy_process(
-            commands=[
+        subprocess.run(
+            [
                 "aws",
                 "ecs",
                 "update-service",
@@ -179,7 +184,10 @@ def deploy_fastapi_app(env):
                 "--task-definition",
                 f"{task_definition_name}:{revision}",
                 "--force-new-deployment"
-            ]
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
 
         os.remove("new_task_def.json")
@@ -230,6 +238,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     env = args.environment
-    assume_role(env)
     deploy_fastapi_app(env)
     print("\nDone")
