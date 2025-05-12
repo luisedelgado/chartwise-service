@@ -1,5 +1,3 @@
-import mimetypes
-
 from ..api.aws_s3_base_class import AwsS3BaseClass
 from ..core.boto3_client_factory import Boto3ClientFactory
 
