@@ -187,6 +187,40 @@ def deploy_fastapi_app(env):
     except Exception as e:
         print(f"Something went wrong ⚠️ – {str(e)}")
 
+def assume_role(env):
+    role_arn = {
+        "staging": "arn:aws:iam::637423642366:role/ChartWiseUserStaging",
+        "prod": "arn:aws:iam::637423642366:role/ChartWiseUserProd"
+    }.get(env)
+
+    print(f"Assuming role {role_arn} 👤")
+
+    if not role_arn:
+        raise ValueError("Invalid env")
+
+    result = subprocess.run(
+        [
+            "aws",
+            "sts",
+            "assume-role",
+            "--role-arn",
+            role_arn,
+            "--role-session-name",
+            f"chartwise-session-{env}"
+        ],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+
+    creds = json.loads(result.stdout)["Credentials"]
+
+    os.environ["AWS_ACCESS_KEY_ID"] = creds["AccessKeyId"]
+    os.environ["AWS_SECRET_ACCESS_KEY"] = creds["SecretAccessKey"]
+    os.environ["AWS_SESSION_TOKEN"] = creds["SessionToken"]
+
+    print(f"Assumed role successfully 🎯")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy the FastAPI app.")
     parser.add_argument(
@@ -196,5 +230,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     env = args.environment
+    assume_role(env)
     deploy_fastapi_app(env)
     print("\nDone")
