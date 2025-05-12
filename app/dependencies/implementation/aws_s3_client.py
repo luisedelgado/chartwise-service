@@ -11,26 +11,61 @@ class AwsS3Client(AwsS3BaseClass):
             service_name="s3",
         )
 
-    def get_audio_file_upload_signed_url(
+    def initiate_multipart_audio_file_upload(
         self,
+        bucket_name: str,
         file_path: str,
-        bucket_name: str
     ) -> dict:
         try:
-            response = self.client.generate_presigned_url(
-                'put_object',
-                Params={
-                    'Bucket': bucket_name,
-                    'Key': file_path,
-                },
-                ExpiresIn=type(self).FIFTEEN_MIN_IN_SECONDS,
+            response = self.client.create_multipart_upload(
+                Bucket=bucket_name,
+                Key=file_path
             )
-
             return {
-                "url": response,
+                "upload_id": response["UploadId"],
+                "file_path": file_path
             }
         except Exception as e:
-            raise RuntimeError(f"Could not generate upload URL: {e}") from e
+            raise RuntimeError(f"Failed to initiate file upload: {e}") from e
+
+    def retrieve_presigned_url_for_multipart_upload(
+        self,
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        part_number: int,
+    ) -> str:
+        try:
+            url = self.client.generate_presigned_url(
+                "upload_part",
+                Params={
+                    "Bucket": bucket_name,
+                    "Key": file_path,
+                    "UploadId": upload_id,
+                    "PartNumber": part_number,
+                },
+                ExpiresIn=900
+            )
+            return url
+        except Exception as e:
+            raise RuntimeError(f"Failed to retrieve presigned URL for multipart upload: {e}") from e
+
+    def complete_multipart_audio_file_upload(
+        self,
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        parts: list,
+    ):
+        try:
+            self.client.complete_multipart_upload(
+                Bucket=bucket_name,
+                Key=file_path,
+                UploadId=upload_id,
+                MultipartUpload={"Parts": parts}
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to complete file upload: {e}") from e
 
     def delete_file(
         self,

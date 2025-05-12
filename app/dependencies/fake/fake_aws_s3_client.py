@@ -4,12 +4,30 @@ class FakeAwsS3Client(AwsS3BaseClass):
 
     get_audio_file_read_signed_url_invoked = False
 
-    def get_audio_file_upload_signed_url(
+    def initiate_multipart_audio_file_upload(
         self,
         file_path: str,
         bucket_name: str
     ) -> dict:
         return {"url": "myFakeUrl"}
+
+    def retrieve_presigned_url_for_multipart_upload(
+        self,
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        part_number: int,
+    ) -> str:
+        return "myFakeURL"
+
+    def complete_multipart_audio_file_upload(
+        self,
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        parts: list,
+    ):
+        pass
 
     def delete_file(
         self,

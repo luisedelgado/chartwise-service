@@ -104,6 +104,253 @@ class TestingHarnessAudioProcessingRouter:
                                                  environment=ENVIRONMENT)
         self.client = TestClient(coordinator.app)
 
+    def test_invoke_initiate_multipart_upload_with_no_session_token(self):
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_START_MULTIPART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_extension": ".wav",
+            }
+        )
+        assert response.status_code == 401
+
+    def test_invoke_initiate_multipart_upload_with_invalid_file_extension(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_START_MULTIPART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_extension": "fsgsgsg",
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_initiate_multipart_upload_with_invalid_patient_id(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_START_MULTIPART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "patient_id": "fdsgdshgsdg",
+                "file_extension": ".wav",
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_initiate_multipart_upload_success(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_START_MULTIPART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_extension": ".wav",
+            }
+        )
+        assert response.status_code == 200
+        assert len(response.json()) > 0
+
+    def test_invoke_get_presign_part_url_with_no_session_token(self):
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_path": "fakePath",
+                "upload_id": "myID",
+                "part_number": 1
+            }
+        )
+        assert response.status_code == 401
+
+    def test_invoke_get_presign_part_url_with_invalid_patient_id(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": "fdsgdsh",
+                "file_path": "fakePath",
+                "upload_id": "myID",
+                "part_number": 1
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_get_presign_part_url_with_invalid_file_path(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_path": "",
+                "upload_id": "myID",
+                "part_number": 1
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_get_presign_part_url_with_invalid_upload_id(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_path": "filePath",
+                "upload_id": "",
+                "part_number": 1
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_get_presign_part_url_with_invalid_part_number(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_path": "filePath",
+                "upload_id": "id",
+                "part_number": 0
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_get_presign_part_url_success(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.get(
+            AudioProcessingRouter.UPLOAD_URL_PRESIGN_PART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            params={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_path": "filePath",
+                "upload_id": "id",
+                "part_number": 1
+            }
+        )
+        assert response.status_code == 200
+        assert "url" in response.json()
+
+    def test_invoke_complete_multipart_upload_with_no_session_token(self):
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "fakePath",
+                "upload_id": "myID",
+                "patient_id": FAKE_PATIENT_ID,
+                "parts": ["part1"]
+            }
+        )
+        assert response.status_code == 401
+
+    def test_invoke_complete_multipart_upload_with_invalid_file_path(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "",
+                "upload_id": "myID",
+                "patient_id": FAKE_PATIENT_ID,
+                "parts": ["part1"]
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_complete_multipart_upload_with_invalid_upload_id(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "filePath",
+                "upload_id": "",
+                "patient_id": FAKE_PATIENT_ID,
+                "parts": ["part1"]
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_complete_multipart_upload_with_invalid_patient_id(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "filePath",
+                "upload_id": "myID",
+                "patient_id": "fdshfsh",
+                "parts": ["part1"]
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_complete_multipart_upload_with_invalid_parts_list(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "filePath",
+                "upload_id": "myID",
+                "patient_id": FAKE_PATIENT_ID,
+                "parts": []
+            }
+        )
+        assert response.status_code == 400
+
+    def test_invoke_complete_multipart_upload_success(self):
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_COMPLETE_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "file_path": "filePath",
+                "upload_id": "myID",
+                "patient_id": FAKE_PATIENT_ID,
+                "parts": ["part1"]
+            }
+        )
+        assert response.status_code == 200
+
     def test_invoke_transcription_with_no_session_token(self):
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,

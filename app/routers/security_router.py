@@ -1,6 +1,6 @@
 import os, uuid
 
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 from fastapi import (APIRouter,
                      BackgroundTasks,
@@ -72,8 +72,8 @@ class SecurityRouter:
         """
         @self.router.get(type(self).HEALTH_ENDPOINT, tags=[type(self).HEALTH_ROUTER_TAG])
         async def health(
-            response: Response,
-            request: Request,
+            _: Response,
+            __: Request,
         ):
             return {}
 

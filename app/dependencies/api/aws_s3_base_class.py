@@ -3,12 +3,36 @@ from abc import ABC, abstractmethod
 class AwsS3BaseClass(ABC):
 
     @abstractmethod
-    def get_audio_file_upload_signed_url(
+    def initiate_multipart_audio_file_upload(
         file_path: str,
         bucket_name: str
     ) -> dict:
         """
-        Returns a signed URL for uploading an audio file to S3.
+        Initiates a multi-part file upload of an audio file to S3.
+        """
+        pass
+
+    @abstractmethod
+    def retrieve_presigned_url_for_multipart_upload(
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        part_number: int,
+    ) -> str:
+        """
+        Fetches a presigned URL for uploading `part_number`.
+        """
+        pass
+
+    @abstractmethod
+    def complete_multipart_audio_file_upload(
+        bucket_name: str,
+        file_path: str,
+        upload_id: str,
+        parts: list,
+    ):
+        """
+        Completes a multi-part upload of an audio file.
         """
         pass
 
