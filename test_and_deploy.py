@@ -1,9 +1,8 @@
 import argparse, json, subprocess, os, pty
 
 from app.internal.schemas import STAGING_ENVIRONMENT, PROD_ENVIRONMENT
+from datetime import datetime, timezone
 from pathlib import Path
-
-ALWAYS_ON_REGIONS = {"mia", "dfw"}
 
 def deploy_process(commands: list[str]):
     master_fd, slave_fd = pty.openpty()
@@ -53,75 +52,140 @@ def run_tests() -> bool:
 
     return True
 
-def update_autostop_for_always_on_regions(app_name: str):
-    print("\nNow checking machine autostop configs in always-on regions...\n")
-
-    # Fetch all machines as JSON
-    result = subprocess.run(
-        ["fly", "machines", "list", "-a", app_name, "--json"],
-        capture_output=True, text=True
-    )
-
-    if result.returncode != 0:
-        print("❌ Failed to fetch machines list.")
-        print(result.stderr)
-        return
-
-    machines = json.loads(result.stdout)
-
-    for machine in machines:
-        region = machine.get("region")
-        machine_id = machine.get("id")
-        config_services = machine.get("config", {}).get("services", [])
-
-        if region in ALWAYS_ON_REGIONS:
-            autostop = config_services[0].get("autostop") if config_services else None
-            if autostop == False or autostop == "off":
-                continue
-
-            print(f"🔧 Updating autostop for machine {machine_id} in {region}...\n")
-            subprocess.run([
-                "fly", "machine", "update", machine_id,
-                "--autostop=off",
-                "--autostart=true",
-                "-a", app_name
-            ])
-
 def deploy_fastapi_app(env):
-    if env == STAGING_ENVIRONMENT:
-        toml_file_name = "fly.staging.toml"
-        app_name = "chartwise-staging-service"
-    elif env == PROD_ENVIRONMENT:
-        toml_file_name = "fly.prod.toml"
-        app_name = "chartwise-service-prod"
-    else:
-        print(f"How did I get here? No env to deploy based on: {env}")
-        exit()
-
-    if env != STAGING_ENVIRONMENT and env != PROD_ENVIRONMENT:
-        print("Invalid environment to deploy.")
-        exit()
-
     print("Running tests...\n")
     tests_passed = run_tests()
     if not tests_passed:
         print("Some tests failed.")
         exit()
 
-    print("All tests passed!\n")
+    print("All tests passed! ✅\n")
 
-    print(f"✅ Deploying FastAPI app in '{env}' environment")
-    deploy_process(commands=["fly",
-                            "deploy",
-                            "-c",
-                            toml_file_name,
-                            "-a",
-                            app_name,
-                            "--dockerfile",
-                            "Dockerfile"])
+    try:
+        print("Logging into ECR 🔐")
+        profile_name = "chartwise-staging" if env == STAGING_ENVIRONMENT else "chartwise-prod"
+        deploy_process(
+            commands=[
+                "bash",
+                "-c",
+                (
+                    f"aws ecr get-login-password --region us-east-2 --profile {profile_name} | "
+                    "docker login --username AWS --password-stdin 637423642366.dkr.ecr.us-east-2.amazonaws.com"
+                )
+            ]
+        )
 
-    if env == PROD_ENVIRONMENT:
-        update_autostop_for_always_on_regions(app_name)
+        account_id = "637423642366"
+        ecr_repo_name = "chartwise-main-app"
+        image_tag = f"main-app-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+        full_image_uri = f"{account_id}.dkr.ecr.us-east-2.amazonaws.com/{ecr_repo_name}:{image_tag}"
+        
+        print("Pushing new docker image to ECR 📦")
+        deploy_process(
+            commands=[
+                "docker",
+                "buildx",
+                "build",
+                "--platform",
+                "linux/amd64",
+                "-t",
+                full_image_uri,
+                "--push",
+                "."
+            ]
+        )
+        print("\nPush succeeded 🎈\n")
+
+        task_definition_name = (
+            "staging-chartwise-main-app-task" if env == STAGING_ENVIRONMENT
+            else "prod-chartwise-main-app-task"
+        )
+
+        result = subprocess.run(
+            [
+                "aws",
+                "ecs",
+                "describe-task-definition",
+                "--task-definition",
+                task_definition_name,
+                "--profile",
+                profile_name
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        task_def = json.loads(result.stdout)["taskDefinition"]
+
+        for container in task_def["containerDefinitions"]:
+            container["image"] = full_image_uri
+
+        keys_to_keep = [
+            "family",
+            "taskRoleArn",
+            "executionRoleArn",
+            "networkMode",
+            "containerDefinitions",
+            "volumes",
+            "requiresCompatibilities",
+            "cpu",
+            "memory",
+        ]
+        task_def_input = {k: task_def[k] for k in keys_to_keep if k in task_def}
+
+        # Write temp JSON file
+        with open("new_task_def.json", "w") as f:
+            json.dump(task_def_input, f)
+
+        # Register new revision
+        print("Registering new task definition pointing to the new image's URI 🐳")
+        deploy_process(
+            [
+                "aws",
+                "ecs",
+                "register-task-definition",
+                "--cli-input-json",
+                f"file://new_task_def.json"
+            ]
+        )
+
+        result = subprocess.run(
+            [
+                "aws",
+                "ecs",
+                "describe-task-definition",
+                "--task-definition",
+                task_definition_name
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        revision = json.loads(result.stdout)["taskDefinition"]["revision"]
+
+        cluster_name = "staging-chartwise-app-cluster" if env == STAGING_ENVIRONMENT else "prod-chartwise-app-cluster"
+        service_name = "staging-chartwise-main-app-task-service" if env == STAGING_ENVIRONMENT else "prod-chartwise-main-app-task-service"
+
+        print(f"Updating ECS service '{service_name}' in cluster '{cluster_name}' to use new image 🔄")
+        deploy_process(
+            commands=[
+                "aws",
+                "ecs",
+                "update-service",
+                "--cluster",
+                cluster_name,
+                "--service",
+                service_name,
+                "--task-definition",
+                f"{task_definition_name}:{revision}",
+                "--force-new-deployment"
+            ]
+        )
+
+        os.remove("new_task_def.json")
+        print("AWS deployment complete 🎊.")
+    except Exception as e:
+        print(f"Something went wrong ⚠️ – {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy the FastAPI app.")
@@ -132,6 +196,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     env = args.environment
-
     deploy_fastapi_app(env)
     print("\nDone")

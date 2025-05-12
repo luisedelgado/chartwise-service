@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage: ./assume_role.sh -env staging|prod
+# Usage:source ./assume_role.sh -env staging|prod
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
