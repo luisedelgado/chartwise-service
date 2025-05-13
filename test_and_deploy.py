@@ -70,15 +70,14 @@ def deploy_fastapi_app(env):
                 "-c",
                 (
                     f"aws ecr get-login-password --region us-east-2 --profile {profile_name} | "
-                    "docker login --username AWS --password-stdin 637423642366.dkr.ecr.us-east-2.amazonaws.com"
+                    f"docker login --username AWS --password-stdin {os.environ.get("AWS_ACCOUNT_ID")}.dkr.ecr.us-east-2.amazonaws.com"
                 )
             ]
         )
 
-        account_id = "637423642366"
         ecr_repo_name = "chartwise-main-app"
         image_tag = f"main-app-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
-        full_image_uri = f"{account_id}.dkr.ecr.us-east-2.amazonaws.com/{ecr_repo_name}:{image_tag}"
+        full_image_uri = f"{os.environ.get("AWS_ACCOUNT_ID")}.dkr.ecr.us-east-2.amazonaws.com/{ecr_repo_name}:{image_tag}"
         
         print("Pushing new docker image to ECR 📦")
         deploy_process(
@@ -197,8 +196,8 @@ def deploy_fastapi_app(env):
 
 def assume_role(env):
     role_arn = {
-        "staging": "arn:aws:iam::637423642366:role/ChartWiseUserStaging",
-        "prod": "arn:aws:iam::637423642366:role/ChartWiseUserProd"
+        "staging": f"arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/ChartWiseUserStaging",
+        "prod": f"arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/ChartWiseUserProd"
     }.get(env)
 
     print(f"Assuming role {role_arn} 👤")
