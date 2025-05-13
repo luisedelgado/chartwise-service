@@ -350,6 +350,7 @@ class TestingHarnessAudioProcessingRouter:
             }
         )
         assert response.status_code == 200
+        assert "file_path" in response.json()
 
     def test_invoke_transcription_with_no_session_token(self):
         response = self.client.post(
