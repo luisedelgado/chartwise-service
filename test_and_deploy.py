@@ -231,7 +231,7 @@ def assume_role(env):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy the FastAPI app.")
     parser.add_argument(
-        "-env", "--environment", required=True, choices={STAGING_ENVIRONMENT, PROD_ENVIRONMENT},
+        "-e", "--env", required=True, choices={STAGING_ENVIRONMENT, PROD_ENVIRONMENT},
         help="Deployment environment for the webapp: 'staging' or 'prod'"
     )
 
