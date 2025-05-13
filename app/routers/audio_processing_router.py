@@ -612,7 +612,9 @@ class AudioProcessingRouter:
                 parts=parts,
                 bucket_name=os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME")
             )
-            return {}
+            return {
+                "file_path": file_path
+            }
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
