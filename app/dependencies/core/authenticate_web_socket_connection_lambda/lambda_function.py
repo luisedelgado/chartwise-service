@@ -20,7 +20,7 @@ gatewayapi = boto3.client(
 )
 
 def lambda_handler(event, context):
-    connection_id = event["requestContext"]["connectionId"]
+    connection_id = event["requestContext"]["connectionId"].strip()
     body = json.loads(event.get("body", "{}"))
     token = body.get("token")
 

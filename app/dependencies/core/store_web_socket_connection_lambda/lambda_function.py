@@ -6,7 +6,7 @@ dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ.get("TABLE_NAME"))
 
 def lambda_handler(event, context):
-    connection_id = event["requestContext"]["connectionId"]
+    connection_id = event["requestContext"]["connectionId"].strip()
 
     try:
         ttl = int(time.time()) + int(os.environ.get("UNAUTHENTICATED_TTL_SECONDS", "60"))
