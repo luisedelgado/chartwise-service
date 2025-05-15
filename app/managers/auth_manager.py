@@ -9,6 +9,7 @@ from ..internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ..internal.security.security_schema import Token
 from ..internal.utilities.datetime_handler import DATE_TIME_FORMAT
 from ..internal.session_container import session_container
+from ..dependencies.dependency_container import dependency_container
 
 class AuthManager:
 
@@ -17,11 +18,16 @@ class AuthManager:
     ENVIRONMENT = os.environ.get("ENVIRONMENT")
     APP_COOKIE_DOMAIN = (".chartwise.ai" if (os.environ.get("ENVIRONMENT") == PROD_ENVIRONMENT
                          or os.environ.get("ENVIRONMENT") == STAGING_ENVIRONMENT) else None)
-    SECRET_KEY = os.environ.get('FASTAPI_JWT_SECRET')
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
     def __init__(self):
+        secret_manager = dependency_container.inject_aws_secret_manager_client()
+        secret_data = secret_manager.get_secret(
+            secret_id=os.environ.get("SESSION_TOKEN_JWT_SECRET_NAME"),
+            resend_client=dependency_container.inject_resend_client(),
+        )
+        self.secret_key = secret_data.get('secret')
         self._pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         logging.getLogger('passlib').setLevel(logging.ERROR)
 
@@ -50,7 +56,7 @@ class AuthManager:
         return (
             jwt.encode(
                 to_encode,
-                cls.SECRET_KEY,
+                self.secret_key,
                 algorithm=cls.ALGORITHM
             ),
             formatted_expiration_time
@@ -80,11 +86,10 @@ class AuthManager:
         access_token: str,
     ) -> dict:
         try:
-            cls = type(self)
             payload = jwt.decode(
                 jwt=access_token,
-                key=cls.SECRET_KEY,
-                algorithms=[cls.ALGORITHM]
+                key=self.secret_key,
+                algorithms=[type(self).ALGORITHM]
             )
             exp: float = payload.get("exp")
             user_id: str = payload.get("sub")
