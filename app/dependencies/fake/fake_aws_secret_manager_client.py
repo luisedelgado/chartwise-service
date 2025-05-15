@@ -9,4 +9,4 @@ class FakeAwsSecretManagerClient(AwsSecretManagerBaseClass):
         secret_id: str,
         resend_client: ResendBaseClass,
     ) -> str:
-        return "myFakeUrl"
+        return {"secret": "myFakeSecret"}
