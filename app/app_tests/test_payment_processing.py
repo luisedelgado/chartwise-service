@@ -302,24 +302,3 @@ class TestingHarnessPaymentProcessingRouter:
         assert response.status_code == 200
         assert self.fake_stripe_client.retrieve_payment_intent_history_invoked
         assert "payments" in response.json()
-
-    def test_get_subscription_status_with_auth_token_but_missing_session_token(self):
-        response = self.client.get(
-            PaymentProcessingRouter.SUBSCRIPTION_STATUS_ENDPOINT,
-            headers={
-                "auth-token": FAKE_ACCESS_TOKEN,
-            },
-        )
-        assert response.status_code == 401
-
-    def test_get_subscription_status_success(self):
-        self.client.cookies.set("session_token", self.session_token)
-        response = self.client.get(
-            PaymentProcessingRouter.SUBSCRIPTION_STATUS_ENDPOINT,
-            headers={
-                "auth-token": FAKE_ACCESS_TOKEN,
-            },
-        )
-        assert response.status_code == 200
-        response_json = response.json()
-        assert response_json["subscription_status"] is not None

@@ -61,7 +61,8 @@ class PaymentProcessingRouter:
     PRODUCT_CATALOG_ENDPOINT = "/v1/product-catalog"
     SUBSCRIPTION_STATUS_ENDPOINT = "/v1/subscription_status"
     ROUTER_TAG = "payments"
-    ACTIVE_SUBSCRIPTION_STATES = ['active', 'trialing']
+    TRIALING = "trialing"
+    ACTIVE_SUBSCRIPTION_STATES = ['active', TRIALING]
 
     def __init__(
         self,
@@ -199,21 +200,6 @@ class PaymentProcessingRouter:
                 response=response,
                 limit=batch_size,
                 starting_after=pagination_last_item_id_retrieved
-            )
-
-        @self.router.get(type(self).SUBSCRIPTION_STATUS_ENDPOINT, tags=[type(self).ROUTER_TAG])
-        async def retrieve_subscription_current_status(
-            request: Request,
-            response: Response,
-            _: dict = Depends(get_user_info),
-            session_token: Annotated[Union[str, None], Cookie()] = None,
-            session_id: Annotated[Union[str, None], Cookie()] = None,
-        ):
-            return await self._retrieve_subscription_current_status_internal(
-                session_token=session_token,
-                session_id=session_id,
-                request=request,
-                response=response,
             )
 
     async def _create_checkout_session_internal(
@@ -366,15 +352,21 @@ class PaymentProcessingRouter:
 
             subscription_data = response['data']
             filtered_data = []
-            for object in subscription_data:
-                payment_method_id = object.get("default_payment_method", None)
+
+            for subscription in subscription_data:
+                subscription_status = subscription['status']
+                payment_method_id = subscription.get("default_payment_method", None)
                 payment_method_data = stripe_client.retrieve_payment_method(payment_method_id)
 
-                subscription_status = object['status']
+                subscription_data = await self._subscription_manager.subscription_data(
+                    user_id=user_id,
+                    request=request,
+                )
+
                 current_subscription = {
-                    "subscription_id": object['id'],
-                    "price_id": object['plan']['id'],
-                    "product_id": object['items']['data'][0]['id'],
+                    "subscription_id": subscription['id'],
+                    "price_id": subscription['plan']['id'],
+                    "product_id": subscription['items']['data'][0]['id'],
                     "status": subscription_status,
                     "payment_method_data": {
                         "id": None if 'id' not in payment_method_data else payment_method_data['id'],
@@ -382,9 +374,10 @@ class PaymentProcessingRouter:
                         "data": None if 'data' not in payment_method_data else payment_method_data['card'],
                     },
                 }
+                current_subscription.update(subscription_data)
 
-                if subscription_status == 'trialing':
-                    trial_end = datetime.fromtimestamp(object['trial_end'])
+                if subscription_status == self.TRIALING:
+                    trial_end = datetime.fromtimestamp(subscription['trial_end'])
                     formatted_trial_end = trial_end.strftime(DATE_FORMAT)
                     current_subscription['trial_end'] = formatted_trial_end
 
@@ -937,73 +930,6 @@ class PaymentProcessingRouter:
 
         return {}
 
-    async def _retrieve_subscription_current_status_internal(
-        self,
-        session_token: str,
-        session_id: str,
-        request: Request,
-        response: Response,
-    ):
-        """
-        Retrieves the current status of the subscription for the incoming user.
-
-        Arguments:
-        session_token – the session_token cookie, if exists.
-        session_id – the session_id cookie, if exists.
-        request – the request object.
-        response – the response model with which to create the final response.
-        """
-        request.state.session_id = session_id
-
-        if not self._auth_manager.session_token_is_valid(session_token):
-            raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
-
-        try:
-            user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
-            request.state.therapist_id = user_id
-            await self._auth_manager.refresh_session(
-                user_id=user_id,
-                session_id=session_id,
-                response=response
-            )
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(
-                e,
-                fallback=status.HTTP_401_UNAUTHORIZED
-            )
-            dependency_container.inject_influx_client().log_error(
-                endpoint_name=request.url.path,
-                session_id=session_id,
-                method=request.method,
-                error_code=status_code,
-                description=str(e)
-            )
-            raise RuntimeError(e) from e
-
-        try:
-            subscription_status = await self._subscription_manager.subscription_data(
-                user_id=user_id,
-                request=request
-            )
-            return subscription_status
-        except Exception as e:
-            description = str(e)
-            status_code = general_utilities.extract_status_code(
-                e,
-                fallback=status.HTTP_400_BAD_REQUEST
-            )
-            dependency_container.inject_influx_client().log_error(
-                endpoint_name=request.url.path,
-                session_id=session_id,
-                method=request.method,
-                error_code=status_code,
-                description=description
-            )
-            raise HTTPException(
-                status_code=status_code,
-                detail=description
-            )
-
     # Private
 
     async def _handle_stripe_event(
@@ -1249,7 +1175,7 @@ class PaymentProcessingRouter:
             product_data = stripe_client.retrieve_product(product_id)
             stripe_product_name = product_data['metadata']['product_name']
             tier_name = subscription_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
-            is_trialing = subscription['status'] == 'trialing'
+            is_trialing = subscription['status'] == self.TRIALING
             now_timestamp = datetime.now().date()
 
             payload = {
