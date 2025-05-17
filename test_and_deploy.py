@@ -114,7 +114,7 @@ def deploy_fastapi_app(env):
             text=True,
             check=True
         )
-        assert describe_current_task_result == 0, "Failed to describe task definition"
+        assert describe_current_task_result.returncode == 0, "Failed to describe task definition"
         task_def = json.loads(describe_current_task_result.stdout)["taskDefinition"]
 
         for container in task_def["containerDefinitions"]:
@@ -153,7 +153,7 @@ def deploy_fastapi_app(env):
             stderr=subprocess.DEVNULL,
             check=True
         )
-        assert register_result == 0, "Failed to register new task definition"
+        assert register_result.returncode == 0, "Failed to register new task definition"
 
         describe_new_task_result = subprocess.run(
             [
@@ -167,7 +167,7 @@ def deploy_fastapi_app(env):
             text=True,
             check=True
         )
-        assert describe_new_task_result == 0, "Failed to describe new task definition"
+        assert describe_new_task_result.returncode == 0, "Failed to describe new task definition"
         revision = json.loads(describe_new_task_result.stdout)["taskDefinition"]["revision"]
 
         cluster_name = "staging-chartwise-app-cluster" if env == STAGING_ENVIRONMENT else "prod-chartwise-app-cluster"
@@ -191,7 +191,7 @@ def deploy_fastapi_app(env):
             capture_output=True,
             text=True
         )
-        assert update_service_result == 0, "Failed to update ECS service"
+        assert update_service_result.returncode == 0, "Failed to update ECS service"
 
         os.remove("new_task_def.json")
         print("AWS deployment complete 🎊.")
@@ -224,8 +224,7 @@ def assume_role(env):
             text=True,
             check=True
         )
-        assert result == 0, "Failed to assume role"
-
+        assert result.returncode == 0, "Failed to assume role"
         creds = json.loads(result.stdout)["Credentials"]
 
         os.environ["AWS_ACCESS_KEY_ID"] = creds["AccessKeyId"]
