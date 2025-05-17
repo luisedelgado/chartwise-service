@@ -362,12 +362,15 @@ class PaymentProcessingRouter:
                     user_id=user_id,
                     request=request,
                 )
-
+                current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
+                current_billing_period_end_date = current_period_end.date().strftime(DATE_FORMAT)
                 current_subscription = {
                     "subscription_id": subscription['id'],
                     "price_id": subscription['plan']['id'],
                     "product_id": subscription['items']['data'][0]['id'],
                     "status": subscription_status,
+                    "recurrence": subscription['items']['data'][0]['plan']['interval'],
+                    "current_billing_period_end_date": current_billing_period_end_date,
                     "payment_method_data": {
                         "id": None if 'id' not in payment_method_data else payment_method_data['id'],
                         "type": None if 'type' not in payment_method_data else payment_method_data['type'],

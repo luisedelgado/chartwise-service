@@ -122,6 +122,7 @@ class FakeStripeClient(StripeBaseClass):
                 "id": "su_1NXPiE2eZvKYlo2COk9fohqA",
                 "object": "subscription",
                 "status": "trialing",
+                "current_period_end": 1749327010,
                 "trial_end": int(time.time()) + 7 * 24 * 60 * 60,
                 "application": "null",
                 "application_fee_percent": "null",
@@ -142,8 +143,11 @@ class FakeStripeClient(StripeBaseClass):
                             "created": "1690208774",
                             "metadata": {},
                             "price": {
-                            "id": "price_1NOhvg2eZvKYlo2CqkpQDVRT",
-                            "object": "price"
+                                "id": "price_1NOhvg2eZvKYlo2CqkpQDVRT",
+                                "object": "price",
+                            },
+                            "plan": {
+                                "interval": "year"
                             }
                         }
                     ]
