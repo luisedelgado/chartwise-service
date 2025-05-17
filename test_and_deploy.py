@@ -100,7 +100,7 @@ def deploy_fastapi_app(env):
             else "prod-chartwise-main-app-task"
         )
 
-        result = subprocess.run(
+        describe_current_task_result = subprocess.run(
             [
                 "aws",
                 "ecs",
@@ -114,7 +114,8 @@ def deploy_fastapi_app(env):
             text=True,
             check=True
         )
-        task_def = json.loads(result.stdout)["taskDefinition"]
+        assert describe_current_task_result == 0, "Failed to describe task definition"
+        task_def = json.loads(describe_current_task_result.stdout)["taskDefinition"]
 
         for container in task_def["containerDefinitions"]:
             container["image"] = full_image_uri
@@ -140,7 +141,7 @@ def deploy_fastapi_app(env):
 
         # Register new revision
         print("Registering new task definition pointing to the new image's URI 🐳")
-        subprocess.run(
+        register_result = subprocess.run(
             [
                 "aws",
                 "ecs",
@@ -152,8 +153,9 @@ def deploy_fastapi_app(env):
             stderr=subprocess.DEVNULL,
             check=True
         )
+        assert register_result == 0, "Failed to register new task definition"
 
-        result = subprocess.run(
+        describe_new_task_result = subprocess.run(
             [
                 "aws",
                 "ecs",
@@ -165,13 +167,14 @@ def deploy_fastapi_app(env):
             text=True,
             check=True
         )
-        revision = json.loads(result.stdout)["taskDefinition"]["revision"]
+        assert describe_new_task_result == 0, "Failed to describe new task definition"
+        revision = json.loads(describe_new_task_result.stdout)["taskDefinition"]["revision"]
 
         cluster_name = "staging-chartwise-app-cluster" if env == STAGING_ENVIRONMENT else "prod-chartwise-app-cluster"
         service_name = "staging-chartwise-main-app-task-service" if env == STAGING_ENVIRONMENT else "prod-chartwise-main-app-task-service"
 
         print(f"\nUpdating ECS service '{service_name}' in cluster '{cluster_name}' to use new image 🔄")
-        subprocess.run(
+        update_service_result = subprocess.run(
             [
                 "aws",
                 "ecs",
@@ -188,6 +191,7 @@ def deploy_fastapi_app(env):
             capture_output=True,
             text=True
         )
+        assert update_service_result == 0, "Failed to update ECS service"
 
         os.remove("new_task_def.json")
         print("AWS deployment complete 🎊.")
@@ -195,38 +199,42 @@ def deploy_fastapi_app(env):
         print(f"Something went wrong ⚠️ – {str(e)}")
 
 def assume_role(env):
-    role_arn = {
-        "staging": f"arn:aws:iam::{os.environ.get('AWS_ACCOUNT_ID')}:role/ChartWiseUserStaging",
-        "prod": f"arn:aws:iam::{os.environ.get('AWS_ACCOUNT_ID')}:role/ChartWiseUserProd"
-    }.get(env)
+    try:
+        role_arn = {
+            "staging": f"arn:aws:iam::{os.environ.get('AWS_ACCOUNT_ID')}:role/ChartWiseUserStaging",
+            "prod": f"arn:aws:iam::{os.environ.get('AWS_ACCOUNT_ID')}:role/ChartWiseUserProd"
+        }.get(env)
 
-    print(f"Assuming role {role_arn} 👤")
+        print(f"Assuming role {role_arn} 👤")
 
-    if not role_arn:
-        raise ValueError("Invalid env")
+        if not role_arn:
+            raise ValueError("Invalid env")
 
-    result = subprocess.run(
-        [
-            "aws",
-            "sts",
-            "assume-role",
-            "--role-arn",
-            role_arn,
-            "--role-session-name",
-            f"chartwise-session-{env}"
-        ],
-        capture_output=True,
-        text=True,
-        check=True
-    )
+        result = subprocess.run(
+            [
+                "aws",
+                "sts",
+                "assume-role",
+                "--role-arn",
+                role_arn,
+                "--role-session-name",
+                f"chartwise-session-{env}"
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        assert result == 0, "Failed to assume role"
 
-    creds = json.loads(result.stdout)["Credentials"]
+        creds = json.loads(result.stdout)["Credentials"]
 
-    os.environ["AWS_ACCESS_KEY_ID"] = creds["AccessKeyId"]
-    os.environ["AWS_SECRET_ACCESS_KEY"] = creds["SecretAccessKey"]
-    os.environ["AWS_SESSION_TOKEN"] = creds["SessionToken"]
+        os.environ["AWS_ACCESS_KEY_ID"] = creds["AccessKeyId"]
+        os.environ["AWS_SECRET_ACCESS_KEY"] = creds["SecretAccessKey"]
+        os.environ["AWS_SESSION_TOKEN"] = creds["SessionToken"]
 
-    print(f"Assumed role successfully 🎯")
+        print(f"Assumed role successfully 🎯")
+    except Exception as e:
+        print(f"Something went wrong ⚠️ – {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy the FastAPI app.")
