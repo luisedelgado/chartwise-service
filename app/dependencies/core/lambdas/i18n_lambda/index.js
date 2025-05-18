@@ -1,44 +1,55 @@
-// English template
-const englishTemplate = `
-<div style="text-align: center">
-  <img
-    src="https://bhpqrkshpqaaqwtemhgx.supabase.co/storage/v1/object/public/assets/email-logo.png"
-  />
-  
-  <h2>Verification code</h2>
-
-  <p>Hey, your Verification code is: {##verify_code##}</p>
-</div>
-
-`;
-
-// Spanish template
-const spanishTemplate = `
-<div style="text-align: center">
-  <img
-    src="https://bhpqrkshpqaaqwtemhgx.supabase.co/storage/v1/object/public/assets/email-logo.png"
-  />
-  
-  <h2>Código de verificación</h2>
-
-  <p>Hola, tu código para verificación es: {##verify_code##}</p>
-</div>
-`;
-
 exports.handler = async (event, context) => {
-  // Get the user's preferred language
-  // This could come from a custom attribute in Cognito
-  const userLanguage = event.request.userAttributes['custom:language_preference'] || 'en';
-  
-  
-  if (userLanguage === 'es') {
-    event.response.emailMessage = spanishTemplate.replace('{##verify_code##}', event.request.codeParameter);
-    event.response.emailSubject = 'Código de verificación';
-  } else {
-    // Default to English
-    event.response.emailMessage = englishTemplate.replace('{##verify_code##}', event.request.codeParameter);
-    event.response.emailSubject = 'Verification code';
+  const triggerSource = event.triggerSource;
+  const userLanguage = (event.request.userAttributes['custom:language_preference'] || 'en').toLowerCase();
+
+  const templates = {
+    en: {
+      verificationSubject: "Verification code",
+      verificationBody: `
+        <div style="text-align: center">
+          <img width="400px" src="https://chartwise-public-media.s3.us-east-2.amazonaws.com/logo.png" />
+          <h2>Verification code</h2>
+          <p>Hey, your Verification code is: {##verify_code##}</p>
+        </div>
+      `,
+      forgotPasswordSubject: "Reset your ChartWise password",
+      forgotPasswordBody: `
+        <div style="text-align: center">
+          <img width="400px" src="https://chartwise-public-media.s3.us-east-2.amazonaws.com/logo.png" />
+          <h2>Reset Password</h2>
+          <p>Use this code to reset your password: {##verify_code##}</p>
+        </div>
+      `,
+    },
+    es: {
+      verificationSubject: "Código de verificación",
+      verificationBody: `
+        <div style="text-align: center">
+          <img width="400px" src="https://chartwise-public-media.s3.us-east-2.amazonaws.com/logo.png" />
+          <h2>Código de verificación</h2>
+          <p>Hola, tu código para verificación es: {##verify_code##}</p>
+        </div>
+      `,
+      forgotPasswordSubject: "Restablece tu contraseña de ChartWise",
+      forgotPasswordBody: `
+        <div style="text-align: center">
+          <img width="400px" src="https://chartwise-public-media.s3.us-east-2.amazonaws.com/logo.png" />
+          <h2>Restablecer contraseña</h2>
+          <p>Usa este código para restablecer tu contraseña: {##verify_code##}</p>
+        </div>
+      `,
+    },
+  };
+
+  const t = userLanguage.startsWith('es') ? templates.es : templates.en;
+
+  if (triggerSource === 'CustomMessage_SignUp') {
+    event.response.emailSubject = t.verificationSubject;
+    event.response.emailMessage = t.verificationBody.replace('{##verify_code##}', event.request.codeParameter);
+  } else if (triggerSource === 'CustomMessage_ForgotPassword') {
+    event.response.emailSubject = t.forgotPasswordSubject;
+    event.response.emailMessage = t.forgotPasswordBody.replace('{##verify_code##}', event.request.codeParameter);
   }
-  
+
   return event;
 };
