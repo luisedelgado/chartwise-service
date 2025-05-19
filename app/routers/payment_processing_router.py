@@ -29,6 +29,7 @@ from ..internal.schemas import (
 from ..internal.security.security_schema import SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 from ..internal.utilities import general_utilities, subscription_utilities
 from ..internal.utilities.datetime_handler import DATE_FORMAT
+from ..internal.utilities.general_utilities import retrieve_ip_address
 from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
 from ..managers.subscription_manager import SubscriptionManager
@@ -258,6 +259,9 @@ class PaymentProcessingRouter:
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
             is_new_customer = (0 == len(customer_data))
+
+            user_ip_address = retrieve_ip_address(request)
+            # Fetch country from IP address
 
             stripe_client = dependency_container.inject_stripe_client()
             payment_session_url = stripe_client.generate_checkout_session(

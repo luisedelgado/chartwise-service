@@ -9,6 +9,7 @@ from starlette.requests import Request
 from ..alerting.internal_alert import EngineeringAlert
 from ..schemas import PROD_ENVIRONMENT
 from ...dependencies.dependency_container import (dependency_container, AwsDbBaseClass)
+from ...internal.utilities.general_utilities import retrieve_ip_address
 from ...routers.assistant_router import AssistantRouter
 from ...routers.audio_processing_router import AudioProcessingRouter
 from ...routers.image_processing_router import ImageProcessingRouter
@@ -131,7 +132,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                     "status_code": response.status_code,
                     "url_path": request_url_path,
                     "session_id": session_id,
-                    "ip_address": request.headers.get("x-forwarded-for", request.client.host)
+                    "ip_address": retrieve_ip_address(request),
                 }
 
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()

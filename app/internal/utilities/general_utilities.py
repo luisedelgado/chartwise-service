@@ -105,3 +105,18 @@ def is_valid_uuid(
         return str(val) == uuid_string.lower()
     except (ValueError, AttributeError, TypeError):
         return False
+
+def retrieve_ip_address(request: Request) -> str:
+    """
+    Extracts the IP address from the request.
+    This function checks the "X-Forwarded-For" header first, which is commonly used in
+    load-balanced environments. If that header is not present, it falls back to the
+    "client.host" attribute of the request.
+    """
+    # Check if the request is behind a proxy or load balancer
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        ip_address = x_forwarded_for.split(",")[0].strip()
+    else:
+        ip_address = request.client.host
+    return ip_address
