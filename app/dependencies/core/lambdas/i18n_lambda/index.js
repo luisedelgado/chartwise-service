@@ -3,13 +3,13 @@ const environment = process.env.ENVIRONMENT;
 let forgotPasswordLink;
 switch (environment) {
   case 'prod':
-    forgotPasswordLink = 'https://app.chartwise.ai/recover';
+    forgotPasswordLink = 'https://app.chartwise.ai/recover?email={##email##}';
     break;
   case 'staging':
-    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover';
+    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover?email={##email##}';
     break;
   default:
-    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover';
+    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover?email={##email##}';
 }
 
 const verifyEmailEnglishTemplate = `
@@ -47,7 +47,7 @@ const forgotPasswordEnglishTemplate = `
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
 
   <p style="font-size: 16px; margin-top: 20px;">
-    Please go to <a href="${forgotPasswordLink}" target="_blank">${forgotPasswordLink}</a> and follow the steps to create a new password.
+    Please go to <a href="{##forgot_password_link##}" target="_blank">{##forgot_password_link##}</a> and follow the steps to create a new password.
   </p>
 
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
@@ -91,7 +91,7 @@ const forgotPasswordSpanishTemplate = `
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
 
   <p style="font-size: 16px; margin-top: 20px;">
-    Por favor visita <a href="${forgotPasswordLink}" target="_blank">${forgotPasswordLink}</a> y sigue los pasos para crear una nueva contraseña.
+    Por favor visita <a href="{##forgot_password_link##}" target="_blank">{##forgot_password_link##}</a> y sigue los pasos para crear una nueva contraseña.
   </p>
 
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
@@ -104,28 +104,38 @@ exports.handler = async (event, context) => {
   const triggerSource = event.triggerSource;
   const userLanguage = (event.request.userAttributes['custom:language_preference'] || 'en').toLowerCase();
 
-  if (userLanguage.startsWith('es')) {
-    if (triggerSource === 'CustomMessage_SignUp') {
-      event.response.emailMessage = verifyEmailSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter);
-      event.response.emailSubject = 'Código de verificación';
-    }
-    else if (triggerSource === 'CustomMessage_ForgotPassword') {
-      event.response.emailMessage = forgotPasswordSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter);
-      event.response.emailSubject = 'Restablece tu contraseña de ChartWise';
-    }
-  }
-  else if (userLanguage.startsWith('en')) {
-    if (triggerSource === 'CustomMessage_SignUp') {
+  if (triggerSource === 'CustomMessage_SignUp') {
+    if (userLanguage.startsWith('en')) {
       event.response.emailMessage = verifyEmailEnglishTemplate.replace('{##verify_code##}', event.request.codeParameter);
       event.response.emailSubject = 'Verification code';
     }
-    else if (triggerSource === 'CustomMessage_ForgotPassword') {
-      event.response.emailMessage = forgotPasswordEnglishTemplate.replace('{##verify_code##}', event.request.codeParameter);
+    else if (userLanguage.startsWith('es')) {
+      event.response.emailMessage = verifyEmailSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter);
+      event.response.emailSubject = 'Código de verificación';
+    }
+    else {
+      throw new Error(`Missing handling of language ${userLanguage} in Cognito custom trigger leveraging i18n Lambda`);
+    }
+  }
+  else if (triggerSource === 'CustomMessage_ForgotPassword') {
+    const userEmail = event.request.userAttributes.email;
+    const base64Email = Buffer.from(userEmail).toString('base64');
+    const formattedForgotPasswordLink = forgotPasswordLink.replace('{##email##}', base64Email);
+
+    if (userLanguage.startsWith('en')) {
+      event.response.emailMessage = forgotPasswordEnglishTemplate.replace('{##verify_code##}', event.request.codeParameter).replace('{##forgot_password_link##}', formattedForgotPasswordLink);
       event.response.emailSubject = 'Reset your ChartWise password';
+    }
+    else if (userLanguage.startsWith('es')) {
+      event.response.emailMessage = forgotPasswordSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter).replace('{##forgot_password_link##}', formattedForgotPasswordLink);
+      event.response.emailSubject = 'Restablece tu contraseña de ChartWise';
+    }
+    else {
+      throw new Error(`Missing handling of language ${userLanguage} in Cognito custom trigger leveraging i18n Lambda`);
     }
   }
   else {
-    throw new Error(`Missing handling of language ${userLanguage} in Cognito custom trigger leveraging i18n Lambda`);
+    console.log(`Unsupported trigger source: ${triggerSource}`);
   }
   return event;
 };
