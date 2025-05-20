@@ -53,7 +53,7 @@ class UpdateSubscriptionBehavior(Enum):
 
 class UpdateSubscriptionPayload(BaseModel):
     behavior: UpdateSubscriptionBehavior
-    new_price_tier_id: Optional[str] = None
+    new_subscription_tier: Optional[SubscriptionTier] = None
 
 class UpdatePaymentMethodPayload(BaseModel):
     success_callback_url: str
@@ -137,7 +137,7 @@ class PaymentProcessingRouter:
         ):
             return await self._update_subscription_internal(
                 session_token=session_token,
-                price_id=payload.new_price_tier_id,
+                subscription_tier=payload.new_subscription_tier,
                 behavior=payload.behavior,
                 request=request,
                 response=response,
@@ -283,7 +283,7 @@ class PaymentProcessingRouter:
             )
             is_new_customer = (0 == len(customer_data))
 
-            user_ip_address = "179.60.127.196"#retrieve_ip_address(request)
+            user_ip_address = retrieve_ip_address(request)
             country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
 
             stripe_client = dependency_container.inject_stripe_client()
@@ -526,7 +526,7 @@ class PaymentProcessingRouter:
         request: Request,
         response: Response,
         behavior: UpdateSubscriptionBehavior,
-        price_id: str
+        subscription_tier: SubscriptionTier
     ):
         """
         Updates the incoming subscription ID with the incoming product information.
@@ -537,7 +537,7 @@ class PaymentProcessingRouter:
         request – the request object.
         response – the response model with which to create the final response.
         behavior – the update behavior to be invoked.
-        price_id – the new price_id to be associated with the subscription.
+        subscription_tier – the new tier to be associated with the subscription.
         """
         request.state.session_id = session_id
         if not self._auth_manager.session_token_is_valid(session_token):
@@ -585,7 +585,18 @@ class PaymentProcessingRouter:
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
 
             if behavior == UpdateSubscriptionBehavior.CHANGE_TIER:
-                assert len(price_id or '') > 0, "Missing the new tier price ID parameter."
+                assert len(subscription_tier.value or '') > 0, "Missing the new tier price ID parameter."
+
+                user_ip_address = retrieve_ip_address(request)
+                country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
+                product_catalog = stripe_client.retrieve_product_catalog(country_iso=country_iso)
+                price_id = None
+                for product in product_catalog:
+                    if product['metadata']['product_name'] == subscription_tier.value:
+                        price_id = product['price_data']['id']
+                        break
+
+                assert len(price_id or '') > 0, "Could not find a product for the incoming request."
                 subscription_item_id = subscription_data["items"]["data"][0]["id"]
                 stripe_client.update_customer_subscription_plan(
                     subscription_id=subscription_id,

@@ -179,7 +179,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "new_price_tier_id": FAKE_PRICE_ID,
+                "new_subscription_tier": "premium_plan_monthly",
                 "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
             }
         )
@@ -207,7 +207,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "new_price_tier_id": FAKE_PRICE_ID,
+                "new_subscription_tier": "basic_plan_monthly",
                 "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
             }
         )
@@ -223,7 +223,6 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "new_price_tier_id": FAKE_PRICE_ID,
                 "behavior": UpdateSubscriptionBehavior.UNDO_CANCELLATION.value
             }
         )
