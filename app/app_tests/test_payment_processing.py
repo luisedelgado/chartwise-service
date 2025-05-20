@@ -3,7 +3,11 @@ from fastapi.testclient import TestClient
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
 from ..dependencies.dependency_container import dependency_container
 from ..managers.auth_manager import AuthManager
-from ..routers.payment_processing_router import UpdateSubscriptionBehavior, PaymentProcessingRouter
+from ..routers.payment_processing_router import (
+    PaymentProcessingRouter,
+    SubscriptionTier,
+    UpdateSubscriptionBehavior,
+)
 from ..service_coordinator import EndpointServiceCoordinator
 
 FAKE_PATIENT_ID = "a789baad-6eb1-44f9-901e-f19d4da910ab"
@@ -51,7 +55,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "price_id": FAKE_PRICE_ID,
+                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -67,7 +71,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "price_id": FAKE_PRICE_ID,
+                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -83,7 +87,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "price_id": FAKE_PRICE_ID,
+                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -99,7 +103,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "price_id": FAKE_PRICE_ID,
+                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }

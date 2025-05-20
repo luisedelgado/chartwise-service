@@ -34,8 +34,15 @@ from ..internal.utilities.route_verification import get_user_info
 from ..managers.auth_manager import AuthManager
 from ..managers.subscription_manager import SubscriptionManager
 
+class SubscriptionTier(Enum):
+    UNSPECIFIED = "unspecified"
+    MONTHLY_BASIC = "basic_plan_monthly"
+    MONTHLY_PREMIUM = "premium_plan_monthly"
+    YEARLY_BASIC = "basic_plan_yearly"
+    YEARLY_PREMIUM = "premium_plan_yearly"
+
 class PaymentSessionPayload(BaseModel):
-    price_id: str
+    subscription_tier: SubscriptionTier
     success_callback_url: str
     cancel_callback_url: str
 
@@ -248,6 +255,22 @@ class PaymentProcessingRouter:
             raise RuntimeError(e) from e
 
         try:
+            assert payload.subscription_tier != SubscriptionTier.UNSPECIFIED, "Unspecified subscription tier"
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise RuntimeError(e) from e
+
+        try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = await aws_db_client.select(
                 user_id=user_id,
@@ -261,11 +284,19 @@ class PaymentProcessingRouter:
             is_new_customer = (0 == len(customer_data))
 
             user_ip_address = retrieve_ip_address(request)
-            # Fetch country from IP address
+            country_name = await subscription_utilities.get_country_from_ip(user_ip_address)
 
             stripe_client = dependency_container.inject_stripe_client()
+            product_catalog = stripe_client.retrieve_product_catalog(country=country_name)
+            price_id = None
+            for product in product_catalog:
+                if product['metadata']['product_name'] == payload.subscription_tier.value:
+                    price_id = product['price_data']['id']
+                    break
+
+            assert len(price_id or '') > 0, "Could not find a product for the incoming request."
             payment_session_url = stripe_client.generate_checkout_session(
-                price_id=payload.price_id,
+                price_id=price_id,
                 session_id=session_id,
                 therapist_id=user_id,
                 success_url=payload.success_callback_url,
@@ -631,8 +662,12 @@ class PaymentProcessingRouter:
             raise RuntimeError(e) from e
 
         try:
+            user_ip_address = retrieve_ip_address(request)
+            country_name = await subscription_utilities.get_country_from_ip(user_ip_address)
+
             stripe_client = dependency_container.inject_stripe_client()
-            response = stripe_client.retrieve_product_catalog()
+            response = stripe_client.retrieve_product_catalog(country=country_name)
+            return {"catalog": response}
         except Exception as e:
             status_code = general_utilities.extract_status_code(
                 e,
@@ -650,8 +685,6 @@ class PaymentProcessingRouter:
                 detail="Subscription not found",
                 status_code=status_code
             )
-
-        return {"catalog": response}
 
     async def _create_update_payment_method_session_internal(
         self,

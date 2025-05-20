@@ -187,29 +187,33 @@ class FakeStripeClient(StripeBaseClass):
     ):
         pass
 
-    def retrieve_product_catalog(self) -> list:
+    def retrieve_product_catalog(self, country: str) -> list:
         self.retrieve_product_catalog_invoked = True
-        return {
-                "catalog": [{
-                    "product": "myproduct",
-                    "product_id": "prod_RCr6wwfVmOVvly",
-                    "description": "(created by Stripe CLI)",
-                    "price_data": [{
-                            "price_id": "price_1QKROSL2OU4L8JdeMZIxSIt0",
-                            "amount": "1500 usd"
-                        }
-                    ]
-                }, {
-                    "product": "Premium Plan",
-                    "product_id": "prod_RCpduG3DY2CCQU",
-                    "description": "Our premium plan for unlimited usage",
-                    "price_data": [{
-                            "price_id": "price_1QKPyiL2OU4L8JdeoVF2QXS2",
-                            "amount": "81000 usd"
-                        }
-                    ]
-                }]
-        }
+        return [
+            {
+                "product": "myproduct",
+                "product_id": "prod_RCr6wwfVmOVvly",
+                "description": "(created by Stripe CLI)",
+                "price_data": {
+                        "id": "price_1QKROSL2OU4L8JdeMZIxSIt0",
+                        "amount": "1500 usd"
+                },
+                "metadata": {
+                    "product_name": "basic_plan_monthly"
+                }
+            }, {
+                "product": "Premium Plan",
+                "product_id": "prod_RCpduG3DY2CCQU",
+                "description": "Our premium plan for unlimited usage",
+                "price_data": {
+                        "id": "price_1QKPyiL2OU4L8JdeoVF2QXS2",
+                        "amount": "81000 usd"
+                },
+                "metadata": {
+                    "product_name": "basic_plan_monthly"
+                }
+            }
+        ]
 
     def attach_subscription_metadata(self, subscription_id: str, metadata: dict):
         pass

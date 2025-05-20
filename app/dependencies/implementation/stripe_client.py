@@ -131,10 +131,28 @@ class StripeClient(StripeBaseClass):
         return stripe.Subscription.modify(subscription_id,
                                           default_payment_method=payment_method_id)
 
-    def retrieve_product_catalog(self) -> list:
-        products = stripe.Product.list(active=True)
-        product_prices = {}
+    def retrieve_product_catalog(
+            self,
+            country: str = None
+        ) -> list:
+        if not country:
+            country = "default"
 
+        country = country.lower()
+        if country == "united states":
+            country = "default"
+
+        products = stripe.Product.search(
+            query=f"metadata['country']:'{country}'"
+        )
+
+        if len(products['data']) == 0:
+            # If no products are found for the specified country, fall back to the default product catalog
+            products = stripe.Product.search(
+                query=f"metadata['country']:default"
+            )
+
+        product_prices = {}
         for product in products['data']:
             price = stripe.Price.retrieve(product['default_price'])
             currency = price['currency']

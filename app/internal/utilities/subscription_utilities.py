@@ -1,3 +1,5 @@
+import httpx, os
+
 from babel.numbers import format_currency, get_currency_precision
 from datetime import datetime, timedelta
 
@@ -66,3 +68,14 @@ def format_currency_amount(
 
     # Format the currency
     return format_currency(number=amount, currency=currency_code.upper(), locale='en_US')
+
+async def get_country_from_ip(ip: str) -> str:
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"https://ipinfo.io/{ip}?token={os.environ.get('IPINFO_API_KEY')}")
+            if resp.status_code == 200:
+                return resp.json().get("country", "unknown")
+            return "unknown"
+    except Exception as e:
+        print(f"Error fetching country from IP: {e}")
+        return "unknown"
