@@ -1,17 +1,5 @@
 const environment = process.env.ENVIRONMENT;
 
-let forgotPasswordLink;
-switch (environment) {
-  case 'prod':
-    forgotPasswordLink = 'https://app.chartwise.ai/recover?email={##email##}';
-    break;
-  case 'staging':
-    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover?email={##email##}';
-    break;
-  default:
-    forgotPasswordLink = 'https://staging.app.chartwise.ai/recover?email={##email##}';
-}
-
 const verifyEmailEnglishTemplate = `
 <div style="text-align: center; font-family: Arial, sans-serif;">
   <img
@@ -45,10 +33,6 @@ const forgotPasswordEnglishTemplate = `
 
   <p style="font-size: 16px;">Use the code below to reset your password:</p>
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
-
-  <p style="font-size: 16px; margin-top: 20px;">
-    Please go to <a href="{##forgot_password_link##}" target="_blank">this link</a> and follow the steps to create a new password.
-  </p>
 
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
     If you didn’t request a password reset, you can ignore this email or contact support.
@@ -90,10 +74,6 @@ const forgotPasswordSpanishTemplate = `
   <p style="font-size: 16px;">Usa el siguiente código para restablecer tu contraseña:</p>
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
 
-  <p style="font-size: 16px; margin-top: 20px;">
-    Por favor visita <a href="{##forgot_password_link##}" target="_blank">este enlace</a> y sigue los pasos para crear una nueva contraseña.
-  </p>
-
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
     Si no solicitaste restablecer tu contraseña, puedes ignorar este correo o contactar al equipo de soporte.
   </p>
@@ -120,14 +100,13 @@ exports.handler = async (event, context) => {
   else if (triggerSource === 'CustomMessage_ForgotPassword') {
     const userEmail = event.request.userAttributes.email;
     const base64Email = Buffer.from(userEmail).toString('base64');
-    const formattedForgotPasswordLink = forgotPasswordLink.replace('{##email##}', base64Email);
 
     if (userLanguage.startsWith('en')) {
-      event.response.emailMessage = forgotPasswordEnglishTemplate.replace('{##verify_code##}', event.request.codeParameter).replace('{##forgot_password_link##}', formattedForgotPasswordLink);
+      event.response.emailMessage = forgotPasswordEnglishTemplate.replace('{##verify_code##}', event.request.codeParameter);
       event.response.emailSubject = 'Reset your ChartWise password';
     }
     else if (userLanguage.startsWith('es')) {
-      event.response.emailMessage = forgotPasswordSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter).replace('{##forgot_password_link##}', formattedForgotPasswordLink);
+      event.response.emailMessage = forgotPasswordSpanishTemplate.replace('{##verify_code##}', event.request.codeParameter);
       event.response.emailSubject = 'Restablece tu contraseña de ChartWise';
     }
     else {
