@@ -1,4 +1,4 @@
-import re, uuid
+import httpx, os, re, uuid
 
 from fastapi import (
     HTTPException,
@@ -120,3 +120,15 @@ def retrieve_ip_address(request: Request) -> str:
     else:
         ip_address = request.client.host
     return ip_address
+
+async def get_country_iso_code_from_ip(ip: str) -> str:
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"https://ipinfo.io/{ip}?token={os.environ.get('IPINFO_API_KEY')}")
+            if resp.status_code == 200:
+                iso_code = resp.json().get("country", "").upper()
+                return iso_code
+            return "unknown"
+    except Exception as e:
+        print(f"Error fetching country from IP: {e}")
+        return "unknown"

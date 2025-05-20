@@ -283,11 +283,11 @@ class PaymentProcessingRouter:
             )
             is_new_customer = (0 == len(customer_data))
 
-            user_ip_address = retrieve_ip_address(request)
-            country_name = await subscription_utilities.get_country_from_ip(user_ip_address)
+            user_ip_address = "179.60.127.196"#retrieve_ip_address(request)
+            country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
 
             stripe_client = dependency_container.inject_stripe_client()
-            product_catalog = stripe_client.retrieve_product_catalog(country=country_name)
+            product_catalog = stripe_client.retrieve_product_catalog(country_iso=country_iso)
             price_id = None
             for product in product_catalog:
                 if product['metadata']['product_name'] == payload.subscription_tier.value:
@@ -663,10 +663,10 @@ class PaymentProcessingRouter:
 
         try:
             user_ip_address = retrieve_ip_address(request)
-            country_name = await subscription_utilities.get_country_from_ip(user_ip_address)
+            country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
 
             stripe_client = dependency_container.inject_stripe_client()
-            response = stripe_client.retrieve_product_catalog(country=country_name)
+            response = stripe_client.retrieve_product_catalog(country_iso=country_iso)
             return {"catalog": response}
         except Exception as e:
             status_code = general_utilities.extract_status_code(

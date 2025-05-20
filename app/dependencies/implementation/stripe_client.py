@@ -133,24 +133,24 @@ class StripeClient(StripeBaseClass):
 
     def retrieve_product_catalog(
             self,
-            country: str = None
+            country_iso: str = None
         ) -> list:
         try:
-            if not country:
-                country = "default"
+            if not country_iso:
+                country_iso = "default"
 
-            country = country.lower()
-            if country == "us":
-                country = "default"
+            country_iso = country_iso.lower()
+            if country_iso == "us":
+                country_iso = "default"
 
             products = stripe.Product.search(
-                query=f"metadata['country']:'{country}'"
+                query=f"metadata['country_iso']:'{country_iso}'"
             )
 
             if len(products['data']) == 0:
                 # If no products are found for the specified country, fall back to the default product catalog
                 products = stripe.Product.search(
-                    query="metadata['country']:'default'"
+                    query="metadata['country_iso']:'default'"
                 )
 
             product_prices = {}

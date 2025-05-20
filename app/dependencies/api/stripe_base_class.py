@@ -204,12 +204,12 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_product_catalog(country: str) -> list:
+    def retrieve_product_catalog(country_iso: str) -> list:
         """
         Retrieves the product catalog.
 
         Arguments:
-        country – the country to be used for retrieving the product catalog.
+        country_iso – the country ISO to be used for retrieving the product catalog.
         """
         pass
 
