@@ -135,54 +135,60 @@ class StripeClient(StripeBaseClass):
             self,
             country: str = None
         ) -> list:
-        if not country:
-            country = "default"
+        try:
+            print(f"COUNTRY: {country}")
+            if not country:
+                country = "default"
 
-        country = country.lower()
-        if country == "united states":
-            country = "default"
+            country = country.lower()
+            if country == "united states":
+                country = "default"
 
-        products = stripe.Product.search(
-            query=f"metadata['country']:'{country}'"
-        )
-
-        if len(products['data']) == 0:
-            # If no products are found for the specified country, fall back to the default product catalog
             products = stripe.Product.search(
-                query=f"metadata['country']:default"
+                query=f"metadata['country']:'{country}'"
             )
 
-        product_prices = {}
-        for product in products['data']:
-            price = stripe.Price.retrieve(product['default_price'])
-            currency = price['currency']
-            formatted_price_amount = format_currency_amount(
-                amount=float(price['unit_amount']),
-                currency_code=currency
-            )
+            if len(products['data']) == 0:
+                # If no products are found for the specified country, fall back to the default product catalog
+                products = stripe.Product.search(
+                    query="metadata['country']:'default'"
+                )
 
-            product_prices[product['id']] = {
-                "name": product['name'],
-                "description": product['description'],
-                "metadata": product['metadata'],
-                "price": {
-                    "id": price['id'],
-                    "unit_amount": formatted_price_amount,
-                    "currency": price['currency'],
-                    "recurring_interval": price['recurring']['interval'],
-                },
-            }
+            product_prices = {}
+            for product in products['data']:
+                price = stripe.Price.retrieve(product['default_price'])
+                currency = price['currency']
+                formatted_price_amount = format_currency_amount(
+                    amount=float(price['unit_amount']),
+                    currency_code=currency
+                )
 
-        catalog = []
-        for product_id, details in product_prices.items():
-            catalog.append({
-                "product": details['name'],
-                "product_id": product_id,
-                "description": details['description'],
-                "price_data": details['price'],
-                "metadata": details['metadata'],
-            })
-        return catalog
+                product_prices[product['id']] = {
+                    "name": product['name'],
+                    "description": product['description'],
+                    "metadata": product['metadata'],
+                    "price": {
+                        "id": price['id'],
+                        "unit_amount": formatted_price_amount,
+                        "currency": price['currency'],
+                        "recurring_interval": price['recurring']['interval'],
+                    },
+                }
+
+            catalog = []
+            for product_id, details in product_prices.items():
+                catalog.append({
+                    "product": details['name'],
+                    "product_id": product_id,
+                    "description": details['description'],
+                    "price_data": details['price'],
+                    "metadata": details['metadata'],
+                })
+            return catalog
+        except Exception as e:
+            error_msg = f"Encountered an issue while retrieving product catalog: {e}"
+            print(error_msg)
+            raise RuntimeError(error_msg) from e
 
     def retrieve_price(self, price_id: str):
         return stripe.Price.retrieve(price_id)
