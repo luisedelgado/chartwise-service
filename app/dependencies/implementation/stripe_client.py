@@ -136,12 +136,11 @@ class StripeClient(StripeBaseClass):
             country: str = None
         ) -> list:
         try:
-            print(f"COUNTRY: {country}")
             if not country:
                 country = "default"
 
             country = country.lower()
-            if country == "united states":
+            if country == "us":
                 country = "default"
 
             products = stripe.Product.search(
@@ -186,7 +185,7 @@ class StripeClient(StripeBaseClass):
                 })
             return catalog
         except Exception as e:
-            error_msg = f"Encountered an issue while retrieving product catalog: {e}"
+            error_msg = f"Encountered an issue while retrieving product catalog for country {country}: {e}"
             print(error_msg)
             raise RuntimeError(error_msg) from e
 
