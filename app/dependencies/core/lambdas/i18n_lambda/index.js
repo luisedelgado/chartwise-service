@@ -47,7 +47,7 @@ const forgotPasswordEnglishTemplate = `
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
 
   <p style="font-size: 16px; margin-top: 20px;">
-    Please go to <a href="{##forgot_password_link##}" target="_blank">{##forgot_password_link##}</a> and follow the steps to create a new password.
+    Please go to <a href="{##forgot_password_link##}" target="_blank">this link</a> and follow the steps to create a new password.
   </p>
 
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
@@ -91,7 +91,7 @@ const forgotPasswordSpanishTemplate = `
   <p style="font-size: 24px; font-weight: bold; letter-spacing: 1px;">{##verify_code##}</p>
 
   <p style="font-size: 16px; margin-top: 20px;">
-    Por favor visita <a href="{##forgot_password_link##}" target="_blank">{##forgot_password_link##}</a> y sigue los pasos para crear una nueva contraseña.
+    Por favor visita <a href="{##forgot_password_link##}" target="_blank">este enlace</a> y sigue los pasos para crear una nueva contraseña.
   </p>
 
   <p style="font-size: 14px; color: #888; margin-top: 30px;">
