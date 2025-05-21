@@ -1243,7 +1243,7 @@ class PaymentProcessingRouter:
                 trial_end_date_from_timestamp = datetime.fromtimestamp(subscription['trial_end'])
                 payload["free_trial_end_date"] = trial_end_date_from_timestamp.date()
 
-            if (subscription.get('status', None) in type(self).ACTIVE_SUBSCRIPTION_STATES) and not subscription.get('cancel_at_period_end', None):
+            if (subscription.get('status', None) in type(self).ACTIVE_SUBSCRIPTION_STATES):
                 # Free trial is ongoing, or subscription is active.
                 payload['is_active'] = True
                 payload['free_trial_active'] = is_trialing
