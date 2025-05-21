@@ -139,8 +139,9 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 await run_in_threadpool(
                     aws_db_client.insert,
                     user_id=therapist_id,
+                    request=request,
+                    payload=payload,
                     table_name="audit_logs",
-                    payload=payload
                 )
             except Exception as e:
                 # Fail silently but send an internal alert.
