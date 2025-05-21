@@ -24,7 +24,6 @@ from ...vectors import data_cleaner
 
 class PineconeClient(PineconeBaseClass):
 
-    NUM_INDEXES = 20
     RERANK_TOP_N = 4
     PRE_EXISTING_HISTORY_PREFIX = "pre-existing-history"
     MAX_CHUNK_SIZE = 512
@@ -569,13 +568,19 @@ class PineconeClient(PineconeBaseClass):
     ) -> str:
         return f"{user_id}-{patient_id}"
 
-    def _get_bucket_for_user(
-        self,
-        user_id: str
-    ) -> str:
-        # Convert the user_id to an integer
-        user_int = int(hashlib.md5(user_id.encode()).hexdigest(), 16)
+    def _get_bucket_for_user(self, user_id: str) -> str:
+        # Combine environment and user_id for environment-specific hashing
+        environment = os.environ.get('ENVIRONMENT')
+        key = f"{environment}:{user_id}"
+        user_int = int(hashlib.md5(key.encode()).hexdigest(), 16)
 
-        # Use modulo to determine the index
-        index_number = user_int % type(self).NUM_INDEXES
+        # Use modulo to determine the bucket
+        if environment == "prod":
+            bucket_count = 18
+            offset = 2  # Start from index 2 onward for prod
+        else:
+            bucket_count = 2  # Limit to 2 buckets for staging
+            offset = 0
+
+        index_number = (user_int % bucket_count) + offset
         return str(index_number)
