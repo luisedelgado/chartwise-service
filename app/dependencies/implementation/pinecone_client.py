@@ -577,10 +577,10 @@ class PineconeClient(PineconeBaseClass):
         # Use modulo to determine the bucket
         if environment == "prod":
             bucket_count = 18
-            offset = 2  # Start from index 2 onward for prod
+            offset = 3  # Start from index 3 onward for prod
         else:
             bucket_count = 2  # Limit to 2 buckets for staging
-            offset = 0
+            offset = 1
 
         index_number = (user_int % bucket_count) + offset
         return str(index_number)
