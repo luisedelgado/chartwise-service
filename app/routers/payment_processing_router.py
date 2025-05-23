@@ -936,9 +936,11 @@ class PaymentProcessingRouter:
 
         try:
             sig_header = request.headers.get("stripe-signature")
-            event = stripe_client.construct_webhook_event(payload=payload,
-                                                          sig_header=sig_header,
-                                                          webhook_secret=webhook_secret)
+            event = stripe_client.construct_webhook_event(
+                payload=payload,
+                sig_header=sig_header,
+                webhook_secret=webhook_secret
+            )
             logging.info("Successfully constructed Stripe event")
 
             # In deployed environments, block requests from localhost
