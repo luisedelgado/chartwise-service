@@ -2,7 +2,6 @@ import asyncpg
 import os
 
 from fastapi import FastAPI
-from urllib.parse import quote_plus
 
 from ...internal.schemas import PROD_ENVIRONMENT, STAGING_ENVIRONMENT
 from ...dependencies.api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
@@ -20,7 +19,7 @@ async def connect_pool(
             resend_client=resend_client,
         )
         username = secret.get("username")
-        password = quote_plus(secret.get("password"))
+        password = secret.get("password")
         endpoint = secret.get("host") or os.getenv("AWS_RDS_DATABASE_ENDPOINT")
         port = secret.get("port") or os.getenv("AWS_RDS_DB_PORT")
         database_name = secret.get("dbname") or os.getenv("AWS_RDS_DB_NAME")
@@ -28,11 +27,14 @@ async def connect_pool(
         if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:
             # Running locally, let's leverage Bastion's SSH tunnel
             endpoint = os.getenv("AWS_BASTION_RDS_DATABASE_ENDPOINT", "127.0.0.1")
-            port = os.getenv("AWS_BASTION_RDS_DB_PORT", "5433")
+            port = os.getenv("AWS_BASTION_RDS_DB_PORT", 5433)
 
-        database_url = f"postgresql://{username}:{password}@{endpoint}:{port}/{database_name}"
         app.state.pool = await asyncpg.create_pool(
-            dsn=database_url,
+            user=username,
+            password=password,
+            host=endpoint,
+            port=int(port),
+            database=database_name,
             ssl='require',
             timeout=30,
             command_timeout=30,

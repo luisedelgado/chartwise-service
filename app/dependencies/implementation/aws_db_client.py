@@ -15,20 +15,24 @@ from typing import (
 from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.aws_secret_manager_base_class import AwsSecretManagerBaseClass
 from ..api.resend_base_class import ResendBaseClass
-from ...internal.schemas import (ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
-                                 ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
-                                 ENCRYPTED_PATIENTS_TABLE_NAME,
-                                 ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-                                 ENCRYPTED_TABLES,
-                                 IS_JSON_KEY,
-                                 PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS,
-                                 PATIENT_BRIEFINGS_ENCRYPTED_COLUMNS,
-                                 PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS,
-                                 PATIENT_TOPICS_ENCRYPTED_COLUMNS,
-                                 PATIENTS_ENCRYPTED_COLUMNS,
-                                 SESSION_REPORTS_ENCRYPTED_COLUMNS)
+from ...internal.schemas import (
+    ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
+    ENCRYPTED_PATIENT_BRIEFINGS_TABLE_NAME,
+    ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
+    ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
+    ENCRYPTED_PATIENTS_TABLE_NAME,
+    ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    ENCRYPTED_TABLES,
+    IS_JSON_KEY,
+    PATIENT_ATTENDANCE_ENCRYPTED_COLUMNS,
+    PATIENT_BRIEFINGS_ENCRYPTED_COLUMNS,
+    PATIENT_QUESTION_SUGGESTIONS_ENCRYPTED_COLUMNS,
+    PATIENT_TOPICS_ENCRYPTED_COLUMNS,
+    PATIENTS_ENCRYPTED_COLUMNS,
+    SESSION_REPORTS_ENCRYPTED_COLUMNS,
+    STAGING_ENVIRONMENT,
+    PROD_ENVIRONMENT
+)
 from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 
 class AwsDbClient(AwsDbBaseClass):
@@ -469,9 +473,15 @@ class AwsDbClient(AwsDbBaseClass):
                 secret_id=stripe_role,
                 resend_client=resend_client,
             )
-            endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
-            port = os.getenv("AWS_RDS_DB_PORT")
+
             db = os.getenv("AWS_RDS_DB_NAME")
+            if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:
+                # Running locally, let's leverage Bastion's SSH tunnel
+                endpoint = os.getenv("AWS_BASTION_RDS_DATABASE_ENDPOINT", "127.0.0.1")
+                port = os.getenv("AWS_BASTION_RDS_DB_PORT", 5433)
+            else:
+                endpoint = os.getenv("AWS_RDS_DATABASE_ENDPOINT")
+                port = secret.get("port") or os.getenv("AWS_RDS_DB_PORT")
 
             conn = await asyncpg.connect(
                 user=secret.get("username", None),
