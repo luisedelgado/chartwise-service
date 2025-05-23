@@ -121,9 +121,8 @@ class FakeStripeClient(StripeBaseClass):
                 {
                 "id": "su_1NXPiE2eZvKYlo2COk9fohqA",
                 "object": "subscription",
-                "status": "trialing",
+                "status": "active",
                 "current_period_end": 1749327010,
-                "trial_end": int(time.time()) + 7 * 24 * 60 * 60,
                 "application": "null",
                 "application_fee_percent": "null",
                 "automatic_tax": {

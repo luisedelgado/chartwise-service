@@ -5,8 +5,6 @@ from ...internal.utilities.subscription_utilities import format_currency_amount
 
 class StripeClient(StripeBaseClass):
 
-    FREE_TRIAL_DURATION_IN_DAYS = 30
-
     def __init__(self):
         stripe.api_key = os.environ.get("STRIPE_API_KEY")
         self.environment = os.environ.get("ENVIRONMENT")
@@ -29,7 +27,6 @@ class StripeClient(StripeBaseClass):
 
             if is_new_customer:
                 subscription_data = {
-                    'trial_period_days': type(self).FREE_TRIAL_DURATION_IN_DAYS,
                     'metadata': global_metadata
                 }
             else:

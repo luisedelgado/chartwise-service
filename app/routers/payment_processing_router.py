@@ -69,8 +69,7 @@ class PaymentProcessingRouter:
     PRODUCT_CATALOG_ENDPOINT = "/v1/product-catalog"
     SUBSCRIPTION_STATUS_ENDPOINT = "/v1/subscription_status"
     ROUTER_TAG = "payments"
-    TRIALING = "trialing"
-    ACTIVE_SUBSCRIPTION_STATES = ['active', TRIALING]
+    ACTIVE_SUBSCRIPTION_STATES = ['active']
 
     def __init__(
         self,
@@ -413,12 +412,6 @@ class PaymentProcessingRouter:
                     },
                 }
                 current_subscription.update(subscription_data)
-
-                if subscription_status == self.TRIALING:
-                    trial_end = datetime.fromtimestamp(subscription['trial_end'])
-                    formatted_trial_end = trial_end.strftime(DATE_FORMAT)
-                    current_subscription['trial_end'] = formatted_trial_end
-
                 filtered_data.append(current_subscription)
 
         except Exception as e:
@@ -1228,7 +1221,6 @@ class PaymentProcessingRouter:
             product_data = stripe_client.retrieve_product(product_id)
             stripe_product_name = product_data['metadata']['product_name']
             tier_name = subscription_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
-            is_trialing = subscription['status'] == self.TRIALING
             now_timestamp = datetime.now().date()
 
             payload = {
@@ -1238,21 +1230,9 @@ class PaymentProcessingRouter:
                 "current_billing_period_end_date": current_billing_period_end_date,
                 "recurrence": billing_interval,
                 "subscription_id": subscription_id,
-                "current_tier": tier_name
+                "current_tier": tier_name,
+                "is_active": (subscription.get('status', None) in type(self).ACTIVE_SUBSCRIPTION_STATES)
             }
-
-            if is_trialing:
-                trial_end_date_from_timestamp = datetime.fromtimestamp(subscription['trial_end'])
-                payload["free_trial_end_date"] = trial_end_date_from_timestamp.date()
-
-            if (subscription.get('status', None) in type(self).ACTIVE_SUBSCRIPTION_STATES):
-                # Free trial is ongoing, or subscription is active.
-                payload['is_active'] = True
-                payload['free_trial_active'] = is_trialing
-            else:
-                # Subscription is not active. Restrict functionality
-                payload['is_active'] = False
-                payload['free_trial_active'] = False
 
             await aws_db_client.upsert_with_stripe_connection(
                 request=request,

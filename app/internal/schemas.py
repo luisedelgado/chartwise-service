@@ -55,7 +55,6 @@ SESSION_REPORTS_ENCRYPTED_COLUMNS = { "notes_text": {
 DATE_COLUMNS = [
     "birth_date",
     "current_billing_period_end_date",
-    "free_trial_end_date",
     "last_attempt_at_processing_date",
     "last_session_date",
     "session_date",

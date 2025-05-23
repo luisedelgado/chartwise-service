@@ -684,7 +684,6 @@ class SecurityRouter:
                     request=request,
                     payload={
                         'is_active': False,
-                        'free_trial_active': False
                     },
                     filters={
                         'therapist_id': user_id,

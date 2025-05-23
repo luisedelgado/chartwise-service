@@ -241,7 +241,6 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "customer_id": "myFakeCustomerId",
                     "subscription_status": "active",
                     "current_tier": "premium",
-                    "free_trial_end_date": date(2024, 10, 10),
                     "reached_tier_usage_limit": False,
                 },
             ]

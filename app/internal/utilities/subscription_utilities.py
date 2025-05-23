@@ -11,9 +11,8 @@ async def reached_subscription_tier_usage_limit(
     tier: str,
     therapist_id: str,
     aws_db_client: AwsDbBaseClass,
-    is_free_trial_active: bool
 ) -> bool:
-    if is_free_trial_active or tier == "premium":
+    if tier == "premium":
         return False
 
     today = datetime.now().date()

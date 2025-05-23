@@ -10,6 +10,7 @@ class SubscriptionManager():
     REACHED_TIER_USAGE_LIMIT_KEY = "reached_tier_usage_limit"
     SUBSCRIPTION_STATUS_KEY = "subscription_status"
     IS_SUBSCRIPTION_ACTIVE_KEY = "is_subscription_active"
+    FREEMIUM_TIER = "freemium"
 
     async def subscription_data(
         self,
@@ -37,30 +38,19 @@ class SubscriptionManager():
             # Check if this user is already a customer, and has subscription history
             if len(customer_data) == 0:
                 is_subscription_active = False
-                is_free_trial_active = False
-                tier = None
-                reached_tier_usage_limit = None
+                tier = self.FREEMIUM_TIER
             else:
                 is_subscription_active = customer_data[0]['is_active']
                 tier = customer_data[0]['current_tier']
 
-                # Determine if free trial is still active
-                free_trial_end_date: date = customer_data[0]['free_trial_end_date']
+            reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
+                tier=tier,
+                therapist_id=user_id,
+                aws_db_client=aws_db_client,
+            )
 
-                if free_trial_end_date is not None:
-                    is_free_trial_active = (datetime.now().date() < free_trial_end_date)
-                else:
-                    is_free_trial_active = False
-
-                reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
-                    tier=tier,
-                    therapist_id=user_id,
-                    aws_db_client=aws_db_client,
-                    is_free_trial_active=is_free_trial_active
-                )
             return {
                 self.SUBSCRIPTION_STATUS_KEY : {
-                    "is_free_trial_active": is_free_trial_active,
                     self.IS_SUBSCRIPTION_ACTIVE_KEY: is_subscription_active,
                     "tier": tier,
                     self.REACHED_TIER_USAGE_LIMIT_KEY: reached_tier_usage_limit
