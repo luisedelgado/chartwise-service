@@ -5,7 +5,7 @@ from .datetime_handler import DATE_FORMAT
 from ..schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ...dependencies.dependency_container import AwsDbBaseClass
 
-NUM_SESSIONS_IN_BASIC_PLAN = 20
+NUM_SESSIONS_IN_FREEMIUM_TIER = 25
 
 async def reached_subscription_tier_usage_limit(
     tier: str,
@@ -33,7 +33,7 @@ async def reached_subscription_tier_usage_limit(
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
             limit=20,
         )
-        return len(session_reports_data) >= NUM_SESSIONS_IN_BASIC_PLAN
+        return len(session_reports_data) >= NUM_SESSIONS_IN_FREEMIUM_TIER
     except Exception as e:
         raise RuntimeError(e) from e
 
