@@ -55,7 +55,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
+                "subscription_tier": SubscriptionTier.YEARLY_PREMIUM.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -71,7 +71,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
+                "subscription_tier": SubscriptionTier.YEARLY_PREMIUM.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -87,7 +87,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
+                "subscription_tier": SubscriptionTier.YEARLY_PREMIUM.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -103,7 +103,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "subscription_tier": SubscriptionTier.MONTHLY_BASIC.value,
+                "subscription_tier": SubscriptionTier.YEARLY_PREMIUM.value,
                 "success_callback_url": "https://www.chartwise.ai/payment-success",
                 "cancel_callback_url": "https://www.chartwise.ai",
             }
@@ -207,7 +207,7 @@ class TestingHarnessPaymentProcessingRouter:
                 "auth-token": "myFakeToken",
             },
             json={
-                "new_subscription_tier": "basic_plan_monthly",
+                "new_subscription_tier": "premium_plan_monthly",
                 "behavior": UpdateSubscriptionBehavior.CHANGE_TIER.value
             }
         )

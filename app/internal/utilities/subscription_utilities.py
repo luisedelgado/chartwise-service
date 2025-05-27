@@ -1,7 +1,7 @@
 from babel.numbers import format_currency, get_currency_precision
 from datetime import datetime, timedelta
+from fastapi import Request
 
-from .datetime_handler import DATE_FORMAT
 from ..schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ...dependencies.dependency_container import AwsDbBaseClass
 
@@ -10,19 +10,20 @@ NUM_SESSIONS_IN_FREEMIUM_TIER = 25
 async def reached_freemium_usage_limit(
     therapist_id: str,
     aws_db_client: AwsDbBaseClass,
+    request: Request,
 ) -> bool:
     today = datetime.now().date()
-    current_monday = today - timedelta(days=today.weekday())
-    today_formatted = today.strftime(DATE_FORMAT)
-    current_monday_formatted = current_monday.strftime(DATE_FORMAT)
+    current_week_monday = today - timedelta(days=today.weekday())
+    current_week_sunday = current_week_monday + timedelta(days=6)
 
     try:
         current_week_session_count = await aws_db_client.select_count(
             user_id=therapist_id,
+            request=request,
             filters={
                 "therapist_id": therapist_id,
-                "created_at__gte": current_monday_formatted,
-                "created_at__lte": today_formatted,
+                "created_at__gte": current_week_monday,
+                "created_at__lte": current_week_sunday,
             },
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
         )
@@ -38,8 +39,6 @@ def map_stripe_product_name_to_chartwise_tier(
     """
     if stripe_plan == "premium_plan_yearly" or stripe_plan == "premium_plan_monthly":
         return "premium"
-    elif stripe_plan == "basic_plan_yearly" or stripe_plan == "basic_plan_monthly":
-        return "basic"
     else:
         raise Exception("Untracked Stripe product name")
 

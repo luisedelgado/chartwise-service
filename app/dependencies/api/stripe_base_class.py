@@ -10,7 +10,6 @@ class StripeBaseClass(ABC):
         price_id: str,
         success_url: str,
         cancel_url: str,
-        is_new_customer: bool
     ) -> str | None:
         """
         Generates a checkout session URL for the customer.

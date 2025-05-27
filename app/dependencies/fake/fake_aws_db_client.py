@@ -26,6 +26,8 @@ class FakeAwsDbClient(AwsDbBaseClass):
     select_returns_data: bool = True
     patient_unique_active_years_nonzero: bool = True
     invoked_delete_patients = False
+    return_no_subscription_data: bool = False
+    return_freemium_usage_above_limit: bool = False
 
     async def insert(
         self,
@@ -234,16 +236,19 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 },
             ]
         if table_name == SUBSCRIPTION_STATUS_TABLE_NAME:
-            return [
-                {
-                    "subscription_id": self.FAKE_SESSION_NOTES_ID,
-                    "is_active": True,
-                    "customer_id": "myFakeCustomerId",
-                    "subscription_status": "active",
-                    "current_tier": "premium",
-                    "reached_tier_usage_limit": False,
-                },
-            ]
+            if self.return_no_subscription_data:
+                return []
+            else:
+                return [
+                    {
+                        "subscription_id": self.FAKE_SESSION_NOTES_ID,
+                        "is_active": True,
+                        "customer_id": "myFakeCustomerId",
+                        "subscription_status": "active",
+                        "current_tier": "premium",
+                        "reached_tier_usage_limit": False,
+                    },
+                ]
 
     async def select_count(
         self,
@@ -253,7 +258,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         filters: dict[str, Any] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> int:
-        return 1
+        return 100 if self.return_freemium_usage_above_limit else 1
 
     async def select_with_stripe_connection(
         self,

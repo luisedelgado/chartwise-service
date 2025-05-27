@@ -16,7 +16,6 @@ class StripeClient(StripeBaseClass):
         price_id: str,
         success_url: str,
         cancel_url: str,
-        is_new_customer: bool
     ) -> str | None:
         try:
             global_metadata = {
@@ -24,13 +23,6 @@ class StripeClient(StripeBaseClass):
                 'therapist_id': str(therapist_id),
                 'environment': self.environment
             }
-
-            if is_new_customer:
-                subscription_data = {
-                    'metadata': global_metadata
-                }
-            else:
-                subscription_data = {'metadata': global_metadata}
 
             checkout_session = stripe.checkout.Session.create(
                 success_url=success_url,
@@ -40,7 +32,9 @@ class StripeClient(StripeBaseClass):
                     'price': price_id,
                     'quantity': 1
                 }],
-                subscription_data=subscription_data,
+                subscription_data={
+                    'metadata': global_metadata,
+                },
                 metadata=global_metadata
             )
             return checkout_session['url']
@@ -87,8 +81,10 @@ class StripeClient(StripeBaseClass):
         )
 
     def cancel_customer_subscription(self, subscription_id: str):
-        return stripe.Subscription.modify(subscription_id,
-                                          cancel_at_period_end=True)
+        return stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=True
+        )
 
     def delete_customer_subscription_immediately(self, subscription_id: str):
         return stripe.Subscription.cancel(subscription_id)
@@ -141,13 +137,13 @@ class StripeClient(StripeBaseClass):
                 country_iso = "default"
 
             products = stripe.Product.search(
-                query=f"metadata['country_iso']:'{country_iso}'"
+                query=f"metadata['country_iso']:'{country_iso}' AND active:'true'"
             )
 
             if len(products['data']) == 0:
                 # If no products are found for the specified country, fall back to the default product catalog
                 products = stripe.Product.search(
-                    query="metadata['country_iso']:'default'"
+                    query="metadata['country_iso']:'default' AND active:'true'"
                 )
 
             product_prices = {}

@@ -624,17 +624,54 @@ class AssistantRouter:
                 tz_identifier=client_timezone_identifier
             )
             assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                patient_id=body['patient_id'],
+                error_code=status_code,
+                description=description,
+                session_id=session_id
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             subscription_data = await self._subscription_manager.subscription_data(
                 user_id=user_id,
                 request=request,
             )
-
             assert (
                 subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
                 or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                patient_id=body['patient_id'],
+                error_code=status_code,
+                description=description,
+                session_id=session_id
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
@@ -665,7 +702,7 @@ class AssistantRouter:
             description = str(e)
             status_code = general_utilities.extract_status_code(
                 e,
-                fallback=status.HTTP_400_BAD_REQUEST
+                fallback=status.HTTP_417_EXPECTATION_FAILED
             )
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,

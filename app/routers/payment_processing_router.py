@@ -36,9 +36,7 @@ from ..managers.subscription_manager import SubscriptionManager
 
 class SubscriptionTier(Enum):
     UNSPECIFIED = "unspecified"
-    MONTHLY_BASIC = "basic_plan_monthly"
     MONTHLY_PREMIUM = "premium_plan_monthly"
-    YEARLY_BASIC = "basic_plan_yearly"
     YEARLY_PREMIUM = "premium_plan_yearly"
 
 class PaymentSessionPayload(BaseModel):
@@ -270,18 +268,6 @@ class PaymentProcessingRouter:
             raise RuntimeError(e) from e
 
         try:
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            customer_data = await aws_db_client.select(
-                user_id=user_id,
-                request=request,
-                fields=["*"],
-                filters={
-                    'therapist_id': user_id,
-                },
-                table_name=SUBSCRIPTION_STATUS_TABLE_NAME
-            )
-            is_new_customer = (0 == len(customer_data))
-
             user_ip_address = retrieve_ip_address(request)
             country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
 
@@ -300,7 +286,6 @@ class PaymentProcessingRouter:
                 therapist_id=user_id,
                 success_url=payload.success_callback_url,
                 cancel_url=payload.cancel_callback_url,
-                is_new_customer=is_new_customer
             )
             assert len(payment_session_url or '') > 0, "Received invalid checkout URL"
         except Exception as e:

@@ -1,5 +1,3 @@
-import time
-
 from stripe._error import SignatureVerificationError
 
 from ..api.stripe_base_class import StripeBaseClass
@@ -29,7 +27,6 @@ class FakeStripeClient(StripeBaseClass):
         price_id: str,
         success_url: str,
         cancel_url: str,
-        is_new_customer: bool
     ) -> str | None:
         self.generate_checkout_session_invoked = True
 
@@ -198,7 +195,7 @@ class FakeStripeClient(StripeBaseClass):
                         "amount": "1500 usd"
                 },
                 "metadata": {
-                    "product_name": "basic_plan_monthly"
+                    "product_name": "premium_plan_yearly"
                 }
             }, {
                 "product": "Premium Plan",
@@ -209,7 +206,7 @@ class FakeStripeClient(StripeBaseClass):
                         "amount": "81000 usd"
                 },
                 "metadata": {
-                    "product_name": "basic_plan_monthly"
+                    "product_name": "premium_plan_monthly"
                 }
             }
         ]

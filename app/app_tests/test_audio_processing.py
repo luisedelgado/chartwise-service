@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.dependency_container import (
     dependency_container,
+    FakeAwsDbClient,
     FakeAwsS3Client,
     FakeDeepgramClient,
     FakePineconeClient,
@@ -98,6 +99,7 @@ class TestingHarnessAudioProcessingRouter:
         self.fake_openai_client = dependency_container.inject_openai_client()
         self.fake_docupanda_client = dependency_container.inject_docupanda_client()
         self.fake_pinecone_client = dependency_container.inject_pinecone_client()
+        self.fake_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT).router],
@@ -144,6 +146,23 @@ class TestingHarnessAudioProcessingRouter:
             }
         )
         assert response.status_code == 400
+
+    def test_invoke_initiate_multipart_upload_beyond_freemium_usage_without_subscribing(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_db_client.return_no_subscription_data = True
+        self.fake_db_client.return_freemium_usage_above_limit = True
+        response = self.client.post(
+            AudioProcessingRouter.UPLOAD_URL_START_MULTIPART_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "patient_id": FAKE_PATIENT_ID,
+                "file_extension": ".wav",
+            }
+        )
+        assert response.status_code == 402
 
     def test_invoke_initiate_multipart_upload_success(self):
         self.client.cookies.set("session_token", self.session_token)
@@ -352,7 +371,7 @@ class TestingHarnessAudioProcessingRouter:
         assert response.status_code == 200
         assert "file_path" in response.json()
 
-    def test_invoke_transcription_with_no_session_token(self):
+    def test_invoke_soap_transcription_with_no_session_token(self):
         response = self.client.post(
             AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
             headers={
@@ -403,6 +422,26 @@ class TestingHarnessAudioProcessingRouter:
             }
         )
         assert response.status_code == 400
+
+    def test_invoke_soap_transcription_beyond_freemium_usage_without_subscribing(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_db_client.return_no_subscription_data = True
+        self.fake_db_client.return_freemium_usage_above_limit = True
+        response = self.client.post(
+            AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            data={
+                "template": "soap",
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "04-04-2022",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            }
+        )
+        assert response.status_code == 402
 
     def test_invoke_soap_transcription_success(self):
         assert not self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked
@@ -514,6 +553,25 @@ class TestingHarnessAudioProcessingRouter:
             },
         )
         assert response.status_code == 400
+
+    def test_invoke_diarization_beyond_freemium_usage_without_subscribing(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_db_client.return_no_subscription_data = True
+        self.fake_db_client.return_freemium_usage_above_limit = True
+        response = self.client.post(AudioProcessingRouter.DIARIZATION_ENDPOINT,
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "10-24-2020",
+                "template": "soap",
+                "client_timezone_identifier": "UTC",
+                "file_path": FAKE_THERAPIST_ID
+            },
+            headers={
+                "auth-token": "myFakeToken",
+            },
+        )
+        assert response.status_code == 402
 
     def test_invoke_diarization_success(self):
         assert not self.fake_aws_s3_client.get_audio_file_read_signed_url_invoked

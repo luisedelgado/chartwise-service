@@ -524,14 +524,17 @@ class AwsDbClient(AwsDbBaseClass):
         fields: list[str],
         table_name: str,
         filters: dict[str, Any],
-        limit: Optional[int],
         order_by: Optional[tuple[str, str]],
         connection_provider: Callable[[], Awaitable[tuple[Any, bool]]],
         request: Request,
+        limit: Optional[int] = None,
     ) -> list[dict]:
         try:
             where_clause, where_values = type(self)._build_where_clause(filters)
-            field_expr = "*" if fields == ["*"] else ', '.join([f'"{field}"' for field in fields])
+            field_expr = "*" if fields == ["*"] else ', '.join([
+                field if " AS " in field.upper() or "(" in field else f'"{field}"'
+                for field in fields
+            ])
             limit_clause = f"LIMIT {limit}" if limit is not None else ""
             order_clause = ""
 

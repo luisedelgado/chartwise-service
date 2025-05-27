@@ -91,6 +91,30 @@ class TestingHarnessImageProcessingRouter:
         )
         assert response.status_code == 400
 
+    def test_invoke_textraction_beyond_freemium_usage_without_subscribing(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_db_client.return_no_subscription_data = True
+        self.fake_db_client.return_freemium_usage_above_limit = True
+        files = {
+            "image": (DUMMY_PNG_FILE_LOCATION, open(DUMMY_PNG_FILE_LOCATION, 'rb'), IMAGE_PNG_FILETYPE)
+        }
+        self.client.cookies.set("session_token", self.session_token)
+        response = self.client.post(
+            ImageProcessingRouter.TEXT_EXTRACTION_ENDPOINT,
+            files=files,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            data={
+                "patient_id": FAKE_PATIENT_ID,
+                "session_date": "01-01-2000",
+                "client_timezone_identifier": "UTC",
+                "template": "soap"
+            }
+        )
+        assert response.status_code == 402
+
     def test_invoke_png_textraction_soap_format_with_existing_patient_success(self):
         assert not self.fake_docupanda_client.upload_image_invoked
         assert not self.fake_docupanda_client.retrieve_text_from_document_invoked

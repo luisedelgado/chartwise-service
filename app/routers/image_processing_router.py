@@ -159,12 +159,29 @@ class ImageProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-
             assert (
                 subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
                 or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(
                 patient_id=patient_id,
                 therapist_id=user_id,

@@ -4,6 +4,7 @@ from ..dependencies.dependency_container import (
     dependency_container,
     FakeAsyncOpenAI,
     FakePineconeClient,
+    FakeAwsDbClient,
 )
 from ..managers.auth_manager import AuthManager
 from ..routers.assistant_router import AssistantRouter
@@ -39,6 +40,7 @@ class TestingHarnessAssistantRouter:
 
         self.fake_openai_client: FakeAsyncOpenAI = dependency_container.inject_openai_client()
         self.fake_pinecone_client: FakePineconeClient = dependency_container.inject_pinecone_client()
+        self.fake_aws_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT).router],
@@ -246,6 +248,28 @@ class TestingHarnessAssistantRouter:
             }
         )
         assert response.status_code == 400
+
+    def test_insert_new_session_beyond_freemium_usage_without_subscribing(self):
+        self.client.cookies.set("session_token", self.session_token)
+        self.fake_pinecone_client.vector_store_context_returns_data = True
+        self.fake_aws_db_client.return_no_subscription_data = True
+        self.fake_aws_db_client.return_freemium_usage_above_limit = True
+        response = self.client.post(
+            AssistantRouter.SESSIONS_ENDPOINT,
+            headers={
+                "auth-token": "myFakeToken",
+            },
+            json={
+                "insert_payload": {
+                    "patient_id": FAKE_PATIENT_ID,
+                    "notes_text": "El jugador favorito de Lionel Andres siempre fue Aimar.",
+                    "session_date": "01-01-2020",
+                    "source": "manual_input"
+                },
+                "client_timezone_identifier": TZ_IDENTIFIER,
+            }
+        )
+        assert response.status_code == 402
 
     def test_insert_new_session_with_empty_patient_id(self):
         insert_text = "El jugador favorito de Lionel Andres siempre fue Aimar."

@@ -36,15 +36,16 @@ class SubscriptionManager():
 
             if len(customer_data) == 0:
                 # User is not subscribed, return freemium tier status
-                reached_freemium_usage_limit = await reached_freemium_usage_limit(
+                reached_limit = await reached_freemium_usage_limit(
                     therapist_id=user_id,
                     aws_db_client=aws_db_client,
+                    request=request,
                 )
                 return {
                     self.SUBSCRIPTION_STATUS_KEY : {
                         self.IS_SUBSCRIPTION_ACTIVE_KEY: False,
                         "tier": "freemium",
-                        self.REACHED_FREEMIUM_USAGE_LIMIT_KEY: reached_freemium_usage_limit
+                        self.REACHED_FREEMIUM_USAGE_LIMIT_KEY: reached_limit
                     }
                 }
 

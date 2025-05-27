@@ -270,12 +270,29 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-
             assert (
                 subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
                 or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_402_PAYMENT_REQUIRED
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
                 user_id=user_id,
@@ -392,12 +409,29 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-
             assert (
                 subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
                 or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_402_PAYMENT_REQUIRED
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             current_timestamp = datetime.now().strftime(datetime_handler.DATE_TIME_FORMAT_FILE)
             file_path = "".join(
                 [
@@ -727,12 +761,29 @@ class AudioProcessingRouter:
                 user_id=user_id,
                 request=request,
             )
-
             assert (
                 subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
                 or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
+        except Exception as e:
+            description = str(e)
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_402_PAYMENT_REQUIRED
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                session_id=session_id,
+                method=request.method,
+                error_code=status_code,
+                description=description
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
+        try:
             session_report_id = await self._audio_processing_manager.transcribe_audio_file(
                 background_tasks=background_tasks,
                 assistant_manager=self._assistant_manager,
