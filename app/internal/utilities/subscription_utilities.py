@@ -7,14 +7,10 @@ from ...dependencies.dependency_container import AwsDbBaseClass
 
 NUM_SESSIONS_IN_FREEMIUM_TIER = 25
 
-async def reached_subscription_tier_usage_limit(
-    tier: str,
+async def reached_freemium_usage_limit(
     therapist_id: str,
     aws_db_client: AwsDbBaseClass,
 ) -> bool:
-    if tier == "premium":
-        return False
-
     today = datetime.now().date()
     current_monday = today - timedelta(days=today.weekday())
     today_formatted = today.strftime(DATE_FORMAT)

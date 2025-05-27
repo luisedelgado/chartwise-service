@@ -3,14 +3,13 @@ from fastapi import Request
 
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..internal.schemas import SUBSCRIPTION_STATUS_TABLE_NAME
-from ..internal.utilities.subscription_utilities import reached_subscription_tier_usage_limit
+from ..internal.utilities.subscription_utilities import reached_freemium_usage_limit
 
 class SubscriptionManager():
 
-    REACHED_TIER_USAGE_LIMIT_KEY = "reached_tier_usage_limit"
+    REACHED_FREEMIUM_USAGE_LIMIT_KEY = "reached_freemium_usage_limit"
     SUBSCRIPTION_STATUS_KEY = "subscription_status"
     IS_SUBSCRIPTION_ACTIVE_KEY = "is_subscription_active"
-    FREEMIUM_TIER = "freemium"
 
     async def subscription_data(
         self,
@@ -35,25 +34,24 @@ class SubscriptionManager():
                 table_name=SUBSCRIPTION_STATUS_TABLE_NAME
             )
 
-            # Check if this user is already a customer, and has subscription history
             if len(customer_data) == 0:
-                is_subscription_active = False
-                tier = self.FREEMIUM_TIER
-            else:
-                is_subscription_active = customer_data[0]['is_active']
-                tier = customer_data[0]['current_tier']
-
-            reached_tier_usage_limit = await reached_subscription_tier_usage_limit(
-                tier=tier,
-                therapist_id=user_id,
-                aws_db_client=aws_db_client,
-            )
+                # User is not subscribed, return freemium tier status
+                reached_freemium_usage_limit = await reached_freemium_usage_limit(
+                    therapist_id=user_id,
+                    aws_db_client=aws_db_client,
+                )
+                return {
+                    self.SUBSCRIPTION_STATUS_KEY : {
+                        self.IS_SUBSCRIPTION_ACTIVE_KEY: False,
+                        "tier": "freemium",
+                        self.REACHED_FREEMIUM_USAGE_LIMIT_KEY: reached_freemium_usage_limit
+                    }
+                }
 
             return {
                 self.SUBSCRIPTION_STATUS_KEY : {
-                    self.IS_SUBSCRIPTION_ACTIVE_KEY: is_subscription_active,
-                    "tier": tier,
-                    self.REACHED_TIER_USAGE_LIMIT_KEY: reached_tier_usage_limit
+                    self.IS_SUBSCRIPTION_ACTIVE_KEY: customer_data[0]['is_active'],
+                    "tier": customer_data[0]['current_tier'],
                 }
             }
         except Exception as e:

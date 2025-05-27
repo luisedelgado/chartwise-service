@@ -161,8 +161,8 @@ class ImageProcessingRouter:
             )
 
             assert (
-                not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY]
-                or subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
+                subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
+                or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
 
             job_id, session_report_id = await self._image_processing_manager.upload_image_for_textraction(

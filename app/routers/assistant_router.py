@@ -631,8 +631,8 @@ class AssistantRouter:
             )
 
             assert (
-                not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_TIER_USAGE_LIMIT_KEY]
-                or subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
+                subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.IS_SUBSCRIPTION_ACTIVE_KEY]
+                or not subscription_data[SubscriptionManager.SUBSCRIPTION_STATUS_KEY][SubscriptionManager.REACHED_FREEMIUM_USAGE_LIMIT_KEY]
             ), "Reached usage limit for freemium tier, and user is not subscribed."
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
