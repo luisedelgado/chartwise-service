@@ -245,6 +245,16 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 },
             ]
 
+    async def select_count(
+        self,
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> int:
+        return 1
+
     async def select_with_stripe_connection(
         self,
         resend_client: ResendBaseClass,

@@ -112,6 +112,27 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
+    async def select_count(
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> int:
+        """
+        Fetches the count of results matching the incoming params.
+
+        Arguments:
+        user_id – the current user ID.
+        request – the FastAPI request associated with the select operation.
+        filters – the set of filters to be applied to the table.
+        table_name – the table to be queried.
+        limit – the optional cap for count of results to be returned.
+        order_by – the optional specification for column to sort by, and sort style.
+        """
+        pass
+
+    @abstractmethod
     async def select_with_stripe_connection(
         resend_client: ResendBaseClass,
         fields: list[str],

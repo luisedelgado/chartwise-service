@@ -199,6 +199,29 @@ class AwsDbClient(AwsDbBaseClass):
             request=request,
         )
 
+    async def select_count(
+        self,
+        user_id: str,
+        request: Request,
+        table_name: str,
+        filters: dict[str, Any] = None,
+        order_by: Optional[tuple[str, str]] = None
+    ) -> int:
+        async def connection_provider():
+            conn = await request.app.state.pool.acquire()
+            await self.set_session_user_id(conn=conn, user_id=user_id)
+            return (conn, False) # False indicates "don't close after use"
+
+        count_response = await self._select_common(
+            fields=["COUNT(*) AS count"],
+            table_name=table_name,
+            filters=filters,
+            order_by=order_by,
+            connection_provider=connection_provider,
+            request=request,
+        )
+        return count_response[0]["count"]
+
     async def select_with_stripe_connection(
         self,
         fields: list[str],

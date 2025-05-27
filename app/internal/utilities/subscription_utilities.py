@@ -17,18 +17,16 @@ async def reached_freemium_usage_limit(
     current_monday_formatted = current_monday.strftime(DATE_FORMAT)
 
     try:
-        session_reports_data = await aws_db_client.select(
+        current_week_session_count = await aws_db_client.select_count(
             user_id=therapist_id,
-            fields=["*"],
             filters={
                 "therapist_id": therapist_id,
                 "created_at__gte": current_monday_formatted,
                 "created_at__lte": today_formatted,
             },
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
-            limit=20,
         )
-        return len(session_reports_data) >= NUM_SESSIONS_IN_FREEMIUM_TIER
+        return current_week_session_count >= NUM_SESSIONS_IN_FREEMIUM_TIER
     except Exception as e:
         raise RuntimeError(e) from e
 
