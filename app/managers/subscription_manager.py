@@ -44,7 +44,6 @@ class SubscriptionManager():
                 return {
                     self.SUBSCRIPTION_STATUS_KEY : {
                         self.IS_SUBSCRIPTION_ACTIVE_KEY: False,
-                        "tier": "freemium",
                         self.REACHED_FREEMIUM_USAGE_LIMIT_KEY: reached_limit
                     }
                 }
