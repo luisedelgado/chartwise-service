@@ -129,7 +129,7 @@ class StripeClient(StripeBaseClass):
             country_iso: str = None
         ) -> list:
         try:
-            if not country_iso:
+            if country_iso is None:
                 country_iso = "default"
 
             country_iso = country_iso.lower()

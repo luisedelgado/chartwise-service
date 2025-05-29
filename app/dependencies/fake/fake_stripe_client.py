@@ -183,7 +183,10 @@ class FakeStripeClient(StripeBaseClass):
     ):
         pass
 
-    def retrieve_product_catalog(self, country_iso: str) -> list:
+    def retrieve_product_catalog(
+        self,
+        country_iso: str = None
+    ) -> list:
         self.retrieve_product_catalog_invoked = True
         return [
             {

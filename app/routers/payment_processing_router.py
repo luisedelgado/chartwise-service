@@ -268,11 +268,8 @@ class PaymentProcessingRouter:
             raise RuntimeError(e) from e
 
         try:
-            user_ip_address = retrieve_ip_address(request)
-            country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
-
             stripe_client = dependency_container.inject_stripe_client()
-            product_catalog = stripe_client.retrieve_product_catalog(country_iso=country_iso)
+            product_catalog = stripe_client.retrieve_product_catalog()
             price_id = None
             for product in product_catalog:
                 if product['metadata']['product_name'] == payload.subscription_tier.value:
@@ -565,9 +562,7 @@ class PaymentProcessingRouter:
             if behavior == UpdateSubscriptionBehavior.CHANGE_TIER:
                 assert len(subscription_tier.value or '') > 0, "Missing the new tier price ID parameter."
 
-                user_ip_address = retrieve_ip_address(request)
-                country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
-                product_catalog = stripe_client.retrieve_product_catalog(country_iso=country_iso)
+                product_catalog = stripe_client.retrieve_product_catalog()
                 price_id = None
                 for product in product_catalog:
                     if product['metadata']['product_name'] == subscription_tier.value:
@@ -651,11 +646,8 @@ class PaymentProcessingRouter:
             raise RuntimeError(e) from e
 
         try:
-            user_ip_address = retrieve_ip_address(request)
-            country_iso = await general_utilities.get_country_iso_code_from_ip(user_ip_address)
-
             stripe_client = dependency_container.inject_stripe_client()
-            response = stripe_client.retrieve_product_catalog(country_iso=country_iso)
+            response = stripe_client.retrieve_product_catalog()
             return {"catalog": response}
         except Exception as e:
             status_code = general_utilities.extract_status_code(

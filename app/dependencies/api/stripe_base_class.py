@@ -203,7 +203,7 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_product_catalog(country_iso: str) -> list:
+    def retrieve_product_catalog(country_iso: str = None) -> list:
         """
         Retrieves the product catalog.
 
