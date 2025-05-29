@@ -12,7 +12,7 @@ from ...internal.alerting.internal_alert import (
     MediaJobProcessingAlert,
     PaymentsActivityAlert
 )
-from ...internal.schemas import MediaType
+from ...internal.schemas import MediaType, PROD_ENVIRONMENT
 
 class ResendClient(ResendBaseClass):
 
@@ -106,6 +106,10 @@ class ResendClient(ResendBaseClass):
         self,
         alert: InternalAlert,
     ):
+        if alert.environment != PROD_ENVIRONMENT:
+            # Do not send customer relations alerts for non-prod environments.
+            return
+
         try:
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
 
