@@ -1552,11 +1552,14 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            return await self._assistant_manager.retrieve_question_suggestions(
+            question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
+            return {
+                "question_suggestions_data": question_suggestions_data
+            }
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
@@ -1622,11 +1625,14 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            return await self._assistant_manager.recent_topics_data(
+            recent_topics_data = await self._assistant_manager.recent_topics_data(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
+            return {
+                "recent_topics_data": recent_topics_data
+            }
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
