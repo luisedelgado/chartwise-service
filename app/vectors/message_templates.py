@@ -9,6 +9,7 @@ class PromptScenario(Enum):
     CHUNK_SUMMARY = "chunk_summary"
     DIARIZATION_SUMMARY = "diarization_summary"
     DIARIZATION_CHUNKS_GRAND_SUMMARY = "diarization_chunks_grand_summary"
+    EXTRACT_TIME_TOKENS = "extract_time_tokens"
     PRESESSION_BRIEFING = "presession_briefing"
     QUERY = "query"
     QUESTION_SUGGESTIONS = "question_suggestions"
@@ -101,6 +102,9 @@ class PromptCrafter:
         elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
             diarization = None if 'diarization' not in kwargs else kwargs['diarization']
             return self._summarize_diarization_chunks_user_message(diarization=diarization)
+        elif scenario == PromptScenario.EXTRACT_TIME_TOKENS:
+            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
+            return self._extract_time_tokens_user_message(query_input=query_input)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
 
@@ -157,6 +161,8 @@ class PromptCrafter:
         elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
             language_code = None if 'language_code' not in kwargs else kwargs['language_code']
             return self._summarize_diarization_chunks_system_message(language_code=language_code)
+        elif scenario == PromptScenario.EXTRACT_TIME_TOKENS:
+            return self._extract_time_tokens_system_message()
         else:
             raise Exception("Received untracked prompt scenario for retrieving the system message")
 
@@ -624,6 +630,35 @@ class PromptCrafter:
             return (
                  "Please clean up the following summary, which consists of a merged set of independent chunk summaries. "
                  f"\n\n-----------------\n\nTranscription:\n\n{diarization}"
+            )
+        except Exception as e:
+            raise RuntimeError(e) from e
+
+    # Extract time tokens
+
+    def _extract_time_tokens_system_message(self) -> str:
+        try:
+            return (
+                "A mental health practitioner is using our Practice Management Platform to inquire about a patient. "
+                "They may ask questions about the patient or about their own notes. "
+                "Your task is to determine if there is a time range implied by the question, and if so, extract the time range using U.S. date format.\n\n"
+                "Return a JSON object with two keys: `start_date` and `end_date`, each in MM-DD-YYYY format (e.g., 10-24-1991).\n"
+                "If no time range is implied, return null for both fields.\n\n"
+                "Example output:\n"
+                '{"start_date": "04-04-2024", "end_date": "04-05-2024"}\n\n'
+                "Return only the JSON object and nothing else."
+            )
+        except Exception as e:
+            raise RuntimeError(e) from e
+
+    def _extract_time_tokens_user_message(self, query_input: str) -> str:
+        try:
+            assert len(query_input or '') > 0, "Missing query_input param for building user message"
+            return (
+                f"The user asked: '{query_input}'.\n"
+                "If the question implies a time range, extract it as `start_date` and `end_date` using U.S. date format (MM-DD-YYYY).\n"
+                "If no time range is implied, return null for both.\n"
+                "Respond only with the JSON object."
             )
         except Exception as e:
             raise RuntimeError(e) from e
