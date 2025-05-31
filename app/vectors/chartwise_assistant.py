@@ -1,6 +1,7 @@
 import tiktoken
 
 from fastapi import Request
+from pydantic import BaseModel, Field
 from typing import AsyncIterable
 
 from .message_templates import PromptCrafter, PromptScenario
@@ -15,6 +16,16 @@ TOPICS_CONTEXT_SESSIONS_CAP = 6
 QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 6
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 4
+
+class ListQuestionSuggestionsSchema(BaseModel):
+    questions: list[str] = Field(..., min_items=2, max_items=2)
+
+class RecentTopicSchema(BaseModel):
+    topic: str = Field(..., max_length=25)
+    percentage: str = Field(..., pattern=r"^\d{1,3}%$")
+
+class ListRecentTopicsSchema(BaseModel):
+    topics: list[RecentTopicSchema]
 
 class ChartWiseAssistant:
 
@@ -73,7 +84,6 @@ class ChartWiseAssistant:
                         {"role": "system", "content": reformulate_question_system_prompt},
                         {"role": "user", "content": reformulate_question_user_prompt},
                     ],
-                    expects_json_response=False
                 )
 
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
@@ -179,7 +189,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False,
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -192,7 +201,7 @@ class ChartWiseAssistant:
         patient_name: str,
         patient_gender: str,
         request: Request,
-    ) -> str:
+    ) -> BaseModel:
         """
         Fetches a set of questions to be suggested to the user for feeding the assistant.
 
@@ -206,8 +215,8 @@ class ChartWiseAssistant:
         """
         try:
             query_input = (
-                f"What are 2 questions about different topics that I could ask "
-                "about {patient_name}'s session history?"
+                "What are 2 questions about different topics that I could ask "
+                f"about {patient_name}'s session history?"
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
@@ -250,7 +259,7 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=True
+                expected_output_model=ListQuestionSuggestionsSchema,
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -263,7 +272,7 @@ class ChartWiseAssistant:
         patient_name: str,
         patient_gender: str,
         request: Request,
-    ) -> str:
+    ) -> BaseModel:
         """
         Fetches a set of topics associated with the user along with respective density percentages.
 
@@ -320,14 +329,14 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=True
+                expected_output_model=ListRecentTopicsSchema,
             )
         except Exception as e:
             raise RuntimeError(e) from e
 
     async def generate_recent_topics_insights(
         self,
-        recent_topics_json: str,
+        recent_topics: ListRecentTopicsSchema,
         user_id: str,
         patient_id: str,
         language_code: str,
@@ -339,7 +348,7 @@ class ChartWiseAssistant:
         Create insight for a given set of recent topics.
 
         Arguments:
-        recent_topics_json – the set of recent topics to be analyzed.
+        recent_topics – the recent topics object to be analyzed.
         user_id – the user id associated with the topics insights operation.
         patient_id – the patient id associated with the topics insights operation.
         language_code – the language code to be used in the response.
@@ -349,7 +358,8 @@ class ChartWiseAssistant:
         """
         try:
             query_input = (
-                f"Please help me analyze the following set of topics that have recently come up during my sessions with {patient_name}, my patient:\n{recent_topics_json}"
+                "Please help me analyze the following set of topics that have recently come up during "
+                f"my sessions with {patient_name}, my patient:\n{str(recent_topics.model_dump_json())}"
             )
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
@@ -392,7 +402,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -433,7 +442,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -465,7 +473,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -497,7 +504,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -534,7 +540,6 @@ class ChartWiseAssistant:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                expects_json_response=False
             )
         except Exception as e:
             raise RuntimeError(e) from e

@@ -213,7 +213,6 @@ class AudioProcessingManager(MediaProcessingManager):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    expects_json_response=False
                 )
 
             if template == SessionNotesTemplate.SOAP:
@@ -431,7 +430,6 @@ class AudioProcessingManager(MediaProcessingManager):
                         {"role": "system", "content": summarize_chunk_system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    expects_json_response=False
                 )
                 chunk_summaries.append(current_chunk_summary)
 
@@ -454,7 +452,6 @@ class AudioProcessingManager(MediaProcessingManager):
                     {"role": "system", "content": grand_summary_system_prompt},
                     {"role": "user", "content": grand_summary_user_prompt},
                 ],
-                expects_json_response=False
             )
             return grand_summary
         except Exception as e:

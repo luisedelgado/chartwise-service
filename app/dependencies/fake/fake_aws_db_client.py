@@ -181,12 +181,22 @@ class FakeAwsDbClient(AwsDbBaseClass):
             return [
                 {
                     "id": self.FAKE_SESSION_NOTES_ID,
+                    "questions": {
+                        "questions": [
+                            "My question",
+                        ]
+                    }
                 }
             ]
         if table_name == ENCRYPTED_PATIENT_TOPICS_TABLE_NAME:
             return [
                 {
                     "id": self.FAKE_SESSION_NOTES_ID,
+                    "topics": {
+                        "topics": [
+                            "My topic"
+                        ]
+                    }
                 }
             ]
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:

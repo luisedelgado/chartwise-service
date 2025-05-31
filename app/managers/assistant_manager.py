@@ -24,7 +24,11 @@ from ..internal.schemas import (
     TimeRange
 )
 from ..internal.utilities import datetime_handler, general_utilities
-from ..vectors.chartwise_assistant import ChartWiseAssistant
+from ..vectors.chartwise_assistant import (
+    ChartWiseAssistant,
+    ListRecentTopicsSchema,
+    ListQuestionSuggestionsSchema,
+)
 
 class AssistantQuery(BaseModel):
     patient_id: str
@@ -691,7 +695,7 @@ class AssistantManager:
                 )
                 return
 
-            questions_json = await self.chartwise_assistant.create_question_suggestions(
+            questions_json_schema: ListQuestionSuggestionsSchema = await self.chartwise_assistant.create_question_suggestions(
                 language_code=language_code,
                 user_id=therapist_id,
                 patient_id=patient_id,
@@ -699,9 +703,8 @@ class AssistantManager:
                 patient_gender=patient_gender,
                 request=request,
             )
-            assert 'questions' in questions_json, "Missing json key for question suggestions response. Please try again"
 
-            questions = questions_json['questions']
+            questions_json = questions_json_schema.model_dump_json()
             now_timestamp = datetime.now()
 
             # Upsert result to DB
@@ -712,7 +715,7 @@ class AssistantManager:
                     "patient_id": patient_id,
                     "last_updated": now_timestamp,
                     "therapist_id": therapist_id,
-                    "questions": questions
+                    "questions": eval(questions_json)
                 },
                 table_name=ENCRYPTED_PATIENT_QUESTION_SUGGESTIONS_TABLE_NAME,
                 conflict_columns=["patient_id"],
@@ -864,7 +867,7 @@ class AssistantManager:
                 return
 
             # There are sessions associated with the patient. Regenerate recent topics.
-            recent_topics_json = await self.chartwise_assistant.fetch_recent_topics(
+            recent_topics_schema: ListRecentTopicsSchema = await self.chartwise_assistant.fetch_recent_topics(
                 language_code=language_code,
                 user_id=therapist_id,
                 patient_id=patient_id,
@@ -872,10 +875,9 @@ class AssistantManager:
                 patient_gender=patient_gender,
                 request=request,
             )
-            assert 'topics' in recent_topics_json, "Missing json key for recent topics response. Please try again"
 
             topics_insights = await self.chartwise_assistant.generate_recent_topics_insights(
-                recent_topics_json=recent_topics_json,
+                recent_topics=recent_topics_schema,
                 user_id=therapist_id,
                 patient_id=patient_id,
                 language_code=language_code,
@@ -884,7 +886,7 @@ class AssistantManager:
                 request=request,
             )
 
-            recent_topics = recent_topics_json['topics']
+            recent_topics_json = recent_topics_schema.model_dump_json()
             now_timestamp = datetime.now()
 
             # Upsert result to DB
@@ -896,7 +898,7 @@ class AssistantManager:
                     "insights": topics_insights,
                     "patient_id": patient_id,
                     "therapist_id": therapist_id,
-                    "topics": recent_topics
+                    "topics": eval(recent_topics_json)
                 },
                 conflict_columns=["patient_id"],
                 table_name=ENCRYPTED_PATIENT_TOPICS_TABLE_NAME
@@ -1182,7 +1184,15 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            return [] if len(response) == 0 else response[0]
+
+            if len(response) == 0:
+                return []
+
+            # Because we handle pydantic BaseModel objects, when we dump the JSON model,
+            # it returns a dict with a redundant string key. We want to get rid of the unnecessary
+            # layer of indirection before returning response to the client.
+            response[0]['questions'] = response[0]['questions']['questions']
+            return response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -1203,7 +1213,15 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            return [] if len(response) == 0 else response[0]
+
+            if len(response) == 0:
+                return []
+
+            # Because we handle pydantic BaseModel objects, when we dump the JSON model,
+            # it returns a dict with a redundant string key. We want to get rid of the unnecessary
+            # layer of indirection before returning response to the client.
+            response[0]['topics'] = response[0]['topics']['topics']
+            return response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -1593,7 +1611,12 @@ class AssistantManager:
                     "patient_id": patient_id,
                     "therapist_id": therapist_id,
                     "last_updated": datetime.now(),
-                    "briefing": eval(json.dumps(formatted_default_briefing, ensure_ascii=False))
+                    "briefing": eval(
+                        json.dumps(
+                            formatted_default_briefing,
+                            ensure_ascii=False
+                        )
+                    )
                 }
             )
         except Exception as e:

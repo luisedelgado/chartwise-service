@@ -1523,6 +1523,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
@@ -1551,13 +1552,11 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(
+            return await self._assistant_manager.retrieve_question_suggestions(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
-            request.state.patient_id = patient_id
-            return {"question_suggestions_data": question_suggestions_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
@@ -1594,6 +1593,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
@@ -1622,13 +1622,11 @@ class AssistantRouter:
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
-            recent_topics_data = await self._assistant_manager.recent_topics_data(
+            return await self._assistant_manager.recent_topics_data(
                 therapist_id=user_id,
                 patient_id=patient_id,
                 request=request,
             )
-            request.state.patient_id = patient_id
-            return {"recent_topics_data": recent_topics_data}
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(

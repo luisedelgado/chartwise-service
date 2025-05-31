@@ -3,11 +3,16 @@ import asyncio
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage
 from langchain_core.messages.ai import AIMessage
+from pydantic import BaseModel
 from typing import AsyncIterable, Awaitable
 
 from ..api.openai_base_class import OpenAIBaseClass
 
 FAKE_ASSISTANT_RESPONSE = "This is my fake response"
+
+class FakeResponse(BaseModel):
+    topics: list
+    questions: list
 
 class FakeOpenAICompletions:
 
@@ -53,15 +58,19 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expects_json_response: bool,
-    ):
+        expected_output_model: BaseModel = None,
+    ) -> BaseModel | str:
         if self.throws_exception:
             raise Exception("Fake exception")
 
+        if expected_output_model is not None:
+            return FakeResponse(
+                questions=["my fake question"],
+                topics=["my fake topic"]
+            )
+
         return {
             "summary": "my fake summary",
-            "questions": ["question"],
-            "topics": ["topic"]
         }
 
     async def stream_chat_completion(

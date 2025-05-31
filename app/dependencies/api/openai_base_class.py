@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from langchain.schema import BaseMessage
+from pydantic import BaseModel
 from typing import AsyncIterable
 
 class OpenAIBaseClass(ABC):
@@ -13,15 +14,15 @@ class OpenAIBaseClass(ABC):
     async def trigger_async_chat_completion(
         max_tokens: int,
         messages: list,
-        expects_json_response: bool,
-    ):
+        expected_output_model: BaseModel = None,
+    ) -> BaseModel | str:
         """
         Invokes a chat completion asynchronously.
 
         Arguments:
         max_tokens – the max tokens allowed for the response output.
         messages – the set of message prompts.
-        expects_json_response – a flag representing whether or not the response is expected to be in json format.
+        expected_output_model – the optional output model expected from the completion.
         """
         pass
 

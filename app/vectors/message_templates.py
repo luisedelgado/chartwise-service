@@ -304,14 +304,13 @@ class PromptCrafter:
                 "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
                 "They can ask you about the patient's session history. "
                 "Your task is to generate two specific, objective questions that the practitioner might ask, based only on the factual information in the `chunk_summary` and `pre_existing_history_summary` values. "
-                "The questions should be psychology-focused while ensuring that they don't add interpretations, assumptions, or diagnostic suggestions to what's exclusively available in the information context. "
-                "The questions should also be under 60 characters in length. "
-                "For example, a psychology-focused question would be 'What has the patient shared about his early childhood?' instead of 'When did the patient learn how to play the guitar?'\n\n"
-                "Return a JSON object with a key titled `questions`, written in English, and an array of questions as its value. "
+                "The questions should be psychology-focused and avoid any interpretation, assumption, or diagnostic suggestion beyond what’s explicitly in the notes. "
+                "Each question should be under 60 characters in length. "
+                "Return a JSON object with one key: `questions`, containing and an array of exactly two questions. "
                 f"Ensure that the questions are written in language code {language_code}. "
                 "This is what the format should look like: {\"questions\": [..., ...]}\n"
-                "Example output:\n"
-                r"{'questions': ['When did we last talk about the divorce?', 'What was the last thing we discussed in session?']}"
+                '{"questions": ["When did we last talk about the divorce?", "What was the last thing we discussed in session?"]}\n\n'
+                "Return only the JSON object and nothing else."
             )
         except Exception as e:
             raise RuntimeError(e) from e
@@ -352,17 +351,20 @@ class PromptCrafter:
                 "They need to know what topics the patient has been discussing the most during the most recent sessions. "
                 "Provide the following:\n\n"
                 "1. A set of recent topics, each with its density percentage. There should not be more than 3 topics.\n"
-                "2. Ensure the topics' percentages total up to exactly 100%. Double-check this, you should not return a set of percentages that do not add up to 100. \n"
+                "2. Ensure the topics' percentages total up to exactly 100%. Double-check this. \n"
                 "3. Each topic's length should be under 25 characters.\n\n"
                 "The topics must be extracted directly from the content in the session notes, exactly as they are presented, without any form of interpretation, rephrasing, or additional analysis. "
                 "Do not infer or generate new topics beyond what is explicitly mentioned in the notes."
-                "Return a JSON object with one key: `topics`, written in English. The value should be an array of up to three objects, each with:\n"
-                f"* `topic`: Distinct topic written using language code {language_code}.\n"
-                f"* `percentage`: Frequency percentage.\n\n"
-                "If there are no `chunk_summary` values available, the array should be empty. "
-                "Otherwise if there's at least one `chunk_summary`, the array should contain at least one topic, but up to three if possible. "
-                "\n\nExample response where the patient spoke half of the time about a given topic, and the remaining time was split between two other topics:\n"
-                r"{'topics':[{'topic': 'Graduating from school', 'percentage': '50%'},{'topic': 'Substance abuse', 'percentage': '25%'},{'topic': 'Adopting a pet', 'percentage': '25%'}]}"
+                "Return a JSON object with one key: `topics`. The value should be an array of up to three objects, each with:\n"
+                f"* `topic`: The distinct topic written using language code {language_code}.\n"
+                f"* `percentage`: The percentage (e.g., '50%').\n\n"
+                "If there are no `chunk_summary` values, return an empty array. "
+                "Otherwise, return at least one topic (up to three if possible). "
+                "\n\nExample response:\n"
+                '{"topics":[{"topic": "Graduating from school", "percentage": "50%"},'
+                '{"topic": "Substance abuse", "percentage": "25%"},'
+                '{"topic": "Adopting a pet", "percentage": "25%"}]}'
+                "\n\nReturn only the JSON object and nothing else."
             )
         except Exception as e:
             raise RuntimeError(e) from e

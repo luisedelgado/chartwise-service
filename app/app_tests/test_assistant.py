@@ -1218,7 +1218,7 @@ class TestingHarnessAssistantRouter:
             },
         )
         assert response.status_code == 200
-        assert "question_suggestions_data" in response.json()
+        assert "questions" in response.json()
 
     def test_get_recent_topics_with_missing_session_token(self):
         response = self.client.get(
@@ -1267,7 +1267,7 @@ class TestingHarnessAssistantRouter:
             },
         )
         assert response.status_code == 200
-        assert "recent_topics_data" in response.json()
+        assert "topics" in response.json()
 
     def test_get_greetings_with_auth_token_but_missing_session_token(self):
         response = self.client.get(

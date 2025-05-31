@@ -119,7 +119,7 @@ networkx==3.2.1
 ninja==1.11.1.3
 nltk==3.9.1
 numpy==1.26.4
-openai==1.40.0
+openai==1.82.1
 orjson==3.10.3
 packaging==24.2
 pandas==2.2.2

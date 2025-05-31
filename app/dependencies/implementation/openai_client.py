@@ -10,6 +10,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 from openai.types import Completion
+from pydantic import BaseModel
 
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
 from ...vectors.message_templates import PromptCrafter, PromptScenario
@@ -20,26 +21,35 @@ class OpenAIClient(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expects_json_response: bool,
-    ):
+        expected_output_model: BaseModel = None,
+    ) -> BaseModel | str:
         try:
             openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-            response_format = "json_object" if expects_json_response else "text"
-            response: Completion = await openai_client.chat.completions.create(
-                model=type(self).LLM_MODEL,
-                messages=messages,
-                temperature=0,
-                max_tokens=max_tokens,
-                response_format={
-                    "type": response_format
-                }
-            )
 
-            response_message = response.choices[0].message
-            assert ('refusal' not in response_message or response_message['refusal'] is None), response_message.refusal
+            if expected_output_model is not None:
+                response: Completion = await openai_client.beta.chat.completions.parse(
+                    model=type(self).LLM_MODEL,
+                    messages=messages,
+                    temperature=0,
+                    max_tokens=max_tokens,
+                    response_format=expected_output_model,
+                )
+                response_message = response.choices[0].message.parsed
+            else:
+                response: Completion = await openai_client.chat.completions.create(
+                    model=type(self).LLM_MODEL,
+                    messages=messages,
+                    temperature=0,
+                    max_tokens=max_tokens,
+                    response_format={
+                        "type": "text"
+                    },
+                )
+                response_message = response.choices[0].message
+                assert ('refusal' not in response_message or response_message['refusal'] is None), response_message.refusal
+                response_message = response_message.content.strip()
 
-            response_text = response_message.content.strip()
-            return response_text if not expects_json_response else eval(response_text)
+            return response_message
         except Exception as e:
             raise RuntimeError(e) from e
 
