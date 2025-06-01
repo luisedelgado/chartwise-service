@@ -1,4 +1,4 @@
-import tiktoken
+import asyncio, tiktoken
 
 from fastapi import Request
 from pydantic import BaseModel, Field
@@ -70,9 +70,12 @@ class ChartWiseAssistant:
             is_first_message_in_conversation = len(openai_client.chat_history) == 0
             prompt_crafter = PromptCrafter()
 
-            # If there exists a chat history already, we should reformulate the latest user question
-            # So that it can be understood standalone. This helps in cleaning the chat history, and helping the assistant be more accurate.
-            if not is_first_message_in_conversation:
+            async def reformulate_query_input_if_needed():
+                if is_first_message_in_conversation:
+                    return query_input
+
+                # If there exists a chat history already, we should reformulate the latest user question
+                # So that it can be understood standalone. This helps in cleaning the chat history, and helping the assistant be more accurate.
                 reformulate_question_user_prompt = prompt_crafter.get_user_message_for_scenario(
                     chat_history=(await openai_client.flatten_chat_history()),
                     query_input=query_input,
@@ -82,7 +85,7 @@ class ChartWiseAssistant:
                 prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{reformulate_question_system_prompt}\n{reformulate_question_user_prompt}"))
                 max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-                query_input = await openai_client.trigger_async_chat_completion(
+                return await openai_client.trigger_async_chat_completion(
                     max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": reformulate_question_system_prompt},
@@ -90,28 +93,35 @@ class ChartWiseAssistant:
                     ],
                 )
 
-            # Extract any time-related tokens from the query input to determine if the completion
-            # should be scoped to a time range.
-            extract_time_tokens_user_prompt = prompt_crafter.get_user_message_for_scenario(
-                query_input=query_input,
-                scenario=PromptScenario.EXTRACT_TIME_TOKENS,
-            )
-            extract_time_tokens_system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.EXTRACT_TIME_TOKENS)
-            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{extract_time_tokens_system_prompt}\n{extract_time_tokens_user_prompt}"))
-            max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            async def extract_time_tokens_if_possible():
+                # Extract any time-related tokens from the query input to determine if the completion
+                # should be scoped to a time range.
+                extract_time_tokens_user_prompt = prompt_crafter.get_user_message_for_scenario(
+                    query_input=query_input,
+                    scenario=PromptScenario.EXTRACT_TIME_TOKENS,
+                )
+                extract_time_tokens_system_prompt = prompt_crafter.get_system_message_for_scenario(scenario=PromptScenario.EXTRACT_TIME_TOKENS)
+                prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{extract_time_tokens_system_prompt}\n{extract_time_tokens_user_prompt}"))
+                max_tokens = openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
 
-            time_token_extraction = await openai_client.trigger_async_chat_completion(
-                max_tokens=max_tokens,
-                messages=[
-                    {"role": "system", "content": extract_time_tokens_system_prompt},
-                    {"role": "user", "content": extract_time_tokens_user_prompt},
-                ],
-                expected_output_model=TimeTokensExtractionSchema,
+                return await openai_client.trigger_async_chat_completion(
+                    max_tokens=max_tokens,
+                    messages=[
+                        {"role": "system", "content": extract_time_tokens_system_prompt},
+                        {"role": "user", "content": extract_time_tokens_user_prompt},
+                    ],
+                    expected_output_model=TimeTokensExtractionSchema,
+                )
+
+            # Run the reformulation and time token extraction concurrently.
+            reformulated_query_input, extracted_time_tokens = await asyncio.gather(
+                reformulate_query_input_if_needed(),
+                extract_time_tokens_if_possible(),
             )
 
             # Fetch the vector store context based on the query input.
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
-                query_input=query_input,
+                query_input=reformulated_query_input,
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
@@ -125,7 +135,7 @@ class ChartWiseAssistant:
             async for part in openai_client.stream_chat_completion(
                 vector_context=context,
                 language_code=response_language_code,
-                query_input=query_input,
+                query_input=reformulated_query_input,
                 is_first_message_in_conversation=is_first_message_in_conversation,
                 patient_name=patient_name,
                 patient_gender=patient_gender,
