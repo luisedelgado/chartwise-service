@@ -8,7 +8,10 @@ from .message_templates import PromptCrafter, PromptScenario
 from ..dependencies.dependency_container import dependency_container
 from ..dependencies.api.openai_base_class import OpenAIBaseClass
 from ..dependencies.api.aws_db_base_class import AwsDbBaseClass
-from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
+from ..dependencies.api.pinecone_session_date_override import (
+    PineconeQuerySessionDateOverride,
+    PineconeQuerySessionDateOverrideType,
+)
 from ..internal.schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ..internal.utilities import datetime_handler
 
@@ -44,7 +47,8 @@ class ChartWiseAssistant:
         patient_gender: str,
         query_input: str,
         response_language_code: str,
-        session_date_override: PineconeQuerySessionDateOverride = None
+        request: Request,
+        last_session_date_override: PineconeQuerySessionDateOverride = None
     ) -> AsyncIterable[str]:
         """
         Queries the respective store with the incoming parameters.
@@ -57,7 +61,8 @@ class ChartWiseAssistant:
         patient_gender – the patient's gender.
         query_input – the user input for the query.
         response_language_code – the language code to be used in the response.
-        session_date_override – the optional override for including date-specific vectors.
+        request – the upstream request object.
+        last_session_date_override – the optional override for including date-specific vectors.
         """
         try:
             openai_client = dependency_container.inject_openai_client()
@@ -119,25 +124,16 @@ class ChartWiseAssistant:
                 extract_time_tokens_if_possible(),
             )
 
-            if isinstance(extracted_time_tokens, BaseModel):
-                extracted_time_tokens_json = json.loads(extracted_time_tokens.model_dump_json())
-                if extracted_time_tokens_json.get("start_date") and extracted_time_tokens_json.get("end_date"):
-                    # If the time tokens were extracted, we should bound the query to the specified time range.
-                    start_date = extracted_time_tokens.start_date
-                    end_date = extracted_time_tokens.end_date
-
-            # Fetch the vector store context based on the query input.
-            context = await dependency_container.inject_pinecone_client().get_vector_store_context(
+            context = await self._fetch_context_based_on_query_input(
                 query_input=reformulated_query_input,
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
-                query_top_k=6,
-                rerank_vectors=True,
-                session_dates_overrides=[session_date_override]
+                request=request,
+                extracted_time_tokens=extracted_time_tokens,
+                last_session_date_override=last_session_date_override,
             )
-
-            last_session_date = None if session_date_override is None else session_date_override.session_date
+            last_session_date = None if last_session_date_override is None else last_session_date_override.session_date_start
 
             async for part in openai_client.stream_chat_completion(
                 vector_context=context,
@@ -199,6 +195,8 @@ class ChartWiseAssistant:
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
+                aws_db_client=dependency_container.inject_aws_db_client(),
+                request=request,
                 query_top_k=0,
                 rerank_vectors=False,
                 session_dates_overrides=session_dates_override
@@ -273,6 +271,8 @@ class ChartWiseAssistant:
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
+                aws_db_client=dependency_container.inject_aws_db_client(),
+                request=request,
                 query_top_k=0,
                 rerank_vectors=False,
                 session_dates_overrides=session_dates_override
@@ -343,6 +343,8 @@ class ChartWiseAssistant:
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
+                aws_db_client=dependency_container.inject_aws_db_client(),
+                request=request,
                 query_top_k=0,
                 rerank_vectors=False,
                 include_preexisting_history=False,
@@ -416,6 +418,8 @@ class ChartWiseAssistant:
                 user_id=user_id,
                 patient_id=patient_id,
                 openai_client=openai_client,
+                aws_db_client=dependency_container.inject_aws_db_client(),
+                request=request,
                 query_top_k=0,
                 rerank_vectors=False,
                 include_preexisting_history=False,
@@ -587,6 +591,58 @@ class ChartWiseAssistant:
 
     # Private
 
+    async def _fetch_context_based_on_query_input(
+        self,
+        query_input: str,
+        user_id: str,
+        patient_id: str,
+        openai_client: OpenAIBaseClass,
+        request: Request,
+        extracted_time_tokens: str | BaseModel,
+        last_session_date_override: PineconeQuerySessionDateOverride = None
+    ):
+        start_date = None
+        end_date = None
+        if isinstance(extracted_time_tokens, BaseModel):
+            extracted_time_tokens_json = json.loads(extracted_time_tokens.model_dump_json())
+            if extracted_time_tokens_json.get("start_date") and extracted_time_tokens_json.get("end_date"):
+                # If the time tokens were extracted, we should bound the query to the specified time range.
+                start_date = extracted_time_tokens.start_date
+                end_date = extracted_time_tokens.end_date
+
+        if start_date is not None and end_date is not None:
+            # Fetch the vector store context based on the extracted time range.
+            return await dependency_container.inject_pinecone_client().get_vector_store_context(
+                query_input=query_input,
+                user_id=user_id,
+                patient_id=patient_id,
+                openai_client=openai_client,
+                aws_db_client=dependency_container.inject_aws_db_client(),
+                request=request,
+                query_top_k=0,
+                rerank_vectors=False,
+                session_dates_overrides=[
+                    PineconeQuerySessionDateOverride(
+                        override_type=PineconeQuerySessionDateOverrideType.DATE_RANGE,
+                        session_date_start=start_date,
+                        session_date_end=end_date,
+                    )
+                ]
+            )
+
+        # Fetch the vector store context based on similarity search.
+        return await dependency_container.inject_pinecone_client().get_vector_store_context(
+            query_input=query_input,
+            user_id=user_id,
+            patient_id=patient_id,
+            openai_client=openai_client,
+            aws_db_client=dependency_container.inject_aws_db_client(),
+            request=request,
+            query_top_k=6,
+            rerank_vectors=True,
+            session_dates_overrides=[last_session_date_override]
+        )
+
     async def _retrieve_n_most_recent_session_dates(
         self,
         request: Request,
@@ -613,7 +669,8 @@ class ChartWiseAssistant:
                 date_obj = date['session_date']
                 overrides.append(
                     PineconeQuerySessionDateOverride(
-                        session_date=date_obj.strftime(datetime_handler.DATE_FORMAT)
+                        override_type=PineconeQuerySessionDateOverrideType.SINGLE_DATE,
+                        session_date_start=date_obj.strftime(datetime_handler.DATE_FORMAT)
                     )
                 )
             return overrides

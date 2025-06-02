@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from datetime import date
+from fastapi import Request
 from pinecone import Index
 from typing import Callable
 
 from .pinecone_session_date_override import PineconeQuerySessionDateOverride
+from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.openai_base_class import OpenAIBaseClass
 
 class PineconeBaseClass(ABC):
@@ -35,7 +37,6 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def insert_preexisting_history_vectors(
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -47,7 +48,6 @@ class PineconeBaseClass(ABC):
         The record is associated with information about pre-existing history.
 
         Arguments:
-        session_id – the current session id.
         user_id – the user id associated with the operation.
         patient_id – the patient id associated with the operation.
         text – the text to be inserted in the record.
@@ -89,7 +89,6 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def update_session_vectors(
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -103,7 +102,6 @@ class PineconeBaseClass(ABC):
         Updates a session record leveraging the incoming data.
 
         Arguments:
-        session_id – the current session id.
         user_id – the user id associated with the operation.
         patient_id – the patient id associated with the operation.
         old_date – the date associated with the old version of the record.
@@ -116,7 +114,6 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def update_preexisting_history_vectors(
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -127,7 +124,6 @@ class PineconeBaseClass(ABC):
         Updates a pre-existig history record leveraging the incoming data.
 
         Arguments:
-        session_id – the current session id.
         user_id – the user id associated with the operation.
         patient_id – the patient id associated with the operation.
         text – the text to be inserted in the record.
@@ -139,11 +135,13 @@ class PineconeBaseClass(ABC):
     @abstractmethod
     async def get_vector_store_context(
         openai_client: OpenAIBaseClass,
+        aws_db_client: AwsDbBaseClass,
         query_input: str,
         user_id: str,
         patient_id: str,
         query_top_k: int,
         rerank_vectors: bool,
+        request: Request,
         include_preexisting_history: bool = True,
         session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
     ) -> str:
@@ -152,11 +150,13 @@ class PineconeBaseClass(ABC):
 
         Arguments:
         openai_client – the openai client to be leveraged internally.
+        aws_db_client – the AWS DB client to be leveraged internally.
         query_input – the query that was triggered by a user.
         user_id – the user id associated with the context.
         patient_id – the patient id associated with the context.
         query_top_k – the top k results that should be retrieved from the vector store.
         rerank_vectors – flag for determining whether vectors should get reranked.
+        request – the FastAPI request associated with the operation.
         include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
         session_dates_overrides – the optional override for including session-date-specific vectors.
         """

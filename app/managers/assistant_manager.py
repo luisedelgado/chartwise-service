@@ -8,7 +8,10 @@ from pydantic import BaseModel
 from typing import AsyncIterable, Optional, Set
 
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
-from ..dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
+from ..dependencies.api.pinecone_session_date_override import (
+    PineconeQuerySessionDateOverride,
+    PineconeQuerySessionDateOverrideType,
+)
 from ..managers.auth_manager import AuthManager
 from ..internal.alerting.internal_alert import EngineeringAlert
 from ..internal.schemas import (
@@ -443,7 +446,6 @@ class AssistantManager:
 
                     background_tasks.add_task(
                         dependency_container.inject_pinecone_client().insert_preexisting_history_vectors,
-                        session_id=session_id,
                         user_id=therapist_id,
                         patient_id=patient_id,
                         text=pre_existing_history,
@@ -528,7 +530,6 @@ class AssistantManager:
         openai_client = dependency_container.inject_openai_client()
         background_tasks.add_task(
             dependency_container.inject_pinecone_client().update_preexisting_history_vectors,
-            session_id=session_id,
             user_id=therapist_id,
             patient_id=filtered_body['id'],
             text=filtered_body['pre_existing_history'],
@@ -636,13 +637,14 @@ class AssistantManager:
                 patient_last_session_date: date = self.cached_patient_query_data.last_session_date
 
             if patient_last_session_date is not None:
-                session_date_override = PineconeQuerySessionDateOverride(
+                last_session_date_override = PineconeQuerySessionDateOverride(
+                    override_type=PineconeQuerySessionDateOverrideType.SINGLE_DATE,
                     output_prefix_override="*** The following data is from the patient's last session with the therapist ***\n",
                     output_suffix_override="*** End of data associated with the patient's last session with the therapist ***",
-                    session_date=patient_last_session_date.strftime(datetime_handler.DATE_FORMAT)
+                    session_date_start=patient_last_session_date.strftime(datetime_handler.DATE_FORMAT)
                 )
             else:
-                session_date_override = None
+                last_session_date_override = None
 
             async for part in self.chartwise_assistant.query_store(
                 user_id=therapist_id,
@@ -650,8 +652,9 @@ class AssistantManager:
                 patient_name=(" ".join([patient_first_name, patient_last_name])),
                 patient_gender=patient_gender,
                 query_input=query.text,
+                request=request,
                 response_language_code=language_code,
-                session_date_override=session_date_override
+                last_session_date_override=last_session_date_override
             ):
                 yield part
         except Exception as e:
@@ -1267,22 +1270,22 @@ class AssistantManager:
         )
 
         # Insert vector ids into mapping table for enhancing RAG accuracy.
-        # aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-        # await aws_db_client.batch_insert(
-        #     user_id=therapist_id,
-        #     request=request,
-        #     table_name=VECTORS_SESSION_MAPPINGS_TABLE_NAME,
-        #     payloads=[
-        #         {
-        #             "id": vector_id,
-        #             "therapist_id": therapist_id,
-        #             "patient_id": patient_id,
-        #             "session_report_id": session_notes_id,
-        #             "session_date": session_date,
-        #         }
-        #         for vector_id in vector_ids
-        #     ]
-        # )
+        aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+        await aws_db_client.batch_insert(
+            user_id=therapist_id,
+            request=request,
+            table_name=VECTORS_SESSION_MAPPINGS_TABLE_NAME,
+            payloads=[
+                {
+                    "id": vector_id,
+                    "therapist_id": therapist_id,
+                    "patient_id": patient_id,
+                    "session_report_id": session_notes_id,
+                    "session_date": session_date,
+                }
+                for vector_id in vector_ids
+            ]
+        )
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
@@ -1336,7 +1339,6 @@ class AssistantManager:
             )
 
         await dependency_container.inject_pinecone_client().update_session_vectors(
-            session_id=session_id,
             user_id=therapist_id,
             patient_id=patient_id,
             text=notes_text,

@@ -1,7 +1,12 @@
+from datetime import date
 from enum import Enum
 
+from ..internal.utilities.datetime_handler import (
+    convert_to_date_format_spell_out_month,
+    DATE_FORMAT,
+    DATE_FORMAT_SPELL_OUT_MONTH,
+)
 from ..internal.utilities.general_utilities import gender_has_default_pronouns
-from ..internal.utilities.datetime_handler import convert_to_date_format_spell_out_month, DATE_FORMAT
 
 class PromptScenario(Enum):
     # keep sorted A-Z
@@ -183,8 +188,10 @@ class PromptCrafter:
         if len(last_session_date or '') == 0:
             last_session_date_context = ""
         else:
-            date_spell_out_month = convert_to_date_format_spell_out_month(session_date=last_session_date,
-                                                                          incoming_date_format=DATE_FORMAT)
+            date_spell_out_month = convert_to_date_format_spell_out_month(
+                session_date=last_session_date,
+                incoming_date_format=DATE_FORMAT
+            )
             last_session_date_context = f"\nNote that {patient_name}'s last session with the practitioner was on {date_spell_out_month}."
 
         if chat_history_included:
@@ -658,6 +665,7 @@ class PromptCrafter:
                 f"The user asked: '{query_input}'.\n"
                 "If the question implies a time range, extract it as `start_date` and `end_date` using U.S. date format (MM-DD-YYYY).\n"
                 "If no time range is implied, return null for both.\n"
+                f"For reference, today's date is {date.today().strftime(DATE_FORMAT_SPELL_OUT_MONTH)}.\n"
                 "Respond only with the JSON object."
             )
         except Exception as e:

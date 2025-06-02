@@ -1,7 +1,9 @@
 from datetime import date
+from fastapi import Request
 from pinecone import Index
 from typing import Callable
 
+from ..api.aws_db_base_class import AwsDbBaseClass
 from ..api.openai_base_class import OpenAIBaseClass
 from ..api.pinecone_base_class import PineconeBaseClass
 from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -37,7 +39,6 @@ class FakePineconeClient(PineconeBaseClass):
 
     async def insert_preexisting_history_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -64,7 +65,6 @@ class FakePineconeClient(PineconeBaseClass):
 
     async def update_session_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -78,7 +78,6 @@ class FakePineconeClient(PineconeBaseClass):
 
     async def update_preexisting_history_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -91,11 +90,13 @@ class FakePineconeClient(PineconeBaseClass):
     async def get_vector_store_context(
         self,
         openai_client: OpenAIBaseClass,
+        aws_db_client: AwsDbBaseClass,
         query_input: str,
         user_id: str,
         patient_id: str,
         query_top_k: int,
         rerank_vectors: bool,
+        request: Request,
         include_preexisting_history: bool = True,
         session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
     ) -> str:

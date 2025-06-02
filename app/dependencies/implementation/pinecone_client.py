@@ -2,8 +2,8 @@ import base64
 import hashlib, os, uuid
 import tiktoken, torch
 
-from datetime import date
-from fastapi import HTTPException
+from datetime import date, datetime
+from fastapi import HTTPException, Request
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
@@ -15,9 +15,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from typing import Callable, Tuple
 
 from ...data_processing.electra_model_data import ELECTRA_MODEL_CACHE_DIR, ELECTRA_MODEL_NAME
+from ...dependencies.api.aws_db_base_class import AwsDbBaseClass
 from ...dependencies.api.openai_base_class import OpenAIBaseClass
-from ...dependencies.api.pinecone_session_date_override import PineconeQuerySessionDateOverride
+from ...dependencies.api.pinecone_session_date_override import (
+    PineconeQuerySessionDateOverride,
+    PineconeQuerySessionDateOverrideType,
+)
 from ...dependencies.api.pinecone_base_class import PineconeBaseClass
+from ...internal.schemas import VECTORS_SESSION_MAPPINGS_TABLE_NAME
 from ...internal.security.chartwise_encryptor import ChartWiseEncryptor
 from ...internal.utilities import datetime_handler
 from ...vectors import data_cleaner
@@ -114,7 +119,6 @@ class PineconeClient(PineconeBaseClass):
 
     async def insert_preexisting_history_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -236,7 +240,6 @@ class PineconeClient(PineconeBaseClass):
 
     async def update_session_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -271,7 +274,6 @@ class PineconeClient(PineconeBaseClass):
 
     async def update_preexisting_history_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -288,7 +290,6 @@ class PineconeClient(PineconeBaseClass):
             # Insert the fresh data
             await self.insert_preexisting_history_vectors(
                 user_id=user_id,
-                session_id=session_id,
                 patient_id=patient_id,
                 text=text,
                 openai_client=openai_client,
@@ -299,20 +300,16 @@ class PineconeClient(PineconeBaseClass):
         except Exception as e:
             raise RuntimeError(e) from e
 
-    async def get_time_range_store_context(
-        self,
-
-    ):
-        ...
-
     async def get_vector_store_context(
         self,
         openai_client: OpenAIBaseClass,
+        aws_db_client: AwsDbBaseClass,
         query_input: str,
         user_id: str,
         patient_id: str,
         query_top_k: int,
         rerank_vectors: bool,
+        request: Request,
         include_preexisting_history: bool = True,
         session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
     ) -> str:
@@ -330,9 +327,10 @@ class PineconeClient(PineconeBaseClass):
             )
 
             dates_contained = []
+            retrieved_docs = []
             context = ""
             if query_top_k > 0:
-                retrieved_docs, dates_contained = self._fetch_vectors(
+                retrieved_docs, dates_contained = await self._query_vectors(
                     query_input=query_input,
                     query_top_k=query_top_k,
                     index=index,
@@ -396,43 +394,33 @@ class PineconeClient(PineconeBaseClass):
             # the ones that may have already been fetched.
             if session_dates_overrides is not None:
                 for session_date_override in session_dates_overrides:
-                    session_date_is_already_contained = any(
-                        current_date.startswith(f"{session_date_override.session_date}")
-                        for current_date in dates_contained
-                    )
+                    if session_date_override.override_type == PineconeQuerySessionDateOverrideType.SINGLE_DATE:
+                        session_date_is_already_contained = any(
+                            current_date.startswith(f"{session_date_override.session_date_start}")
+                            for current_date in dates_contained
+                        )
 
-                    if session_date_is_already_contained:
-                        continue
+                        if session_date_is_already_contained:
+                            continue
 
-                    session_date_override_context = self._fetch_context_from_vectors_by_date(
-                        session_date=session_date_override.session_date,
-                        index=index,
-                        namespace=namespace,
-                    )
-
-                    if session_date_override_context is not None:
-                        # If the session_date_override has an output prefix or suffix for formatting purposes,
-                        # apply it, and append the final result to the `context` value.
-                        if session_date_override.output_prefix_override is not None:
-                            session_date_override_context = "".join(
-                                [
-                                    session_date_override.output_prefix_override,
-                                    session_date_override_context
-                                ]
-                            )
-                        if session_date_override.output_suffix_override is not None:
-                            session_date_override_context = "".join(
-                                [
-                                    session_date_override_context,
-                                    session_date_override.output_suffix_override,
-                                    "\n"
-                                ]
-                            )
-                        context = "\n".join(
-                            [
-                                context,
-                                session_date_override_context
-                            ]
+                        context = self._override_context_with_single_date_vectors(
+                            session_date_override=session_date_override,
+                            index=index,
+                            namespace=namespace,
+                            current_context=context
+                        )
+                    elif session_date_override.override_type == PineconeQuerySessionDateOverrideType.DATE_RANGE:
+                        context = await self._override_context_with_date_range_vectors(
+                            current_context=context,
+                            index=index,
+                            namespace=namespace,
+                            aws_db_client=aws_db_client,
+                            therapist_id=user_id,
+                            request=request,
+                            query_top_k=query_top_k,
+                            query_input=query_input,
+                            start_date=session_date_override.session_date_start,
+                            end_date=session_date_override.session_date_end,
                         )
             return missing_session_data_error if len(context or '') == 0 else context
         except Exception as e:
@@ -539,7 +527,7 @@ class PineconeClient(PineconeBaseClass):
 
     # Private
 
-    async def _fetch_vectors(
+    async def _query_vectors(
         self,
         query_input: str,
         query_top_k: int,
@@ -575,31 +563,24 @@ class PineconeClient(PineconeBaseClass):
             )
         return (retrieved_docs, dates_contained)
 
-    def _fetch_context_from_vectors_by_date(
+    def _create_context_from_vectors(
         self,
-        session_date: str,
         index: Index,
         namespace: str,
-    ):
-        session_date_vector_ids = []
-        for list_ids in index.list(
-            namespace=namespace,
-            prefix=session_date
-        ):
-            session_date_vector_ids = list_ids
-
-        if len(session_date_vector_ids) == 0:
-            return None
-
-        session_date_fetch_result = index.fetch(
-            ids=session_date_vector_ids,
+        vector_ids: list[str],
+        query_top_k: int = 0,
+        query_input: str = None,
+        rerank_vectors: bool = False
+    ) -> str:
+        fetch_result = index.fetch(
+            ids=vector_ids,
             namespace=namespace
         )
-        vectors = session_date_fetch_result['vectors']
+        vectors = fetch_result['vectors']
         if len(vectors or []) == 0:
             return None
 
-        session_date_context = ""
+        fetched_docs = []
         for vector_id in vectors:
             vector_data = vectors[vector_id]
 
@@ -610,17 +591,125 @@ class PineconeClient(PineconeBaseClass):
                 session_date=metadata['session_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
             )
-            session_date = "".join(["`session_date` = ",f"{formatted_date}\n"])
-            chunk_summary = "".join(["`chunk_summary` = ",f"{plaintext}\n"])
-            session_date_context = "".join(
+            fetched_docs.append({
+                "session_date": formatted_date,
+                "chunk_summary": plaintext
+            })
+
+        if rerank_vectors:
+            assert query_top_k > 0, "query_top_k must be greater than 0 when reranking is enabled."
+            assert query_input is not None, "query_input must be provided when reranking is enabled."
+            context, _ = self.get_reranked_context(
+                query_input=query_input,
+                batch_size=query_top_k,
+                retrieved_docs=fetched_docs,
+            )
+        else:
+            # Build context in-order from the fetched documents.
+            context = ""
+            for doc in fetched_docs:
+                doc_context = "".join([
+                    "`session_date` = ",
+                    doc['session_date'],
+                    "\n",
+                    "`chunk_summary` = ",
+                    doc['chunk_summary'],
+                    "\n"
+                ])
+                context = "".join([context, doc_context, "\n"])
+        return context
+
+    def _override_context_with_single_date_vectors(
+        self,
+        session_date_override: PineconeQuerySessionDateOverride,
+        index: Index,
+        namespace: str,
+        current_context: str
+    ) -> str:
+        """
+        Updates the context for a single session date override.
+        """
+        session_date_vector_ids = []
+        for list_ids in index.list(
+            namespace=namespace,
+            prefix=session_date_override.session_date_start,
+        ):
+            session_date_vector_ids = list_ids
+
+        if len(session_date_vector_ids) == 0:
+            return None
+
+        session_date_override_context = self._create_context_from_vectors(
+            index=index,
+            namespace=namespace,
+            vector_ids=session_date_vector_ids,
+        )
+
+        if session_date_override_context is not None:
+            # If the session_date_override has an output prefix or suffix for formatting purposes,
+            # apply it, and append the final result to the `context` value.
+            if session_date_override.output_prefix_override is not None:
+                session_date_override_context = "".join(
+                    [
+                        session_date_override.output_prefix_override,
+                        session_date_override_context
+                    ]
+                )
+            if session_date_override.output_suffix_override is not None:
+                session_date_override_context = "".join(
+                    [
+                        session_date_override_context,
+                        session_date_override.output_suffix_override,
+                        "\n"
+                    ]
+                )
+            return "\n".join(
                 [
-                    session_date_context,
-                    session_date,
-                    chunk_summary,
+                    current_context,
+                    session_date_override_context
                 ]
             )
 
-        return session_date_context
+        # If no context was found for the session date override, we will not modify the current context.
+        return current_context
+
+    async def _override_context_with_date_range_vectors(
+            self,
+            current_context: str,
+            index: Index,
+            namespace: str,
+            aws_db_client: AwsDbBaseClass,
+            therapist_id: str,
+            request: Request,
+            query_top_k: int,
+            query_input: str,
+            start_date: str,
+            end_date: str,
+        ):
+        vector_ids_response = await aws_db_client.select(
+            user_id=therapist_id,
+            request=request,
+            table_name=VECTORS_SESSION_MAPPINGS_TABLE_NAME,
+            fields=["id"],
+            filters={
+                "therapist_id": therapist_id,
+                "session_date__gte": datetime.strptime(start_date, datetime_handler.DATE_FORMAT).date(),
+                "session_date__lte": datetime.strptime(end_date, datetime_handler.DATE_FORMAT).date(),
+            },
+        )
+
+        if len(vector_ids_response) == 0:
+            return current_context
+
+        vector_ids = vector_ids_response[0]
+        return self._create_context_from_vectors(
+            index=index,
+            namespace=namespace,
+            vector_ids=vector_ids,
+            query_top_k=query_top_k,
+            query_input=query_input,
+            rerank_vectors=True,
+        )
 
     def _get_namespace(
         self,
