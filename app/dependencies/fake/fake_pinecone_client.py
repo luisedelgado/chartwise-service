@@ -36,6 +36,7 @@ class FakePineconeClient(PineconeBaseClass):
     ) -> list[str]:
         self.fake_vectors_insertion = text
         self.insert_session_vectors_invoked = True
+        return ["vector1", "vector2"]
 
     async def insert_preexisting_history_vectors(
         self,

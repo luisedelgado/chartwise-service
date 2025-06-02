@@ -460,7 +460,7 @@ class ChartWiseAssistant:
                                            request: Request,) -> str:
         try:
             patient_session_dates = [
-                date_wrapper.session_date for date_wrapper in (await self._retrieve_n_most_recent_session_dates(
+                date_override.session_date_start for date_override in (await self._retrieve_n_most_recent_session_dates(
                     request=request,
                     therapist_id=therapist_id,
                     patient_id=patient_id,
