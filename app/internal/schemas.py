@@ -17,6 +17,7 @@ ENCRYPTED_TABLES = [ENCRYPTED_PATIENT_ATTENDANCE_TABLE_NAME,
 # Unencrypted tables names
 SUBSCRIPTION_STATUS_TABLE_NAME = "subscription_status"
 THERAPISTS_TABLE_NAME = "therapists"
+VECTORS_SESSION_MAPPINGS_TABLE_NAME = "vectors_session_mappings"
 
 # Encryped columns per table
 IS_JSON_KEY = "is_json"

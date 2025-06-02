@@ -13,6 +13,8 @@ FAKE_ASSISTANT_RESPONSE = "This is my fake response"
 class FakeResponse(BaseModel):
     topics: list
     questions: list
+    start_date: str
+    end_date: str
 
 class FakeOpenAICompletions:
 
@@ -66,7 +68,9 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         if expected_output_model is not None:
             return FakeResponse(
                 questions=["my fake question"],
-                topics=["my fake topic"]
+                topics=["my fake topic"],
+                start_date="01-01-2023",
+                end_date="12-31-2023"
             )
 
         return {

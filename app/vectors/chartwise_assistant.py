@@ -1,4 +1,4 @@
-import asyncio, tiktoken
+import asyncio, json, tiktoken
 
 from fastapi import Request
 from pydantic import BaseModel, Field
@@ -119,6 +119,13 @@ class ChartWiseAssistant:
                 extract_time_tokens_if_possible(),
             )
 
+            if isinstance(extracted_time_tokens, BaseModel):
+                extracted_time_tokens_json = json.loads(extracted_time_tokens.model_dump_json())
+                if extracted_time_tokens_json.get("start_date") and extracted_time_tokens_json.get("end_date"):
+                    # If the time tokens were extracted, we should bound the query to the specified time range.
+                    start_date = extracted_time_tokens.start_date
+                    end_date = extracted_time_tokens.end_date
+
             # Fetch the vector store context based on the query input.
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
                 query_input=reformulated_query_input,
@@ -127,7 +134,7 @@ class ChartWiseAssistant:
                 openai_client=openai_client,
                 query_top_k=6,
                 rerank_vectors=True,
-                session_dates_override=[session_date_override]
+                session_dates_overrides=[session_date_override]
             )
 
             last_session_date = None if session_date_override is None else session_date_override.session_date
@@ -194,7 +201,7 @@ class ChartWiseAssistant:
                 openai_client=openai_client,
                 query_top_k=0,
                 rerank_vectors=False,
-                session_dates_override=session_dates_override
+                session_dates_overrides=session_dates_override
             )
 
             prompt_crafter = PromptCrafter()
@@ -268,7 +275,7 @@ class ChartWiseAssistant:
                 openai_client=openai_client,
                 query_top_k=0,
                 rerank_vectors=False,
-                session_dates_override=session_dates_override
+                session_dates_overrides=session_dates_override
             )
 
             prompt_crafter = PromptCrafter()
@@ -339,7 +346,7 @@ class ChartWiseAssistant:
                 query_top_k=0,
                 rerank_vectors=False,
                 include_preexisting_history=False,
-                session_dates_override=session_dates_override
+                session_dates_overrides=session_dates_override
             )
 
             prompt_crafter = PromptCrafter()
@@ -412,7 +419,7 @@ class ChartWiseAssistant:
                 query_top_k=0,
                 rerank_vectors=False,
                 include_preexisting_history=False,
-                session_dates_override=session_dates_override
+                session_dates_overrides=session_dates_override
             )
 
             prompt_crafter = PromptCrafter()

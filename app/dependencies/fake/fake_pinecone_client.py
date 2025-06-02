@@ -24,7 +24,6 @@ class FakePineconeClient(PineconeBaseClass):
 
     async def insert_session_vectors(
         self,
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -32,7 +31,7 @@ class FakePineconeClient(PineconeBaseClass):
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable,
         therapy_session_date: date = None
-    ):
+    ) -> list[str]:
         self.fake_vectors_insertion = text
         self.insert_session_vectors_invoked = True
 
@@ -98,7 +97,7 @@ class FakePineconeClient(PineconeBaseClass):
         query_top_k: int,
         rerank_vectors: bool,
         include_preexisting_history: bool = True,
-        session_dates_override: list[PineconeQuerySessionDateOverride] = None
+        session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
     ) -> str:
         self.get_vector_store_context_invoked = True
         if not self.vector_store_context_returns_data:

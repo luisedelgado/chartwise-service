@@ -79,6 +79,52 @@ class AwsDbClient(AwsDbBaseClass):
         except Exception as e:
             raise RuntimeError(f"Insert failed: {e}") from e
 
+    async def batch_insert(
+        self,
+        user_id: str,
+        request: Request,
+        payloads: list[dict[str, Any]],
+        table_name: str,
+    ) -> list[dict]:
+        if not payloads:
+            return []
+
+        try:
+            # Validate all payloads have the same keys
+            columns = list(payloads[0].keys())
+            for p in payloads:
+                if set(p.keys()) != set(columns):
+                    raise ValueError("All payloads must have the same keys")
+
+            # Encrypt all payloads
+            encrypted_payloads = [self._encrypt_payload(p, table_name) for p in payloads]
+
+            # Prepare dynamic SQL
+            column_names = ', '.join(f'"{col}"' for col in columns)
+            placeholders = []
+            values = []
+
+            for payload in encrypted_payloads:
+                value_placeholders = [
+                    f"${len(values) + j + 1}" for j in range(len(columns))
+                ]
+                placeholders.append(f"({', '.join(value_placeholders)})")
+                values.extend(payload[col] for col in columns)
+
+            insert_statement = f"""
+                INSERT INTO "{table_name}" ({column_names})
+                VALUES {', '.join(placeholders)}
+                RETURNING *
+            """
+
+            async with request.app.state.pool.acquire() as conn:
+                await self.set_session_user_id(conn=conn, user_id=user_id)
+                rows = await conn.fetch(insert_statement, *values)
+                return [dict(row) for row in rows]
+
+        except Exception as e:
+            raise RuntimeError(f"Batch insert failed: {e}") from e
+
     async def upsert(
         self,
         user_id: str,

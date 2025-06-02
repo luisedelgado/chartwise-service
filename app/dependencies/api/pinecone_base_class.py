@@ -10,7 +10,6 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def insert_session_vectors(
-        session_id: str,
         user_id: str,
         patient_id: str,
         text: str,
@@ -18,13 +17,12 @@ class PineconeBaseClass(ABC):
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable,
         therapy_session_date: date = None
-    ):
+    ) -> list[str]:
         """
         Inserts a new record to the store leveraging the incoming data.
         The record is associated with information about a session.
 
         Arguments:
-        session_id – the current session id.
         user_id – the user id associated with the data that will be inserted.
         patient_id – the patient id associated with the data to be inserted.
         text – the text to be inserted in the record.
@@ -147,7 +145,7 @@ class PineconeBaseClass(ABC):
         query_top_k: int,
         rerank_vectors: bool,
         include_preexisting_history: bool = True,
-        session_dates_override: list[PineconeQuerySessionDateOverride] = None
+        session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
     ) -> str:
         """
         Retrieves the vector context associated with the incoming query_input.
@@ -160,7 +158,7 @@ class PineconeBaseClass(ABC):
         query_top_k – the top k results that should be retrieved from the vector store.
         rerank_vectors – flag for determining whether vectors should get reranked.
         include_preexisting_history – flag determinig whether the context will include the patient's preexisting history.
-        session_date_override – the optional override for including session-date-specific vectors.
+        session_dates_overrides – the optional override for including session-date-specific vectors.
         """
         pass
 

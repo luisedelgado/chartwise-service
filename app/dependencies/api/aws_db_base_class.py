@@ -27,6 +27,24 @@ class AwsDbBaseClass(ABC):
         pass
 
     @abstractmethod
+    async def batch_insert(
+        user_id: str,
+        request: Request,
+        payloads: list[dict[str, Any]],
+        table_name: str,
+    ) -> list[dict]:
+        """
+        Inserts multiple payloads into a table.
+
+        Arguments:
+        user_id – the current user ID.
+        request – the FastAPI request associated with the insert operation.
+        payloads – the list of payloads to be inserted.
+        table_name – the table into which the payloads should be inserted.
+        """
+        pass
+
+    @abstractmethod
     async def update(
         user_id: str,
         request: Request,

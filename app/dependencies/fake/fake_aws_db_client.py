@@ -52,6 +52,15 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 "therapist_id": self.FAKE_THERAPIST_ID,
             }
 
+    async def batch_insert(
+        self,
+        user_id: str,
+        request: Request,
+        payloads: list[dict[str, Any]],
+        table_name: str,
+    ) -> list[dict]:
+        return [{}]
+
     async def update(
         self,
         user_id: str,

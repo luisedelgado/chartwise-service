@@ -19,6 +19,7 @@ from ..internal.schemas import (
     ENCRYPTED_PATIENT_TOPICS_TABLE_NAME,
     ENCRYPTED_PATIENTS_TABLE_NAME,
     ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    VECTORS_SESSION_MAPPINGS_TABLE_NAME,
     Gender,
     SessionProcessingStatus,
     TimeRange
@@ -1255,8 +1256,7 @@ class AssistantManager:
                 request=request,
             )
 
-        await dependency_container.inject_pinecone_client().insert_session_vectors(
-            session_id=session_id,
+        vector_ids = await dependency_container.inject_pinecone_client().insert_session_vectors(
             user_id=therapist_id,
             patient_id=patient_id,
             text=notes_text,
@@ -1265,6 +1265,24 @@ class AssistantManager:
             therapy_session_date=session_date,
             summarize_chunk=self.chartwise_assistant.summarize_chunk
         )
+
+        # Insert vector ids into mapping table for enhancing RAG accuracy.
+        # aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
+        # await aws_db_client.batch_insert(
+        #     user_id=therapist_id,
+        #     request=request,
+        #     table_name=VECTORS_SESSION_MAPPINGS_TABLE_NAME,
+        #     payloads=[
+        #         {
+        #             "id": vector_id,
+        #             "therapist_id": therapist_id,
+        #             "patient_id": patient_id,
+        #             "session_report_id": session_notes_id,
+        #             "session_date": session_date,
+        #         }
+        #         for vector_id in vector_ids
+        #     ]
+        # )
 
         # Update patient metrics around last session date, and total session count AFTER
         # session has already been inserted.
