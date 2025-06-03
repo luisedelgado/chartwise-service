@@ -1523,12 +1523,16 @@ class AssistantManager:
                     "patient_id": patient_id,
                     "therapist_id": therapist_id,
                     "last_updated": datetime.now(),
-                    "questions": eval(
-                        json.dumps(
-                            default_question_suggestions,
-                            ensure_ascii=False,
+                    "questions": {
+                        # We want to leave this extra layer of indirection for consistency due to the
+                        # mechanism we have in place for converting structured output into a Pydantic model (used elsewhere)
+                        "questions": eval(
+                            json.dumps(
+                                default_question_suggestions,
+                                ensure_ascii=False,
+                            )
                         )
-                    )
+                    }
                 }
             )
         except Exception as e:
