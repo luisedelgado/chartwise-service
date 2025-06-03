@@ -326,11 +326,11 @@ class PineconeClient(PineconeBaseClass):
                 patient_id=patient_id
             )
 
-            dates_contained = []
+            ids_contained = []
             retrieved_docs = []
             context = ""
             if query_top_k > 0:
-                retrieved_docs, dates_contained = await self._query_vectors(
+                retrieved_docs, ids_contained = await self._query_vectors(
                     query_input=query_input,
                     query_top_k=query_top_k,
                     index=index,
@@ -343,10 +343,10 @@ class PineconeClient(PineconeBaseClass):
 
             if rerank_vectors:
                 assert query_top_k > 0, "query_top_k must be greater than 0 when reranking is enabled."
-                context, dates_contained = self.get_reranked_context(
+                context, ids_contained = self.get_reranked_context(
                     query_input=query_input,
                     retrieved_docs=retrieved_docs,
-                    batch_size=query_top_k
+                    batch_size=query_top_k,
                 )
             elif len(retrieved_docs or '') > 0:
                 # If reranking is not enabled, we will use the retrieved documents as they are.
@@ -395,32 +395,25 @@ class PineconeClient(PineconeBaseClass):
             if session_dates_overrides is not None:
                 for session_date_override in session_dates_overrides:
                     if session_date_override.override_type == PineconeQuerySessionDateOverrideType.SINGLE_DATE:
-                        session_date_is_already_contained = any(
-                            current_date.startswith(f"{session_date_override.session_date_start}")
-                            for current_date in dates_contained
-                        )
-
-                        if session_date_is_already_contained:
-                            continue
-
-                        context = self._override_context_with_single_date_vectors(
+                        context = self._append_context_from_single_date_vectors(
                             session_date_override=session_date_override,
                             index=index,
                             namespace=namespace,
-                            current_context=context
+                            current_context=context,
+                            ids_contained_in_current_context=ids_contained,
                         )
                     elif session_date_override.override_type == PineconeQuerySessionDateOverrideType.DATE_RANGE:
-                        context = await self._override_context_with_date_range_vectors(
+                        context = await self._append_context_from_date_range_vectors(
                             current_context=context,
                             index=index,
                             namespace=namespace,
                             aws_db_client=aws_db_client,
                             therapist_id=user_id,
                             request=request,
-                            query_top_k=query_top_k,
                             query_input=query_input,
                             start_date=session_date_override.session_date_start,
                             end_date=session_date_override.session_date_end,
+                            ids_contained_in_current_context=ids_contained,
                         )
             return missing_session_data_error if len(context or '') == 0 else context
         except Exception as e:
@@ -473,7 +466,8 @@ class PineconeClient(PineconeBaseClass):
         self,
         query_input: str,
         retrieved_docs: list,
-        batch_size: int
+        batch_size: int,
+        include_all_docs: bool = False,
     ) -> Tuple[str, list]:
         """
         Reranks the retrieved documents based on their chunk summaries using a pre-trained model.
@@ -482,11 +476,14 @@ class PineconeClient(PineconeBaseClass):
             retrieved_docs (list): A list of documents retrieved from the vector store.
             batch_size (int): The size of the batches to process the documents in.
         Returns:
-            Tuple[str, list]: A tuple containing the reranked context as a string and a list of dates contained in the documents.
+            Tuple[str, list]:
+            - str: The reranked context.
+            - list: A list of vector ids contained in the reranked context.
         """
         # Create pairs using only the chunk_summary for ranking
         pairs = [[query_input, doc['chunk_summary']] for doc in retrieved_docs]
         scores = []
+        ids_contained = []
 
         # Process in batches
         for i in range(0, len(pairs), batch_size):
@@ -507,10 +504,10 @@ class PineconeClient(PineconeBaseClass):
         doc_score_pairs = list(zip(retrieved_docs, scores))
         reranked_documents = [doc for doc, _ in sorted(doc_score_pairs, key=lambda x: x[1], reverse=True)]
 
-        dates_contained = []
         reranked_context = ""
-        for doc in reranked_documents[:type(self).RERANK_TOP_N]:
-            dates_contained.append(doc['session_date'])
+        reranked_docs_count = type(self).RERANK_TOP_N if not include_all_docs else len(retrieved_docs)
+        for doc in reranked_documents[:reranked_docs_count]:
+            ids_contained.append(doc['id'])
             formatted_date = datetime_handler.convert_to_date_format_spell_out_month(
                 session_date=doc['session_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
@@ -523,7 +520,7 @@ class PineconeClient(PineconeBaseClass):
                 "\n"]
             )
             reranked_context = "\n".join([reranked_context, doc_full_context])
-        return reranked_context, dates_contained
+        return reranked_context, ids_contained
 
     # Private
 
@@ -547,28 +544,29 @@ class PineconeClient(PineconeBaseClass):
         if len(query_matches or []) == 0:
             return [], []
 
+        ids_contained = []
         retrieved_docs = []
-        dates_contained = []
         for match in query_matches:
             metadata = match['metadata']
             session_date = metadata['session_date']
-            dates_contained.append(session_date)
+            vector_id = match['id']
+            ids_contained.append(vector_id)
             ciphertext = base64.b64decode(metadata['chunk_summary'])
             plaintext = self.encryptor.decrypt(ciphertext)
             retrieved_docs.append(
                 {
                     "session_date": session_date,
-                    "chunk_summary": plaintext
+                    "chunk_summary": plaintext,
+                    "id": vector_id,
                 }
             )
-        return (retrieved_docs, dates_contained)
+        return retrieved_docs, ids_contained
 
     def _create_context_from_vectors(
         self,
         index: Index,
         namespace: str,
         vector_ids: list[str],
-        query_top_k: int = 0,
         query_input: str = None,
         rerank_vectors: bool = False
     ) -> str:
@@ -578,7 +576,7 @@ class PineconeClient(PineconeBaseClass):
         )
         vectors = fetch_result['vectors']
         if len(vectors or []) == 0:
-            return None
+            return ""
 
         fetched_docs = []
         for vector_id in vectors:
@@ -587,30 +585,31 @@ class PineconeClient(PineconeBaseClass):
             metadata = vector_data['metadata']
             ciphertext = base64.b64decode(metadata['chunk_summary'])
             plaintext = self.encryptor.decrypt(ciphertext)
-            formatted_date = datetime_handler.convert_to_date_format_spell_out_month(
-                session_date=metadata['session_date'],
-                incoming_date_format=datetime_handler.DATE_FORMAT
-            )
             fetched_docs.append({
-                "session_date": formatted_date,
-                "chunk_summary": plaintext
+                "session_date": metadata['session_date'],
+                "chunk_summary": plaintext,
+                "id": vector_data['id'],
             })
 
         if rerank_vectors:
-            assert query_top_k > 0, "query_top_k must be greater than 0 when reranking is enabled."
             assert query_input is not None, "query_input must be provided when reranking is enabled."
             context, _ = self.get_reranked_context(
                 query_input=query_input,
-                batch_size=query_top_k,
+                batch_size=len(fetched_docs),
                 retrieved_docs=fetched_docs,
+                include_all_docs=True,
             )
         else:
             # Build context in-order from the fetched documents.
             context = ""
             for doc in fetched_docs:
+                formatted_date = datetime_handler.convert_to_date_format_spell_out_month(
+                    session_date=doc['session_date'],
+                    incoming_date_format=datetime_handler.DATE_FORMAT
+                )
                 doc_context = "".join([
                     "`session_date` = ",
-                    doc['session_date'],
+                    formatted_date,
                     "\n",
                     "`chunk_summary` = ",
                     doc['chunk_summary'],
@@ -619,12 +618,13 @@ class PineconeClient(PineconeBaseClass):
                 context = "".join([context, doc_context, "\n"])
         return context
 
-    def _override_context_with_single_date_vectors(
+    def _append_context_from_single_date_vectors(
         self,
         session_date_override: PineconeQuerySessionDateOverride,
         index: Index,
         namespace: str,
-        current_context: str
+        current_context: str,
+        ids_contained_in_current_context: list[str]
     ) -> str:
         """
         Updates the context for a single session date override.
@@ -637,12 +637,21 @@ class PineconeClient(PineconeBaseClass):
             session_date_vector_ids = list_ids
 
         if len(session_date_vector_ids) == 0:
-            return None
+            # If there are no db hits for the session date override, we will not modify the current context.
+            return current_context
+
+        filtered_vector_ids = [
+            vector_id for vector_id in session_date_vector_ids if vector_id not in ids_contained_in_current_context
+        ]
+
+        if len(filtered_vector_ids) == 0:
+            # If there are no new vectors to append, we will not modify the current context.
+            return current_context
 
         session_date_override_context = self._create_context_from_vectors(
             index=index,
             namespace=namespace,
-            vector_ids=session_date_vector_ids,
+            vector_ids=filtered_vector_ids,
         )
 
         if session_date_override_context is not None:
@@ -673,7 +682,7 @@ class PineconeClient(PineconeBaseClass):
         # If no context was found for the session date override, we will not modify the current context.
         return current_context
 
-    async def _override_context_with_date_range_vectors(
+    async def _append_context_from_date_range_vectors(
             self,
             current_context: str,
             index: Index,
@@ -681,10 +690,10 @@ class PineconeClient(PineconeBaseClass):
             aws_db_client: AwsDbBaseClass,
             therapist_id: str,
             request: Request,
-            query_top_k: int,
             query_input: str,
             start_date: str,
             end_date: str,
+            ids_contained_in_current_context: list[str],
         ):
         vector_ids_response = await aws_db_client.select(
             user_id=therapist_id,
@@ -701,14 +710,26 @@ class PineconeClient(PineconeBaseClass):
         if len(vector_ids_response) == 0:
             return current_context
 
-        vector_ids = vector_ids_response[0]
-        return self._create_context_from_vectors(
+        vector_ids = [
+            item['id'] for item in vector_ids_response if item['id'] not in ids_contained_in_current_context
+        ]
+
+        if len(vector_ids) == 0:
+            # If there are no new vectors to append, we will not modify the current context.
+            return current_context
+
+        date_range_context = self._create_context_from_vectors(
             index=index,
             namespace=namespace,
             vector_ids=vector_ids,
-            query_top_k=query_top_k,
             query_input=query_input,
             rerank_vectors=True,
+        )
+        return "\n".join(
+            [
+                current_context,
+                date_range_context,
+            ]
         )
 
     def _get_namespace(
