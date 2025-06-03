@@ -2,6 +2,8 @@
 
 # Usage:source ./assume_role.sh -env staging|prod
 
+unset ENVIRONMENT
+
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --env)
@@ -40,10 +42,8 @@ if [[ $? -ne 0 ]]; then
   exit 1
 fi
 
-AWS_ACCESS_KEY_ID=$(echo "$CREDS_JSON" | jq -r '.Credentials.AccessKeyId')
-AWS_SECRET_ACCESS_KEY=$(echo "$CREDS_JSON" | jq -r '.Credentials.SecretAccessKey')
-AWS_SESSION_TOKEN=$(echo "$CREDS_JSON" | jq -r '.Credentials.SessionToken')
+export AWS_ACCESS_KEY_ID=$(echo "$CREDS_JSON" | jq -r '.Credentials.AccessKeyId')
+export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS_JSON" | jq -r '.Credentials.SecretAccessKey')
+export AWS_SESSION_TOKEN=$(echo "$CREDS_JSON" | jq -r '.Credentials.SessionToken')
 
-echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
-echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-echo "export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"
+echo "✅ Assumed role $ROLE_ARN and updated environment variables."

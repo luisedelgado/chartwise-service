@@ -29,6 +29,9 @@ services:
       DEBUG_MODE: "true"
       AWS_BASTION_RDS_DATABASE_ENDPOINT: "ssh-tunnel"
       AWS_BASTION_RDS_DB_PORT: "5433"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
     env_file:
       - .env
     volumes:
