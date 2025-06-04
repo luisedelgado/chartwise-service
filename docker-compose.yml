@@ -11,7 +11,7 @@ services:
       echo '  StrictHostKeyChecking no' >> ~/.ssh/config &&
       ssh -N -L 0.0.0.0:5433:chartwise-database-instance-staging.cx44ewmqqt62.us-east-2.rds.amazonaws.com:5432 ec2-user@3.145.210.176"
     volumes:
-      - ./app/dependencies/core/bastion_host/staging-bastion-host-key-pair.pem:/ssh-keys/staging-bastion-host-key-pair.pem:ro
+      - ./app/dependencies/core/bastion_host:/ssh-keys:ro
     networks:
       - app-network
     restart: always
