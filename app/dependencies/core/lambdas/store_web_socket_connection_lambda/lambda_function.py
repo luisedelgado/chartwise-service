@@ -15,7 +15,6 @@ def lambda_handler(event, context):
             "connection_id": connection_id,
             "authenticated": False,
             "ttl": ttl,
-            "therapist_id": "unauthenticated",
         })
 
         return {"statusCode": 200, "body": "Connected"}

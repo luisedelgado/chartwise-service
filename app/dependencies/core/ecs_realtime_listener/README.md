@@ -1,5 +1,5 @@
 ## Assume role with local script
-./assume_role.sh -env staging|prod
+assume_role --env staging|prod
 
 ## Authenticate Staging with ECR
 aws ecr get-login-password \

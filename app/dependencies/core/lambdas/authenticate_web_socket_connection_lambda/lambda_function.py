@@ -4,7 +4,6 @@ import time
 import boto3
 import jwt
 from jwt import PyJWKClient
-from boto3.dynamodb.conditions import Key
 
 # Cognito issuer and JWKS setup
 COGNITO_ISSUER = f"https://cognito-idp.{os.environ['AWS_SERVICES_REGION']}.amazonaws.com/{os.environ['AWS_COGNITO_USER_POOL_ID']}"
@@ -40,36 +39,40 @@ def lambda_handler(event, context):
         )
         therapist_id = decoded["sub"]
 
-        # Lookup existing connection using GSI
-        response = table.query(
-            IndexName=os.environ["CONNECTION_ID_INDEX_NAME"],
-            KeyConditionExpression=Key("connection_id").eq(connection_id)
-        )
-        items = response.get("Items", [])
-        if not items:
-            print(f"No record found for connection_id: {connection_id}")
-            gatewayapi.delete_connection(ConnectionId=connection_id)
-            return {"statusCode": 401, "body": "Connection not registered"}
+        # Query all current connections for the therapist
+        existing = table.query(
+            IndexName="TherapistIdIndex",
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
+        ).get("Items", [])
 
-        # Delete old (unauthenticated) record
-        table.delete_item(
-            Key={
-                "therapist_id": items[0]["therapist_id"],
-                "connection_id": connection_id
-            }
-        )
+        # Remove any other authenticated connections
+        for conn in existing:
+            if conn["connection_id"] != connection_id and conn.get("authenticated") is True:
+                table.delete_item(Key={"connection_id": conn["connection_id"]})
 
-        # Put new authenticated record
+        # Update the unauthenticated record to mark as authenticated
         ttl = int(time.time()) + int(os.environ.get("AUTHENTICATED_TTL_SECONDS", "600"))
-        table.put_item(Item={
-            "therapist_id": therapist_id,
-            "connection_id": connection_id,
-            "authenticated": True,
-            "ttl": ttl
-        })
+        table.update_item(
+            Key={"connection_id": connection_id},
+            UpdateExpression="SET therapist_id = :tid, authenticated = :auth, #ttl = :ttl",
+            ExpressionAttributeValues={
+                ":tid": therapist_id,
+                ":auth": True,
+                ":ttl": ttl
+            },
+            ExpressionAttributeNames={
+                "#ttl": "ttl"
+            },
+            ConditionExpression="attribute_exists(connection_id)"
+        )
 
         return {"statusCode": 200, "body": "Authenticated"}
 
     except Exception as e:
         print(f"Auth error: {e}")
+        # Optionally close the connection if the record doesn't exist
+        try:
+            gatewayapi.delete_connection(ConnectionId=connection_id)
+        except Exception as close_err:
+            print(f"Failed to close connection: {close_err}")
         return {"statusCode": 401, "body": "Unauthorized"}

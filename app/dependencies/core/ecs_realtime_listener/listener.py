@@ -46,6 +46,7 @@ def publish_to_external_service(payload):
 
         # Query all connections for the therapist
         response = table.query(
+            IndexName="TherapistIdIndex",
             KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
         )
         all_connections = response.get("Items", [])
