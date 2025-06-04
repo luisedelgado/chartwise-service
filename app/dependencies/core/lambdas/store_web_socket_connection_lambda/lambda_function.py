@@ -10,11 +10,12 @@ def lambda_handler(event, context):
 
     try:
         ttl = int(time.time()) + int(os.environ.get("UNAUTHENTICATED_TTL_SECONDS", "60"))
-
         table.put_item(Item={
+            "therapist_id": f"unauthenticated" ,
             "connection_id": connection_id,
             "authenticated": False,
-            "ttl": ttl,
+            "connected_at": int(time.time()),
+            "ttl": ttl
         })
 
         return {"statusCode": 200, "body": "Connected"}

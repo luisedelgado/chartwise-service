@@ -4,18 +4,18 @@ import time
 import boto3
 import jwt
 from jwt import PyJWKClient
+from boto3.dynamodb.conditions import Key
 
 # Cognito issuer and JWKS setup
-COGNITO_ISSUER = f"https://cognito-idp.{os.environ['AWS_SERVICES_REGION']}.amazonaws.com/{os.environ['AWS_COGNITO_USER_POOL_ID']}"
+COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get('AWS_SERVICES_REGION')}.amazonaws.com/{os.environ.get('AWS_COGNITO_USER_POOL_ID')}"
 JWKS_URL = f"{COGNITO_ISSUER}/.well-known/jwks.json"
 
-# AWS clients
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ["TABLE_NAME"])
+table = dynamodb.Table(os.environ.get("TABLE_NAME"))
 
 gatewayapi = boto3.client(
     "apigatewaymanagementapi",
-    endpoint_url=f"https://{os.environ['WEBSOCKET_DOMAIN']}/{os.environ['WEBSOCKET_STAGE']}"
+    endpoint_url=f"https://{os.environ.get('WEBSOCKET_DOMAIN')}/{os.environ.get('WEBSOCKET_STAGE')}"
 )
 
 def lambda_handler(event, context):
@@ -34,43 +34,48 @@ def lambda_handler(event, context):
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=os.environ["COGNITO_APP_CLIENT_ID"],
+            audience=os.environ.get("COGNITO_APP_CLIENT_ID"),
             issuer=COGNITO_ISSUER
         )
         therapist_id = decoded["sub"]
+        ttl = int(time.time()) + int(os.environ.get("AUTHENTICATED_TTL_SECONDS", "600"))
 
-        # Query all current connections for the therapist
-        existing = table.query(
-            IndexName="TherapistIdIndex",
-            KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
+        # Read the unauthenticated record
+        unauth_key = {"therapist_id": "unauthenticated", "connection_id": connection_id}
+        record = table.get_item(Key=unauth_key).get("Item")
+
+        if not record:
+            raise ValueError("Unauthenticated connection not found")
+
+        # Delete old authenticated connections for this therapist (optional)
+        old_connections = table.query(
+            KeyConditionExpression=Key("therapist_id").eq(therapist_id)
         ).get("Items", [])
 
-        # Remove any other authenticated connections
-        for conn in existing:
+        for conn in old_connections:
             if conn["connection_id"] != connection_id and conn.get("authenticated") is True:
-                table.delete_item(Key={"connection_id": conn["connection_id"]})
+                table.delete_item(Key={
+                    "therapist_id": therapist_id,
+                    "connection_id": conn["connection_id"]
+                })
 
-        # Update the unauthenticated record to mark as authenticated
-        ttl = int(time.time()) + int(os.environ.get("AUTHENTICATED_TTL_SECONDS", "600"))
-        table.update_item(
-            Key={"connection_id": connection_id},
-            UpdateExpression="SET therapist_id = :tid, authenticated = :auth, #ttl = :ttl",
-            ExpressionAttributeValues={
-                ":tid": therapist_id,
-                ":auth": True,
-                ":ttl": ttl
-            },
-            ExpressionAttributeNames={
-                "#ttl": "ttl"
-            },
-            ConditionExpression="attribute_exists(connection_id)"
-        )
+        # Write new record under authenticated therapist_id
+        table.put_item(Item={
+            "therapist_id": therapist_id,
+            "connection_id": connection_id,
+            "authenticated": True,
+            "connected_at": record.get("connected_at", int(time.time())),
+            "authenticated_at": int(time.time()),
+            "ttl": ttl
+        })
+
+        # Delete the original unauthenticated record
+        table.delete_item(Key=unauth_key)
 
         return {"statusCode": 200, "body": "Authenticated"}
 
     except Exception as e:
         print(f"Auth error: {e}")
-        # Optionally close the connection if the record doesn't exist
         try:
             gatewayapi.delete_connection(ConnectionId=connection_id)
         except Exception as close_err:
