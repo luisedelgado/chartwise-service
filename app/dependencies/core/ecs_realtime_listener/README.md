@@ -16,6 +16,7 @@ aws ecr get-login-password \
 ## Command for pushing to ECR
 ```
 export TAG=realtime-listener-$(date +%Y%m%d%H%M) && docker buildx build \
+  --no-cache \
   --platform linux/amd64 \
   -t 637423642366.dkr.ecr.us-east-2.amazonaws.com/chartwise-realtime-listener:$TAG \
   --push \
