@@ -6,3 +6,4 @@ storage/index_store.json
 model_cache/
 .vscode/chartwise-service.code-workspace
 *.pem
+session-manager-plugin.pkg

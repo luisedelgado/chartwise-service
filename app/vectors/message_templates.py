@@ -365,7 +365,7 @@ class PromptCrafter:
                 "Provide the following:\n\n"
                 "1. A set of recent topics, each with its density percentage. There should not be more than 3 topics.\n"
                 "2. Ensure the topics' percentages total up to exactly 100%. Double-check this. \n"
-                "3. Each topic's length should be under 25 characters.\n\n"
+                "3. Each topic's length should be 23 characters or less.\n\n"
                 "The topics must be extracted directly from the content in the session notes, exactly as they are presented, without any form of interpretation, rephrasing, or additional analysis. "
                 "Do not infer or generate new topics beyond what is explicitly mentioned in the notes."
                 "Return a JSON object with one key: `topics`. The value should be an array of up to three objects, each with:\n"
@@ -401,7 +401,7 @@ class PromptCrafter:
             return (
                 f"We have provided context information below.\n---------------------\n{context}\n---------------------\n"
                 f"{patient_info} "
-                f"It is very important that each topic is written using language code {language_code}, and that it remain under 25 characters of length. "
+                f"It is very important that each topic is written using language code {language_code}, and that its length is 23 characters or less. "
                 f"Given this information, please answer the practitioner's question:\n{query_input}"
             )
         except Exception as e:

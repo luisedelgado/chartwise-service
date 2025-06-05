@@ -9,13 +9,17 @@ import redis
 
 SECRET_STRING_KEY = "SecretString"
 
-# Initialize at module level
 redis_client = redis.StrictRedis(
     host=os.environ["REDIS_HOST"],
     port=int(os.environ["REDIS_PORT"]),
     password=os.environ["REDIS_AUTH_TOKEN"],
     db=0,
-    decode_responses=True
+    decode_responses=True,
+    ssl=True,
+    ssl_cert_reqs=None,
+    ssl_check_hostname=False,
+    socket_connect_timeout=10,
+    socket_timeout=10
 )
 
 def get_secret(secret_name: str) -> dict:
