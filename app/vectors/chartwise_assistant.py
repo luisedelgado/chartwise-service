@@ -15,10 +15,11 @@ from ..dependencies.api.pinecone_session_date_override import (
 from ..internal.schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
 from ..internal.utilities import datetime_handler
 
-TOPICS_CONTEXT_SESSIONS_CAP = 6
-QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 6
+TOPICS_CONTEXT_SESSIONS_CAP = 4
+QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 4
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 4
+MINIMUM_TOKEN_LIMIT = 512
 
 class ListQuestionSuggestionsSchema(BaseModel):
     questions: list[str] = Field(..., min_items=2, max_items=2)
