@@ -5,8 +5,18 @@ import os
 import json
 import psycopg2
 import select
+import redis
 
 SECRET_STRING_KEY = "SecretString"
+
+# Initialize at module level
+redis_client = redis.StrictRedis(
+    host=os.environ["REDIS_HOST"],
+    port=int(os.environ["REDIS_PORT"]),
+    password=os.environ["REDIS_AUTH_TOKEN"],
+    db=0,
+    decode_responses=True
+)
 
 def get_secret(secret_name: str) -> dict:
     try:
@@ -40,22 +50,13 @@ def get_db_connection():
 def publish_to_external_service(payload):
     try:
         therapist_id = payload["therapist_id"]
+        redis_key = f"therapist:{therapist_id}:connections"
 
-        dynamodb = boto3.resource("dynamodb")
-        table = dynamodb.Table(os.environ.get("WEBSOCKET_CONNECTIONS_TABLE"))
+        # Redis returns a set of connection IDs (assumes you use Redis sets)
+        connection_ids = redis_client.smembers(redis_key)
 
-        # Query all connections for the therapist
-        response = table.query(
-            IndexName="TherapistIdIndex",
-            KeyConditionExpression=boto3.dynamodb.conditions.Key("therapist_id").eq(therapist_id)
-        )
-        all_connections = response.get("Items", [])
-
-        # Filter to authenticated ones only
-        connections = [c for c in all_connections if c.get("authenticated") is True]
-
-        if not connections:
-            print(f"No authenticated WebSocket connections for therapist_id: {therapist_id}")
+        if not connection_ids:
+            print(f"No active WebSocket connections in Redis for therapist_id: {therapist_id}")
             return
 
         gatewayapi = boto3.client(
@@ -63,8 +64,7 @@ def publish_to_external_service(payload):
             endpoint_url=f"https://{os.environ.get('WEBSOCKET_DOMAIN')}/{os.environ.get('WEBSOCKET_STAGE')}"
         )
 
-        for connection in connections:
-            conn_id = connection["connection_id"]
+        for conn_id in connection_ids:
             try:
                 gatewayapi.post_to_connection(
                     ConnectionId=conn_id,
@@ -72,9 +72,10 @@ def publish_to_external_service(payload):
                 )
                 print(f"✅ Sent update to connection {conn_id}")
             except gatewayapi.exceptions.GoneException:
-                print(f"⚠️ Connection {conn_id} is stale — should be cleaned up by $disconnect.")
+                print(f"⚠️ Connection {conn_id} is stale — let $disconnect clean it up")
             except Exception as e:
                 print(f"❌ Failed to send to {conn_id}: {e}")
+
     except Exception as e:
         print(f"[publish_to_external_service] Unexpected error: {e}")
 
