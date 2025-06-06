@@ -70,6 +70,7 @@ def publish_to_external_service(payload):
 
         for conn_id in connection_ids:
             try:
+                print(f"Sending update to connection {conn_id}")
                 gatewayapi.post_to_connection(
                     ConnectionId=conn_id,
                     Data=json.dumps(payload).encode("utf-8")
