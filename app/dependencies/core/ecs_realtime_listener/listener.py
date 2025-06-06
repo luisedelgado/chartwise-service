@@ -54,10 +54,10 @@ def get_db_connection():
 def publish_to_external_service(payload):
     try:
         therapist_id = payload["therapist_id"]
-        redis_key = f"therapist:{therapist_id}:connections"
-
-        # Redis returns a set of connection IDs (assumes you use Redis sets)
-        connection_ids = redis_client.smembers(redis_key)
+        connection_ids = [
+            key.split(":")[-1]
+            for key in redis_client.scan_iter(f"therapist:{therapist_id}:connection:*")
+        ]
 
         if not connection_ids:
             print(f"No active WebSocket connections in Redis for therapist_id: {therapist_id}")
@@ -69,6 +69,11 @@ def publish_to_external_service(payload):
         )
 
         for conn_id in connection_ids:
+            key = f"therapist:{therapist_id}:connection:{conn_id}"
+            if not redis_client.exists(key):
+                print(f"⏱️ Skipping expired key for connection id: {conn_id}")
+                continue
+
             try:
                 print(f"Sending update to connection {conn_id}")
                 gatewayapi.post_to_connection(
@@ -77,7 +82,8 @@ def publish_to_external_service(payload):
                 )
                 print(f"✅ Sent update to connection {conn_id}")
             except gatewayapi.exceptions.GoneException:
-                print(f"⚠️ Connection {conn_id} is stale — let $disconnect clean it up")
+                redis_client.delete(key)
+                print(f"⏱️ Cleaned up expired key with connection id: {conn_id}")
             except Exception as e:
                 print(f"❌ Failed to send to {conn_id}: {e}")
 

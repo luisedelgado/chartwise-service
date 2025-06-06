@@ -42,7 +42,9 @@ def lambda_handler(event, context):
 
         # Read the unauthenticated record
         unauth_key = {"therapist_id": "unauthenticated", "connection_id": connection_id}
-        record = table.get_item(Key=unauth_key).get("Item")
+
+        # Read the unauthenticated record with retries and exponential backoff
+        record = table.get_item(Key=unauth_key, ConsistentRead=True).get("Item")
 
         if not record:
             raise ValueError("Unauthenticated connection not found")

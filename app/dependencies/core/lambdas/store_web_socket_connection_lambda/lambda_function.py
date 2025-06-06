@@ -9,6 +9,7 @@ def lambda_handler(event, context):
     connection_id = event["requestContext"]["connectionId"].strip()
 
     try:
+        print(f"[$connect] Writing item: therapist_id=unauthenticated, connection_id={connection_id}")
         ttl = int(time.time()) + int(os.environ.get("UNAUTHENTICATED_TTL_SECONDS", "60"))
         table.put_item(Item={
             "therapist_id": f"unauthenticated" ,
