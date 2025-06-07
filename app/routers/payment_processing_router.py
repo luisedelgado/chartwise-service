@@ -1189,14 +1189,29 @@ class PaymentProcessingRouter:
             is_new_customer = (0 == len(therapist_query_data))
 
             # Get customer data
-            billing_interval = subscription['items']['data'][0]['plan']['interval']
-            current_period_end = datetime.fromtimestamp(subscription["current_period_end"])
+            subscription_items = subscription.get('items', {})
+            subscription_data = subscription_items.get('data', [])
+            billing_interval = None
+            if subscription_data:
+                plan_data = subscription_data[0].get('plan', {})
+                billing_interval = plan_data.get('interval')
+
+            current_period_end = datetime.fromtimestamp(subscription.get("current_period_end", 0))
             current_billing_period_end_date = current_period_end.date()
             customer_id = subscription.get('customer', None)
             subscription_id = subscription.get('id', None)
-            product_id = subscription['items']['data'][0]['price']['product']
+
+            product_id = None
+            if subscription_data:
+                price_data = subscription_data[0].get('price', {})
+                product_id = price_data.get('product')
+
+            if not product_id:
+                raise ValueError("Missing required product_id from subscription data")
+
             product_data = stripe_client.retrieve_product(product_id)
-            stripe_product_name = product_data['metadata']['product_name']
+            product_metadata = product_data.get('metadata', {})
+            stripe_product_name = product_metadata.get('product_name')
             tier_name = subscription_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
             now_timestamp = datetime.now().date()
 
