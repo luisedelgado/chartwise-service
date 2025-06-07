@@ -352,7 +352,7 @@ class ChartWiseAssistant:
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
-            logging.info(f"[fetch_recent_topics] Session dates override: {json.dumps(session_dates_override)}")
+            logging.info(f"[fetch_recent_topics] Session dates override: {session_dates_override}")
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
@@ -427,11 +427,12 @@ class ChartWiseAssistant:
         request – the upstream request object.
         """
         try:
+            recent_topics_json_str = str(recent_topics.model_dump_json())
             query_input = (
                 "Please help me analyze the following set of topics that have recently come up during "
-                f"my sessions with {patient_name}, my patient:\n{str(recent_topics.model_dump_json())}"
+                f"my sessions with {patient_name}, my patient:\n{recent_topics_json_str}"
             )
-            logging.info(f"[generate_recent_topics_insights] Recent topics JSON length: {len(str(recent_topics.model_dump_json()))}")
+            logging.info(f"[generate_recent_topics_insights] Recent topics JSON length: {len(recent_topics_json_str)}")
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 request=request,
@@ -439,7 +440,7 @@ class ChartWiseAssistant:
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
-            logging.info(f"[generate_recent_topics_insights] Session dates override: {json.dumps(session_dates_override)}")
+            logging.info(f"[generate_recent_topics_insights] Session dates override: {session_dates_override}")
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
