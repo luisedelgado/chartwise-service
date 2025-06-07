@@ -1,4 +1,4 @@
-import asyncio, inspect, json, tiktoken
+import asyncio, inspect, json, tiktoken, logging
 
 from fastapi import Request
 from pydantic import BaseModel, Field
@@ -352,6 +352,7 @@ class ChartWiseAssistant:
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
+            logging.info(f"[fetch_recent_topics] Session dates override: {json.dumps(session_dates_override)}")
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
@@ -366,6 +367,7 @@ class ChartWiseAssistant:
                 include_preexisting_history=False,
                 session_dates_overrides=session_dates_override
             )
+            logging.info(f"[fetch_recent_topics] Context length: {len(context)}")
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(
@@ -380,11 +382,15 @@ class ChartWiseAssistant:
                 scenario=PromptScenario.TOPICS,
                 language_code=language_code
             )
+            logging.info(f"[fetch_recent_topics] User prompt length: {len(user_prompt)}")
+            logging.info(f"[fetch_recent_topics] System prompt length: {len(system_prompt)}")
+
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 incoming_method=inspect.currentframe().f_code.co_name,
             )
+            logging.info(f"[fetch_recent_topics] Calculated max_tokens: {max_tokens}")
 
             return await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
@@ -395,6 +401,7 @@ class ChartWiseAssistant:
                 expected_output_model=ListRecentTopicsSchema,
             )
         except Exception as e:
+            logging.error(f"[fetch_recent_topics] Error occurred: {str(e)}")
             raise RuntimeError(e) from e
 
     async def generate_recent_topics_insights(
@@ -424,6 +431,7 @@ class ChartWiseAssistant:
                 "Please help me analyze the following set of topics that have recently come up during "
                 f"my sessions with {patient_name}, my patient:\n{str(recent_topics.model_dump_json())}"
             )
+            logging.info(f"[generate_recent_topics_insights] Recent topics JSON length: {len(str(recent_topics.model_dump_json()))}")
 
             session_dates_override = await self._retrieve_n_most_recent_session_dates(
                 request=request,
@@ -431,6 +439,7 @@ class ChartWiseAssistant:
                 patient_id=patient_id,
                 n=TOPICS_CONTEXT_SESSIONS_CAP
             )
+            logging.info(f"[generate_recent_topics_insights] Session dates override: {json.dumps(session_dates_override)}")
 
             openai_client = dependency_container.inject_openai_client()
             context = await dependency_container.inject_pinecone_client().get_vector_store_context(
@@ -445,6 +454,7 @@ class ChartWiseAssistant:
                 include_preexisting_history=False,
                 session_dates_overrides=session_dates_override
             )
+            logging.info(f"[generate_recent_topics_insights] Context length: {len(context)}")
 
             prompt_crafter = PromptCrafter()
             user_prompt = prompt_crafter.get_user_message_for_scenario(
@@ -459,11 +469,15 @@ class ChartWiseAssistant:
                 scenario=PromptScenario.TOPICS_INSIGHTS,
                 language_code=language_code
             )
+            logging.info(f"[generate_recent_topics_insights] User prompt length: {len(user_prompt)}")
+            logging.info(f"[generate_recent_topics_insights] System prompt length: {len(system_prompt)}")
+
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 incoming_method=inspect.currentframe().f_code.co_name,
             )
+            logging.info(f"[generate_recent_topics_insights] Calculated max_tokens: {max_tokens}")
 
             return await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
@@ -473,6 +487,7 @@ class ChartWiseAssistant:
                 ],
             )
         except Exception as e:
+            logging.error(f"[generate_recent_topics_insights] Error occurred: {str(e)}")
             raise RuntimeError(e) from e
 
     async def generate_attendance_insights(self,
