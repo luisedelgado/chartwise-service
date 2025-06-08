@@ -1,3 +1,4 @@
+import logging
 import os
 
 from .routers.assistant_router import AssistantRouter
@@ -6,6 +7,11 @@ from .routers.image_processing_router import ImageProcessingRouter
 from .routers.payment_processing_router import PaymentProcessingRouter
 from .routers.security_router import SecurityRouter
 from .service_coordinator import EndpointServiceCoordinator
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 if os.environ.get("DEBUG_MODE") == "true":
     import debugpy
