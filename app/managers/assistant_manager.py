@@ -1257,6 +1257,7 @@ class AssistantManager:
                 environment=environment,
                 background_tasks=background_tasks,
                 request=request,
+                patient_id=patient_id,
             )
 
         vector_ids = await dependency_container.inject_pinecone_client().insert_session_vectors(
@@ -1336,6 +1337,7 @@ class AssistantManager:
                 environment=environment,
                 background_tasks=background_tasks,
                 request=request,
+                patient_id=patient_id,
             )
 
         await dependency_container.inject_pinecone_client().update_session_vectors(
@@ -1666,6 +1668,7 @@ class AssistantManager:
         environment: str,
         background_tasks: BackgroundTasks,
         request: Request,
+        patient_id: str,
     ):
         try:
             mini_summary = await self.chartwise_assistant.create_session_mini_summary(
@@ -1692,7 +1695,8 @@ class AssistantManager:
                 session_id=session_id,
                 exception=e,
                 environment=environment,
-                therapist_id=therapist_id
+                therapist_id=therapist_id,
+                patient_id=patient_id,
             )
             dependency_container.inject_resend_client().send_internal_alert(alert=eng_alert)
             raise RuntimeError(e) from e

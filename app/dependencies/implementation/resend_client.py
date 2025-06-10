@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from ..api.resend_base_class import ResendBaseClass
 from ...internal.alerting.internal_alert import (
     CustomerRelationsAlert,
+    EngineeringAlert,
     InternalAlert,
     InternalAlertCategory,
     MediaJobProcessingAlert,
@@ -72,9 +73,9 @@ class ResendClient(ResendBaseClass):
                     storage_filepath=storage_filepath,
                 )
             else:
-                # Not tracking any `activity_details` for an internal eng alert.
-                activity_details = ""
                 assert alert.category == InternalAlertCategory.ENGINEERING_ALERT, f"Untracked alert category: {alert.category.value}."
+                alert: EngineeringAlert = alert
+                activity_details = f"<li><b>Patient ID:</b> {alert.patient_id}</li>"
 
             body = "".join([
                 f"<b>{alert.description}</b>",
