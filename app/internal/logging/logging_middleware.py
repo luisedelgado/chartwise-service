@@ -9,6 +9,7 @@ from starlette.requests import Request
 from ..alerting.internal_alert import EngineeringAlert
 from ..schemas import PROD_ENVIRONMENT
 from ...dependencies.dependency_container import (dependency_container, AwsDbBaseClass)
+from ...internal.utilities.fire_and_forget_caller import fire_and_forget
 from ...internal.utilities.general_utilities import retrieve_ip_address
 from ...routers.assistant_router import AssistantRouter
 from ...routers.audio_processing_router import AudioProcessingRouter
@@ -17,7 +18,12 @@ from ...routers.image_processing_router import ImageProcessingRouter
 class TimingMiddleware(BaseHTTPMiddleware):
 
     VALID_API_METHODS = ["POST", "PUT", "GET", "DELETE"]
-    PHI_ENDPOINTS = [AssistantRouter.PATIENTS_ENDPOINT,
+    PHI_ENDPOINTS = [AssistantRouter.ATTENDANCE_INSIGHTS_ENDPOINT,
+                     AssistantRouter.BRIEFINGS_ENDPOINT,
+                     AssistantRouter.PATIENTS_ENDPOINT,
+                     AssistantRouter.QUERIES_ENDPOINT,
+                     AssistantRouter.QUESTION_SUGGESTIONS_ENDPOINT,
+                     AssistantRouter.RECENT_TOPICS_ENDPOINT,
                      AssistantRouter.SESSIONS_ENDPOINT,
                      AudioProcessingRouter.DIARIZATION_ENDPOINT,
                      AudioProcessingRouter.NOTES_TRANSCRIPTION_ENDPOINT,
@@ -40,7 +46,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self,
         request: Request,
-        call_next
+        call_next,
     ):
         # Detect stale data, and clear if needed
         cls = type(self)
@@ -55,9 +61,11 @@ class TimingMiddleware(BaseHTTPMiddleware):
         influx_client = dependency_container.inject_influx_client()
 
         environment = os.environ.get("ENVIRONMENT")
-        if (environment == PROD_ENVIRONMENT
-            and request_method in cls.VALID_API_METHODS
-            and request_url_path not in cls.IRRELEVANT_PATHS):
+        if self._should_log_request(
+            environment=environment,
+            request_method=request_method,
+            request_url_path=request_url_path
+        ):
             await run_in_threadpool(
                 influx_client.log_api_request,
                 endpoint_name=request_url_path,
@@ -70,7 +78,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         # Calculate the response time in milliseconds
         end_time = time.perf_counter()
-        response_time = (end_time - start_time) * 1000
+        response_time_ms = (end_time - start_time) * 1000
 
         session_id = getattr(
             request.state,
@@ -93,14 +101,16 @@ class TimingMiddleware(BaseHTTPMiddleware):
             )
         )
 
-        if (environment == PROD_ENVIRONMENT
-            and request_method in cls.VALID_API_METHODS
-            and request_url_path not in cls.IRRELEVANT_PATHS):
+        if self._should_log_request(
+            environment=environment,
+            request_method=request_method,
+            request_url_path=request_url_path
+        ):
             await run_in_threadpool(
                 influx_client.log_api_response,
                 endpoint_name=request_url_path,
                 method=request_method,
-                response_time=response_time,
+                response_time=response_time_ms,
                 status_code=response.status_code,
                 session_id=session_id,
                 session_report_id=getattr(
@@ -115,7 +125,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
         # Log PHI activity
         if (environment == PROD_ENVIRONMENT
             and request_method in cls.VALID_API_METHODS
-            and request_url_path in cls.PHI_ENDPOINTS):
+            and self._is_phi_endpoint(request_url_path)):
             try:
                 assert len(therapist_id or '') > 0, "Therapist ID is required."
             except Exception as e:
@@ -135,13 +145,28 @@ class TimingMiddleware(BaseHTTPMiddleware):
                     "ip_address": retrieve_ip_address(request),
                 }
 
+                def on_log_audit_error(e: Exception):
+                    resend_client = dependency_container.inject_resend_client()
+                    resend_client.send_internal_alert(
+                        alert=EngineeringAlert(
+                            description=f"Failed to log PHI activity: {str(e)}",
+                            session_id=session_id,
+                            environment=os.environ.get("ENVIRONMENT"),
+                            exception=e,
+                            therapist_id=therapist_id,
+                            patient_id=patient_id,
+                        )
+                    )
+
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-                await run_in_threadpool(
-                    aws_db_client.insert,
-                    user_id=therapist_id,
-                    request=request,
-                    payload=payload,
-                    table_name="audit_logs",
+                fire_and_forget(
+                    aws_db_client.insert(
+                        user_id=therapist_id,
+                        request=request,
+                        payload=payload,
+                        table_name="audit_logs"
+                    ),
+                    on_error=on_log_audit_error
                 )
             except Exception as e:
                 # Fail silently but send an internal alert.
@@ -158,3 +183,26 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 )
                 pass
         return response
+
+    # Private methods
+
+    def _is_phi_endpoint(
+        self,
+        request_url_path: str,
+    ) -> bool:
+        for phi_endpoint in self.PHI_ENDPOINTS:
+            if request_url_path.startswith(phi_endpoint):
+                return True
+        return False
+
+    def _should_log_request(
+        self,
+        environment: str,
+        request_method: str,
+        request_url_path: str,
+    ) -> bool:
+        return (
+            environment == PROD_ENVIRONMENT
+            and request_method in self.VALID_API_METHODS
+            and request_url_path not in self.IRRELEVANT_PATHS
+        )
