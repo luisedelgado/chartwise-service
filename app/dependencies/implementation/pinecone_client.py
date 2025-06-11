@@ -740,18 +740,10 @@ class PineconeClient(PineconeBaseClass):
         return f"{user_id}-{patient_id}"
 
     def _get_bucket_for_user(self, user_id: str) -> str:
-        # Combine environment and user_id for environment-specific hashing
-        environment = os.environ.get('ENVIRONMENT')
-        key = f"{environment}:{user_id}"
-        user_int = int(hashlib.md5(key.encode()).hexdigest(), 16)
+        user_int = int(hashlib.md5(user_id.encode()).hexdigest(), 16)
 
-        # Use modulo to determine the bucket
-        if environment == "prod":
-            bucket_count = 18
-            offset = 3  # Start from index 3 onward for prod
-        else:
-            bucket_count = 2  # Limit to 2 buckets for staging
-            offset = 1
+        bucket_count = 20
+        offset = 1
 
         index_number = (user_int % bucket_count) + offset
         return str(index_number)
