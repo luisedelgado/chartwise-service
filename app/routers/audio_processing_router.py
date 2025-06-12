@@ -210,7 +210,7 @@ class AudioProcessingRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        request.state.patient_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
@@ -359,7 +359,7 @@ class AudioProcessingRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        request.state.patient_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
@@ -492,7 +492,7 @@ class AudioProcessingRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        request.state.patient_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
@@ -593,7 +593,7 @@ class AudioProcessingRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        request.state.patient_id = session_id
+        request.state.patient_id = patient_id
         if not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
