@@ -47,8 +47,10 @@ class ImageProcessingManager(MediaProcessingManager):
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
-            doc_id = await dependency_container.inject_docupanda_client().upload_image(image_filepath=image_copy_path,
-                                                                                       image_filename=image.filename)
+            doc_id = await dependency_container.inject_docupanda_client().upload_image(
+                image_filepath=image_copy_path,
+                image_filename=image.filename
+            )
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             insert_result = await aws_db_client.insert(
