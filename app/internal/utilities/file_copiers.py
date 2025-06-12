@@ -1,3 +1,4 @@
+import mimetypes
 import os, shutil
 
 from datetime import datetime
@@ -48,6 +49,8 @@ async def make_image_pdf_copy(
         copy_extension = copy_extension.lower()
         if copy_extension == PDF_EXTENSION:
             # It's already a PDF, we can return as is.
+            return copy_file_result
+        elif mimetypes.guess_extension(image.content_type).lower() == PDF_EXTENSION:
             return copy_file_result
 
         # We need to make a PDF copy.
