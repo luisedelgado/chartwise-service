@@ -8,6 +8,7 @@ class OpenAIBaseClass(ABC):
     LLM_MODEL = "gpt-4o-mini"
     EMBEDDING_MODEL = "text-embedding-3-small"
     GPT_4O_MINI_MAX_OUTPUT_TOKENS = 16000
+    GPT_4O_MINI_CONTEXT_WINDOW = 128000
     chat_history: list[BaseMessage] = []
 
     @abstractmethod

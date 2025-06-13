@@ -21,7 +21,6 @@ TOPICS_CONTEXT_SESSIONS_CAP = 4
 QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 4
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 4
-MINIMUM_TOKEN_LIMIT = 512
 
 class ListQuestionSuggestionsSchema(BaseModel):
     questions: list[str] = Field(..., min_items=2, max_items=2)
@@ -93,7 +92,6 @@ class ChartWiseAssistant:
                 max_tokens = await self.calculate_max_tokens(
                     system_prompt=reformulate_question_system_prompt,
                     user_prompt=reformulate_question_user_prompt,
-                    incoming_method=inspect.currentframe().f_code.co_name,
                 )
 
                 return await openai_client.trigger_async_chat_completion(
@@ -115,7 +113,6 @@ class ChartWiseAssistant:
                 max_tokens = await self.calculate_max_tokens(
                     system_prompt=extract_time_tokens_system_prompt,
                     user_prompt=extract_time_tokens_user_prompt,
-                    incoming_method=inspect.currentframe().f_code.co_name,
                 )
 
                 return await openai_client.trigger_async_chat_completion(
@@ -151,7 +148,8 @@ class ChartWiseAssistant:
                 is_first_message_in_conversation=is_first_message_in_conversation,
                 patient_name=patient_name,
                 patient_gender=patient_gender,
-                last_session_date=last_session_date
+                last_session_date=last_session_date,
+                calculate_max_tokens=self.calculate_max_tokens
             ):
                 yield part
 
@@ -232,7 +230,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await openai_client.trigger_async_chat_completion(
@@ -307,7 +304,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await openai_client.trigger_async_chat_completion(
@@ -388,7 +384,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
             logging.info(f"[fetch_recent_topics] Calculated max_tokens: {max_tokens}")
 
@@ -476,7 +471,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
             logging.info(f"[generate_recent_topics_insights] Calculated max_tokens: {max_tokens}")
 
@@ -521,7 +515,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await dependency_container.inject_openai_client().trigger_async_chat_completion(
@@ -554,7 +547,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await dependency_container.inject_openai_client().trigger_async_chat_completion(
@@ -589,7 +581,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await openai_client.trigger_async_chat_completion(
@@ -627,7 +618,6 @@ class ChartWiseAssistant:
             max_tokens = await self.calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                incoming_method=inspect.currentframe().f_code.co_name,
             )
 
             return await dependency_container.inject_openai_client().trigger_async_chat_completion(
@@ -645,31 +635,15 @@ class ChartWiseAssistant:
     async def calculate_max_tokens(
         self,
         system_prompt: str,
-        user_prompt: str,
-        incoming_method: str) -> int:
+        user_prompt: str) -> int:
+        openai_client = dependency_container.inject_openai_client()
         prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{system_prompt}\n{user_prompt}"))
-        max_output_tokens = dependency_container.inject_openai_client().GPT_4O_MINI_MAX_OUTPUT_TOKENS
-        max_tokens = max_output_tokens - prompt_tokens
 
-        if max_tokens < MINIMUM_TOKEN_LIMIT:
-            eng_alert = EngineeringAlert(
-                description="Prompt too long is resulting in insufficient space for response",
-                session_id=session_container.session_id,
-                environment=session_container.environment,
-                therapist_id=session_container.user_id,
-                exception=Exception(
-                    f'''Prompt too long is resulting in insufficient space for response.\n
-                    Incoming method: {incoming_method}.\n
-                    Tokens: {prompt_tokens}.\n
-                    Max tokens: {max_tokens}.\n
-                    Total limit: {max_output_tokens}.\n
-                    '''
-                )
-            )
-            dependency_container.inject_resend_client().send_internal_alert(
-                alert=eng_alert
-            )
+        # Calculate how much space is left in the context window
+        available_context = openai_client.GPT_4O_MINI_CONTEXT_WINDOW - prompt_tokens
 
+        # Don't exceed OpenAI's max output limit
+        max_tokens = min(available_context, openai_client.GPT_4O_MINI_MAX_OUTPUT_TOKENS)
         return max_tokens
 
     async def _fetch_context_based_on_query_input(

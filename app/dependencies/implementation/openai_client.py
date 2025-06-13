@@ -2,7 +2,7 @@ import asyncio
 import os
 import tiktoken
 
-from typing import AsyncIterable, Awaitable
+from typing import AsyncIterable, Awaitable, Callable
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage, SystemMessage
@@ -61,6 +61,7 @@ class OpenAIClient(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
+        calculate_max_tokens: Callable[[str, str], int],
         last_session_date: str = None
     ) -> AsyncIterable[str]:
         try:
@@ -80,13 +81,15 @@ class OpenAIClient(OpenAIBaseClass):
                 chat_history_included=(not is_first_message_in_conversation)
             )
 
-            input_window_content = "\n".join(
-                [system_prompt,
-                (await self.flatten_chat_history()),
-                user_prompt]
+            user_prompt_with_chat_history = "\n".join([
+                    (await self.flatten_chat_history()),
+                    user_prompt
+                ]
             )
-            prompt_tokens = len(tiktoken.get_encoding("o200k_base").encode(f"{input_window_content}"))
-            max_tokens = self.GPT_4O_MINI_MAX_OUTPUT_TOKENS - prompt_tokens
+            max_tokens = calculate_max_tokens(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt_with_chat_history,
+            )
 
             callback = AsyncIteratorCallbackHandler()
             llm_client = ChatOpenAI(

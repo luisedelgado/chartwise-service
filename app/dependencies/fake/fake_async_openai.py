@@ -4,7 +4,7 @@ from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from pydantic import BaseModel
-from typing import AsyncIterable, Awaitable
+from typing import AsyncIterable, Awaitable, Callable
 
 from ..api.openai_base_class import OpenAIBaseClass
 
@@ -85,6 +85,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
+        calculate_max_tokens: Callable[[str, str], int],
         last_session_date: str = None
     ) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
