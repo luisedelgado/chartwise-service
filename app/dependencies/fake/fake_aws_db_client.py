@@ -92,6 +92,8 @@ class FakeAwsDbClient(AwsDbBaseClass):
                 }
             ]
         if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
+            if "is_soft_deleted" in payload and payload.get("is_soft_deleted"):
+                self.invoked_delete_patients = True
             return [
                 {
                     "id": self.FAKE_PATIENT_ID,
@@ -312,13 +314,6 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "patient_id": self.FAKE_PATIENT_ID,
                     "therapist_id": self.FAKE_THERAPIST_ID,
                     "session_date": date(2024, 10, 10),
-                },
-            ]
-        if table_name == ENCRYPTED_PATIENTS_TABLE_NAME:
-            self.invoked_delete_patients = True
-            return [
-                {
-                    "id": self.FAKE_SESSION_NOTES_ID,
                 },
             ]
 

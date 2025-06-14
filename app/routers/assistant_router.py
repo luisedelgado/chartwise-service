@@ -1316,31 +1316,24 @@ class AssistantRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
             assert len(user_id or '') > 0, "Missing therapist_id param"
 
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            patient_query = await aws_db_client.select(
+            # Soft-delete the patient given our 6-year HIPAA retention policy.
+            soft_deletion_result = await dependency_container.inject_aws_db_client().update(
                 user_id=user_id,
                 request=request,
-                fields=["*"],
+                payload={
+                    "is_soft_deleted": True,
+                    "soft_deleted_at": datetime.now()
+                },
                 filters={
-                    'therapist_id': user_id,
                     'id': patient_id
                 },
-                table_name=ENCRYPTED_PATIENTS_TABLE_NAME
-            )
-            assert (0 != len(patient_query)), "There isn't a patient-therapist match with the incoming ids."
-
-            # Cascading will take care of deleting the session notes as well.
-            delete_result = await aws_db_client.delete(
-                user_id=user_id,
-                request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
-                filters={
-                    'id': patient_id
-                }
             )
-            assert len(delete_result) > 0, "No patient found with the incoming patient_id"
+            assert len(soft_deletion_result) > 0, "No patient found with the incoming patient_id"
 
-            self._assistant_manager.delete_all_data_for_patient(
+            # Delete all vector data for the patient, since it's not necessary to keep around
+            # when we already have our soft-deleted records in Postgres.
+            self._assistant_manager.delete_all_vector_data_for_single_patient(
                 therapist_id=user_id,
                 patient_id=patient_id
             )

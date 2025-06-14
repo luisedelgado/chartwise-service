@@ -126,7 +126,8 @@ class AssistantManager:
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 fields=["*"],
                 filters={
-                    "id": session_report_id
+                    "id": session_report_id,
+                    "is_soft_deleted": False,
                 }
             )
             return [] if len(response) == 0 else response[0]
@@ -333,24 +334,27 @@ class AssistantManager:
         request: Request,
     ):
         try:
-            # Delete the session notes from DB
-            aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
-            delete_result_data = await aws_db_client.delete(
+            # Soft-delete the session report given our 6-year HIPAA retention policy.
+            soft_deletion_result_data = await dependency_container.inject_aws_db_client().update(
                 user_id=therapist_id,
                 request=request,
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+                payload={
+                    "is_soft_deleted": True,
+                    "soft_deleted_at": datetime.now()
+                },
                 filters={
                     'id': session_report_id
-                }
+                },
             )
-            assert len(delete_result_data) > 0, "No session found with the incoming session_report_id"
-            delete_result_data = delete_result_data[0]
+            assert len(soft_deletion_result_data) > 0, "No session found with the incoming session_report_id"
 
-            therapist_id = str(delete_result_data['therapist_id'])
-            patient_id = str(delete_result_data['patient_id'])
-            session_date = delete_result_data['session_date']
+            therapist_id = str(soft_deletion_result_data[0]['therapist_id'])
+            patient_id = str(soft_deletion_result_data[0]['patient_id'])
+            session_date = soft_deletion_result_data[0]['session_date']
 
-            # Delete vector embeddings
+            # Delete all vector data for the patient, since it's not necessary to keep around
+            # when we already have our soft-deleted records in Postgres.
             background_tasks.add_task(
                 self._delete_vectors_and_generate_insights,
                 therapist_id=therapist_id,
@@ -384,7 +388,8 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 fields=["*"],
                 filters={
-                    "id": patient_id
+                    "id": patient_id,
+                    "is_soft_deleted": False,
                 }
             )
             return [] if len(response) == 0 else response[0]
@@ -405,7 +410,8 @@ class AssistantManager:
                 fields=["*"],
                 order_by=("first_name", "desc"),
                 filters={
-                    "therapist_id": therapist_id
+                    "therapist_id": therapist_id,
+                    "is_soft_deleted": False,
                 }
             )
             return [] if len(response) == 0 else response
@@ -552,7 +558,7 @@ class AssistantManager:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def delete_all_data_for_patient(
+    def delete_all_vector_data_for_single_patient(
         self,
         therapist_id: str,
         patient_id: str
@@ -572,7 +578,7 @@ class AssistantManager:
             # data in our vector db
             pass
 
-    def delete_all_sessions_for_therapist(
+    def delete_all_vector_data_for_patients(
         self,
         user_id: str,
         patient_ids: list[str]
@@ -1720,6 +1726,7 @@ class AssistantManager:
                     "patient_id": patient_id,
                     "session_date__gte": date(year_as_int, 1, 1),
                     "session_date__lte": date(year_as_int, 12, 31),
+                    "is_soft_deleted": False,
                 },
                 order_by=("session_date", "desc"),
             )
@@ -1751,6 +1758,7 @@ class AssistantManager:
                     "patient_id": patient_id,
                     "session_date__gte": start_date,
                     "session_date__lte": now,
+                    "is_soft_deleted": False,
                 },
                 order_by=("session_date", "desc"),
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
@@ -1819,6 +1827,7 @@ class AssistantManager:
                 fields=["*"],
                 filters={
                     "patient_id": patient_id,
+                    "is_soft_deleted": False,
                 },
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 limit=most_recent_n,

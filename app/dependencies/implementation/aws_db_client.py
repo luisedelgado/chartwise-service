@@ -212,11 +212,11 @@ class AwsDbClient(AwsDbBaseClass):
                     conn=conn,
                     user_id=user_id
                 )
-                row = await conn.fetchrow(
+                rows = await conn.fetch(
                     update_query,
                     *all_values
                 )
-                return dict(row) if row else None
+                return [dict(row) for row in rows]
         except Exception as e:
             raise RuntimeError(e) from e
 

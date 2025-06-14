@@ -691,38 +691,48 @@ class SecurityRouter:
                     table_name=SUBSCRIPTION_STATUS_TABLE_NAME
                 )
 
-            # Delete patient data associated with therapist.
-            delete_patients_operation = await aws_db_client.delete(
+            # Soft-delete the patients given our 6-year HIPAA retention policy.
+            soft_delete_patients_operation = await aws_db_client.update(
                 user_id=user_id,
                 request=request,
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
+                payload={
+                    "is_soft_deleted": True,
+                    "soft_deleted_at": datetime.now()
+                },
                 filters={
                     "therapist_id": user_id
                 }
             )
-            patient_ids = [item['id'] for item in delete_patients_operation]
+            patient_ids = [str(item['id']) for item in soft_delete_patients_operation]
 
-            # Delete vectors associated with the deleted patient ids.
-            self._assistant_manager.delete_all_sessions_for_therapist(
-                user_id=user_id,
-                patient_ids=patient_ids
-            )
+            if len(patient_ids) > 0:
+                # Delete all vector data for the patients, since it's not necessary to keep around
+                # when we already have our soft-deleted records in Postgres.
+                self._assistant_manager.delete_all_vector_data_for_patients(
+                    user_id=user_id,
+                    patient_ids=patient_ids
+                )
 
-            account_response_dict = await aws_db_client.select(
+            soft_deletion_result = await aws_db_client.update(
                 user_id=user_id,
                 request=request,
-                fields=["*"],
+                payload={
+                    'is_soft_deleted': True,
+                    'soft_deleted_at': datetime.now()
+                },
                 filters={
                     'id': user_id,
                 },
                 table_name=THERAPISTS_TABLE_NAME
             )
-            therapist_email = account_response_dict[0]['email']
+
+            therapist_email = soft_deletion_result[0]['email']
             alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
                                  "has canceled their subscription, and deleted all their account data.")
-            therapist_name = "".join([account_response_dict[0]['first_name'],
+            therapist_name = "".join([soft_deletion_result[0]['first_name'],
                                       " ",
-                                      account_response_dict[0]['last_name']])
+                                      soft_deletion_result[0]['last_name']])
             alert = CustomerRelationsAlert(
                 description=alert_description,
                 environment=os.environ.get('ENVIRONMENT'),
