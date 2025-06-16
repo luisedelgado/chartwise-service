@@ -370,7 +370,8 @@ class AudioProcessingManager(MediaProcessingManager):
                 request=request,
                 fields=["id"],
                 filters={
-                    'patient_id': patient_id
+                    'patient_id': patient_id,
+                    'is_soft_deleted': False,
                 },
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
             )

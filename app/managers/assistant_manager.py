@@ -1018,7 +1018,8 @@ class AssistantManager:
                 fields=["*"],
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 filters={
-                    "patient_id": patient_id
+                    "patient_id": patient_id,
+                    "is_soft_deleted": False,
                 },
                 order_by=("session_date", "desc")
             )
@@ -1098,7 +1099,8 @@ class AssistantManager:
             request=request,
             fields=["session_date"],
             filters={
-                "patient_id": patient_id
+                "patient_id": patient_id,
+                "is_soft_deleted": False,
             },
             table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME
         )
