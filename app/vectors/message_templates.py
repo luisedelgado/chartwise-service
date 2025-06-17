@@ -361,23 +361,27 @@ class PromptCrafter:
 
             return (
                 "A mental health practitioner is viewing a patient’s dashboard on our Practice Management Platform. "
-                "They need to know what topics the patient has been discussing the most during the most recent sessions. "
-                "Provide the following:\n\n"
-                "1. A set of recent topics, each with its density percentage. There should not be more than 3 topics.\n"
-                "2. Ensure the topics' percentages total up to exactly 100%. Double-check this. \n"
-                "3. Each topic's length should be 23 characters or less.\n\n"
-                "The topics must be extracted directly from the content in the session notes, exactly as they are presented, without any form of interpretation, rephrasing, or additional analysis. "
-                "Do not infer or generate new topics beyond what is explicitly mentioned in the notes."
-                "Return a JSON object with one key: `topics`. The value should be an array of up to three objects, each with:\n"
-                f"* `topic`: The distinct topic written using language code {language_code}.\n"
-                f"* `percentage`: The percentage (e.g., '50%').\n\n"
-                "If there are no `chunk_summary` values, return an empty array. "
-                "Otherwise, return at least one topic (up to three if possible). "
-                "\n\nExample response:\n"
-                '{"topics":[{"topic": "Graduating from school", "percentage": "50%"},'
-                '{"topic": "Substance abuse", "percentage": "25%"},'
-                '{"topic": "Adopting a pet", "percentage": "25%"}]}'
-                "\n\nReturn only the JSON object and nothing else."
+                "They need to know what topics the patient has been discussing the most during the most recent sessions.\n"
+                "\nProvide the following:\n\n"
+                "1. A set of up to three recent topics, each with its density percentage, totaling exactly 100%.\n"
+                "2. Each topic should be based directly on repeated patterns or themes from the session notes.\n"
+                "3. It is acceptable to group identical or highly similar phrases under a single representative topic label.\n"
+                "4. Do not invent new topics that are not reflected in the notes. Avoid broad generalizations.\n"
+                "5. Each topic label should be concise (23 characters or fewer).\n"
+                "6. Base the percentages on actual relative frequency across all notes. Do not artificially balance the percentages "
+                "— reflect actual repetition and emphasis in the session notes.\n"
+                "\nReturn only a JSON object with one key: `topics`. The value should be an array of topic objects. Each topic must include:\n"
+                f"- `topic`: the grouped topic label (language: {language_code})\n"
+                "- `percentage`: a percentage string like \"60%\"\n"
+                "\nIf there are no session note summaries (found in the `chunk_summary` values), return an empty array.\n"
+                "\nExample:\n"
+                "{\n"
+                "  \"topics\": [\n"
+                "    {\"topic\": \"Graduation prep\", \"percentage\": \"50%\"},\n"
+                "    {\"topic\": \"Job search\", \"percentage\": \"30%\"},\n"
+                "    {\"topic\": \"Family conflict\", \"percentage\": \"20%\"}\n"
+                "  ]\n"
+                "}\n"
             )
         except Exception as e:
             raise RuntimeError(e) from e
