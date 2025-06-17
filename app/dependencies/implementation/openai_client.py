@@ -86,7 +86,7 @@ class OpenAIClient(OpenAIBaseClass):
                     user_prompt
                 ]
             )
-            max_tokens = calculate_max_tokens(
+            max_tokens = await calculate_max_tokens(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt_with_chat_history,
             )
