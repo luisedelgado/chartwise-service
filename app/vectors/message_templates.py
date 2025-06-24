@@ -27,88 +27,146 @@ class PromptScenario(Enum):
 
 class PromptCrafter:
 
-    def get_user_message_for_scenario(self, scenario: PromptScenario, **kwargs):
+    def get_user_message_for_scenario(
+        self,
+        scenario: PromptScenario,
+        **kwargs
+    ):
         if scenario == PromptScenario.UNDEFINED:
             raise Exception("Received undefined prompt scenario for retrieving the user message")
 
         if scenario == PromptScenario.QUERY:
-            context = None if 'context' not in kwargs else kwargs['context']
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_qa_user_message(context=context,
-                                                language_code=language_code,
-                                                query_input=query_input)
+            assert 'context' in kwargs, "Missing context param for building user message"
+            assert 'language_code' in kwargs, "Missing language_code param for building user message"
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+
+            context = kwargs['context']
+            language_code = kwargs['language_code']
+            query_input = kwargs['query_input']
+            return self._create_qa_user_message(
+                context=context,
+                language_code=language_code,
+                query_input=query_input
+            )
         elif scenario == PromptScenario.PRESESSION_BRIEFING:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            context = None if 'context' not in kwargs else kwargs['context']
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_briefing_user_message(language_code=language_code,
-                                                      patient_name=patient_name,
-                                                      query_input=query_input,
-                                                      context=context)
+            assert 'language_code' in kwargs, "Missing language_code param for building user message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building user message"
+            assert 'context' in kwargs, "Missing context param for building user message"
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+
+            language_code = kwargs['language_code']
+            patient_name = kwargs['patient_name']
+            context = kwargs['context']
+            query_input = kwargs['query_input']
+            return self._create_briefing_user_message(
+                language_code=language_code,
+                patient_name=patient_name,
+                query_input=query_input,
+                context=context
+            )
         elif scenario == PromptScenario.QUESTION_SUGGESTIONS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            context = None if 'context' not in kwargs else kwargs['context']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_question_suggestions_user_message(language_code=language_code,
-                                                                  context=context,
-                                                                  patient_name=patient_name,
-                                                                  patient_gender=patient_gender,
-                                                                  query_input=query_input)
+            assert 'language_code' in kwargs, "Missing language_code param for building user message"
+            assert 'context' in kwargs, "Missing context param for building user message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building user message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building user message"
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+
+            language_code = kwargs['language_code']
+            context = kwargs['context']
+            patient_name = kwargs['patient_name']
+            patient_gender = kwargs['patient_gender']
+            query_input = kwargs['query_input']
+            return self._create_question_suggestions_user_message(
+                language_code=language_code,
+                context=context,
+                patient_name=patient_name,
+                patient_gender=patient_gender,
+                query_input=query_input
+            )
         elif scenario == PromptScenario.TOPICS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            context = None if 'context' not in kwargs else kwargs['context']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_recent_topics_user_message(language_code=language_code,
-                                                           context=context,
-                                                           patient_name=patient_name,
-                                                           patient_gender=patient_gender,
-                                                           query_input=query_input)
+            assert 'language_code' in kwargs, "Missing language_code param for building user message"
+            assert 'context' in kwargs, "Missing context param for building user message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building user message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building user message"
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+
+            language_code = kwargs['language_code']
+            context = kwargs['context']
+            patient_name = kwargs['patient_name']
+            patient_gender = kwargs['patient_gender']
+            query_input = kwargs['query_input']
+            return self._create_recent_topics_user_message(
+                language_code=language_code,
+                context=context,
+                patient_name=patient_name,
+                patient_gender=patient_gender,
+                query_input=query_input
+            )
         elif scenario == PromptScenario.CHUNK_SUMMARY:
-            chunk_text = None if 'chunk_text' not in kwargs else kwargs['chunk_text']
+            assert 'chunk_text' in kwargs, "Missing chunk_text param for building user message"
+            chunk_text = kwargs['chunk_text']
             return self._create_chunk_summary_user_message(chunk_text=chunk_text)
         elif scenario == PromptScenario.SOAP_TEMPLATE:
-            session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
+            assert 'session_notes' in kwargs, "Missing session_notes param for building user message"
+            session_notes = kwargs['session_notes']
             return self._create_soap_template_user_message(session_notes=session_notes)
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
-            session_notes = None if 'session_notes' not in kwargs else kwargs['session_notes']
+            assert 'session_notes' in kwargs, "Missing session_notes param for building user message"
+            session_notes = kwargs['session_notes']
             return self._create_session_mini_summary_user_message(session_notes=session_notes)
         elif scenario == PromptScenario.REFORMULATE_QUERY:
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            chat_history = None if 'chat_history' not in kwargs else kwargs['chat_history']
-            return self._create_reformulate_query_user_message(chat_history=chat_history,
-                                                               query_input=query_input)
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+            assert 'chat_history' in kwargs, "Missing chat_history param for building user message"
+
+            query_input = kwargs['query_input']
+            chat_history = kwargs['chat_history']
+            return self._create_reformulate_query_user_message(
+                chat_history=chat_history,
+                query_input=query_input
+            )
         elif scenario == PromptScenario.TOPICS_INSIGHTS:
-            context = None if 'context' not in kwargs else kwargs['context']
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
-            return self._create_topics_insights_user_message(context=context,
-                                                             language_code=language_code,
-                                                             patient_gender=patient_gender,
-                                                             patient_name=patient_name,
-                                                             query_input=query_input)
+            assert 'context' in kwargs, "Missing context param for building user message"
+            assert 'language_code' in kwargs, "Missing language_code param for building user message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building user message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building user message"
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+
+            context = kwargs['context']
+            language_code = kwargs['language_code']
+            patient_gender = kwargs['patient_gender']
+            patient_name = kwargs['patient_name']
+            query_input = kwargs['query_input']
+            return self._create_topics_insights_user_message(
+                context=context,
+                language_code=language_code,
+                patient_gender=patient_gender,
+                patient_name=patient_name,
+                query_input=query_input
+            )
         elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
-            patient_session_dates = [] if 'patient_session_dates' not in kwargs else kwargs['patient_session_dates']
-            patient_name = [] if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = [] if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            return self._create_attendance_insights_user_message(patient_session_dates=patient_session_dates,
-                                                                 patient_gender=patient_gender,
-                                                                 patient_name=patient_name)
+            assert 'patient_session_dates' in kwargs, "Missing patient_session_dates param for building user message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building user message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building user message"
+
+            patient_session_dates = kwargs['patient_session_dates']
+            patient_name = kwargs['patient_name']
+            patient_gender = kwargs['patient_gender']
+            return self._create_attendance_insights_user_message(
+                patient_session_dates=patient_session_dates,
+                patient_gender=patient_gender,
+                patient_name=patient_name
+            )
         elif scenario == PromptScenario.DIARIZATION_SUMMARY:
-            diarization = None if 'diarization' not in kwargs else kwargs['diarization']
+            assert 'diarization' in kwargs, "Missing diarization param for building user message"
+            diarization = kwargs['diarization']
             return self._summarize_diarization_user_message(diarization=diarization)
         elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
-            diarization = None if 'diarization' not in kwargs else kwargs['diarization']
+            assert 'diarization' in kwargs, "Missing diarization param for building user message"
+            diarization = kwargs['diarization']
             return self._summarize_diarization_chunks_user_message(diarization=diarization)
         elif scenario == PromptScenario.EXTRACT_TIME_TOKENS:
-            query_input = None if 'query_input' not in kwargs else kwargs['query_input']
+            assert 'query_input' in kwargs, "Missing query_input param for building user message"
+            query_input = kwargs['query_input']
             return self._extract_time_tokens_user_message(query_input=query_input)
         else:
             raise Exception("Received untracked prompt scenario for retrieving the user message")
@@ -118,53 +176,75 @@ class PromptCrafter:
             raise Exception("Received undefined prompt scenario for retrieving the user message")
 
         if scenario == PromptScenario.QUERY:
+            assert 'patient_name' in kwargs, "Missing patient_name param for building system message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building system message"
+            assert 'chat_history_included' in kwargs, "Missing chat_history_included param for building system message"
+
+            patient_name = kwargs['patient_name']
+            patient_gender = kwargs['patient_gender']
+            chat_history_included = kwargs['chat_history_included']
             last_session_date = None if 'last_session_date' not in kwargs else kwargs['last_session_date']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            chat_history_included = False if 'chat_history_included' not in kwargs else kwargs['chat_history_included']
-            return self._create_qa_system_message(last_session_date=last_session_date,
-                                                  patient_name=patient_name,
-                                                  patient_gender=patient_gender,
-                                                  chat_history_included=chat_history_included)
+            return self._create_qa_system_message(
+                patient_name=patient_name,
+                patient_gender=patient_gender,
+                chat_history_included=chat_history_included,
+                last_session_date=last_session_date,
+            )
         elif scenario == PromptScenario.PRESESSION_BRIEFING:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
-            patient_name = None if 'patient_name' not in kwargs else kwargs['patient_name']
-            patient_gender = None if 'patient_gender' not in kwargs else kwargs['patient_gender']
-            therapist_name = None if 'therapist_name' not in kwargs else kwargs['therapist_name']
-            therapist_gender = None if 'therapist_gender' not in kwargs else kwargs['therapist_gender']
-            session_count = None if 'session_count' not in kwargs else kwargs['session_count']
-            return self._create_briefing_system_message(language_code=language_code,
-                                                        therapist_name=therapist_name,
-                                                        therapist_gender=therapist_gender,
-                                                        patient_name=patient_name,
-                                                        patient_gender=patient_gender,
-                                                        session_count=session_count)
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            assert 'patient_name' in kwargs, "Missing patient_name param for building system message"
+            assert 'patient_gender' in kwargs, "Missing patient_gender param for building system message"
+            assert 'therapist_name' in kwargs, "Missing therapist_name param for building system message"
+            assert 'therapist_gender' in kwargs, "Missing therapist_gender param for building system message"
+            assert 'session_count' in kwargs, "Missing session_count param for building system message"
+
+            language_code = kwargs['language_code']
+            patient_name = kwargs['patient_name']
+            patient_gender = kwargs['patient_gender']
+            therapist_name = kwargs['therapist_name']
+            therapist_gender = kwargs['therapist_gender']
+            session_count = kwargs['session_count']
+            return self._create_briefing_system_message(
+                language_code=language_code,
+                therapist_name=therapist_name,
+                therapist_gender=therapist_gender,
+                patient_name=patient_name,
+                patient_gender=patient_gender,
+                session_count=session_count
+            )
         elif scenario == PromptScenario.QUESTION_SUGGESTIONS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._create_question_suggestions_system_message(language_code=language_code)
         elif scenario == PromptScenario.TOPICS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._create_recent_topics_system_message(language_code=language_code)
         elif scenario == PromptScenario.CHUNK_SUMMARY:
             return self._create_chunk_summary_system_message()
         elif scenario == PromptScenario.SOAP_TEMPLATE:
             return self._create_soap_template_system_message()
         elif scenario == PromptScenario.SESSION_MINI_SUMMARY:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._create_session_mini_summary_system_message(language_code=language_code)
         elif scenario == PromptScenario.REFORMULATE_QUERY:
             return self._create_reformulate_query_system_message()
         elif scenario == PromptScenario.TOPICS_INSIGHTS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._create_topics_insights_system_message(language_code=language_code)
         elif scenario == PromptScenario.ATTENDANCE_INSIGHTS:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._create_attendance_insights_system_message(language_code=language_code)
         elif scenario == PromptScenario.DIARIZATION_SUMMARY:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._summarize_diarization_system_message(language_code=language_code)
         elif scenario == PromptScenario.DIARIZATION_CHUNKS_GRAND_SUMMARY:
-            language_code = None if 'language_code' not in kwargs else kwargs['language_code']
+            assert 'language_code' in kwargs, "Missing language_code param for building system message"
+            language_code = kwargs['language_code']
             return self._summarize_diarization_chunks_system_message(language_code=language_code)
         elif scenario == PromptScenario.EXTRACT_TIME_TOKENS:
             return self._extract_time_tokens_system_message()
@@ -173,11 +253,13 @@ class PromptCrafter:
 
     # Text QA Prompt
 
-    def _create_qa_system_message(self,
-                                  patient_name: str,
-                                  patient_gender: str,
-                                  chat_history_included: bool,
-                                  last_session_date: str = None) -> str:
+    def _create_qa_system_message(
+        self,
+        patient_name: str,
+        patient_gender: str,
+        chat_history_included: bool,
+        last_session_date: str | None = None
+    ) -> str:
         assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
 
         if patient_gender is not None and gender_has_default_pronouns(patient_gender):
@@ -185,7 +267,7 @@ class PromptCrafter:
         else:
             patient_gender_context = ""
 
-        if len(last_session_date or '') == 0:
+        if last_session_date is None:
             last_session_date_context = ""
         else:
             date_spell_out_month = convert_to_date_format_spell_out_month(
@@ -225,10 +307,12 @@ class PromptCrafter:
             f"{last_session_date_context}"
         )
 
-    def _create_qa_user_message(self,
-                                context: str,
-                                language_code: str,
-                                query_input: str) -> str:
+    def _create_qa_user_message(
+        self,
+        context: str,
+        language_code: str,
+        query_input: str
+    ) -> str:
         try:
             assert len(context or '') > 0, "Missing context param for building user message"
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
@@ -244,56 +328,63 @@ class PromptCrafter:
 
     # Briefing Prompt
 
-    def _create_briefing_system_message(self,
-                                        language_code: str,
-                                        therapist_name: str,
-                                        therapist_gender: str,
-                                        patient_name: str,
-                                        patient_gender: str,
-                                        session_count: int) -> str | None:
+    def _create_briefing_system_message(
+        self,
+        language_code: str,
+        therapist_name: str,
+        therapist_gender: str,
+        patient_name: str,
+        patient_gender: str,
+        session_count: int
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             assert len(therapist_name or '') > 0, "Missing therapist_name param for building system message"
             assert len(patient_name or '') > 0, "Missing patient_name param for building system message"
             assert session_count >= 0, "Something went wrong when building system message"
 
-            therapist_gender = ("" if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
-                                else f" ({therapist_gender})")
-            patient_gender = ("" if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
-                              else f" ({patient_gender})")
+            therapist_gender = (
+                "" if (therapist_gender is None or not gender_has_default_pronouns(therapist_gender))
+                else f" ({therapist_gender})")
+            patient_gender = (
+                "" if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
+                else f" ({patient_gender})"
+            )
 
             return (
-                    f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
-                    f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
-                    f"{therapist_name} has had {session_count} sessions with {patient_name} so far. "
-                    f"The first thing you should do is say hi to {therapist_name}, and remind them that they have had {session_count} with {patient_name} **since the patient was onboarded onto our platform** (this distinction is very important). "
-                    f"\n\nOnce you've said hi to {therapist_name}, your job is to provide a summary of {patient_name}'s session history in two sections: **Most Recent Sessions** and **Historical Themes**. "
-                    "You should never attempt to diagnose the patient yourself. "
-                    "The practitioner relies on your support for organization and information retrieval, not for making clinical decisions. Focus on providing objective data analysis rather than offering diagnostic recommendations.\n\n"
-                    "• **Most Recent Sessions**: Base the summary strictly on the `chunk_summary` values you see as context. If you don't see any `chunk_summary` values, omit this section entirely without making up any details beyond what is explicitly available.\n"
-                    "• **Historical Themes**: Use the `pre_existing_history_summary` as well as the `chunk_summary` values to determine a set of relevant, historical themes for the patient. "
-                    "Use only information from the `pre_existing_history_summary` and `chunk_summary` values. Do not add nor make up any additional information. "
-                    "If no `pre_existing_history_summary` value is available, attempt to identify historical themes from the available `chunk_summary` values. "
-                    "However, if neither `pre_existing_history_summary` nor relevant `chunk_summary` values are available, omit this section entirely without adding or filling in any details beyond what's explicitly provided.\n\n"
-                    "There are two specific scenarios to consider:\n\n"
-                    f"1. **If both sections are omitted** due to lack of data, shift the focus to providing generic recommendations on how to approach the upcoming session with {patient_name}. "
-                    "Offer strategies for guiding the conversation or establishing continuity from their previous meeting.\n\n"
-                    f"2. **If this is {therapist_name}'s first time meeting with {patient_name}**, omit both sections, and instead suggest strategies on how to establish a solid foundation for their relationship.\n\n"
-                    f"For **'Most Recent Sessions'** list the most recent sessions sorted by the most recent first. Ensure date precision. "
-                    f"If {therapist_name} has previously met with {patient_name}, conclude with **'Suggestions for Next Session'**, offering discussion topics for their session that's about to start. "
-                    "All sections should have at most 4 bullet points. "
-                    f"It is very important that the summary is written using language code {language_code}. "
-                    "As a reference point, aim for a total length of 1,600–2,000 characters. However, it's preferable to exceed this range rather than omit available information from a section. "
-                    f"Ensure the headers for Most Recent Sessions, Historical Themes, and Suggestions for Next Session are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
+                f"A mental health practitioner, {therapist_name}{therapist_gender}, is about to meet with {patient_name}{patient_gender}, an existing patient. "
+                f"{therapist_name} is using our Practice Management Platform to quickly refreshen on {patient_name}'s session history. "
+                f"{therapist_name} has had {session_count} sessions with {patient_name} so far. "
+                f"The first thing you should do is say hi to {therapist_name}, and remind them that they have had {session_count} with {patient_name} **since the patient was onboarded onto our platform** (this distinction is very important). "
+                f"\n\nOnce you've said hi to {therapist_name}, your job is to provide a summary of {patient_name}'s session history in two sections: **Most Recent Sessions** and **Historical Themes**. "
+                "You should never attempt to diagnose the patient yourself. "
+                "The practitioner relies on your support for organization and information retrieval, not for making clinical decisions. Focus on providing objective data analysis rather than offering diagnostic recommendations.\n\n"
+                "• **Most Recent Sessions**: Base the summary strictly on the `chunk_summary` values you see as context. If you don't see any `chunk_summary` values, omit this section entirely without making up any details beyond what is explicitly available.\n"
+                "• **Historical Themes**: Use the `pre_existing_history_summary` as well as the `chunk_summary` values to determine a set of relevant, historical themes for the patient. "
+                "Use only information from the `pre_existing_history_summary` and `chunk_summary` values. Do not add nor make up any additional information. "
+                "If no `pre_existing_history_summary` value is available, attempt to identify historical themes from the available `chunk_summary` values. "
+                "However, if neither `pre_existing_history_summary` nor relevant `chunk_summary` values are available, omit this section entirely without adding or filling in any details beyond what's explicitly provided.\n\n"
+                "There are two specific scenarios to consider:\n\n"
+                f"1. **If both sections are omitted** due to lack of data, shift the focus to providing generic recommendations on how to approach the upcoming session with {patient_name}. "
+                "Offer strategies for guiding the conversation or establishing continuity from their previous meeting.\n\n"
+                f"2. **If this is {therapist_name}'s first time meeting with {patient_name}**, omit both sections, and instead suggest strategies on how to establish a solid foundation for their relationship.\n\n"
+                f"For **'Most Recent Sessions'** list the most recent sessions sorted by the most recent first. Ensure date precision. "
+                f"If {therapist_name} has previously met with {patient_name}, conclude with **'Suggestions for Next Session'**, offering discussion topics for their session that's about to start. "
+                "All sections should have at most 4 bullet points. "
+                f"It is very important that the summary is written using language code {language_code}. "
+                "As a reference point, aim for a total length of 1,600–2,000 characters. However, it's preferable to exceed this range rather than omit available information from a section. "
+                f"Ensure the headers for Most Recent Sessions, Historical Themes, and Suggestions for Next Session are bolded using appropriate mark-up, and that they also are written using language code {language_code}."
             )
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_briefing_user_message(self,
-                                      patient_name: str,
-                                      query_input: str,
-                                      language_code: str,
-                                      context: str) -> str:
+    def _create_briefing_user_message(
+        self,
+        patient_name: str,
+        query_input: str,
+        language_code: str,
+        context: str
+    ) -> str:
         try:
             assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
@@ -308,32 +399,37 @@ class PromptCrafter:
 
     # Question Suggestions
 
-    def _create_question_suggestions_system_message(self,
-                                                    language_code: str) -> str:
+    def _create_question_suggestions_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             return (
                 "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
                 "They can ask you about the patient's session history. "
-                "Your task is to generate two specific, objective questions that the practitioner might ask, based only on the factual information in the `chunk_summary` and `pre_existing_history_summary` values. "
-                "The questions should be psychology-focused and avoid any interpretation, assumption, or diagnostic suggestion beyond what’s explicitly in the notes. "
-                "Each question should be under 60 characters in length. "
-                "Return a JSON object with one key: `questions`, containing and an array of exactly two questions. "
-                f"Ensure that the questions are written in language code {language_code}. "
-                "This is what the format should look like: {\"questions\": [..., ...]}\n"
-                '{"questions": ["When did we last talk about the divorce?", "What was the last thing we discussed in session?"]}\n\n'
-                "Return only the JSON object and nothing else."
+                "Your task is to generate exactly two specific, psychology-relevant questions that the practitioner might ask, "
+                "based only on the factual content found in the `chunk_summary` and `pre_existing_history_summary`."
+                "Requirements:\n"
+                "- You must only generate questions for which the answer is explicitly available or inferable from the summaries. Do not generate questions about topics that are not mentioned.\n"
+                "- The questions must be useful to a therapist reviewing the patient’s recent progress, themes, or topics of discussion.\n"
+                f"- The questions must be written in language code {language_code}.\n"
+                "- Each question must be concise, under 60 characters.\n"
+                "- Avoid assumptions, clinical interpretations, or speculative reasoning.\n"
+                "- Return only a JSON object in the following format: {\"questions\": [..., ...]}\n"
             )
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_question_suggestions_user_message(self,
-                                                  language_code: str,
-                                                  context: str,
-                                                  patient_name: str,
-                                                  query_input: str,
-                                                  patient_gender: str) -> str:
+    def _create_question_suggestions_user_message(
+        self,
+        language_code: str,
+        context: str,
+        patient_name: str,
+        query_input: str,
+        patient_gender: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
             assert len(context or '') > 0, "Missing context param for building user message"
@@ -355,7 +451,10 @@ class PromptCrafter:
 
     # Recent Topics
 
-    def _create_recent_topics_system_message(self, language_code: str) -> str:
+    def _create_recent_topics_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
@@ -386,12 +485,14 @@ class PromptCrafter:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_recent_topics_user_message(self,
-                                           language_code: str,
-                                           context: str,
-                                           patient_name: str,
-                                           query_input: str,
-                                           patient_gender: str) -> str:
+    def _create_recent_topics_user_message(
+        self,
+        language_code: str,
+        context: str,
+        patient_name: str,
+        query_input: str,
+        patient_gender: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
             assert len(context or '') > 0, "Missing context param for building user message"
@@ -425,8 +526,10 @@ class PromptCrafter:
             "Regardless of the original language, generate the summary in English."
         )
 
-    def _create_chunk_summary_user_message(self,
-                                           chunk_text: str) -> str:
+    def _create_chunk_summary_user_message(
+        self,
+        chunk_text: str
+    ) -> str:
         try:
             assert len(chunk_text or '') > 0, "Missing chunk_text param for building user message"
             return (f"Summarize the following chunk:\n\n{chunk_text}")
@@ -450,14 +553,20 @@ class PromptCrafter:
             "Write the section headers in English, bolded with appropriate mark-up, while keeping the content in the same language as the original notes."
         )
 
-    def _create_soap_template_user_message(self, session_notes: str) -> str:
+    def _create_soap_template_user_message(
+        self,
+        session_notes: str
+    ) -> str:
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return f"Adapt the following session notes into the SOAP format:\n\n{session_notes}."
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_session_mini_summary_system_message(self, language_code: str):
+    def _create_session_mini_summary_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return (
@@ -472,7 +581,10 @@ class PromptCrafter:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_session_mini_summary_user_message(self, session_notes: str):
+    def _create_session_mini_summary_user_message(
+        self,
+        session_notes: str
+    ) -> str:
         try:
             assert len(session_notes or '') > 0, "Missing session_notes param for building user message"
             return (f"Summarize the following session notes:\n\n{session_notes}")
@@ -481,7 +593,7 @@ class PromptCrafter:
 
     # Reformulate query
 
-    def _create_reformulate_query_system_message(self):
+    def _create_reformulate_query_system_message(self) -> str:
         return (
             "Given the chat history and the latest user input, which may reference previous context, reformulate the input into a standalone entry "
             "that can be understood without relying on the chat history. If the input is a question, do NOT provide an answer; only reformulate it if necessary, otherwise return it unchanged. "
@@ -489,7 +601,11 @@ class PromptCrafter:
             "The output should be generated using the same language in which the user question is written."
         )
 
-    def _create_reformulate_query_user_message(self, chat_history: str, query_input: str):
+    def _create_reformulate_query_user_message(
+        self,
+        chat_history: str,
+        query_input: str
+    ) -> str:
         try:
             assert len(chat_history or '') > 0, "Error while building user message: chat_history should be bigger than 0"
             assert len(query_input or '') > 0, "Error while building user message: query_input should be bigger than 0"
@@ -509,7 +625,10 @@ class PromptCrafter:
 
     # Topics Insights
 
-    def _create_topics_insights_system_message(self, language_code: str):
+    def _create_topics_insights_system_message(
+        self,
+        language_code: str
+    ) -> str:
         assert len(language_code or '') > 0, "Missing language_code param for building system message"
         return (
             "You are a mental health assistant helping practitioners analyze their patients' session data. "
@@ -524,12 +643,14 @@ class PromptCrafter:
             f"4. Ensure the output is generated using language code {language_code}.\n"
         )
 
-    def _create_topics_insights_user_message(self,
-                                             context: str,
-                                             language_code: str,
-                                             patient_gender: str,
-                                             patient_name: str,
-                                             query_input: str):
+    def _create_topics_insights_user_message(
+        self,
+        context: str,
+        language_code: str,
+        patient_gender: str,
+        patient_name: str,
+        query_input: str
+    ) -> str:
         try:
             assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
             assert len(language_code or '') > 0, "Missing language_code param for building user message"
@@ -548,28 +669,36 @@ class PromptCrafter:
 
     # Attendance Insights
 
-    def _create_attendance_insights_user_message(self,
-                                                 patient_gender: str,
-                                                 patient_name: str,
-                                                 patient_session_dates: list[str]):
+    def _create_attendance_insights_user_message(
+        self,
+        patient_gender: str,
+        patient_name: str,
+        patient_session_dates: list[str]
+    ) -> str:
         try:
             assert len(patient_name or '') > 0, "Missing patient_name param for building user message"
             assert len(patient_session_dates or '') >= 0, "Missing patient_session_dates param for building user message"
 
-            gender_context = (". " if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
-                              else f" ({patient_gender}). ")
-            return ("Given the following dates of sessions that a patient has had with their therapist, provide an analysis of the patient's attendance pattern. "
-                    "Highlight any trends, consistency, or notable gaps in the sessions. "
-                    "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance. "
-                    "If the set of dates is empty, return only a 50-character sentence stating that the patient is yet to start attending sessions. "
-                    f"Note that the patient name is {patient_name}{gender_context}"
-                    "\n\n"
-                    f"Here is the set of dates: {patient_session_dates}")
+            gender_context = (
+                ". " if (patient_gender is None or not gender_has_default_pronouns(patient_gender))
+                else f" ({patient_gender}). "
+            )
+            return (
+                "Given the following dates of sessions that a patient has had with their therapist, provide an analysis of the patient's attendance pattern. "
+                "Highlight any trends, consistency, or notable gaps in the sessions. "
+                "Offer insights that might help understand the patient's commitment to therapy or any potential issues with regular attendance. "
+                "If the set of dates is empty, return only a 50-character sentence stating that the patient is yet to start attending sessions. "
+                f"Note that the patient name is {patient_name}{gender_context}"
+                "\n\n"
+                f"Here is the set of dates: {patient_session_dates}"
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _create_attendance_insights_system_message(self,
-                                                   language_code: str):
+    def _create_attendance_insights_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return ("You are a mental health assistant helping practitioners analyze their patients' attendance patterns. "
@@ -586,7 +715,10 @@ class PromptCrafter:
 
     # Summarize Diarization
 
-    def _summarize_diarization_system_message(self, language_code: str) -> str:
+    def _summarize_diarization_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return (
@@ -609,7 +741,10 @@ class PromptCrafter:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _summarize_diarization_user_message(self, diarization: str) -> str:
+    def _summarize_diarization_user_message(
+        self,
+        diarization: str
+    ) -> str:
         try:
             assert len(diarization or '') > 0, "Missing diarization param for building user message"
             return (
@@ -622,7 +757,10 @@ class PromptCrafter:
 
     # Grand Summary of Diarization Chunks
 
-    def _summarize_diarization_chunks_system_message(self, language_code: str) -> str:
+    def _summarize_diarization_chunks_system_message(
+        self,
+        language_code: str
+    ) -> str:
         try:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
             return (
@@ -635,7 +773,10 @@ class PromptCrafter:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _summarize_diarization_chunks_user_message(self, diarization: str) -> str:
+    def _summarize_diarization_chunks_user_message(
+        self,
+        diarization: str
+    ) -> str:
         try:
             assert len(diarization or '') > 0, "Missing diarization param for building user message"
             return (
@@ -662,7 +803,10 @@ class PromptCrafter:
         except Exception as e:
             raise RuntimeError(e) from e
 
-    def _extract_time_tokens_user_message(self, query_input: str) -> str:
+    def _extract_time_tokens_user_message(
+        self,
+        query_input: str
+    ) -> str:
         try:
             assert len(query_input or '') > 0, "Missing query_input param for building user message"
             return (
