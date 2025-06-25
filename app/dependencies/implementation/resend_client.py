@@ -14,7 +14,7 @@ from ...internal.alerting.internal_alert import (
     MediaJobProcessingAlert,
     PaymentsActivityAlert
 )
-from ...internal.schemas import MediaType, PROD_ENVIRONMENT
+from ...internal.schemas import PROD_ENVIRONMENT
 
 class ResendClient(ResendBaseClass):
 
