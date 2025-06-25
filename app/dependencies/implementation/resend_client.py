@@ -3,6 +3,7 @@ import os
 import resend
 
 from jinja2 import Environment, FileSystemLoader
+from typing import cast
 
 from ..api.resend_base_class import ResendBaseClass
 from ...internal.alerting.internal_alert import (
@@ -48,50 +49,47 @@ class ResendClient(ResendBaseClass):
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
             session_id = alert.session_id if alert.session_id is not None else "N/A"
 
-            assert hasattr(alert, "category")
-
             cls = type(self)
-            if alert.category == InternalAlertCategory.PAYMENTS_ACTIVITY:
-                alert: PaymentsActivityAlert = alert
-                subscription_id = alert.subscription_id if alert.subscription_id is not None else "N/A"
-                customer_id = alert.customer_id if alert.customer_id is not None else "N/A"
-                payment_method_id = alert.payment_method_id if alert.payment_method_id is not None else "N/A"
+            if alert.category == InternalAlertCategory.PAYMENTS_ACTIVITY.value:
+                payments_alert = cast(PaymentsActivityAlert, alert)
+                subscription_id = payments_alert.subscription_id if payments_alert.subscription_id is not None else "N/A"
+                customer_id = payments_alert.customer_id if payments_alert.customer_id is not None else "N/A"
+                payment_method_id = payments_alert.payment_method_id if payments_alert.payment_method_id is not None else "N/A"
                 activity_details = cls.PAYMENTS_ACTIVITY_DETAILS.format(
                     subscription_id=subscription_id,
                     customer_id=customer_id,
                     payment_method_id=payment_method_id,
                 )
-            elif (alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING
-                  or alert.category == InternalAlertCategory.IMAGE_JOB_PROCESSING):
-                alert: MediaJobProcessingAlert = alert
-                media_type = MediaType.AUDIO.value if alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING else MediaType.IMAGE.value
-                session_report_id = alert.session_report_id if alert.session_report_id is not None else "N/A"
-                storage_filepath = alert.storage_filepath if alert.storage_filepath is not None else "N/A"
+            elif (alert.category == InternalAlertCategory.AUDIO_JOB_PROCESSING.value
+                  or alert.category == InternalAlertCategory.IMAGE_JOB_PROCESSING.value):
+                media_job_alert = cast(MediaJobProcessingAlert, alert)
+                session_report_id = media_job_alert.session_report_id if media_job_alert.session_report_id is not None else "N/A"
+                storage_filepath = media_job_alert.storage_filepath if media_job_alert.storage_filepath is not None else "N/A"
                 activity_details = cls.MEDIA_JOB_ACTIVITY_DETAILS.format(
-                    media_type=media_type,
+                    media_type=media_job_alert.category,
                     session_report_id=session_report_id,
                     storage_filepath=storage_filepath,
                 )
             else:
-                assert alert.category == InternalAlertCategory.ENGINEERING_ALERT, f"Untracked alert category: {alert.category.value}."
-                alert: EngineeringAlert = alert
-                activity_details = f"<li><b>Patient ID:</b> {alert.patient_id}</li>"
+                assert alert.category == InternalAlertCategory.ENGINEERING_ALERT.value, f"Untracked alert category: {alert.category}."
+                eng_alert = cast(EngineeringAlert, alert)
+                activity_details = f"<li><b>Patient ID:</b> {eng_alert.patient_id}</li>"
 
             body = "".join([
-                f"<b>{alert.description}</b>",
+                f"<b>{eng_alert.description}</b>",
                 "<ul>",
                 cls.SESSION_DATA_DETAILS.format(
                     therapist_id=therapist_id,
                     session_id=session_id,
-                    environment=alert.environment
+                    environment=eng_alert.environment
                 ),
                 activity_details,
                 "</ul>",
-                "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
+                "" if eng_alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(eng_alert.exception)}</i></p>"
             ])
 
             html_content = self.internal_eng_alert_template.render(
-                problem_area=alert.category,
+                problem_area=eng_alert.category,
                 alert_content=body
             )
             self._send_email(
@@ -114,12 +112,12 @@ class ResendClient(ResendBaseClass):
         try:
             therapist_id = alert.therapist_id if alert.therapist_id is not None else "N/A"
 
-            assert hasattr(alert, "category") and alert.category == InternalAlertCategory.CUSTOMER_RELATIONS
+            assert alert.category == InternalAlertCategory.CUSTOMER_RELATIONS.value, "Unexpected alert type in customer relations path."
 
-            alert: CustomerRelationsAlert = alert
+            customer_relations_alert: CustomerRelationsAlert = cast(CustomerRelationsAlert, alert)
 
-            therapist_email = alert.therapist_email if alert.therapist_email is not None else "N/A"
-            therapist_name = alert.therapist_name if alert.therapist_name is not None else "N/A"
+            therapist_email = customer_relations_alert.therapist_email if customer_relations_alert.therapist_email is not None else "N/A"
+            therapist_name = customer_relations_alert.therapist_name if customer_relations_alert.therapist_name is not None else "N/A"
 
             cls = type(self)
             activity_details = cls.CUSTOMER_RELATIONS_ACTIVITY_DETAILS.format(
@@ -128,20 +126,20 @@ class ResendClient(ResendBaseClass):
             )
 
             body = "".join([
-                f"<b>{alert.description}</b>",
+                f"<b>{customer_relations_alert.description}</b>",
                 "<ul>",
                 cls.SESSION_DATA_DETAILS.format(
                     therapist_id=therapist_id,
-                    session_id=alert.session_id,
-                    environment=alert.environment
+                    session_id=customer_relations_alert.session_id,
+                    environment=customer_relations_alert.environment
                 ),
                 activity_details,
                 "</ul>",
-                "" if alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(alert.exception)}</i></p>"
+                "" if customer_relations_alert.exception is None else f"<p>Additionally, the following exception was raised: <i>{str(customer_relations_alert.exception)}</i></p>"
             ])
 
             html_content = self.customer_relations_alert_template.render(
-                problem_area=alert.category,
+                problem_area=customer_relations_alert.category,
                 alert_content=body
             )
             self._send_email(

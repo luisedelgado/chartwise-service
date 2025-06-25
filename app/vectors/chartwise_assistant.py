@@ -12,9 +12,7 @@ from ..dependencies.api.pinecone_session_date_override import (
     PineconeQuerySessionDateOverride,
     PineconeQuerySessionDateOverrideType,
 )
-from ..internal.alerting.internal_alert import EngineeringAlert
 from ..internal.schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
-from ..internal.session_container import session_container
 from ..internal.utilities import datetime_handler
 
 TOPICS_CONTEXT_SESSIONS_CAP = 4
@@ -23,7 +21,7 @@ ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 4
 
 class ListQuestionSuggestionsSchema(BaseModel):
-    questions: list[str] = Field(..., min_items=2, max_items=2)
+    questions: list[str] = Field(...)
 
 class RecentTopicSchema(BaseModel):
     topic: str = Field(..., max_length=25)
@@ -50,7 +48,7 @@ class ChartWiseAssistant:
         query_input: str,
         response_language_code: str,
         request: Request,
-        last_session_date_override: PineconeQuerySessionDateOverride = None
+        last_session_date_override: PineconeQuerySessionDateOverride | None = None
     ) -> AsyncIterable[str]:
         """
         Queries the respective store with the incoming parameters.

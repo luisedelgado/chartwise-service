@@ -40,7 +40,7 @@ def map_stripe_product_name_to_chartwise_tier(
     if stripe_plan == "premium_plan_yearly" or stripe_plan == "premium_plan_monthly":
         return "premium"
     else:
-        raise Exception("Untracked Stripe product name")
+        raise Exception(f"Untracked Stripe product name: {stripe_plan}")
 
 def format_currency_amount(
     amount: float,
