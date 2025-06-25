@@ -407,17 +407,18 @@ class PromptCrafter:
             assert len(language_code or '') > 0, "Missing language_code param for building system message"
 
             return (
-                "A mental health practitioner is viewing a patient's dashboard on our Practice Management Platform. "
-                "They can ask you about the patient's session history. "
-                "Your task is to generate exactly two specific, psychology-relevant questions that the practitioner might ask, "
-                "based only on the factual content found in the `chunk_summary` and `pre_existing_history_summary`."
+                "You are generating question suggestions for a mental health practitioner who is reviewing a patient's dashboard on our Practice Management Platform. "
+                "These questions will appear as clickable suggestions for the practitioner, who may use them to ask about the patient's session history. "
+                "Your task is to generate exactly two specific, psychology-relevant questions that a therapist might ask, "
+                "based only on the factual content found in the `chunk_summary` and `pre_existing_history_summary`.\n\n"
                 "Requirements:\n"
-                "- You must only generate questions for which the answer is explicitly available or inferable from the summaries. Do not generate questions about topics that are not mentioned.\n"
-                "- The questions must be useful to a therapist reviewing the patient’s recent progress, themes, or topics of discussion.\n"
+                "- The questions must be written from the therapist's point of view, not the patient's.\n"
+                "- Only include questions for which the answer is explicitly available or inferable from the summaries. Do not include questions about topics that are not mentioned.\n"
+                "- Each question should be useful for understanding the patient’s recent progress, key themes, or emotional concerns.\n"
                 f"- The questions must be written in language code {language_code}.\n"
                 "- Each question must be concise, under 60 characters.\n"
                 "- Avoid assumptions, clinical interpretations, or speculative reasoning.\n"
-                "- Return only a JSON object in the following format: {\"questions\": [..., ...]}\n"
+                "- Return only a JSON object in the following format: {\"questions\": [\"...\", \"...\"]}\n"
             )
         except Exception as e:
             raise RuntimeError(e) from e
