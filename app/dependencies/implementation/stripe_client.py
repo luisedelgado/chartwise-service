@@ -11,15 +11,15 @@ class StripeClient(StripeBaseClass):
 
     def generate_checkout_session(
         self,
-        session_id: str,
         therapist_id: str,
         price_id: str,
         success_url: str,
         cancel_url: str,
+        session_id: str | None,
     ) -> str | None:
         try:
             global_metadata = {
-                'session_id': str(session_id),
+                'session_id': str(session_id) if session_id is not None else None,
                 'therapist_id': str(therapist_id),
                 'environment': self.environment
             }
@@ -56,7 +56,7 @@ class StripeClient(StripeBaseClass):
     def retrieve_session(self, session_id):
         return stripe.checkout.Session.retrieve(session_id)
 
-    def retrieve_subscription(self, subscription_id):
+    def retrieve_subscription(self, subscription_id) -> dict:
         return stripe.Subscription.retrieve(subscription_id)
 
     def retrieve_payment_method(self, payment_method_id):
@@ -73,7 +73,7 @@ class StripeClient(StripeBaseClass):
         customer_id: str,
         limit: int,
         starting_after: str | None
-    ):
+    ) -> dict:
         return stripe.PaymentIntent.list(
             customer=customer_id,
             limit=limit,

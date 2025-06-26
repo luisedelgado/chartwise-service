@@ -6,11 +6,11 @@ class StripeBaseClass(ABC):
     @abstractmethod
     def generate_checkout_session(
         self,
-        session_id: str,
         therapist_id: str,
         price_id: str,
         success_url: str,
         cancel_url: str,
+        session_id: str | None,
     ) -> str | None:
         """
         Generates a checkout session URL for the customer.
@@ -60,7 +60,7 @@ class StripeBaseClass(ABC):
         customer_id: str,
         limit: int,
         starting_after: str | None
-    ):
+    ) -> dict:
         """
         Retrieves the payment history associated with the incoming customer id
 
@@ -127,7 +127,7 @@ class StripeBaseClass(ABC):
     def retrieve_subscription(
         self,
         subscription_id: str
-    ):
+    ) -> dict:
         """
         Retrieves the subscription associated with the incoming id
 

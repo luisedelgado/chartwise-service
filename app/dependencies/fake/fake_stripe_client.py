@@ -22,11 +22,11 @@ class FakeStripeClient(StripeBaseClass):
 
     def generate_checkout_session(
         self,
-        session_id: str,
         therapist_id: str,
         price_id: str,
         success_url: str,
         cancel_url: str,
+        session_id: str | None,
     ) -> str | None:
         self.generate_checkout_session_invoked = True
 
@@ -70,7 +70,7 @@ class FakeStripeClient(StripeBaseClass):
         customer_id: str,
         limit: int,
         starting_after: str | None
-    ):
+    ) -> dict:
         self.retrieve_payment_intent_history_invoked = True
         return {
             "data": [{
@@ -98,7 +98,7 @@ class FakeStripeClient(StripeBaseClass):
             }
         }
 
-    def retrieve_subscription(self, subscription_id: str):
+    def retrieve_subscription(self, subscription_id: str) -> dict:
         return {
             "items": {
                 "data": [{

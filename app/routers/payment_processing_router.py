@@ -51,7 +51,7 @@ class UpdateSubscriptionBehavior(Enum):
 
 class UpdateSubscriptionPayload(BaseModel):
     behavior: UpdateSubscriptionBehavior
-    new_subscription_tier: Optional[SubscriptionTier] = None
+    new_subscription_tier: SubscriptionTier | None = None
 
 class UpdatePaymentMethodPayload(BaseModel):
     success_callback_url: str
@@ -196,7 +196,7 @@ class PaymentProcessingRouter:
             session_token: Annotated[Union[str, None], Cookie()] = None,
             session_id: Annotated[Union[str, None], Cookie()] = None,
             batch_size: int = 0,
-            pagination_last_item_id_retrieved: str = None
+            pagination_last_item_id_retrieved: str | None = None
         ):
             return await self._retrieve_payment_history_internal(
                 session_token=session_token,
@@ -209,8 +209,8 @@ class PaymentProcessingRouter:
 
     async def _create_checkout_session_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response,
         payload: PaymentSessionPayload
@@ -226,7 +226,7 @@ class PaymentProcessingRouter:
         payload – the incoming request's payload.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -276,7 +276,7 @@ class PaymentProcessingRouter:
                     price_id = product['price_data']['id']
                     break
 
-            assert len(price_id or '') > 0, "Could not find a product for the incoming request."
+            assert price_id is not None, "Could not find a product for the incoming request."
             payment_session_url = stripe_client.generate_checkout_session(
                 price_id=price_id,
                 session_id=session_id,
@@ -307,8 +307,8 @@ class PaymentProcessingRouter:
 
     async def _retrieve_subscriptions_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response
     ):
@@ -322,7 +322,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -364,9 +364,9 @@ class PaymentProcessingRouter:
             customer_id = customer_data[0]['customer_id']
 
             stripe_client = dependency_container.inject_stripe_client()
-            response = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
+            customer_subscriptions = stripe_client.retrieve_customer_subscriptions(customer_id=customer_id)
 
-            subscription_data = response['data']
+            subscription_data = customer_subscriptions['data']
             filtered_data = []
 
             for subscription in subscription_data:
@@ -388,9 +388,9 @@ class PaymentProcessingRouter:
                     "recurrence": subscription['items']['data'][0]['plan']['interval'],
                     "current_billing_period_end_date": current_billing_period_end_date,
                     "payment_method_data": {
-                        "id": None if 'id' not in payment_method_data else payment_method_data['id'],
-                        "type": None if 'type' not in payment_method_data else payment_method_data['type'],
-                        "data": None if 'data' not in payment_method_data else payment_method_data['card'],
+                        "id": payment_method_data['id'] if payment_method_data and 'id' in payment_method_data else None,
+                        "type": payment_method_data['type'] if payment_method_data and 'type' in payment_method_data else None,
+                        "data": payment_method_data['data'] if payment_method_data and 'data' in payment_method_data else None,
                     },
                 }
                 current_subscription.update(subscription_data)
@@ -418,8 +418,8 @@ class PaymentProcessingRouter:
 
     async def _delete_subscription_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response
     ):
@@ -433,7 +433,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -496,12 +496,12 @@ class PaymentProcessingRouter:
 
     async def _update_subscription_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response,
         behavior: UpdateSubscriptionBehavior,
-        subscription_tier: SubscriptionTier
+        subscription_tier: SubscriptionTier | None
     ):
         """
         Updates the incoming subscription ID with the incoming product information.
@@ -515,7 +515,7 @@ class PaymentProcessingRouter:
         subscription_tier – the new tier to be associated with the subscription.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -560,7 +560,7 @@ class PaymentProcessingRouter:
             subscription_data = stripe_client.retrieve_subscription(subscription_id=subscription_id)
 
             if behavior == UpdateSubscriptionBehavior.CHANGE_TIER:
-                assert len(subscription_tier.value or '') > 0, "Missing the new tier price ID parameter."
+                assert subscription_tier is not None, "Missing the new tier price ID parameter."
 
                 product_catalog = stripe_client.retrieve_product_catalog()
                 price_id = None
@@ -569,7 +569,7 @@ class PaymentProcessingRouter:
                         price_id = product['price_data']['id']
                         break
 
-                assert len(price_id or '') > 0, "Could not find a product for the incoming request."
+                assert price_id is not None, "Could not find a product for the incoming request."
                 subscription_item_id = subscription_data["items"]["data"][0]["id"]
                 stripe_client.update_customer_subscription_plan(
                     subscription_id=subscription_id,
@@ -605,8 +605,8 @@ class PaymentProcessingRouter:
 
     async def _retrieve_product_catalog_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response
     ):
@@ -620,7 +620,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -647,8 +647,8 @@ class PaymentProcessingRouter:
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
-            response = stripe_client.retrieve_product_catalog()
-            return {"catalog": response}
+            product_catalog = stripe_client.retrieve_product_catalog()
+            return {"catalog": product_catalog}
         except Exception as e:
             status_code = general_utilities.extract_status_code(
                 e,
@@ -669,8 +669,8 @@ class PaymentProcessingRouter:
 
     async def _create_update_payment_method_session_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response,
         payload: UpdatePaymentMethodPayload
@@ -686,7 +686,7 @@ class PaymentProcessingRouter:
         payload – the JSON payload containing the update data.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -753,8 +753,8 @@ class PaymentProcessingRouter:
 
     async def _retrieve_payment_history_internal(
         self,
-        session_token: str,
-        session_id: str,
+        session_token: str | None,
+        session_id: str | None,
         request: Request,
         response: Response,
         limit: int,
@@ -772,7 +772,7 @@ class PaymentProcessingRouter:
         starting_after – the id of the last payment that was retrieved (for pagination purposes).
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -889,7 +889,7 @@ class PaymentProcessingRouter:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_STAGING")
             elif environment == PROD_ENVIRONMENT:
                 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET_PROD")
-            assert len(webhook_secret) > 0, "Empty webhook secret due to invalid environment value"
+            assert webhook_secret is not None and len(webhook_secret) > 0, "Empty webhook secret due to invalid environment value"
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -914,13 +914,15 @@ class PaymentProcessingRouter:
             logging.info("Successfully constructed Stripe event")
 
             # In deployed environments, block requests from localhost
-            if environment in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT] and request.client.host in ["localhost", "127.0.0.1"]:
+            if (environment in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT] and
+                request.client is not None and
+                request.client.host in ["localhost", "127.0.0.1"]):
                 logging.info(f"Blocking localhost request for {environment}")
                 raise HTTPException(
                     status_code=403,
                     detail="Webhooks from localhost are not allowed in staging."
                 )
-        except ValueError:
+        except ValueError as e:
             # Invalid payload
             logging.error(f"ValueError encountered: {str(e)}")
             raise HTTPException(
@@ -948,8 +950,12 @@ class PaymentProcessingRouter:
                 stripe_client=stripe_client,
             )
         except Exception as e:
-            logging.error(f"Exception encountered handling the Stripe event: {str(e)}")
-            raise HTTPException(e)
+            error_message = str(e)
+            logging.error(f"Exception encountered handling the Stripe event: {error_message}")
+            raise HTTPException(
+                status_code=status.HTTP_417_EXPECTATION_FAILED,
+                detail=error_message,
+            )
 
         return {}
 
@@ -987,15 +993,20 @@ class PaymentProcessingRouter:
                 # Attach product metadata to the underlying payment intent
                 try:
                     subscription = stripe_client.retrieve_subscription(subscription_id)
-                    latest_invoice = stripe_client.retrieve_invoice(subscription.get("latest_invoice", None))
+                    latest_invoice_id = subscription.get("latest_invoice", None)
+                    assert latest_invoice_id is not None, "Did not find latest invoice ID"
+                    latest_invoice = stripe_client.retrieve_invoice(latest_invoice_id)
+                    assert latest_invoice is not None, "Did not find latest invoice object"
                     payment_intent_id = latest_invoice.get("payment_intent", None)
                     if payment_intent_id is not None:
                         price_id = subscription["items"]["data"][0]["price"]["id"]
 
                         # Retrieve product metadata associated with the price id.
                         price = stripe_client.retrieve_price(price_id)
+                        assert price is not None, "Did not find price object"
                         product_id = price.get("product", None)
                         product = stripe_client.retrieve_product(product_id)
+                        assert product is not None, "Did not find product object"
                         stripe_client.attach_payment_intent_metadata(
                             payment_intent_id=payment_intent_id,
                             metadata=product.get("metadata", {})
@@ -1048,8 +1059,10 @@ class PaymentProcessingRouter:
                 subscription = stripe_client.retrieve_subscription(subscription_id)
                 price_id = subscription["items"]["data"][0]["price"]["id"]
                 price = stripe_client.retrieve_price(price_id)
+                assert price is not None, "Did not find price object"
                 product_id = price.get("product", {})
                 product = stripe_client.retrieve_product(product_id)
+                assert product is not None, "Did not find product object"
                 product_metadata = product.get("metadata", {})
                 stripe_client.attach_payment_intent_metadata(
                     payment_intent_id=payment_intent_id,
@@ -1210,6 +1223,7 @@ class PaymentProcessingRouter:
                 raise ValueError("Missing required product_id from subscription data")
 
             product_data = stripe_client.retrieve_product(product_id)
+            assert product_data is not None, "Did not find product data"
             product_metadata = product_data.get('metadata', {})
             stripe_product_name = product_metadata.get('product_name')
             tier_name = subscription_utilities.map_stripe_product_name_to_chartwise_tier(stripe_product_name)
