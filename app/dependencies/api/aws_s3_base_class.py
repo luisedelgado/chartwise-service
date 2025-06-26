@@ -6,7 +6,7 @@ class AwsS3BaseClass(ABC):
     def initiate_multipart_audio_file_upload(
         self,
         file_path: str,
-        bucket_name: str
+        bucket_name: str | None
     ) -> dict:
         """
         Initiates a multi-part file upload of an audio file to S3.
@@ -16,10 +16,10 @@ class AwsS3BaseClass(ABC):
     @abstractmethod
     def retrieve_presigned_url_for_multipart_upload(
         self,
-        bucket_name: str,
-        file_path: str,
-        upload_id: str,
         part_number: int,
+        bucket_name: str | None,
+        upload_id: str | None,
+        file_path: str | None,
     ) -> str:
         """
         Fetches a presigned URL for uploading `part_number`.
@@ -29,10 +29,10 @@ class AwsS3BaseClass(ABC):
     @abstractmethod
     def complete_multipart_audio_file_upload(
         self,
-        bucket_name: str,
         file_path: str,
         upload_id: str,
         parts: list,
+        bucket_name: str | None,
     ):
         """
         Completes a multi-part upload of an audio file.

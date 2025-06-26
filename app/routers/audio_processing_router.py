@@ -142,10 +142,10 @@ class AudioProcessingRouter:
         async def retrieve_presign_part_url(
             request: Request,
             response: Response,
-            file_path: str = None,
-            patient_id: str = None,
-            upload_id: str = None,
-            part_number: int = None,
+            file_path: str | None = None,
+            patient_id: str | None = None,
+            upload_id: str | None = None,
+            part_number: int | None = None,
             _: dict = Depends(get_user_info),
             session_token: Annotated[Union[str, None], Cookie()] = None,
             session_id: Annotated[Union[str, None], Cookie()] = None
@@ -211,7 +211,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -360,7 +360,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -470,10 +470,10 @@ class AudioProcessingRouter:
 
     async def _retrieve_presign_part_url_internal(
         self,
-        upload_id: str,
-        part_number: int,
-        file_path: str,
-        patient_id: str,
+        upload_id: str | None,
+        part_number: int | None,
+        file_path: str | None,
+        patient_id: str | None,
         request: Request,
         response: Response,
         session_token: Annotated[Union[str, None], Cookie()],
@@ -493,7 +493,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -523,7 +523,7 @@ class AudioProcessingRouter:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id value"
             assert len(upload_id or '') > 0, "Invalid upload ID."
             assert len(file_path or '') > 0, "Invalid file path."
-            assert part_number > 0, "Invalid part number."
+            assert part_number is not None and part_number > 0, "Invalid part number."
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
@@ -594,7 +594,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -642,7 +642,7 @@ class AudioProcessingRouter:
 
         try:
             storage_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
-            response = storage_client.complete_multipart_audio_file_upload(
+            storage_client.complete_multipart_audio_file_upload(
                 file_path=file_path,
                 upload_id=upload_id,
                 parts=parts,
@@ -699,7 +699,7 @@ class AudioProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:

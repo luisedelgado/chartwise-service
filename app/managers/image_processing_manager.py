@@ -82,14 +82,14 @@ class ImageProcessingManager(MediaProcessingManager):
     async def process_textraction(
         self,
         document_id: str,
-        session_id: str,
         environment: str,
         language_code: str,
         therapist_id: str,
         background_tasks: BackgroundTasks,
         auth_manager: AuthManager,
         assistant_manager: AssistantManager,
-        request: Request
+        request: Request,
+        session_id: str | None,
     ) -> str:
         try:
             session_notes_id = None

@@ -111,8 +111,8 @@ class AuthManager:
     async def refresh_session(
         self,
         user_id: str,
-        session_id: str,
         response: Response,
+        session_id: str | None,
     ) -> Token:
         try:
             session_container.user_id = user_id

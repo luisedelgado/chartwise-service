@@ -102,7 +102,7 @@ class ImageProcessingRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -193,11 +193,11 @@ class ImageProcessingRouter:
             request.state.session_report_id = session_report_id
             background_tasks.add_task(
                 self._process_textraction,
-                job_id,
-                user_id,
-                session_id,
-                background_tasks,
-                request,
+                job_id=job_id,
+                therapist_id=user_id,
+                background_tasks=background_tasks,
+                request=request,
+                session_id=session_id,
             )
 
             return {
@@ -225,9 +225,9 @@ class ImageProcessingRouter:
         self,
         job_id: str,
         therapist_id: str,
-        session_id: str,
         background_tasks: BackgroundTasks,
         request: Request,
+        session_id: str | None,
     ):
         """
         Processes the textraction job in the background after the image has been uploaded.

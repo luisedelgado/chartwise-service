@@ -30,7 +30,7 @@ class AudioProcessingManager(MediaProcessingManager):
         assistant_manager: AssistantManager,
         template: SessionNotesTemplate,
         therapist_id: str,
-        session_id: str,
+        session_id: str | None,
         language_code: str,
         patient_id: str,
         session_date: date,

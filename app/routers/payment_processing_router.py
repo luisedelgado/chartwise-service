@@ -226,7 +226,7 @@ class PaymentProcessingRouter:
         payload – the incoming request's payload.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -322,7 +322,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -433,7 +433,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -515,7 +515,7 @@ class PaymentProcessingRouter:
         subscription_tier – the new tier to be associated with the subscription.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -620,7 +620,7 @@ class PaymentProcessingRouter:
         response – the response model with which to create the final response.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -686,7 +686,7 @@ class PaymentProcessingRouter:
         payload – the JSON payload containing the update data.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -772,7 +772,7 @@ class PaymentProcessingRouter:
         starting_after – the id of the last payment that was retrieved (for pagination purposes).
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:

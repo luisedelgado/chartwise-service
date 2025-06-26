@@ -269,7 +269,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
         try:
-            if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+            if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
                 raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
@@ -344,7 +344,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
 
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -420,7 +420,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
 
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -539,7 +539,7 @@ class SecurityRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -631,7 +631,7 @@ class SecurityRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:

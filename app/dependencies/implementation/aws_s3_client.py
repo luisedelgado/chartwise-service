@@ -13,10 +13,12 @@ class AwsS3Client(AwsS3BaseClass):
 
     def initiate_multipart_audio_file_upload(
         self,
-        bucket_name: str,
         file_path: str,
+        bucket_name: str | None,
     ) -> dict:
         try:
+            assert bucket_name is not None, "Received a nullable bucket name"
+
             response = self.client.create_multipart_upload(
                 Bucket=bucket_name,
                 Key=file_path
@@ -30,12 +32,15 @@ class AwsS3Client(AwsS3BaseClass):
 
     def retrieve_presigned_url_for_multipart_upload(
         self,
-        bucket_name: str,
-        file_path: str,
-        upload_id: str,
         part_number: int,
+        bucket_name: str | None,
+        upload_id: str | None,
+        file_path: str | None,
     ) -> str:
         try:
+            assert bucket_name is not None, "Received nullable bucket name"
+            assert upload_id is not None, "Received nullable upload id"
+            assert file_path is not None, "Received nullable file path"
             url = self.client.generate_presigned_url(
                 "upload_part",
                 Params={
@@ -52,12 +57,13 @@ class AwsS3Client(AwsS3BaseClass):
 
     def complete_multipart_audio_file_upload(
         self,
-        bucket_name: str,
         file_path: str,
         upload_id: str,
         parts: list,
+        bucket_name: str | None,
     ):
         try:
+            assert bucket_name is not None, "Received nullable bucket name"
             self.client.complete_multipart_upload(
                 Bucket=bucket_name,
                 Key=file_path,
