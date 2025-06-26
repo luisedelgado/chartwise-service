@@ -4,6 +4,7 @@ class InfluxBaseClass(ABC):
 
     @abstractmethod
     def log_api_request(
+        self,
         endpoint_name: str,
         method: str,
         **kwargs
@@ -20,6 +21,7 @@ class InfluxBaseClass(ABC):
 
     @abstractmethod
     def log_api_response(
+        self,
         endpoint_name: str,
         method: str,
         response_time: float,
@@ -38,6 +40,7 @@ class InfluxBaseClass(ABC):
 
     @abstractmethod
     def log_error(
+        self,
         endpoint_name: str,
         method: str,
         error_code: int,

@@ -177,7 +177,7 @@ class AwsDbClient(AwsDbBaseClass):
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         try:
             payload = self._encrypt_payload(payload, table_name)
 

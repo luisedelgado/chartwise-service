@@ -1,6 +1,5 @@
 import asyncio
 import os
-import tiktoken
 
 from typing import AsyncIterable, Awaitable, Callable
 
@@ -21,7 +20,7 @@ class OpenAIClient(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expected_output_model: BaseModel = None,
+        expected_output_model: BaseModel | None = None,
     ) -> BaseModel | str:
         try:
             openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -61,8 +60,8 @@ class OpenAIClient(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        calculate_max_tokens: Callable[[str, str], int],
-        last_session_date: str = None
+        calculate_max_tokens: Callable[[str, str], Awaitable[int]],
+        last_session_date: str | None = None
     ) -> AsyncIterable[str]:
         try:
             prompt_crafter = PromptCrafter()

@@ -6,6 +6,7 @@ class AwsSecretManagerBaseClass(ABC):
 
     @abstractmethod
     async def get_secret(
+        self,
         secret_id: str,
         resend_client: ResendBaseClass,
     ) -> str:

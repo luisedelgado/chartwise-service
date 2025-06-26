@@ -1,7 +1,7 @@
-import asyncio, inspect, json, tiktoken, logging
+import asyncio, json, tiktoken, logging
 
 from fastapi import Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import AsyncIterable
 
 from .message_templates import PromptCrafter, PromptScenario
@@ -12,27 +12,18 @@ from ..dependencies.api.pinecone_session_date_override import (
     PineconeQuerySessionDateOverride,
     PineconeQuerySessionDateOverrideType,
 )
-from ..internal.schemas import ENCRYPTED_SESSION_REPORTS_TABLE_NAME
+from ..internal.schemas import (
+    ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
+    ListQuestionSuggestionsSchema,
+    ListRecentTopicsSchema,
+    TimeTokensExtractionSchema,
+)
 from ..internal.utilities import datetime_handler
 
 TOPICS_CONTEXT_SESSIONS_CAP = 4
 QUESTION_SUGGESTIONS_CONTEXT_SESSIONS_CAP = 4
 ATTENDANCE_CONTEXT_SESSIONS_CAP = 52
 BRIEFING_CONTEXT_SESSIONS_CAP = 4
-
-class ListQuestionSuggestionsSchema(BaseModel):
-    questions: list[str] = Field(...)
-
-class RecentTopicSchema(BaseModel):
-    topic: str = Field(..., max_length=25)
-    percentage: str = Field(..., pattern=r"^\d{1,3}%$")
-
-class ListRecentTopicsSchema(BaseModel):
-    topics: list[RecentTopicSchema]
-
-class TimeTokensExtractionSchema(BaseModel):
-    start_date: str
-    end_date: str
 
 class ChartWiseAssistant:
 
@@ -75,7 +66,7 @@ class ChartWiseAssistant:
             is_first_message_in_conversation = len(openai_client.chat_history) == 0
             prompt_crafter = PromptCrafter()
 
-            async def reformulate_query_input_if_needed():
+            async def reformulate_query_input_if_needed() -> str:
                 if is_first_message_in_conversation:
                     return query_input
 
@@ -92,15 +83,17 @@ class ChartWiseAssistant:
                     user_prompt=reformulate_question_user_prompt,
                 )
 
-                return await openai_client.trigger_async_chat_completion(
+                completion = await openai_client.trigger_async_chat_completion(
                     max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": reformulate_question_system_prompt},
                         {"role": "user", "content": reformulate_question_user_prompt},
                     ],
                 )
+                assert type(completion) == str, "Unexpected completion type when reformulating query input."
+                return completion
 
-            async def extract_time_tokens_if_possible():
+            async def extract_time_tokens_if_possible() -> TimeTokensExtractionSchema:
                 # Extract any time-related tokens from the query input to determine if the completion
                 # should be scoped to a time range.
                 extract_time_tokens_user_prompt = prompt_crafter.get_user_message_for_scenario(
@@ -113,7 +106,7 @@ class ChartWiseAssistant:
                     user_prompt=extract_time_tokens_user_prompt,
                 )
 
-                return await openai_client.trigger_async_chat_completion(
+                completion = await openai_client.trigger_async_chat_completion(
                     max_tokens=max_tokens,
                     messages=[
                         {"role": "system", "content": extract_time_tokens_system_prompt},
@@ -121,6 +114,8 @@ class ChartWiseAssistant:
                     ],
                     expected_output_model=TimeTokensExtractionSchema,
                 )
+                assert isinstance(completion, TimeTokensExtractionSchema), "Unexpected completion type when extracting time tokens."
+                return completion
 
             # Run the reformulation and time token extraction concurrently.
             reformulated_query_input, extracted_time_tokens = await asyncio.gather(
@@ -230,13 +225,15 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await openai_client.trigger_async_chat_completion(
+            completion = await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when creating briefing"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -304,7 +301,7 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await openai_client.trigger_async_chat_completion(
+            completion = await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -312,6 +309,8 @@ class ChartWiseAssistant:
                 ],
                 expected_output_model=ListQuestionSuggestionsSchema,
             )
+            assert isinstance(completion, ListQuestionSuggestionsSchema), "Unexpected completion type when creating question suggestions"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -385,7 +384,7 @@ class ChartWiseAssistant:
             )
             logging.info(f"[fetch_recent_topics] Calculated max_tokens: {max_tokens}")
 
-            return await openai_client.trigger_async_chat_completion(
+            completion = await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -393,6 +392,8 @@ class ChartWiseAssistant:
                 ],
                 expected_output_model=ListRecentTopicsSchema,
             )
+            assert isinstance(completion, ListRecentTopicsSchema), "Unexpected completion type when creating recent topics"
+            return completion
         except Exception as e:
             logging.error(f"[fetch_recent_topics] Error occurred: {str(e)}")
             raise RuntimeError(e) from e
@@ -472,24 +473,28 @@ class ChartWiseAssistant:
             )
             logging.info(f"[generate_recent_topics_insights] Calculated max_tokens: {max_tokens}")
 
-            return await openai_client.trigger_async_chat_completion(
+            completion = await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when creating recent topics insights"
+            return completion
         except Exception as e:
             logging.error(f"[generate_recent_topics_insights] Error occurred: {str(e)}")
             raise RuntimeError(e) from e
 
-    async def generate_attendance_insights(self,
-                                           therapist_id: str,
-                                           patient_id: str,
-                                           language_code: str,
-                                           patient_name: str,
-                                           patient_gender: str,
-                                           request: Request,) -> str:
+    async def generate_attendance_insights(
+        self,
+        therapist_id: str,
+        patient_id: str,
+        language_code: str,
+        patient_name: str,
+        patient_gender: str,
+        request: Request,
+    ) -> str:
         try:
             patient_session_dates = [
                 date_override.session_date_start for date_override in (await self._retrieve_n_most_recent_session_dates(
@@ -515,13 +520,15 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await dependency_container.inject_openai_client().trigger_async_chat_completion(
+            completion = await dependency_container.inject_openai_client().trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when creating attendance insights"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -547,13 +554,15 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await dependency_container.inject_openai_client().trigger_async_chat_completion(
+            completion = await dependency_container.inject_openai_client().trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when creating soap report"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -581,13 +590,15 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await openai_client.trigger_async_chat_completion(
+            completion = await openai_client.trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when summarizing chunk"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -618,13 +629,15 @@ class ChartWiseAssistant:
                 user_prompt=user_prompt,
             )
 
-            return await dependency_container.inject_openai_client().trigger_async_chat_completion(
+            completion = await dependency_container.inject_openai_client().trigger_async_chat_completion(
                 max_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            assert type(completion) == str, "Unexpected completion type when creating a mini summary"
+            return completion
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -651,17 +664,16 @@ class ChartWiseAssistant:
         patient_id: str,
         openai_client: OpenAIBaseClass,
         request: Request,
-        extracted_time_tokens: str | BaseModel,
-        last_session_date_override: PineconeQuerySessionDateOverride = None
+        extracted_time_tokens: TimeTokensExtractionSchema,
+        last_session_date_override: PineconeQuerySessionDateOverride | None = None
     ):
         start_date = None
         end_date = None
-        if isinstance(extracted_time_tokens, BaseModel):
-            extracted_time_tokens_json = json.loads(extracted_time_tokens.model_dump_json())
-            if extracted_time_tokens_json.get("start_date") and extracted_time_tokens_json.get("end_date"):
-                # If the time tokens were extracted, we should bound the query to the specified time range.
-                start_date = extracted_time_tokens.start_date
-                end_date = extracted_time_tokens.end_date
+        extracted_time_tokens_json = json.loads(extracted_time_tokens.model_dump_json())
+        if extracted_time_tokens_json.get("start_date") and extracted_time_tokens_json.get("end_date"):
+            # If the time tokens were extracted, we should bound the query to the specified time range.
+            start_date = extracted_time_tokens.start_date
+            end_date = extracted_time_tokens.end_date
 
         if start_date is not None and end_date is not None:
             # Fetch the vector store context based on the extracted time range.
@@ -693,7 +705,7 @@ class ChartWiseAssistant:
             request=request,
             query_top_k=6,
             rerank_vectors=True,
-            session_dates_overrides=[last_session_date_override]
+            session_dates_overrides=(None if last_session_date_override is None else [last_session_date_override])
         )
 
     async def _retrieve_n_most_recent_session_dates(

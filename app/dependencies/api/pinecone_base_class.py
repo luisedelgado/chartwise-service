@@ -12,13 +12,14 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def insert_session_vectors(
+        self,
         user_id: str,
         patient_id: str,
         text: str,
         session_report_id: str,
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable,
-        therapy_session_date: date = None
+        therapy_session_date: date | None = None
     ) -> list[str]:
         """
         Inserts a new record to the store leveraging the incoming data.
@@ -37,11 +38,12 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def insert_preexisting_history_vectors(
+        self,
         user_id: str,
         patient_id: str,
         text: str,
         openai_client: OpenAIBaseClass,
-        summarize_chunk: Callable
+        summarize_chunk: Callable,
     ):
         """
         Inserts a new record to the store leveraging the incoming data.
@@ -58,9 +60,10 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     def delete_session_vectors(
+        self,
         user_id: str,
         patient_id: str,
-        date: date = None
+        date: date | None = None,
     ):
         """
         Deletes session vectors. If the date param is None, it deletes everything inside the namespace.
@@ -75,8 +78,9 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     def delete_preexisting_history_vectors(
+        self,
         user_id: str,
-        patient_id: str
+        patient_id: str,
     ):
         """
         Deletes pre-existing history vectors.
@@ -89,6 +93,7 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def update_session_vectors(
+        self,
         user_id: str,
         patient_id: str,
         text: str,
@@ -114,6 +119,7 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def update_preexisting_history_vectors(
+        self,
         user_id: str,
         patient_id: str,
         text: str,
@@ -134,6 +140,7 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def get_vector_store_context(
+        self,
         openai_client: OpenAIBaseClass,
         aws_db_client: AwsDbBaseClass,
         query_input: str,
@@ -143,7 +150,7 @@ class PineconeBaseClass(ABC):
         rerank_vectors: bool,
         request: Request,
         include_preexisting_history: bool = True,
-        session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
+        session_dates_overrides: list[PineconeQuerySessionDateOverride] | None = None
     ) -> str:
         """
         Retrieves the vector context associated with the incoming query_input.
@@ -164,8 +171,9 @@ class PineconeBaseClass(ABC):
 
     @abstractmethod
     async def fetch_historical_context(
+        self,
         index: Index,
-        namespace: str
+        namespace: str,
     ):
         """
         Retrieves the historical context associated with a patient, if exists.

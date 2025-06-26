@@ -59,24 +59,24 @@ class SessionNotesSource(Enum):
 class PatientInsertPayload(BaseModel):
     first_name: str
     last_name: str
-    birth_date: Optional[str] = None
-    pre_existing_history: Optional[str] = None
-    gender: Optional[Gender] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
-    consentment_channel: Optional[PatientConsentmentChannel] = None
+    birth_date: str | None = None
+    pre_existing_history: str | None = None
+    gender: Gender | None = None
+    email: str | None = None
+    phone_number: str | None = None
+    consentment_channel: PatientConsentmentChannel | None = None
     onboarding_first_time_patient: bool
 
 class PatientUpdatePayload(BaseModel):
     id: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    birth_date: Optional[str] = None
-    pre_existing_history: Optional[str] = None
-    gender: Optional[Gender] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
-    consentment_channel: Optional[PatientConsentmentChannel] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    birth_date: str | None = None
+    pre_existing_history: str | None = None
+    gender: Gender | None = None
+    email: str | None = None
+    phone_number: str | None = None
+    consentment_channel: PatientConsentmentChannel | None = None
 
 class SessionNotesInsert(BaseModel):
     patient_id: str
@@ -85,10 +85,10 @@ class SessionNotesInsert(BaseModel):
 
 class SessionNotesUpdate(BaseModel):
     id: str
-    notes_text: Optional[str] = None
-    session_date: Optional[str] = None
-    diarization: Optional[str] = None
-    is_read: Optional[bool] = None
+    notes_text: str | None = None
+    session_date: str | None = None
+    diarization: str | None = None
+    is_read: str | None = None
 
 class CachedPatientQueryData:
     def __init__(self,
@@ -96,8 +96,8 @@ class CachedPatientQueryData:
                  patient_first_name: str,
                  patient_last_name: str,
                  response_language_code: str,
-                 patient_gender: Optional[str] = None,
-                 last_session_date: Optional[str] = None):
+                 patient_gender: str | None = None,
+                 last_session_date: str | None = None):
         self.patient_id = patient_id
         self.patient_first_name = patient_first_name
         self.patient_last_name = patient_last_name

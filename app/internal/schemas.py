@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import BaseModel, Field
 
 # Encrypted tables names
 ENCRYPTED_PATIENTS_TABLE_NAME = "encrypted_patients"
@@ -91,3 +92,17 @@ class TimeRange(Enum):
     MONTH = "month"
     YEAR = "year"
     FIVE_YEARS = "five_years"
+
+class ListQuestionSuggestionsSchema(BaseModel):
+    questions: list[str] = Field(...)
+
+class RecentTopicSchema(BaseModel):
+    topic: str = Field(..., max_length=25)
+    percentage: str = Field(..., pattern=r"^\d{1,3}%$")
+
+class ListRecentTopicsSchema(BaseModel):
+    topics: list[RecentTopicSchema]
+
+class TimeTokensExtractionSchema(BaseModel):
+    start_date: str
+    end_date: str

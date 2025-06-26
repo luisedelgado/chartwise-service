@@ -84,8 +84,8 @@ class MediaJobProcessingAlert(InternalAlert):
 class CustomerRelationsAlert(InternalAlert):
     def __init__(
         self,
-        environment: str,
         description: str,
+        environment: str | None,
         session_id: str | None = None,
         exception: Exception | None = None,
         therapist_id: str | None = None,

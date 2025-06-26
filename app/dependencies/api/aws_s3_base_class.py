@@ -4,6 +4,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def initiate_multipart_audio_file_upload(
+        self,
         file_path: str,
         bucket_name: str
     ) -> dict:
@@ -14,6 +15,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def retrieve_presigned_url_for_multipart_upload(
+        self,
         bucket_name: str,
         file_path: str,
         upload_id: str,
@@ -26,6 +28,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def complete_multipart_audio_file_upload(
+        self,
         bucket_name: str,
         file_path: str,
         upload_id: str,
@@ -38,6 +41,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def delete_file(
+        self,
         source_bucket: str,
         storage_filepath: str
     ):
@@ -52,6 +56,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def upload_file(
+        self,
         destination_bucket: str,
         storage_filepath: str,
         content: str | bytes
@@ -68,6 +73,7 @@ class AwsS3BaseClass(ABC):
 
     @abstractmethod
     def get_audio_file_read_signed_url(
+        self,
         bucket_name: str,
         file_path: str
     ) -> dict:

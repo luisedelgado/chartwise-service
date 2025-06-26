@@ -7,6 +7,12 @@ from pydantic import BaseModel
 from typing import AsyncIterable, Awaitable, Callable
 
 from ..api.openai_base_class import OpenAIBaseClass
+from ...internal.schemas import (
+    TimeTokensExtractionSchema,
+    ListRecentTopicsSchema,
+    ListQuestionSuggestionsSchema,
+    RecentTopicSchema,
+)
 
 FAKE_ASSISTANT_RESPONSE = "This is my fake response"
 
@@ -60,22 +66,28 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expected_output_model: BaseModel = None,
+        expected_output_model: BaseModel | None = None,
     ) -> BaseModel | str:
         if self.throws_exception:
             raise Exception("Fake exception")
 
-        if expected_output_model is not None:
-            return FakeResponse(
-                questions=["my fake question"],
-                topics=["my fake topic"],
+        if expected_output_model is TimeTokensExtractionSchema:
+            return TimeTokensExtractionSchema(
                 start_date="01-01-2023",
                 end_date="12-31-2023"
             )
 
-        return {
-            "summary": "my fake summary",
-        }
+        if expected_output_model is ListRecentTopicsSchema:
+            return ListRecentTopicsSchema(
+                topics=[RecentTopicSchema(topic="fakeTopic", percentage="100%")],
+            )
+
+        if expected_output_model is ListQuestionSuggestionsSchema:
+            return ListQuestionSuggestionsSchema(
+                questions=["my fake question"],
+            )
+
+        return "my fake summary"
 
     async def stream_chat_completion(
         self,
@@ -85,8 +97,8 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        calculate_max_tokens: Callable[[str, str], int],
-        last_session_date: str = None
+        calculate_max_tokens: Callable[[str, str], Awaitable[int]],
+        last_session_date: str | None = None
     ) -> AsyncIterable[str]:
         async def wrap_done(fn: Awaitable, event: asyncio.Event):
                 try:

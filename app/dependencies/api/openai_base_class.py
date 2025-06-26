@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from langchain.schema import BaseMessage
 from pydantic import BaseModel
-from typing import AsyncIterable
+from typing import AsyncIterable, Awaitable, Callable, Type
 
 class OpenAIBaseClass(ABC):
 
@@ -13,9 +13,10 @@ class OpenAIBaseClass(ABC):
 
     @abstractmethod
     async def trigger_async_chat_completion(
+        self,
         max_tokens: int,
         messages: list,
-        expected_output_model: BaseModel = None,
+        expected_output_model: Type[BaseModel] | None = None,
     ) -> BaseModel | str:
         """
         Invokes a chat completion asynchronously.
@@ -29,13 +30,15 @@ class OpenAIBaseClass(ABC):
 
     @abstractmethod
     async def stream_chat_completion(
+        self,
         vector_context: str,
         language_code: str,
         query_input: str,
         is_first_message_in_conversation: bool,
         patient_name: str,
         patient_gender: str,
-        last_session_date: str = None
+        calculate_max_tokens: Callable[[str, str], Awaitable[int]],
+        last_session_date: str | None = None
     ) -> AsyncIterable[str]:
         """
         Streams a chat completion asynchronously.
@@ -49,24 +52,29 @@ class OpenAIBaseClass(ABC):
         patient_gender – the patient gender.
         last_session_date – the optional last session date for further contextualizing the prompts.
         """
-        pass
+        if False:
+            yield  # type: ignore
+        raise NotImplementedError
 
     @abstractmethod
-    async def clear_chat_history():
+    async def clear_chat_history(self):
         """
         Clears any existing chat history.
         """
         pass
 
     @abstractmethod
-    async def flatten_chat_history() -> str:
+    async def flatten_chat_history(self) -> str:
         """
         Returns a flattened version of the full chat history.
         """
         pass
 
     @abstractmethod
-    async def create_embeddings(text: str):
+    async def create_embeddings(
+        self,
+        text: str
+    ):
         """
         Creates embeddings from the incoming text.
 

@@ -99,7 +99,7 @@ class FakePineconeClient(PineconeBaseClass):
         rerank_vectors: bool,
         request: Request,
         include_preexisting_history: bool = True,
-        session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
+        session_dates_overrides: list[PineconeQuerySessionDateOverride] | None = None
     ) -> str:
         self.get_vector_store_context_invoked = True
         if not self.vector_store_context_returns_data:

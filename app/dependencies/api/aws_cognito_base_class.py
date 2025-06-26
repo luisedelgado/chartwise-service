@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from fastapi import Header
 from typing import Dict
 
 class AwsCognitoBaseClass(ABC):
 
     @abstractmethod
-    def verify_cognito_token(token: str) -> Dict:
+    def verify_cognito_token(
+        self,
+        token: str
+    ) -> Dict:
         """
         Verifies the Cognito token.
         Arguments:
@@ -14,7 +16,10 @@ class AwsCognitoBaseClass(ABC):
         pass
 
     @abstractmethod
-    def decode_cognito_token(token: str) -> Dict:
+    def decode_cognito_token(
+        self,
+        token: str
+    ) -> Dict:
         """
         Decodes the Cognito token.
         Arguments:
@@ -23,14 +28,17 @@ class AwsCognitoBaseClass(ABC):
         pass
 
     @abstractmethod
-    def get_jwk_client():
+    def get_jwk_client(self):
         """
         Returns the JWK client for Cognito.
         """
         pass
 
     @abstractmethod
-    async def delete_user(user_id: str):
+    async def delete_user(
+        self,
+        user_id: str
+    ):
         """
         Deletes a user from the Cognito auth system.
         Arguments:

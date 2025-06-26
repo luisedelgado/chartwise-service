@@ -209,7 +209,7 @@ class SecurityRouter:
             assert len(user_id or '') > 0, "Failed to authenticate the user. Check the tokens you are sending."
 
             if session_id is None:
-                session_id = uuid.uuid1()
+                session_id = str(uuid.uuid1())
                 request.state.session_id = session_id
                 response.set_cookie(
                     key=AuthManager.SESSION_ID_KEY,
@@ -269,7 +269,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
         try:
-            if not self._auth_manager.session_token_is_valid(session_token):
+            if not session_token or not self._auth_manager.session_token_is_valid(session_token):
                 raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
             user_id = self._auth_manager.extract_data_from_token(session_token)[USER_ID_KEY]
@@ -344,7 +344,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -420,7 +420,7 @@ class SecurityRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -446,19 +446,19 @@ class SecurityRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
+            body_dict = body.model_dump(exclude_unset=True)
 
-            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert 'birth_date' not in body or datetime_handler.is_valid_date(
-                date_input=body['birth_date'],
+            assert 'gender' not in body_dict or body_dict['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body_dict or datetime_handler.is_valid_date(
+                date_input=body_dict['birth_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
+            assert Language.get(body_dict['language_preference']).is_valid(), "Invalid language_preference parameter"
 
             payload = {
                 'id': user_id,
             }
-            for key, value in body.items():
+            for key, value in body_dict.items():
                 if isinstance(value, Enum):
                     value = value.value
                 elif key in DATE_COLUMNS and type(value) == str:
@@ -539,7 +539,7 @@ class SecurityRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -565,16 +565,16 @@ class SecurityRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
-            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert 'birth_date' not in body or datetime_handler.is_valid_date(
-                date_input=body['birth_date'],
+            body_dict = body.model_dump(exclude_unset=True)
+            assert 'gender' not in body_dict or body_dict['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body_dict or datetime_handler.is_valid_date(
+                date_input=body_dict['birth_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
-            assert 'language_preference' not in body or Language.get(body['language_preference']).is_valid(), "Invalid language_preference parameter"
+            assert 'language_preference' not in body_dict or Language.get(body_dict['language_preference']).is_valid(), "Invalid language_preference parameter"
 
             payload = {}
-            for key, value in body.items():
+            for key, value in body_dict.items():
                 if isinstance(value, Enum):
                     value = value.value
                 elif key in DATE_COLUMNS and type(value) == str:
@@ -594,7 +594,7 @@ class SecurityRouter:
                     'id': user_id
                 }
             )
-            assert (0 != len(update_response)), "Update operation could not be completed."
+            assert (type(update_response) == list and 0 != len(update_response)), "Update operation could not be completed."
             return {}
         except Exception as e:
             description = str(e)
@@ -631,7 +631,7 @@ class SecurityRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if not session_token or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -727,6 +727,7 @@ class SecurityRouter:
                 table_name=THERAPISTS_TABLE_NAME
             )
 
+            assert type(soft_deletion_result) == list, "Unexpected soft deletion result"
             therapist_email = soft_deletion_result[0]['email']
             alert_description = (f"Customer with therapist ID <i>{user_id}</i>, and email {therapist_email} "
                                  "has canceled their subscription, and deleted all their account data.")

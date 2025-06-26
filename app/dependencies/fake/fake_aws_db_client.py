@@ -68,7 +68,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         if table_name == THERAPISTS_TABLE_NAME:
             return [
                 {

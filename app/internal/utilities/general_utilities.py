@@ -35,7 +35,7 @@ def gender_has_default_pronouns(
 
 def extract_status_code(
     exception,
-    fallback: status
+    fallback: int
 ):
     """
     Attempts to extract a status code for an Exception object whose underlying type we don't know.

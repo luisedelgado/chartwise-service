@@ -5,6 +5,7 @@ class DocupandaBaseClass(ABC):
 
     @abstractmethod
     async def upload_image(
+        self,
         image_filepath: str,
         image_filename: str
     ) -> str:

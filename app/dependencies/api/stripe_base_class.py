@@ -5,6 +5,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def generate_checkout_session(
+        self,
         session_id: str,
         therapist_id: str,
         price_id: str,
@@ -25,6 +26,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def construct_webhook_event(
+        self,
         payload,
         sig_header,
         webhook_secret
@@ -40,7 +42,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_session(session_id: str):
+    def retrieve_session(
+        self,
+        session_id: str
+    ):
         """
         Retrieves the session associated with the incoming id
 
@@ -51,6 +56,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def retrieve_payment_intent_history(
+        self,
         customer_id: str,
         limit: int,
         starting_after: str | None
@@ -67,6 +73,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def retrieve_price(
+        self,
         price_id: str
     ):
         """
@@ -78,7 +85,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_invoice(invoice_id: str):
+    def retrieve_invoice(
+        self,
+        invoice_id: str
+    ):
         """
         Retrieves the invoice associated with the incoming id
 
@@ -88,7 +98,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_product(product_id: str):
+    def retrieve_product(
+        self,
+        product_id: str
+    ):
         """
         Retrieves the product associated with the incoming id
 
@@ -98,7 +111,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_payment_method(payment_method_id: str):
+    def retrieve_payment_method(
+        self,
+        payment_method_id: str
+    ):
         """
         Retrieves the payment method associated with the incoming id
 
@@ -108,7 +124,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_subscription(subscription_id: str):
+    def retrieve_subscription(
+        self,
+        subscription_id: str
+    ):
         """
         Retrieves the subscription associated with the incoming id
 
@@ -118,7 +137,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_customer_subscriptions(customer_id: str) -> dict:
+    def retrieve_customer_subscriptions(
+        self,
+        customer_id: str
+    ) -> dict:
         """
         Retrieves the subscriptions associated with the incoming customer id
 
@@ -128,7 +150,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def cancel_customer_subscription(subscription_id: str):
+    def cancel_customer_subscription(
+        self,
+        subscription_id: str
+    ):
         """
         Cancels the subscription associated with the incoming id while
         leaving it active until the current billing period end.
@@ -139,7 +164,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def delete_customer_subscription_immediately(subscription_id: str):
+    def delete_customer_subscription_immediately(
+        self,
+        subscription_id: str
+    ):
         """
         Cancels and deletes a subscription immediately.
 
@@ -149,7 +177,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def resume_cancelled_subscription(subscription_id: str):
+    def resume_cancelled_subscription(
+        self,
+        subscription_id: str
+    ):
         """
         Attempts to resume a subscription that was previously scheduled for cancellation.
 
@@ -160,9 +191,10 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def update_customer_subscription_plan(
+        self,
         subscription_id: str,
         subscription_item_id: str,
-        price_id: str
+        price_id: str,
     ):
         """
         Updates the subscription associated with the incoming id
@@ -176,6 +208,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def attach_customer_payment_method(
+        self,
         customer_id: str,
         payment_method_id: str
     ):
@@ -190,6 +223,7 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def update_subscription_payment_method(
+        self,
         subscription_id: str,
         payment_method_id: str
     ):
@@ -203,7 +237,10 @@ class StripeBaseClass(ABC):
         pass
 
     @abstractmethod
-    def retrieve_product_catalog(country_iso: str = None) -> list:
+    def retrieve_product_catalog(
+        self,
+        country_iso: str | None = None
+    ) -> list:
         """
         Retrieves the product catalog.
 
@@ -214,8 +251,9 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def attach_subscription_metadata(
+        self,
         subscription_id: str,
-        metadata: dict
+        metadata: dict,
     ):
         """
         Attaches metadata to the subscription associated with the incoming ID
@@ -228,8 +266,9 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def attach_invoice_metadata(
+        self,
         invoice_id: str,
-        metadata: dict
+        metadata: dict,
     ):
         """
         Attaches metadata to the invoice associated with the incoming ID
@@ -242,8 +281,9 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def attach_payment_intent_metadata(
+        self,
         payment_intent_id: str,
-        metadata: dict
+        metadata: dict,
     ):
         """
         Attach metadata to the payment intent associated with the incoming ID
@@ -256,9 +296,10 @@ class StripeBaseClass(ABC):
 
     @abstractmethod
     def generate_payment_method_update_session(
+        self,
         customer_id: str,
         success_url: str,
-        cancel_url
+        cancel_url: str,
     ) -> str:
         """
         Generates a 'update-payment-method' session URL for the customer.

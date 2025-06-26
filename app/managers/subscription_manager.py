@@ -15,7 +15,7 @@ class SubscriptionManager():
         self,
         user_id: str,
         request: Request
-    ):
+    ) -> dict:
         """
         Returns a JSON object representing the subscription status of the user.
         Arguments:

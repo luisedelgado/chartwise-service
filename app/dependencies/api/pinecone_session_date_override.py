@@ -20,9 +20,9 @@ class PineconeQuerySessionDateOverride:
         self,
         override_type: PineconeQuerySessionDateOverrideType,
         session_date_start: str,
-        session_date_end: str = None,
-        output_prefix_override: str = None,
-        output_suffix_override: str = None
+        session_date_end: str | None = None,
+        output_prefix_override: str | None = None,
+        output_suffix_override: str | None = None
     ):
         self.override_type = override_type
         self.output_prefix_override = output_prefix_override

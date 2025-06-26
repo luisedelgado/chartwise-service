@@ -10,6 +10,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def insert(
+        self,
         user_id: str,
         request: Request,
         payload: dict[str, Any],
@@ -28,6 +29,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def batch_insert(
+        self,
         user_id: str,
         request: Request,
         payloads: list[dict[str, Any]],
@@ -46,12 +48,13 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def update(
+        self,
         user_id: str,
         request: Request,
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Updates a table with the incoming payload and filters.
 
@@ -66,6 +69,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def upsert(
+        self,
         user_id: str,
         request: Request,
         conflict_columns: List[str],
@@ -85,6 +89,7 @@ class AwsDbBaseClass(ABC):
         pass
 
     async def upsert_with_stripe_connection(
+        self,
         request: Request,
         conflict_columns: List[str],
         payload: dict[str, Any],
@@ -107,13 +112,14 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def select(
+        self,
         user_id: str,
         request: Request,
         fields: list[str],
         table_name: str,
-        filters: dict[str, Any] = None,
-        limit: Optional[int] = None,
-        order_by: Optional[tuple[str, str]] = None
+        filters: dict[str, Any] | None = None,
+        limit: Optional[int] | None = None,
+        order_by: Optional[tuple[str, str]] | None = None
     ) -> list[dict]:
         """
         Fetches data from a table based on the incoming params.
@@ -131,11 +137,12 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def select_count(
+        self,
         user_id: str,
         request: Request,
         table_name: str,
-        filters: dict[str, Any] = None,
-        order_by: Optional[tuple[str, str]] = None
+        filters: dict[str, Any] | None = None,
+        order_by: Optional[tuple[str, str]] | None = None
     ) -> int:
         """
         Fetches the count of results matching the incoming params.
@@ -152,14 +159,15 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def select_with_stripe_connection(
+        self,
         resend_client: ResendBaseClass,
         fields: list[str],
         filters: dict[str, Any],
         table_name: str,
         secret_manager: AwsSecretManagerBaseClass,
         request: Request,
-        limit: Optional[int] = None,
-        order_by: Optional[tuple[str, str]] = None
+        limit: Optional[int] | None = None,
+        order_by: Optional[tuple[str, str]] | None = None
     ) -> list[dict]:
         """
         Fetches data from a table based on the incoming params, using a stripe_reader connection.
@@ -178,6 +186,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def delete(
+        self,
         user_id: str,
         request: Request,
         table_name: str,
@@ -196,6 +205,7 @@ class AwsDbBaseClass(ABC):
 
     @abstractmethod
     async def set_session_user_id(
+        self,
         request: Request,
         user_id: str
     ):
