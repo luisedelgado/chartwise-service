@@ -27,6 +27,7 @@ class Boto3ClientFactory:
                     if cls._expiration is None or now >= cls._expiration:
                         cls._refresh_credentials()
 
+            assert cls._creds is not None, "Null credentials found when retrieving clients"
             if service_name not in cls._clients:
                 cls._clients[service_name] = boto3.client(
                     service_name,

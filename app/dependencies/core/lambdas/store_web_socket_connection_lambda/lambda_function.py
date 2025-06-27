@@ -3,7 +3,7 @@ import time
 import boto3
 
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ.get("TABLE_NAME"))
+table = dynamodb.Table(os.environ.get("TABLE_NAME")) # type: ignore[attr-defined]
 
 def lambda_handler(event, context):
     connection_id = event["requestContext"]["connectionId"].strip()

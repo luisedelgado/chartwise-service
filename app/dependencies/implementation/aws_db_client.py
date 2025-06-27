@@ -177,7 +177,7 @@ class AwsDbClient(AwsDbBaseClass):
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> dict | None:
+    ) -> list | None:
         try:
             payload = self._encrypt_payload(payload, table_name)
 
@@ -226,7 +226,7 @@ class AwsDbClient(AwsDbBaseClass):
         request: Request,
         fields: list[str],
         table_name: str,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
@@ -250,7 +250,7 @@ class AwsDbClient(AwsDbBaseClass):
         user_id: str,
         request: Request,
         table_name: str,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> int:
         async def connection_provider():
@@ -456,7 +456,7 @@ class AwsDbClient(AwsDbBaseClass):
 
     @staticmethod
     def _build_where_clause(
-        filters: dict[str, Any]
+        filters: dict[str, Any] | None
     ) -> tuple[str, list[Any]]:
         values = []
         if filters is None:
@@ -514,8 +514,10 @@ class AwsDbClient(AwsDbBaseClass):
         secret_manager: AwsSecretManagerBaseClass,
         resend_client: ResendBaseClass,
     ):
+        stripe_role_secret = os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE")
+        assert stripe_role_secret is not None, "Null role secret"
         return await self._get_db_connection_for_stripe(
-            stripe_role=os.environ.get("AWS_SECRET_MANAGER_STRIPE_READER_ROLE"),
+            stripe_role=stripe_role_secret,
             secret_manager=secret_manager,
             resend_client=resend_client
         )
@@ -525,8 +527,10 @@ class AwsDbClient(AwsDbBaseClass):
         secret_manager: AwsSecretManagerBaseClass,
         resend_client: ResendBaseClass,
     ):
+        stripe_role_secret = os.environ.get("AWS_SECRET_MANAGER_STRIPE_WRITER_ROLE")
+        assert stripe_role_secret is not None, "Null role secret"
         return await self._get_db_connection_for_stripe(
-            stripe_role=os.environ.get("AWS_SECRET_MANAGER_STRIPE_WRITER_ROLE"),
+            stripe_role=stripe_role_secret,
             secret_manager=secret_manager,
             resend_client=resend_client
         )
@@ -542,6 +546,7 @@ class AwsDbClient(AwsDbBaseClass):
                 secret_id=stripe_role,
                 resend_client=resend_client,
             )
+            assert type(secret) == dict, "Unexpected data type"
 
             db = os.getenv("AWS_RDS_DB_NAME")
             if os.environ.get("ENVIRONMENT") not in [STAGING_ENVIRONMENT, PROD_ENVIRONMENT]:
@@ -569,7 +574,7 @@ class AwsDbClient(AwsDbBaseClass):
         self,
         fields: list[str],
         table_name: str,
-        filters: dict[str, Any],
+        filters: dict[str, Any] | None,
         order_by: Optional[tuple[str, str]],
         connection_provider: Callable[[], Awaitable[tuple[Any, bool]]],
         request: Request,

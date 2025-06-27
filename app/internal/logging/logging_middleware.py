@@ -157,7 +157,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                             patient_id=patient_id,
                         )
                     )
-
+                assert therapist_id is not None, "Nullable type for user ID"
                 aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 fire_and_forget(
                     aws_db_client.insert(
@@ -197,7 +197,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
     def _should_log_request(
         self,
-        environment: str,
+        environment: str | None,
         request_method: str,
         request_url_path: str,
     ) -> bool:

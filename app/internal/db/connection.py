@@ -14,10 +14,12 @@ async def connect_pool(
 ):
     try:
         chartwise_user_secret_id = os.environ.get("AWS_SECRET_MANAGER_CHARTWISE_USER_ROLE")
+        assert chartwise_user_secret_id is not None, "Nullable value for role secret"
         secret = secret_manager.get_secret(
             secret_id=chartwise_user_secret_id,
             resend_client=resend_client,
         )
+        assert type(secret) == dict, "Unexpected data type"
         username = secret.get("username")
         password = secret.get("password")
         endpoint = secret.get("host") or os.getenv("AWS_RDS_DATABASE_ENDPOINT")

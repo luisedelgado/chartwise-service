@@ -36,7 +36,7 @@ class OpenAIBaseClass(ABC):
         query_input: str,
         is_first_message_in_conversation: bool,
         patient_name: str,
-        patient_gender: str,
+        patient_gender: str | None,
         calculate_max_tokens: Callable[[str, str], Awaitable[int]],
         last_session_date: str | None = None
     ) -> AsyncIterable[str]:

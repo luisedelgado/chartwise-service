@@ -26,16 +26,16 @@ class OpenAIClient(OpenAIBaseClass):
             openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
             if expected_output_model is not None:
-                response: Completion = await openai_client.beta.chat.completions.parse(
+                response = await openai_client.beta.chat.completions.parse(
                     model=type(self).LLM_MODEL,
                     messages=messages,
                     temperature=0,
                     max_tokens=max_tokens,
-                    response_format=expected_output_model,
+                    response_format=type(expected_output_model),
                 )
                 response_message = response.choices[0].message.parsed
             else:
-                response: Completion = await openai_client.chat.completions.create(
+                response = await openai_client.chat.completions.create(
                     model=type(self).LLM_MODEL,
                     messages=messages,
                     temperature=0,
@@ -45,9 +45,11 @@ class OpenAIClient(OpenAIBaseClass):
                     },
                 )
                 response_message = response.choices[0].message
-                assert ('refusal' not in response_message or response_message['refusal'] is None), response_message.refusal
+                assert not getattr(response_message, "refusal", None), getattr(response_message, "refusal", None)
+                assert response_message.content is not None, "Response content is null"
                 response_message = response_message.content.strip()
 
+            assert response_message is not None, "Null value was attempted to send in response"
             return response_message
         except Exception as e:
             raise RuntimeError(e) from e
@@ -59,7 +61,7 @@ class OpenAIClient(OpenAIBaseClass):
         query_input: str,
         is_first_message_in_conversation: bool,
         patient_name: str,
-        patient_gender: str,
+        patient_gender: str | None,
         calculate_max_tokens: Callable[[str, str], Awaitable[int]],
         last_session_date: str | None = None
     ) -> AsyncIterable[str]:
@@ -86,8 +88,8 @@ class OpenAIClient(OpenAIBaseClass):
                 ]
             )
             max_tokens = await calculate_max_tokens(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt_with_chat_history,
+                system_prompt,
+                user_prompt_with_chat_history,
             )
 
             callback = AsyncIteratorCallbackHandler()

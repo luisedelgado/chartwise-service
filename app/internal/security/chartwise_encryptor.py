@@ -13,7 +13,7 @@ class ChartWiseEncryptor:
         aws_kms_client: AwsKmsBaseClass,
         resend_client: ResendBaseClass,
     ):
-        encryption_key = aws_kms_client.decrypt_encryption_key_ciphertext(
+        encryption_key: bytes = aws_kms_client.decrypt_encryption_key_ciphertext(
             resend_client=resend_client,
         )
         if len(encryption_key) != Aead.KEY_SIZE:
@@ -35,7 +35,7 @@ class ChartWiseEncryptor:
         if plaintext is None:
             return plaintext
 
-        return self.aead.encrypt(plaintext.encode("utf-8"), None)
+        return self.aead.encrypt(plaintext.encode("utf-8"))
 
     """
     Decrypts the incoming bytes.
@@ -52,7 +52,7 @@ class ChartWiseEncryptor:
             return None
 
         try:
-            plaintext_bytes = self.aead.decrypt(ciphertext, None)
+            plaintext_bytes = self.aead.decrypt(ciphertext)
             return plaintext_bytes.decode("utf-8")
         except Exception as e:
             raise ValueError("Decryption failed") from e

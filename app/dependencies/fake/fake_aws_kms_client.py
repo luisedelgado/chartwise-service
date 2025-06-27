@@ -8,5 +8,5 @@ class FakeAwsKmsClient(AwsKmsBaseClass):
     def decrypt_encryption_key_ciphertext(
         self,
         resend_client: ResendBaseClass,
-    ) -> str:
+    ) -> bytes:
         return base64.b64decode("3DclmGMk9h9s+PFlIF9XjzQnCDgdGUk+Zud8Ilpxjx4=")

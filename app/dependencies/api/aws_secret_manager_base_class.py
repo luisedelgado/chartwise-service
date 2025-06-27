@@ -9,7 +9,7 @@ class AwsSecretManagerBaseClass(ABC):
         self,
         secret_id: str,
         resend_client: ResendBaseClass,
-    ) -> str:
+    ) -> dict:
         """
         Retrieves a secret.
         """

@@ -14,6 +14,8 @@ class DocupandaClient(DocupandaBaseClass):
     ) -> str:
         base_url = os.getenv("DOCUPANDA_BASE_URL")
         document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
+
+        assert base_url is not None and document_endpoint is not None, "Could not construct endpoint"
         pdf_extension = "pdf"
         file_name, _ = os.path.splitext(image_filename)
 
@@ -29,7 +31,7 @@ class DocupandaClient(DocupandaBaseClass):
         }
         url = base_url + document_endpoint
         response = requests.post(url, json={"document": payload}, headers=headers)
-        assert response.status_code == 200, f"Got HTTP code {response.status} while uploading the image"
+        assert response.status_code == 200, f"Got HTTP code {response.status_code} while uploading the image"
         doc_id = response.json()['documentId']
 
         return doc_id
@@ -37,10 +39,12 @@ class DocupandaClient(DocupandaBaseClass):
     async def retrieve_text_from_document(
         self,
         document_id
-    ) -> Tuple[int, str]:
+    ) -> Tuple[int, str | None]:
         try:
             base_url = os.getenv("DOCUPANDA_BASE_URL")
             document_endpoint = os.getenv("DOCUPANDA_DOCUMENT_ENDPOINT")
+
+            assert base_url is not None and document_endpoint is not None, "Could not construct endpoint"
             url = base_url + document_endpoint + "/" + document_id
 
             headers = {

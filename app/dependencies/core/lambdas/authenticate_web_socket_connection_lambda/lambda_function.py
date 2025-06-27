@@ -11,7 +11,7 @@ COGNITO_ISSUER = f"https://cognito-idp.{os.environ.get('AWS_SERVICES_REGION')}.a
 JWKS_URL = f"{COGNITO_ISSUER}/.well-known/jwks.json"
 
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ.get("TABLE_NAME"))
+table = dynamodb.Table(os.environ.get("TABLE_NAME")) # type: ignore[attr-defined]
 
 gatewayapi = boto3.client(
     "apigatewaymanagementapi",

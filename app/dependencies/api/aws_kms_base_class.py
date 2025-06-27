@@ -8,7 +8,7 @@ class AwsKmsBaseClass(ABC):
     def decrypt_encryption_key_ciphertext(
         self,
         resend_client: ResendBaseClass
-    ) -> str:
+    ) -> bytes:
         """
         Returns the derypted encryption key, if any.
         """

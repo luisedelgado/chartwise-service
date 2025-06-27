@@ -8,17 +8,20 @@ from ...internal.utilities.aws_utils import sign_and_send_aws_request
 class AwsKmsClient(AwsKmsBaseClass):
     def __init__(self):
         encryption_key = "CHARTWISE_PHI_ENCRYPTION_KEY"
-        key_hex: str = os.environ.get(encryption_key)
+        key_hex = os.environ.get(encryption_key)
         if not key_hex:
             raise ValueError(f"Missing encryption key in env var: {encryption_key}")
 
         self.key_hex = key_hex
-        self.region = os.environ.get("AWS_SERVICES_REGION")
+        region = os.environ.get("AWS_SERVICES_REGION")
+
+        assert region is not None, "Missing region"
+        self.region = region
 
     def decrypt_encryption_key_ciphertext(
         self,
         resend_client: ResendBaseClass,
-    ) -> str:
+    ) -> bytes:
         try:
             encrypted_key_bytes = base64.b64decode(self.key_hex)
             payload = {

@@ -54,7 +54,7 @@ class AwsDbBaseClass(ABC):
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> dict | None:
+    ) -> list | None:
         """
         Updates a table with the incoming payload and filters.
 

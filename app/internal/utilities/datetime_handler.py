@@ -1,7 +1,7 @@
 import re
 
 from babel.dates import format_date, get_month_names
-from datetime import datetime
+from datetime import datetime, date
 from pytz import timezone
 
 ABBREVIATED_MONTH_FORMAT = "%b"
@@ -20,7 +20,7 @@ YEAR_FORMAT = "%Y"
 def is_valid_date(
     date_input: str,
     incoming_date_format: str,
-    tz_identifier: str = None
+    tz_identifier: str | None = None
 ) -> bool:
     """
     Returns a flag representing whether or not the incoming date is valid.
@@ -35,6 +35,7 @@ def is_valid_date(
         if len(tz_identifier or '') == 0:
             return datetime.strptime(date_input, incoming_date_format).date() <= datetime.now().date()
 
+        assert tz_identifier is not None, "Nullable tz identifier"
         tz = timezone(tz_identifier)
         return datetime.strptime(date_input, incoming_date_format).date() <= datetime.now(tz).date()
     except:
@@ -72,7 +73,7 @@ def get_base_locale(
     return re.split(r'[-_]', language_code)[0]
 
 def get_month_abbreviated(
-    date: datetime.date,
+    date_input: date,
     language_code: str
 ):
     """
@@ -80,9 +81,11 @@ def get_month_abbreviated(
     """
     base_locale = get_base_locale(language_code=language_code)
     babel_abbreviated_month_format = 'MMM'
-    return format_date(date,
-                       format=babel_abbreviated_month_format,
-                       locale=base_locale)
+    return format_date(
+        date_input,
+        format=babel_abbreviated_month_format,
+        locale=base_locale
+    )
 
 def get_last_12_months_abbr(
     language_code: str

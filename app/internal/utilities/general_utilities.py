@@ -24,7 +24,7 @@ def is_valid_timezone_identifier(
         return False
 
 def gender_has_default_pronouns(
-    gender: str = None
+    gender: str | None = None
 ) -> bool:
     """
     Returns a flag representing whether or not the incoming gender has default pronouns.
@@ -118,6 +118,7 @@ def retrieve_ip_address(request: Request) -> str:
     if x_forwarded_for:
         ip_address = x_forwarded_for.split(",")[0].strip()
     else:
+        assert request.client is not None, "Received a null request client"
         ip_address = request.client.host
     return ip_address
 

@@ -32,7 +32,7 @@ class FakePineconeClient(PineconeBaseClass):
         session_report_id: str,
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable,
-        therapy_session_date: date = None
+        therapy_session_date: date | None = None
     ) -> list[str]:
         self.fake_vectors_insertion = text
         self.insert_session_vectors_invoked = True
@@ -53,7 +53,7 @@ class FakePineconeClient(PineconeBaseClass):
         self,
         user_id: str,
         patient_id: str,
-        date: date = None
+        date: date | None = None
     ):
         self.delete_session_vectors_invoked = True
 

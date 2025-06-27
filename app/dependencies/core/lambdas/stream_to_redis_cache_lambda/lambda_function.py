@@ -10,7 +10,6 @@ redis_client = redis.StrictRedis(
     db=0,
     decode_responses=True,
     ssl=True,
-    ssl_cert_reqs=None,
     ssl_check_hostname=False,
     socket_connect_timeout=10,
     socket_timeout=10

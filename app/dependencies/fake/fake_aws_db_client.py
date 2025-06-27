@@ -68,7 +68,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         payload: dict[str, Any],
         filters: dict[str, Any],
         table_name: str
-    ) -> dict | None:
+    ) -> list | None:
         if table_name == THERAPISTS_TABLE_NAME:
             return [
                 {
@@ -78,7 +78,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "last_name": "bar",
                     "language_preference": "en-US",
                     "gender": "male",
-                },
+                }
             ]
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             return [
@@ -131,12 +131,12 @@ class FakeAwsDbClient(AwsDbBaseClass):
         request: Request,
         fields: list[str],
         table_name: str,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         limit: Optional[int] = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
         if not self.select_returns_data:
-            return {}
+            return []
 
         if table_name == "user_interface_strings":
             return [
@@ -270,13 +270,14 @@ class FakeAwsDbClient(AwsDbBaseClass):
                         "reached_tier_usage_limit": False,
                     },
                 ]
+        return []
 
     async def select_count(
         self,
         user_id: str,
         request: Request,
         table_name: str,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         order_by: Optional[tuple[str, str]] = None
     ) -> int:
         return 100 if self.return_freemium_usage_above_limit else 1
@@ -293,9 +294,9 @@ class FakeAwsDbClient(AwsDbBaseClass):
         order_by: Optional[tuple[str, str]] = None
     ) -> list[dict]:
         if not self.select_returns_data:
-            return {}
+            return []
 
-        return {}
+        return []
 
     async def delete(
         self,
@@ -305,7 +306,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
         filters: dict[str, Any]
     ) -> list[dict]:
         if not self.select_returns_data:
-            return {}
+            return []
 
         if table_name == ENCRYPTED_SESSION_REPORTS_TABLE_NAME:
             return [
@@ -316,6 +317,7 @@ class FakeAwsDbClient(AwsDbBaseClass):
                     "session_date": date(2024, 10, 10),
                 },
             ]
+        return []
 
     async def set_session_user_id(
         self,

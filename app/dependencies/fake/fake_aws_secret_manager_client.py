@@ -8,5 +8,5 @@ class FakeAwsSecretManagerClient(AwsSecretManagerBaseClass):
         self,
         secret_id: str,
         resend_client: ResendBaseClass,
-    ) -> str:
+    ) -> dict:
         return {"secret": "myFakeSecret"}

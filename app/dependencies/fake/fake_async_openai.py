@@ -96,7 +96,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         query_input: str,
         is_first_message_in_conversation: bool,
         patient_name: str,
-        patient_gender: str,
+        patient_gender: str | None,
         calculate_max_tokens: Callable[[str, str], Awaitable[int]],
         last_session_date: str | None = None
     ) -> AsyncIterable[str]:
@@ -131,7 +131,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self.chat_history = []
 
     async def flatten_chat_history(self) -> str:
-        pass
+        return ""
 
     async def create_embeddings(
         self,

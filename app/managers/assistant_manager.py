@@ -1787,7 +1787,7 @@ class AssistantManager:
                 )
                 month_names = [
                     datetime_handler.get_month_abbreviated(
-                        date=item['session_date'],
+                        date_input=item['session_date'],
                         language_code=language_preference
                     ) for item in response_data
                 ]

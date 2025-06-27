@@ -11,9 +11,10 @@ class AwsSecretManagerClient(AwsSecretManagerBaseClass):
         self,
         secret_id: str,
         resend_client: ResendBaseClass,
-    ) -> str:
+    ) -> dict:
         try:
             region = os.environ.get("AWS_SERVICES_REGION")
+            assert region is not None, "Missing region"
 
             payload = {
                 "SecretId": secret_id

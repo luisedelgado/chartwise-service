@@ -23,12 +23,16 @@ class DeepgramClient(DeepgramBaseClass):
     TRANSCRIPTION_POOL_TIMEOUT = 100
     DG_QUERY_PARAMS = "model=nova-2&smart_format=true&detect_language=true&utterances=true&numerals=true"
 
+    def __init__(self):
+        api_key = os.getenv("DG_API_KEY")
+        assert api_key is not None, "Missing API key"
+        self.deepgram = DeepgramSDKClient(api_key)
+
     async def diarize_audio(
         self,
         audio_file_url: str
     ) -> str:
         try:
-            deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
             options = PrerecordedOptions(
                 model="nova-2",
                 smart_format=True,
@@ -40,7 +44,7 @@ class DeepgramClient(DeepgramBaseClass):
 
             # Increase the timeout to 300 seconds (5 minutes).
             cls = type(self)
-            response = await deepgram.listen.asyncrest.v("1").transcribe_url(
+            response = await self.deepgram.listen.asyncrest.v("1").transcribe_url( # type: ignore
                 source={"url": audio_file_url},
                 options=options,
                 timeout=Timeout(
@@ -70,7 +74,6 @@ class DeepgramClient(DeepgramBaseClass):
         audio_file_url: str
     ) -> str:
         try:
-            deepgram = DeepgramSDKClient(os.getenv("DG_API_KEY"))
             options = PrerecordedOptions(
                 model="nova-2",
                 smart_format=True,
@@ -81,12 +84,16 @@ class DeepgramClient(DeepgramBaseClass):
 
             # Increase the timeout to 300 seconds (5 minutes).
             cls = type(self)
-            response = await deepgram.listen.asyncrest.v("1").transcribe_url(source={"url": audio_file_url},
-                                                                                options=options,
-                                                                                timeout=Timeout(connect=cls.CONNECT_TIMEOUT,
-                                                                                                read=cls.TRANSCRIPTION_READ_TIMEOUT,
-                                                                                                write=cls.TRANSCRIPTION_WRITE_TIMEOUT,
-                                                                                                pool=cls.TRANSCRIPTION_POOL_TIMEOUT))
+            response = await self.deepgram.listen.asyncrest.v("1").transcribe_url( # type: ignore
+                source={"url": audio_file_url},
+                options=options,
+                timeout=Timeout(
+                    connect=cls.CONNECT_TIMEOUT,
+                    read=cls.TRANSCRIPTION_READ_TIMEOUT,
+                    write=cls.TRANSCRIPTION_WRITE_TIMEOUT,
+                    pool=cls.TRANSCRIPTION_POOL_TIMEOUT
+                )
+            )
 
             json_response = json.loads(response.to_json(indent=4))
             transcript = json_response.get('results').get('channels')[0]['alternatives'][0]['transcript']

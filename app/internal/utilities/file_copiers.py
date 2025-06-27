@@ -50,8 +50,11 @@ async def make_image_pdf_copy(
         if copy_extension == PDF_EXTENSION:
             # It's already a PDF, we can return as is.
             return copy_file_result
-        elif mimetypes.guess_extension(image.content_type).lower() == PDF_EXTENSION:
-            return copy_file_result
+
+        if image.content_type is not None:
+            extension_guess = mimetypes.guess_extension(image.content_type)
+            if extension_guess is not None and extension_guess.lower() == PDF_EXTENSION:
+                return copy_file_result
 
         # We need to make a PDF copy.
         image_copy_directory = FILES_DIR + '/'
@@ -79,7 +82,10 @@ async def make_file_copy(
     file – the file to be processed
     """
     try:
-        _, file_extension = os.path.splitext(file.filename)
+        filename = file.filename
+        assert filename is not None, "Received nullable filename"
+
+        _, file_extension = os.path.splitext(filename)
         file_copy_name_without_ext = datetime.now().strftime(DATE_TIME_FORMAT_FILE)
         file_copy_name_with_ext = file_copy_name_without_ext + file_extension
         file_copy_directory = FILES_DIR + '/'

@@ -16,7 +16,6 @@ redis_client = redis.StrictRedis(
     db=0,
     decode_responses=True,
     ssl=True,
-    ssl_cert_reqs=None,
     ssl_check_hostname=False,
     socket_connect_timeout=10,
     socket_timeout=10
@@ -40,7 +39,9 @@ def get_secret(secret_name: str) -> dict:
         raise RuntimeError(error_msg) from e
 
 def get_db_connection():
-    secret = get_secret(os.environ.get("AWS_SECRET_MANAGER_PROCESSING_STATUS_UPDATER_ROLE"))
+    secret_name = os.environ.get("AWS_SECRET_MANAGER_PROCESSING_STATUS_UPDATER_ROLE")
+    assert secret_name is not None, "Found a null secret value when trying to open a DB connection"
+    secret = get_secret(secret_name)
     print("[get_db_connection] Retrieved secret successfully")
     return psycopg2.connect(
         host=secret.get("host"),
