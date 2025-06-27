@@ -19,7 +19,10 @@ class DocupandaBaseClass(ABC):
         pass
 
     @abstractmethod
-    async def retrieve_text_from_document(document_id) -> Tuple[int, str]:
+    async def retrieve_text_from_document(
+        self,
+        document_id: str
+    ) -> Tuple[int, str]:
         """
         Perform textraction from an incoming document_id, and returns the resulting status code and text.
 

@@ -74,7 +74,7 @@ class AwsS3BaseClass(ABC):
     @abstractmethod
     def get_audio_file_read_signed_url(
         self,
-        bucket_name: str,
+        bucket_name: str | None,
         file_path: str
     ) -> dict:
         """

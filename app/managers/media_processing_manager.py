@@ -19,13 +19,13 @@ class MediaProcessingManager(ABC):
         environment: str,
         background_tasks: BackgroundTasks,
         auth_manager: AuthManager,
-        session_id: str,
+        session_id: str | None,
         session_processing_status: str,
         session_notes_id: str,
         media_type: MediaType,
         therapist_id: str,
         request: Request,
-        storage_filepath: str = None
+        storage_filepath: str | None = None
     ):
         """
         Updates the incoming session's processing status.
@@ -74,7 +74,11 @@ class MediaProcessingManager(ABC):
         if media_type == MediaType.AUDIO:
             # Delete the file from the processing bucket.
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
+            bucket_name = os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME")
+            assert bucket_name is not None, "Nullable bucket name"
+            assert storage_filepath is not None, "Nullable storage filepath"
+
             aws_s3_client.delete_file(
-                os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME"),
+                bucket_name,
                 storage_filepath=storage_filepath
             )

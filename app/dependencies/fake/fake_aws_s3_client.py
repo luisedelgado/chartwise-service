@@ -46,7 +46,7 @@ class FakeAwsS3Client(AwsS3BaseClass):
 
     def get_audio_file_read_signed_url(
         self,
-        bucket_name: str,
+        bucket_name: str | None,
         file_path: str
     ) -> dict:
         self.get_audio_file_read_signed_url_invoked = True

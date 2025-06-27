@@ -47,9 +47,11 @@ class ImageProcessingManager(MediaProcessingManager):
                 await file_copiers.clean_up_files(files_to_clean)
                 raise Exception("Something went wrong while processing the image.")
 
+            image_filename = image.filename
+            assert image_filename is not None, "Nullable image filename"
             doc_id = await dependency_container.inject_docupanda_client().upload_image(
                 image_filepath=image_copy_path,
-                image_filename=image.filename
+                image_filename=image_filename,
             )
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -70,6 +72,7 @@ class ImageProcessingManager(MediaProcessingManager):
                     "source": SessionNotesSource.NOTES_IMAGE.value,
                 }
             )
+            assert type(insert_result) == dict, "Unexpected data type"
             session_notes_id = insert_result['id']
 
             # Clean up the image copies we used for processing.
@@ -178,6 +181,7 @@ class ImageProcessingManager(MediaProcessingManager):
                 media_type=MediaType.IMAGE,
                 request=request
             )
+            return session_notes_id
         except Exception as e:
             # We want to synchronously log the failed processing status to avoid execution
             # stoppage when the exception is raised.

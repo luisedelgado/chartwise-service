@@ -23,10 +23,13 @@ class AuthManager:
 
     def __init__(self):
         secret_manager = dependency_container.inject_aws_secret_manager_client()
+        secret_id = os.environ.get("SESSION_TOKEN_JWT_SECRET_NAME")
+        assert secret_id is not None, "Nullable JWT Secret, secret name"
         secret_data = secret_manager.get_secret(
-            secret_id=os.environ.get("SESSION_TOKEN_JWT_SECRET_NAME"),
+            secret_id=secret_id,
             resend_client=dependency_container.inject_resend_client(),
         )
+        assert type(secret_data) == dict, "Unexpected data type"
         self.secret_key = secret_data.get('secret')
         self._pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         logging.getLogger('passlib').setLevel(logging.ERROR)
@@ -49,7 +52,7 @@ class AuthManager:
         expiration_time = datetime.now(timezone.utc) + expiration_delta
 
         data = {"sub": user_id}
-        to_encode = data.copy()
+        to_encode: dict = data.copy()
         to_encode.update({"exp": expiration_time})
 
         formatted_expiration_time = expiration_time.strftime(DATE_TIME_FORMAT)
@@ -67,14 +70,16 @@ class AuthManager:
         access_token: str,
     ) -> bool:
         try:
-            token_data = self.extract_data_from_token(access_token)
-            user_id: str = token_data.get("user_id")
+            token_data: dict = self.extract_data_from_token(access_token)
+            user_id = token_data.get("user_id")
             if user_id == None or len(user_id) == 0:
                 return False
 
             # Check that token hasn't expired
+            exp = token_data.get("exp")
+            assert type(exp) == int, "Unexpected exp datatype"
             token_expiration_date = datetime.fromtimestamp(
-                token_data.get("exp"),
+                exp,
                 tz=timezone.utc
             )
             return (token_expiration_date > datetime.now(timezone.utc))

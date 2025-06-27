@@ -57,14 +57,16 @@ class AudioProcessingManager(MediaProcessingManager):
                     "processing_status": SessionProcessingStatus.PROCESSING.value
                 }
             )
-            assert (0 != len(session_report_creation_response)), "Something went wrong when inserting the session."
+            assert type(session_report_creation_response) == dict and (0 != len(session_report_creation_response)), "Something went wrong when inserting the session."
             session_report_id = session_report_creation_response['id']
 
             aws_s3_client: AwsS3BaseClass = dependency_container.inject_aws_s3_client()
-            audio_file_url = aws_s3_client.get_audio_file_read_signed_url(
+            audio_file_url_dict: dict = aws_s3_client.get_audio_file_read_signed_url(
                 file_path=file_path,
                 bucket_name=os.environ.get("SESSION_AUDIO_FILES_PROCESSING_BUCKET_NAME")
-            ).get("url")
+            )
+            audio_file_url = audio_file_url_dict.get("url")
+            assert audio_file_url is not None, "Received empty audio file URL"
 
             # Attempt immediate processing.
             if diarize:
@@ -139,7 +141,7 @@ class AudioProcessingManager(MediaProcessingManager):
         therapist_id: str,
         patient_id: str,
         language_code: str,
-        session_id: str,
+        session_id: str | None,
         template: SessionNotesTemplate,
         storage_filepath: str,
         audio_file_url: str,
@@ -202,9 +204,6 @@ class AudioProcessingManager(MediaProcessingManager):
                     prompt_crafter=prompt_crafter,
                     summarize_chunk_system_prompt=system_prompt,
                     language_code=language_code,
-                    patient_id=patient_id,
-                    therapist_id=therapist_id,
-                    session_id=session_id
                 )
             else:
                 session_summary = await openai_client.trigger_async_chat_completion(
@@ -215,6 +214,7 @@ class AudioProcessingManager(MediaProcessingManager):
                     ],
                 )
 
+            assert type(session_summary) == str, "Unexpected data type for session summary"
             if template == SessionNotesTemplate.SOAP:
                 session_summary = await assistant_manager.adapt_session_notes_to_soap(
                     session_notes_text=session_summary,
@@ -275,7 +275,7 @@ class AudioProcessingManager(MediaProcessingManager):
         assistant_manager: AssistantManager,
         therapist_id: str,
         language_code: str,
-        session_id: str,
+        session_id: str | None,
         template: SessionNotesTemplate,
         storage_filepath: str,
         audio_file_url: str,
@@ -395,14 +395,11 @@ class AudioProcessingManager(MediaProcessingManager):
     async def _chunk_diarization_and_summarize(
         self,
         encoding: Encoding,
-        diarization: list,
+        diarization: list | None,
         prompt_crafter: PromptCrafter,
         summarize_chunk_system_prompt: str,
         language_code: str,
-        patient_id: str,
-        therapist_id: str,
-        session_id: str
-    ):
+    ) -> str:
         try:
             splitter = RecursiveCharacterTextSplitter(
                 separators=["\n\n", "\n", " ", ""],
@@ -412,7 +409,7 @@ class AudioProcessingManager(MediaProcessingManager):
             )
 
             chunk_summaries = []
-            flattened_diarization = DiarizationCleaner.flatten_diarization(diarization)
+            flattened_diarization = DiarizationCleaner.flatten_diarization(diarization or [])
             chunks = splitter.split_text(flattened_diarization)
             for chunk in chunks:
                 current_chunk_text = data_cleaner.clean_up_text(chunk)
@@ -454,6 +451,8 @@ class AudioProcessingManager(MediaProcessingManager):
                     {"role": "user", "content": grand_summary_user_prompt},
                 ],
             )
+
+            assert type(grand_summary) == str, "Unexpected data type for grand summary"
             return grand_summary
         except Exception as e:
             raise RuntimeError(e) from e

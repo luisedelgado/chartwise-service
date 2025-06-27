@@ -106,10 +106,11 @@ class AwsS3Client(AwsS3BaseClass):
 
     def get_audio_file_read_signed_url(
         self,
-        bucket_name: str,
+        bucket_name: str | None,
         file_path: str
     ) -> dict:
         try:
+            assert bucket_name is not None, "Received nullable bucket name"
             response = self.client.generate_presigned_url(
                 'get_object',
                 Params={
