@@ -35,7 +35,7 @@ class ChartWiseAssistant:
         user_id: str,
         patient_id: str,
         patient_name: str,
-        patient_gender: str,
+        patient_gender: str | None,
         query_input: str,
         response_language_code: str,
         request: Request,
@@ -245,7 +245,7 @@ class ChartWiseAssistant:
         patient_name: str,
         patient_gender: str,
         request: Request,
-    ) -> BaseModel:
+    ) -> ListQuestionSuggestionsSchema:
         """
         Fetches a set of questions to be suggested to the user for feeding the assistant.
 
@@ -322,7 +322,7 @@ class ChartWiseAssistant:
         patient_name: str,
         patient_gender: str,
         request: Request,
-    ) -> BaseModel:
+    ) -> ListRecentTopicsSchema:
         """
         Fetches a set of topics associated with the user along with respective density percentages.
 

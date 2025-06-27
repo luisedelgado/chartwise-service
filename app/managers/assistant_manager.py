@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from fastapi import BackgroundTasks, Request
 from pydantic import BaseModel
-from typing import AsyncIterable, Optional, Set
+from typing import Any, AsyncIterable, Set
 
 from ..dependencies.dependency_container import AwsDbBaseClass, dependency_container
 from ..dependencies.api.pinecone_session_date_override import (
@@ -97,7 +97,7 @@ class CachedPatientQueryData:
                  patient_last_name: str,
                  response_language_code: str,
                  patient_gender: str | None = None,
-                 last_session_date: str | None = None):
+                 last_session_date: date | None = None):
         self.patient_id = patient_id
         self.patient_first_name = patient_first_name
         self.patient_last_name = patient_last_name
@@ -107,7 +107,7 @@ class CachedPatientQueryData:
 
 class AssistantManager:
 
-    cached_patient_query_data: CachedPatientQueryData = None
+    cached_patient_query_data: CachedPatientQueryData | None = None
 
     def __init__(self):
         self.chartwise_assistant = ChartWiseAssistant()
@@ -183,7 +183,7 @@ class AssistantManager:
         session_id: str | None,
         therapist_id: str,
         request: Request,
-        diarization: str = None
+        diarization: str | None = None
     ) -> str:
         try:
             assert source == SessionNotesSource.MANUAL_INPUT, f"Unexpected SessionNotesSource value \"{source.value}\""
@@ -209,6 +209,7 @@ class AssistantManager:
                 table_name=ENCRYPTED_SESSION_REPORTS_TABLE_NAME,
                 payload=insert_payload
             )
+            assert type(insert_result) == dict, "Unexpected type after inserting"
             session_notes_id = insert_result['id']
 
             # Upload vector embeddings and generate insights
@@ -256,7 +257,7 @@ class AssistantManager:
             assert (0 != len(report_query)), "There isn't a match with the incoming session data."
 
             # Start populating payload for updating session.
-            session_update_payload = {
+            session_update_payload: dict[str, Any] = {
                 "last_updated": datetime.now()
             }
 
@@ -281,7 +282,7 @@ class AssistantManager:
                     'id': session_notes_id
                 }
             )
-            assert (0 != len(session_update_response)), "Update operation could not be completed"
+            assert (0 != len(session_update_response or '')), "Update operation could not be completed"
 
             current_session_text = report_query[0]['notes_text']
             current_session_date: date = report_query[0]['session_date']
@@ -347,7 +348,7 @@ class AssistantManager:
                     'id': session_report_id
                 },
             )
-            assert len(soft_deletion_result_data) > 0, "No session found with the incoming session_report_id"
+            assert type(soft_deletion_result_data) is list and len(soft_deletion_result_data) > 0, "No session found with the incoming session_report_id"
 
             therapist_id = str(soft_deletion_result_data[0]['therapist_id'])
             patient_id = str(soft_deletion_result_data[0]['patient_id'])
@@ -442,6 +443,7 @@ class AssistantManager:
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
                 payload=payload
             )
+            assert type(response) == dict, "Unexpected data type after insert"
             patient_id = response['id']
 
             is_first_time_patient = filtered_body['onboarding_first_time_patient']
@@ -526,7 +528,7 @@ class AssistantManager:
                 'id': filtered_body['id']
             }
         )
-        assert (0 != len(update_response)), "Update operation could not be completed"
+        assert (0 != len(update_response or '')), "Update operation could not be completed"
 
         if ('pre_existing_history' not in filtered_body
             or filtered_body['pre_existing_history'] == current_pre_existing_history):
@@ -639,7 +641,7 @@ class AssistantManager:
                 patient_last_name = self.cached_patient_query_data.patient_last_name
                 patient_gender = self.cached_patient_query_data.patient_gender
                 language_code = self.cached_patient_query_data.response_language_code
-                patient_last_session_date: date = self.cached_patient_query_data.last_session_date
+                patient_last_session_date: date | None = self.cached_patient_query_data.last_session_date
 
             if patient_last_session_date is not None:
                 last_session_date_override = PineconeQuerySessionDateOverride(
@@ -671,7 +673,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         environment: str,
-        session_id: str,
+        session_id: str | None,
         request: Request,
     ):
         try:
@@ -746,7 +748,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         environment: str,
-        session_id: str,
+        session_id: str | None,
         language_code: str,
         request: Request,
     ):
@@ -841,7 +843,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         environment: str,
-        session_id: str,
+        session_id: str | None,
         request: Request,
     ):
         try:
@@ -929,7 +931,7 @@ class AssistantManager:
         language_code: str,
         therapist_id: str,
         patient_id: str,
-        session_id: str,
+        session_id: str | None,
         environment: str,
         request: Request,
     ):
@@ -1003,10 +1005,10 @@ class AssistantManager:
         patient_id: str,
         environment: str,
         therapist_id: str,
-        session_id: str,
+        session_id: str | None,
         operation: SessionCrudOperation,
         request: Request,
-        session_date: date = None
+        session_date: date | None = None
     ):
         try:
             # Fetch patient last session date and total session count
@@ -1023,12 +1025,12 @@ class AssistantManager:
                 order_by=("session_date", "desc")
             )
             total_session_count = len(patient_session_notes_data)
-            patient_last_session_date: date = (
+            patient_last_session_date: date | None = (
                 None if total_session_count == 0
                 else patient_session_notes_data[0]['session_date']
             )
 
-            unique_active_years: Set[str] = await self.get_patient_active_session_years(
+            unique_active_years: list[str] = await self.get_patient_active_session_years(
                 therapist_id=therapist_id,
                 patient_id=patient_id,
                 request=request,
@@ -1036,7 +1038,6 @@ class AssistantManager:
 
             # New value for last_session_date will be the most recent session we already found
             if operation == SessionCrudOperation.DELETE_COMPLETED:
-                aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
                 await aws_db_client.update(
                     user_id=therapist_id,
                     request=request,
@@ -1058,7 +1059,7 @@ class AssistantManager:
             if patient_last_session_date is None:
                 assert session_date is not None, "Received an invalid session date"
                 patient_last_session_date = session_date
-            else:
+            elif session_date is not None:
                 patient_last_session_date = max(patient_last_session_date, session_date)
 
             await aws_db_client.update(
@@ -1091,7 +1092,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         request: Request,
-    ) -> Set[str]:
+    ) -> list[str]:
         aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
         session_dates = await aws_db_client.select(
             user_id=therapist_id,
@@ -1245,7 +1246,7 @@ class AssistantManager:
         patient_id: str,
         notes_text: str,
         session_date: date,
-        session_id: str,
+        session_id: str | None,
         language_code: str,
         environment: str,
         background_tasks: BackgroundTasks,
@@ -1325,7 +1326,7 @@ class AssistantManager:
         notes_text: str,
         old_session_date: date,
         new_session_date: date,
-        session_id: str,
+        session_id: str | None,
         language_code: str,
         environment: str,
         background_tasks: BackgroundTasks,
@@ -1385,7 +1386,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         session_date: date,
-        session_id: str,
+        session_id: str | None,
         language_code: str,
         environment: str,
         background_tasks: BackgroundTasks,
@@ -1425,7 +1426,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         environment: str,
-        session_id: str,
+        session_id: str | None,
         request: Request,
     ):
         # Clean patient query cache
@@ -1503,8 +1504,8 @@ class AssistantManager:
         language_code: str,
         patient_id: str,
         therapist_id: str,
-        environment: str,
-        session_id: str,
+        environment: str | None,
+        session_id: str | None,
         request: Request,
     ):
         try:
@@ -1561,12 +1562,12 @@ class AssistantManager:
         language_code: str,
         patient_id: str,
         therapist_id: str,
-        environment: str,
-        session_id: str,
+        environment: str | None,
+        session_id: str | None,
         patient_first_name: str,
         is_first_time_patient: bool,
         request: Request,
-        patient_gender: str = None
+        patient_gender: str | None = None,
     ):
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -1671,7 +1672,7 @@ class AssistantManager:
         therapist_id: str,
         language_code: str,
         auth_manager: AuthManager,
-        session_id: str,
+        session_id: str | None,
         environment: str,
         background_tasks: BackgroundTasks,
         request: Request,
@@ -1714,7 +1715,7 @@ class AssistantManager:
         request: Request,
         patient_id: str,
         year: str
-    ):
+    ) -> list[dict]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             year_as_int = int(year)
@@ -1741,7 +1742,7 @@ class AssistantManager:
         patient_id: str,
         time_range: TimeRange,
         therapist_id: str
-    ):
+    ) -> list[dict]:
         try:
             now = datetime.now()
             days_map = {
@@ -1819,7 +1820,7 @@ class AssistantManager:
         request: Request,
         patient_id: str,
         most_recent_n: int
-    ) -> list[PineconeQuerySessionDateOverride]:
+    ) -> list[dict]:
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             session_reports_data = await aws_db_client.select(
