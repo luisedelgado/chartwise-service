@@ -77,12 +77,14 @@ class AssistantRouter:
         Registers the set of routes that the class' router can access.
         """
         @self.router.get(type(self).SINGLE_SESSION_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def retrieve_single_session_report(response: Response,
-                                                 request: Request,
-                                                 _: dict = Depends(get_user_info),
-                                                 session_report_id: str = Path(..., min_length=1),
-                                                 session_token: Annotated[Union[str, None], Cookie()] = None,
-                                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def retrieve_single_session_report(
+            response: Response,
+            request: Request,
+            _: dict = Depends(get_user_info),
+            session_report_id: str = Path(..., min_length=1),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._retrieve_single_session_report_internal(
                 response=response,
                 request=request,
@@ -92,15 +94,17 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def get_session_reports(response: Response,
-                                      request: Request,
-                                      year: str = Query(None),
-                                      most_recent_n: int = Query(None),
-                                      time_range: Optional[TimeRange] = Query(None),
-                                      patient_id: str = None,
-                                      _: dict = Depends(get_user_info),
-                                      session_token: Annotated[Union[str, None], Cookie()] = None,
-                                      session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_session_reports(
+            response: Response,
+            request: Request,
+            year: str = Query(None),
+            most_recent_n: int = Query(None),
+            time_range: TimeRange | None = Query(None),
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_session_reports_internal(
                 response=response,
                 request=request,
@@ -113,14 +117,16 @@ class AssistantRouter:
             )
 
         @self.router.post(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def insert_new_session(insert_payload: SessionNotesInsert,
-                                     request: Request,
-                                     response: Response,
-                                     background_tasks: BackgroundTasks,
-                                     _: dict = Depends(get_user_info),
-                                     client_timezone_identifier: Annotated[str, Body()] = None,
-                                     session_token: Annotated[Union[str, None], Cookie()] = None,
-                                     session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def insert_new_session(
+            insert_payload: SessionNotesInsert,
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            _: dict = Depends(get_user_info),
+            client_timezone_identifier: Annotated[Union[str, None], Body()] = None,
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._insert_new_session_internal(
                 body=insert_payload,
                 client_timezone_identifier=client_timezone_identifier,
@@ -132,14 +138,16 @@ class AssistantRouter:
             )
 
         @self.router.put(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def update_session(update_payload: SessionNotesUpdate,
-                                 request: Request,
-                                 response: Response,
-                                 background_tasks: BackgroundTasks,
-                                 _: dict = Depends(get_user_info),
-                                 client_timezone_identifier: Annotated[str, Body()] = None,
-                                 session_token: Annotated[Union[str, None], Cookie()] = None,
-                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def update_session(
+            update_payload: SessionNotesUpdate,
+            request: Request,
+            response: Response,
+            background_tasks: BackgroundTasks,
+            _: dict = Depends(get_user_info),
+            client_timezone_identifier: Annotated[Union[str, None], Body()] = None,
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._update_session_internal(
                 body=update_payload,
                 client_timezone_identifier=client_timezone_identifier,
@@ -151,13 +159,15 @@ class AssistantRouter:
             )
 
         @self.router.delete(type(self).SESSIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def delete_session(response: Response,
-                                 request: Request,
-                                 background_tasks: BackgroundTasks,
-                                 session_report_id: str = None,
-                                 _: dict = Depends(get_user_info),
-                                 session_token: Annotated[Union[str, None], Cookie()] = None,
-                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def delete_session(
+            response: Response,
+            request: Request,
+            background_tasks: BackgroundTasks,
+            session_report_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._delete_session_internal(
                 session_report_id=session_report_id,
                 background_tasks=background_tasks,
@@ -168,15 +178,17 @@ class AssistantRouter:
             )
 
         @self.router.post(type(self).QUERIES_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def execute_assistant_query(query: AssistantQuery,
-                                          request: Request,
-                                          response: Response,
-                                          _: dict = Depends(get_user_info),
-                                          session_token: Annotated[Union[str, None], Cookie()] = None,
-                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def execute_assistant_query(
+            query: AssistantQuery,
+            request: Request,
+            response: Response,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             request.state.session_id = session_id
             request.state.patient_id = query.patient_id
-            if not self._auth_manager.session_token_is_valid(session_token):
+            if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
                 raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
             try:
@@ -216,12 +228,14 @@ class AssistantRouter:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         @self.router.get(type(self).SINGLE_PATIENT_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
-        async def get_single_patient(response: Response,
-                                     request: Request,
-                                     patient_id: str = Path(..., min_length=1),
-                                     _: dict = Depends(get_user_info),
-                                     session_token: Annotated[Union[str, None], Cookie()] = None,
-                                     session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_single_patient(
+            response: Response,
+            request: Request,
+            patient_id: str = Path(..., min_length=1),
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_single_patient_internal(
                 response=response,
                 request=request,
@@ -231,11 +245,13 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
-        async def get_patients(response: Response,
-                               request: Request,
-                                _: dict = Depends(get_user_info),
-                               session_token: Annotated[Union[str, None], Cookie()] = None,
-                               session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_patients(
+            response: Response,
+            request: Request,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_patients_internal(
                 response=response,
                 request=request,
@@ -244,13 +260,15 @@ class AssistantRouter:
             )
 
         @self.router.post(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
-        async def add_patient(response: Response,
-                              request: Request,
-                              background_tasks: BackgroundTasks,
-                              body: PatientInsertPayload,
-                              _: dict = Depends(get_user_info),
-                              session_token: Annotated[Union[str, None], Cookie()] = None,
-                              session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def add_patient(
+            response: Response,
+            request: Request,
+            background_tasks: BackgroundTasks,
+            body: PatientInsertPayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._add_patient_internal(
                 response=response,
                 request=request,
@@ -261,13 +279,15 @@ class AssistantRouter:
             )
 
         @self.router.put(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
-        async def update_patient(response: Response,
-                                 request: Request,
-                                 background_tasks: BackgroundTasks,
-                                 body: PatientUpdatePayload,
-                                 _: dict = Depends(get_user_info),
-                                 session_token: Annotated[Union[str, None], Cookie()] = None,
-                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def update_patient(
+            response: Response,
+            request: Request,
+            background_tasks: BackgroundTasks,
+            body: PatientUpdatePayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._update_patient_internal(
                 response=response,
                 request=request,
@@ -278,12 +298,14 @@ class AssistantRouter:
             )
 
         @self.router.delete(type(self).PATIENTS_ENDPOINT, tags=[type(self).PATIENTS_ROUTER_TAG])
-        async def delete_patient(request: Request,
-                                 response: Response,
-                                 patient_id: str = None,
-                                 _: dict = Depends(get_user_info),
-                                 session_token: Annotated[Union[str, None], Cookie()] = None,
-                                 session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def delete_patient(
+            request: Request,
+            response: Response,
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._delete_patient_internal(
                 request=request,
                 response=response,
@@ -293,12 +315,14 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).ATTENDANCE_INSIGHTS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def get_attendance_insights(response: Response,
-                                          request: Request,
-                                          patient_id: str = None,
-                                          _: dict = Depends(get_user_info),
-                                          session_token: Annotated[Union[str, None], Cookie()] = None,
-                                          session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_attendance_insights(
+            response: Response,
+            request: Request,
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_attendance_insights_internal(
                 response=response,
                 request=request,
@@ -308,12 +332,14 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).BRIEFINGS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def get_briefing(response: Response,
-                               request: Request,
-                               patient_id: str = None,
-                               _: dict = Depends(get_user_info),
-                               session_token: Annotated[Union[str, None], Cookie()] = None,
-                               session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_briefing(
+            response: Response,
+            request: Request,
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_briefing_internal(
                 response=response,
                 request=request,
@@ -323,12 +349,14 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).QUESTION_SUGGESTIONS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def get_question_suggestions(response: Response,
-                                           request: Request,
-                                           patient_id: str = None,
-                                           _: dict = Depends(get_user_info),
-                                           session_token: Annotated[Union[str, None], Cookie()] = None,
-                                           session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_question_suggestions(
+            response: Response,
+            request: Request,
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_question_suggestions_internal(
                 response=response,
                 request=request,
@@ -338,12 +366,14 @@ class AssistantRouter:
             )
 
         @self.router.get(type(self).RECENT_TOPICS_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def get_recent_topics(response: Response,
-                                    request: Request,
-                                    patient_id: str = None,
-                                    _: dict = Depends(get_user_info),
-                                    session_token: Annotated[Union[str, None], Cookie()] = None,
-                                    session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def get_recent_topics(
+            response: Response,
+            request: Request,
+            patient_id: str | None = None,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._get_recent_topics_internal(
                 response=response,
                 request=request,
@@ -353,12 +383,14 @@ class AssistantRouter:
             )
 
         @self.router.post(type(self).TEMPLATES_ENDPOINT, tags=[type(self).ASSISTANT_ROUTER_TAG])
-        async def transform_session_with_template(request: Request,
-                                                  response: Response,
-                                                  body: TemplatePayload,
-                                                  _: dict = Depends(get_user_info),
-                                                  session_token: Annotated[Union[str, None], Cookie()] = None,
-                                                  session_id: Annotated[Union[str, None], Cookie()] = None):
+        async def transform_session_with_template(
+            request: Request,
+            response: Response,
+            body: TemplatePayload,
+            _: dict = Depends(get_user_info),
+            session_token: Annotated[Union[str, None], Cookie()] = None,
+            session_id: Annotated[Union[str, None], Cookie()] = None
+        ):
             return await self._transform_session_with_template_internal(
                 request=request,
                 response=response,
@@ -400,12 +432,14 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-    async def _retrieve_single_session_report_internal(self,
-                                                       request: Request,
-                                                       response: Response,
-                                                       session_report_id: str,
-                                                       session_token: Annotated[Union[str, None], Cookie()],
-                                                       session_id: Annotated[Union[str, None], Cookie()]):
+    async def _retrieve_single_session_report_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_report_id: str,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a session report.
 
@@ -417,7 +451,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -454,7 +488,12 @@ class AssistantRouter:
                 session_report_id=session_report_id,
                 request=request,
             )
-            request.state.patient_id = None if len(session_report_data or '') == 0 else session_report_data['patient_id']
+            assert type(session_report_data) == dict, "Received unexpected data type"
+
+            request.state.patient_id = (
+                None if len(session_report_data or '') == 0
+                else session_report_data['patient_id']
+            )
             return {"session_report_data": session_report_data}
         except Exception as e:
             description = str(e)
@@ -475,15 +514,17 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_session_reports_internal(self,
-                                            request: Request,
-                                            response: Response,
-                                            year: str,
-                                            most_recent_n: int,
-                                            time_range: str,
-                                            patient_id: str,
-                                            session_token: Annotated[Union[str, None], Cookie()],
-                                            session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_session_reports_internal(
+        self,
+        request: Request,
+        response: Response,
+        year: str,
+        most_recent_n: int,
+        time_range: TimeRange | None,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a batch of session reports.
 
@@ -500,7 +541,7 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -531,7 +572,7 @@ class AssistantRouter:
 
             assert set_filters == 1, "Only one of 'year', 'recent', or 'range' needs to be specified."
             assert year is None or datetime_handler.validate_year(year=year), "Invalid year parameteter"
-            assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id), "Invalid patient_id parameteter"
 
             session_reports_data = await self._assistant_manager.retrieve_session_reports(
                 therapist_id=user_id,
@@ -561,14 +602,16 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _insert_new_session_internal(self,
-                                           body: SessionNotesInsert,
-                                           client_timezone_identifier: str,
-                                           request: Request,
-                                           response: Response,
-                                           background_tasks: BackgroundTasks,
-                                           session_token: Annotated[Union[str, None], Cookie()],
-                                           session_id: Annotated[Union[str, None], Cookie()]):
+    async def _insert_new_session_internal(
+        self,
+        body: SessionNotesInsert,
+        client_timezone_identifier: str | None,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Stores a new session report.
 
@@ -583,7 +626,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = body.patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -610,20 +653,20 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
-            patient_id = body['patient_id']
+            body_dict = body.model_dump(exclude_unset=True)
+            patient_id = body_dict['patient_id']
 
-            assert 'source' not in body or body['source'] != SessionNotesSource.UNDEFINED.value, "Invalid source parameter"
+            assert 'source' not in body_dict or body_dict['source'] != SessionNotesSource.UNDEFINED.value, "Invalid source parameter"
             assert general_utilities.is_valid_uuid(patient_id), "Invalid patient_id body param"
-            assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert client_timezone_identifier is not None and general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
             tz_exists = len(client_timezone_identifier or '') > 0
             date_is_valid = datetime_handler.is_valid_date(
-                date_input=body['session_date'],
+                date_input=body_dict['session_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT,
                 tz_identifier=client_timezone_identifier
             )
-            assert 'session_date' not in body or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
+            assert 'session_date' not in body_dict or (tz_exists and date_is_valid), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
@@ -633,7 +676,7 @@ class AssistantRouter:
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
-                patient_id=body['patient_id'],
+                patient_id=body_dict['patient_id'],
                 error_code=status_code,
                 description=description,
                 session_id=session_id
@@ -661,7 +704,7 @@ class AssistantRouter:
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
-                patient_id=body['patient_id'],
+                patient_id=body_dict['patient_id'],
                 error_code=status_code,
                 description=description,
                 session_id=session_id
@@ -680,7 +723,7 @@ class AssistantRouter:
             )
 
             formatted_session_date = datetime.strptime(
-                body['session_date'],
+                body_dict['session_date'],
                 datetime_handler.DATE_FORMAT
             ).date()
             session_report_id = await self._assistant_manager.process_new_session_data(
@@ -688,7 +731,7 @@ class AssistantRouter:
                 environment=self._environment,
                 auth_manager=self._auth_manager,
                 patient_id=patient_id,
-                notes_text=body['notes_text'],
+                notes_text=body_dict['notes_text'],
                 session_date=formatted_session_date,
                 source=SessionNotesSource.MANUAL_INPUT,
                 background_tasks=background_tasks,
@@ -707,7 +750,7 @@ class AssistantRouter:
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
-                patient_id=body['patient_id'],
+                patient_id=body_dict['patient_id'],
                 error_code=status_code,
                 description=description,
                 session_id=session_id
@@ -717,14 +760,16 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _update_session_internal(self,
-                                       body: SessionNotesUpdate,
-                                       client_timezone_identifier: str,
-                                       request: Request,
-                                       response: Response,
-                                       background_tasks: BackgroundTasks,
-                                       session_token: Annotated[Union[str, None], Cookie()],
-                                       session_id: Annotated[Union[str, None], Cookie()]):
+    async def _update_session_internal(
+        self,
+        body: SessionNotesUpdate,
+        client_timezone_identifier: str | None,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Updates a session report.
 
@@ -739,7 +784,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.session_report_id = body.id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -766,18 +811,18 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
+            body_dict = body.model_dump(exclude_unset=True)
 
-            assert general_utilities.is_valid_uuid(body['id']), "Invalid session report ID param in body"
-            assert len(client_timezone_identifier or '') == 0 or general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
+            assert general_utilities.is_valid_uuid(body_dict['id']), "Invalid session report ID param in body"
+            assert client_timezone_identifier is not None and general_utilities.is_valid_timezone_identifier(client_timezone_identifier), "Invalid timezone identifier parameter"
 
             tz_exists = len(client_timezone_identifier or '') > 0
             lazy_date_is_valid = lambda: datetime_handler.is_valid_date(
-                date_input=body['session_date'],
+                date_input=body_dict['session_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT,
                 tz_identifier=client_timezone_identifier
             )
-            assert 'session_date' not in body or (tz_exists and lazy_date_is_valid()), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
+            assert 'session_date' not in body_dict or (tz_exists and lazy_date_is_valid()), "Invalid payload. Need a timezone identifier, and session_date (mm-dd-yyyy) should not be in the future."
 
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             language_code = await general_utilities.get_user_language_code(
@@ -791,7 +836,7 @@ class AssistantRouter:
                 environment=self._environment,
                 background_tasks=background_tasks,
                 auth_manager=self._auth_manager,
-                filtered_body=body,
+                filtered_body=body_dict,
                 session_id=session_id,
                 request=request,)
             )['patient_id']
@@ -806,21 +851,25 @@ class AssistantRouter:
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
-                session_report_id=body['id'],
+                session_report_id=body_dict['id'],
                 error_code=status_code,
                 description=description,
                 session_id=session_id
             )
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
-    async def _delete_session_internal(self,
-                                       session_report_id: str,
-                                       request: Request,
-                                       response: Response,
-                                       background_tasks: BackgroundTasks,
-                                       session_token: Annotated[Union[str, None], Cookie()],
-                                       session_id: Annotated[Union[str, None], Cookie()],):
+    async def _delete_session_internal(
+        self,
+        session_report_id: str | None,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()],
+    ):
         """
         Deletes a session report.
 
@@ -834,7 +883,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.session_report_id = session_report_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -861,7 +910,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
+            assert session_report_id is not None and general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
         except Exception as e:
             description = str(e)
             status_code = general_utilities.extract_status_code(
@@ -916,11 +965,13 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _execute_assistant_query_internal(self,
-                                                request: Request,
-                                                query: AssistantQuery,
-                                                therapist_id: str,
-                                                session_id: Annotated[Union[str, None], Cookie()]) -> AsyncIterable[str]:
+    async def _execute_assistant_query_internal(
+        self,
+        request: Request,
+        query: AssistantQuery,
+        therapist_id: str,
+        session_id: Annotated[Union[str, None], Cookie()],
+    ) -> AsyncIterable[str]:
         """
         Executes a query to our assistant system.
         Returns the query response.
@@ -955,12 +1006,14 @@ class AssistantRouter:
                 session_id=session_id
             )
 
-    async def _get_single_patient_internal(self,
-                                           request: Request,
-                                           response: Response,
-                                           patient_id: str,
-                                           session_token: Annotated[Union[str, None], Cookie()],
-                                           session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_single_patient_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a patient.
 
@@ -974,7 +1027,7 @@ class AssistantRouter:
         request.state.session_id = session_id
         request.state.patient_id = patient_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1031,11 +1084,13 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_patients_internal(self,
-                                     request: Request,
-                                     response: Response,
-                                     session_token: Annotated[Union[str, None], Cookie()],
-                                     session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_patients_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a batch of patients.
 
@@ -1047,7 +1102,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1097,13 +1152,15 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _add_patient_internal(self,
-                                    request: Request,
-                                    response: Response,
-                                    background_tasks: BackgroundTasks,
-                                    body: PatientInsertPayload,
-                                    session_token: Annotated[Union[str, None], Cookie()],
-                                    session_id: Annotated[Union[str, None], Cookie()]):
+    async def _add_patient_internal(
+        self,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        body: PatientInsertPayload,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Adds a patient.
 
@@ -1116,7 +1173,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1142,12 +1199,12 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
+            body_dict = body.model_dump(exclude_unset=True)
 
-            assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert 'birth_date' not in body or datetime_handler.is_valid_date(
-                date_input=body['birth_date'],
+            assert 'consentment_channel' not in body_dict or body_dict['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert 'gender' not in body_dict or body_dict['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body_dict or datetime_handler.is_valid_date(
+                date_input=body_dict['birth_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
@@ -1160,7 +1217,7 @@ class AssistantRouter:
             patient_id = await self._assistant_manager.add_patient(
                 language_code=language_code,
                 background_tasks=background_tasks,
-                filtered_body=body,
+                filtered_body=body_dict,
                 therapist_id=user_id,
                 session_id=session_id,
                 request=request,
@@ -1186,13 +1243,15 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _update_patient_internal(self,
-                                       request: Request,
-                                       response: Response,
-                                       background_tasks: BackgroundTasks,
-                                       body: PatientUpdatePayload,
-                                       session_token: Annotated[Union[str, None], Cookie()],
-                                       session_id: Annotated[Union[str, None], Cookie()]):
+    async def _update_patient_internal(
+        self,
+        request: Request,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        body: PatientUpdatePayload,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Updates a patient.
 
@@ -1206,7 +1265,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = body.id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1233,20 +1292,19 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            body = body.model_dump(exclude_unset=True)
+            body_dict = body.model_dump(exclude_unset=True)
 
-            assert general_utilities.is_valid_uuid(body['id'] or '') > 0, "Missing patient id param in payload"
-            assert 'consentment_channel' not in body or body['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
-            assert 'gender' not in body or body['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
-            assert 'birth_date' not in body or datetime_handler.is_valid_date(
-                date_input=body['birth_date'],
+            assert general_utilities.is_valid_uuid(body_dict['id'] or '') > 0, "Missing patient id param in payload"
+            assert 'consentment_channel' not in body_dict or body_dict['consentment_channel'] != PatientConsentmentChannel.UNDEFINED, '''Invalid parameter 'undefined' for consentment_channel.'''
+            assert 'gender' not in body_dict or body_dict['gender'] != Gender.UNDEFINED, '''Invalid parameter 'undefined' for gender.'''
+            assert 'birth_date' not in body_dict or datetime_handler.is_valid_date(
+                date_input=body_dict['birth_date'],
                 incoming_date_format=datetime_handler.DATE_FORMAT
             ), "Invalid date format. Date should not be in the future, and the expected format is mm-dd-yyyy"
 
             await self._assistant_manager.update_patient(
                 therapist_id=user_id,
-                filtered_body=body,
-                session_id=session_id,
+                filtered_body=body_dict,
                 background_tasks=background_tasks,
                 request=request,
             )
@@ -1260,20 +1318,24 @@ class AssistantRouter:
             dependency_container.inject_influx_client().log_error(
                 endpoint_name=request.url.path,
                 method=request.method,
-                patient_id=body['id'],
+                patient_id=body_dict['id'],
                 error_code=status_code,
                 description=description,
                 session_id=session_id
             )
-            raise HTTPException(status_code=status_code,
-                                detail=description)
+            raise HTTPException(
+                status_code=status_code,
+                detail=description
+            )
 
-    async def _delete_patient_internal(self,
-                                       request: Request,
-                                       response: Response,
-                                       patient_id: str,
-                                       session_token: Annotated[Union[str, None], Cookie()],
-                                       session_id: Annotated[Union[str, None], Cookie()]):
+    async def _delete_patient_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Deletes a patient.
 
@@ -1286,7 +1348,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1313,7 +1375,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
             assert len(user_id or '') > 0, "Missing therapist_id param"
 
             # Soft-delete the patient given our 6-year HIPAA retention policy.
@@ -1329,7 +1391,7 @@ class AssistantRouter:
                 },
                 table_name=ENCRYPTED_PATIENTS_TABLE_NAME,
             )
-            assert len(soft_deletion_result) > 0, "No patient found with the incoming patient_id"
+            assert len(soft_deletion_result or '') > 0, "No patient found with the incoming patient_id"
 
             # Delete all vector data for the patient, since it's not necessary to keep around
             # when we already have our soft-deleted records in Postgres.
@@ -1357,12 +1419,14 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_attendance_insights_internal(self,
-                                                request: Request,
-                                                response: Response,
-                                                patient_id: str,
-                                                session_token: Annotated[Union[str, None], Cookie()],
-                                                session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_attendance_insights_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a patient's attendance insights.
 
@@ -1374,7 +1438,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1400,7 +1464,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             attendance_insights_data = await self._assistant_manager.retrieve_attendance_insights(
                 therapist_id=user_id,
@@ -1428,12 +1492,14 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_briefing_internal(self,
-                                     request: Request,
-                                     response: Response,
-                                     patient_id: str,
-                                     session_token: Annotated[Union[str, None], Cookie()],
-                                     session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_briefing_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a patient's latest briefing.
 
@@ -1445,7 +1511,7 @@ class AssistantRouter:
         session_id – the session_id cookie, if exists.
         """
         request.state.session_id = session_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1471,7 +1537,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             briefing_data = await self._assistant_manager.retrieve_briefing(
                 therapist_id=user_id,
@@ -1499,12 +1565,14 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_question_suggestions_internal(self,
-                                                 request: Request,
-                                                 response: Response,
-                                                 patient_id: str,
-                                                 session_token: Annotated[Union[str, None], Cookie()],
-                                                 session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_question_suggestions_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a patient's latest question suggestions.
 
@@ -1517,7 +1585,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1543,7 +1611,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             question_suggestions_data = await self._assistant_manager.retrieve_question_suggestions(
                 therapist_id=user_id,
@@ -1572,12 +1640,14 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _get_recent_topics_internal(self,
-                                          request: Request,
-                                          response: Response,
-                                          patient_id: str,
-                                          session_token: Annotated[Union[str, None], Cookie()],
-                                          session_id: Annotated[Union[str, None], Cookie()]):
+    async def _get_recent_topics_internal(
+        self,
+        request: Request,
+        response: Response,
+        patient_id: str | None,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Retrieves a patient's latest recent topics.
 
@@ -1590,7 +1660,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.patient_id = patient_id
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1616,7 +1686,7 @@ class AssistantRouter:
             raise RuntimeError(e) from e
 
         try:
-            assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
+            assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
 
             recent_topics_data = await self._assistant_manager.recent_topics_data(
                 therapist_id=user_id,
@@ -1645,13 +1715,15 @@ class AssistantRouter:
                 detail=description
             )
 
-    async def _transform_session_with_template_internal(self,
-                                                        request: Request,
-                                                        response: Response,
-                                                        session_notes_text: str,
-                                                        template: SessionNotesTemplate,
-                                                        session_token: Annotated[Union[str, None], Cookie()],
-                                                        session_id: Annotated[Union[str, None], Cookie()]):
+    async def _transform_session_with_template_internal(
+        self,
+        request: Request,
+        response: Response,
+        session_notes_text: str,
+        template: SessionNotesTemplate,
+        session_token: Annotated[Union[str, None], Cookie()],
+        session_id: Annotated[Union[str, None], Cookie()]
+    ):
         """
         Adapts an incoming set of session notes into the SOAP format and returns the result.
 
@@ -1665,7 +1737,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
         request.state.notes_template = template.value
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1733,7 +1805,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:
@@ -1806,7 +1878,7 @@ class AssistantRouter:
         """
         request.state.session_id = session_id
 
-        if not self._auth_manager.session_token_is_valid(session_token):
+        if session_token is None or not self._auth_manager.session_token_is_valid(session_token):
             raise SESSION_TOKEN_MISSING_OR_EXPIRED_ERROR
 
         try:

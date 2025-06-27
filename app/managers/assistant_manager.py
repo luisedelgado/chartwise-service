@@ -139,7 +139,7 @@ class AssistantManager:
         therapist_id: str,
         patient_id: str,
         year: str,
-        time_range: TimeRange,
+        time_range: TimeRange | None,
         most_recent: int,
         request: Request,
     ):
@@ -180,7 +180,7 @@ class AssistantManager:
         notes_text: str,
         session_date: date,
         source: SessionNotesSource,
-        session_id: str,
+        session_id: str | None,
         therapist_id: str,
         request: Request,
         diarization: str = None
@@ -238,7 +238,7 @@ class AssistantManager:
         background_tasks: BackgroundTasks,
         auth_manager: AuthManager,
         filtered_body: dict,
-        session_id: str,
+        session_id: str | None,
         request: Request,
     ):
         try:
@@ -327,7 +327,7 @@ class AssistantManager:
         self,
         language_code: str,
         environment: str,
-        session_id: str,
+        session_id: str | None,
         background_tasks: BackgroundTasks,
         therapist_id: str,
         session_report_id: str,
@@ -424,7 +424,7 @@ class AssistantManager:
         language_code: str,
         filtered_body: dict,
         therapist_id: str,
-        session_id: str,
+        session_id: str | None,
         request: Request,
     ) -> str:
         try:
@@ -493,7 +493,6 @@ class AssistantManager:
         self,
         therapist_id: str,
         filtered_body: dict,
-        session_id: str,
         background_tasks: BackgroundTasks,
         request: Request,
     ):
