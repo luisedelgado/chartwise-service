@@ -4,7 +4,7 @@ from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from pydantic import BaseModel
-from typing import AsyncIterable, Awaitable, Callable
+from typing import AsyncIterable, Awaitable, Callable, Type
 
 from ..api.openai_base_class import OpenAIBaseClass
 from ...internal.schemas import (
@@ -66,7 +66,7 @@ class FakeAsyncOpenAI(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expected_output_model: BaseModel | None = None,
+        expected_output_model: Type[BaseModel] | None = None,
     ) -> BaseModel | str:
         if self.throws_exception:
             raise Exception("Fake exception")

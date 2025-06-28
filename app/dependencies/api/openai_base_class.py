@@ -16,7 +16,7 @@ class OpenAIBaseClass(ABC):
         self,
         max_tokens: int,
         messages: list,
-        expected_output_model: Type[BaseModel] | None = None,
+        expected_output_model: Type[BaseModel] | None = None
     ) -> BaseModel | str:
         """
         Invokes a chat completion asynchronously.

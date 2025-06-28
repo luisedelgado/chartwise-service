@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from typing import AsyncIterable, Awaitable, Callable
+from typing import AsyncIterable, Awaitable, Callable, Type
 
 from langchain.callbacks import AsyncIteratorCallbackHandler
 from langchain.schema import HumanMessage, SystemMessage
@@ -20,7 +20,7 @@ class OpenAIClient(OpenAIBaseClass):
         self,
         max_tokens: int,
         messages: list,
-        expected_output_model: BaseModel | None = None,
+        expected_output_model: Type[BaseModel] | None = None,
     ) -> BaseModel | str:
         try:
             openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -31,7 +31,7 @@ class OpenAIClient(OpenAIBaseClass):
                     messages=messages,
                     temperature=0,
                     max_tokens=max_tokens,
-                    response_format=type(expected_output_model),
+                    response_format=expected_output_model,
                 )
                 response_message = response.choices[0].message.parsed
             else:
