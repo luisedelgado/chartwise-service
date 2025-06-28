@@ -204,15 +204,19 @@ class AssistantRouter:
                     e,
                     fallback=status.HTTP_400_BAD_REQUEST
                 )
+                error_message = str(e)
                 dependency_container.inject_influx_client().log_error(
                     endpoint_name=request.url.path,
                     method=request.method,
                     patient_id=query.patient_id,
                     error_code=status_code,
-                    description=str(e),
+                    description=error_message,
                     session_id=session_id
                 )
-                raise RuntimeError(e) from e
+                raise HTTPException(
+                    status_code=status_code,
+                    detail=error_message,
+                ) from e
 
             try:
                 assert general_utilities.is_valid_uuid(query.patient_id or '') > 0, "Invalid patient_id in payload"
@@ -474,7 +478,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             if not session_report_id.strip():
@@ -564,7 +571,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             filters = [year, most_recent_n, time_range]
@@ -650,7 +660,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -808,7 +821,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -907,7 +923,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert session_report_id is not None and general_utilities.is_valid_uuid(session_report_id), "Received invalid session_report_id"
@@ -1050,7 +1069,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             if not patient_id.strip():
@@ -1125,7 +1147,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             patients_data = await self._assistant_manager.retrieve_patients(
@@ -1196,7 +1221,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -1289,7 +1317,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -1372,7 +1403,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id param"
@@ -1461,7 +1495,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1534,7 +1571,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1608,7 +1648,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1683,7 +1726,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert patient_id is not None and general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id in payload"
@@ -1760,7 +1806,10 @@ class AssistantRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert len(session_notes_text or '') > 0, "Empty session_notes_text param"
@@ -1828,7 +1877,10 @@ class AssistantRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -1901,7 +1953,10 @@ class AssistantRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert len(ids_to_fetch) > 0, "Empty ids_to_fetch param"

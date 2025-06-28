@@ -204,7 +204,7 @@ class PaymentProcessingRouter:
                 request=request,
                 response=response,
                 limit=batch_size,
-                starting_after=pagination_last_item_id_retrieved
+                pagination_last_item_id_retrieved=pagination_last_item_id_retrieved
             )
 
     async def _create_checkout_session_internal(
@@ -249,7 +249,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert payload.subscription_tier != SubscriptionTier.UNSPECIFIED, "Unspecified subscription tier"
@@ -265,7 +268,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
@@ -345,7 +351,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -456,7 +465,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -538,7 +550,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert behavior != UpdateSubscriptionBehavior.UNSPECIFIED, "Unspecified update behavior"
@@ -643,7 +658,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             stripe_client = dependency_container.inject_stripe_client()
@@ -709,7 +727,10 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -758,7 +779,7 @@ class PaymentProcessingRouter:
         request: Request,
         response: Response,
         limit: int,
-        starting_after: str | None
+        pagination_last_item_id_retrieved: str | None
     ):
         """
         Retrieves the payment history for the current user (customer).
@@ -795,7 +816,29 @@ class PaymentProcessingRouter:
                 description=str(e),
                 session_id=session_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
+
+        try:
+            assert pagination_last_item_id_retrieved is not None, "Need a non-null value for pagination_last_item_id_retrieved"
+        except Exception as e:
+            status_code = general_utilities.extract_status_code(
+                e,
+                fallback=status.HTTP_400_BAD_REQUEST
+            )
+            dependency_container.inject_influx_client().log_error(
+                endpoint_name=request.url.path,
+                method=request.method,
+                error_code=status_code,
+                description=str(e),
+                session_id=session_id
+            )
+            raise HTTPException(
+                detail=str(e),
+                status_code=status_code
+            )
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -817,7 +860,7 @@ class PaymentProcessingRouter:
             payment_intent_history = stripe_client.retrieve_payment_intent_history(
                 customer_id=customer_id,
                 limit=limit,
-                starting_after=starting_after
+                starting_after=pagination_last_item_id_retrieved
             )
 
             successful_payments = []

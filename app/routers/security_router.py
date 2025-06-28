@@ -367,7 +367,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
@@ -443,7 +446,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -562,7 +568,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             body_dict = body.model_dump(exclude_unset=True)
@@ -654,7 +663,10 @@ class SecurityRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             # Cancel Stripe subscription

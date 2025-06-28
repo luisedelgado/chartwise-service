@@ -235,7 +235,10 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert len(file_path or '') > 0, "Invalid file path value"
@@ -384,7 +387,10 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert is_valid_extension(file_extension), "Received invalid file extension."
@@ -517,7 +523,10 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id value"
@@ -618,7 +627,10 @@ class AudioProcessingRouter:
                 description=str(e),
                 patient_id=patient_id
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert general_utilities.is_valid_uuid(patient_id or '') > 0, "Invalid patient_id value"
@@ -722,7 +734,10 @@ class AudioProcessingRouter:
                 error_code=status_code,
                 description=str(e)
             )
-            raise RuntimeError(e) from e
+            raise HTTPException(
+                status_code=status_code,
+                detail=str(e),
+            ) from e
 
         try:
             assert len(file_path or '') > 0, "Empty file path value"
