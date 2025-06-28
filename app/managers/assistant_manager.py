@@ -130,7 +130,7 @@ class AssistantManager:
                     "is_soft_deleted": False,
                 }
             )
-            return [] if len(response) == 0 else response[0]
+            return {} if len(response) == 0 else response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -393,7 +393,7 @@ class AssistantManager:
                     "is_soft_deleted": False,
                 }
             )
-            return [] if len(response) == 0 else response[0]
+            return {} if len(response) == 0 else response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -1154,7 +1154,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            return [] if len(response) == 0 else response[0]
+            return {} if len(response) == 0 else response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -1175,7 +1175,7 @@ class AssistantManager:
                     "patient_id": patient_id
                 }
             )
-            return [] if len(response) == 0 else response[0]
+            return {} if len(response) == 0 else response[0]
         except Exception as e:
             raise RuntimeError(e) from e
 
