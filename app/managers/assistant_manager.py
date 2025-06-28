@@ -88,7 +88,7 @@ class SessionNotesUpdate(BaseModel):
     notes_text: str | None = None
     session_date: str | None = None
     diarization: str | None = None
-    is_read: str | None = None
+    is_read: bool | None = None
 
 class CachedPatientQueryData:
     def __init__(self,
