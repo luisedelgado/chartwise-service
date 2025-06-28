@@ -1,11 +1,11 @@
-import os
-
 from fastapi.testclient import TestClient
+from typing import cast
 
 from ..dependencies.dependency_container import (
     dependency_container,
     FakeAwsDbClient,
     FakeDocupandaClient,
+    FakeAsyncOpenAI,
     FakePineconeClient,
 )
 from ..managers.auth_manager import AuthManager
@@ -40,16 +40,17 @@ class TestingHarnessImageProcessingRouter:
         dependency_container._pinecone_client = None
         dependency_container._resend_client = None
         dependency_container._stripe_client = None
-        dependency_container._testing_environment = "testing"
+        dependency_container._testing_environment = True
 
-        self.fake_pinecone_client: FakePineconeClient = dependency_container.inject_pinecone_client()
-        self.fake_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
-        self.fake_openai_client = dependency_container.inject_openai_client()
-        self.fake_docupanda_client:FakeDocupandaClient = dependency_container.inject_docupanda_client()
-        self.fake_pinecone_client = dependency_container.inject_pinecone_client()
+        self.fake_pinecone_client: FakePineconeClient = cast(FakePineconeClient, dependency_container.inject_pinecone_client())
+        self.fake_db_client: FakeAwsDbClient = cast(FakeAwsDbClient, dependency_container.inject_aws_db_client())
+        self.fake_openai_client: FakeAsyncOpenAI = cast(FakeAsyncOpenAI, dependency_container.inject_openai_client())
+        self.fake_docupanda_client: FakeDocupandaClient = cast(FakeDocupandaClient, dependency_container.inject_docupanda_client())
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
-        coordinator = EndpointServiceCoordinator(routers=[ImageProcessingRouter(environment=ENVIRONMENT).router],
-                                                 environment=ENVIRONMENT)
+        coordinator = EndpointServiceCoordinator(
+            routers=[ImageProcessingRouter(environment=ENVIRONMENT).router],
+            environment=ENVIRONMENT,
+        )
         self.client = TestClient(coordinator.app)
 
     def test_invoke_textraction_with_no_session_token(self):

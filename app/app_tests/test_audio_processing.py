@@ -1,11 +1,14 @@
 from fastapi.testclient import TestClient
+from typing import cast
 
 from ..data_processing.diarization_cleaner import DiarizationCleaner
 from ..dependencies.dependency_container import (
     dependency_container,
+    FakeAsyncOpenAI,
     FakeAwsDbClient,
     FakeAwsS3Client,
     FakeDeepgramClient,
+    FakeDocupandaClient,
     FakePineconeClient,
 )
 from ..managers.auth_manager import AuthManager
@@ -91,15 +94,15 @@ class TestingHarnessAudioProcessingRouter:
         dependency_container._pinecone_client = None
         dependency_container._resend_client = None
         dependency_container._stripe_client = None
-        dependency_container._testing_environment = "testing"
+        dependency_container._testing_environment = True
 
-        self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
-        self.fake_aws_s3_client:FakeAwsS3Client = dependency_container.inject_aws_s3_client()
-        self.fake_deepgram_client:FakeDeepgramClient = dependency_container.inject_deepgram_client()
-        self.fake_openai_client = dependency_container.inject_openai_client()
-        self.fake_docupanda_client = dependency_container.inject_docupanda_client()
-        self.fake_pinecone_client = dependency_container.inject_pinecone_client()
-        self.fake_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
+        self.fake_openai_client: FakeAsyncOpenAI = cast(FakeAsyncOpenAI, dependency_container.inject_openai_client())
+        self.fake_pinecone_client: FakePineconeClient = cast(FakePineconeClient, dependency_container.inject_pinecone_client())
+        self.fake_aws_db_client: FakeAwsDbClient = cast(FakeAwsDbClient, dependency_container.inject_aws_db_client())
+        self.fake_aws_s3_client: FakeAwsS3Client = cast(FakeAwsS3Client, dependency_container.inject_aws_s3_client())
+        self.fake_deepgram_client: FakeDeepgramClient = cast(FakeDeepgramClient, dependency_container.inject_deepgram_client())
+        self.fake_docupanda_client: FakeDocupandaClient = cast(FakeDocupandaClient, dependency_container.inject_docupanda_client())
+        self.fake_db_client: FakeAwsDbClient = cast(FakeAwsDbClient, dependency_container.inject_aws_db_client())
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AudioProcessingRouter(environment=ENVIRONMENT).router],

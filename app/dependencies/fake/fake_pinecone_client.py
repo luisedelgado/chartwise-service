@@ -1,6 +1,7 @@
 from datetime import date
 from fastapi import Request
 from pinecone import Index
+from pinecone.grpc import GRPCIndex
 from typing import Callable
 
 from ..api.aws_db_base_class import AwsDbBaseClass
@@ -108,7 +109,7 @@ class FakePineconeClient(PineconeBaseClass):
 
     async def fetch_historical_context(
         self,
-        index: Index,
+        index: GRPCIndex,
         namespace: str
     ):
         self.fetch_historical_context_invoked = True

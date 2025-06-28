@@ -2,6 +2,7 @@ import os
 import time
 
 from fastapi.testclient import TestClient
+from typing import cast
 
 from ..dependencies.fake.fake_async_openai import FakeAsyncOpenAI
 from ..dependencies.fake.fake_aws_cognito_client import FakeAwsCognitoClient
@@ -35,13 +36,13 @@ class TestingHarnessSecurityRouter:
         dependency_container._pinecone_client = None
         dependency_container._resend_client = None
         dependency_container._stripe_client = None
-        dependency_container._testing_environment = "testing"
+        dependency_container._testing_environment = True
 
-        self.fake_db_client:FakeAwsDbClient = dependency_container.inject_aws_db_client()
-        self.fake_stripe_client:FakeStripeClient = dependency_container.inject_stripe_client()
-        self.fake_cognito_client:FakeAwsCognitoClient = dependency_container.inject_aws_cognito_client()
-        self.fake_openai_client:FakeAsyncOpenAI = dependency_container.inject_openai_client()
-        self.fake_pinecone_client:FakePineconeClient = dependency_container.inject_pinecone_client()
+        self.fake_openai_client: FakeAsyncOpenAI = cast(FakeAsyncOpenAI, dependency_container.inject_openai_client())
+        self.fake_stripe_client: FakeStripeClient = cast(FakeStripeClient, dependency_container.inject_stripe_client())
+        self.fake_pinecone_client: FakePineconeClient = cast(FakePineconeClient, dependency_container.inject_pinecone_client())
+        self.fake_cognito_client: FakeAwsCognitoClient = cast(FakeAwsCognitoClient, dependency_container.inject_aws_cognito_client())
+        self.fake_db_client: FakeAwsDbClient = cast(FakeAwsDbClient, dependency_container.inject_aws_db_client())
         self.auth_manager = AuthManager()
         self.session_token, _ = self.auth_manager.create_session_token(user_id=FAKE_THERAPIST_ID)
 
@@ -107,7 +108,9 @@ class TestingHarnessSecurityRouter:
         new_token_data = self.auth_manager.extract_data_from_token(new_token)
         old_token_data = self.auth_manager.extract_data_from_token(self.session_token)
 
-        assert new_token_data.get("exp") > old_token_data.get("exp")
+        assert "exp" in new_token_data
+        assert "exp" in old_token_data
+        assert new_token_data["exp"] > old_token_data["exp"]
         assert "subscription_status" in response_json
 
     def test_get_therapist_with_auth_token_but_missing_session_token(self):

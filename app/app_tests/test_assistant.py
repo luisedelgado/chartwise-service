@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from typing import cast
 
 from ..dependencies.dependency_container import (
     dependency_container,
@@ -36,11 +37,11 @@ class TestingHarnessAssistantRouter:
         dependency_container._pinecone_client = None
         dependency_container._resend_client = None
         dependency_container._stripe_client = None
-        dependency_container._testing_environment = "testing"
+        dependency_container._testing_environment = True
 
-        self.fake_openai_client: FakeAsyncOpenAI = dependency_container.inject_openai_client()
-        self.fake_pinecone_client: FakePineconeClient = dependency_container.inject_pinecone_client()
-        self.fake_aws_db_client: FakeAwsDbClient = dependency_container.inject_aws_db_client()
+        self.fake_openai_client: FakeAsyncOpenAI = cast(FakeAsyncOpenAI, dependency_container.inject_openai_client())
+        self.fake_pinecone_client: FakePineconeClient = cast(FakePineconeClient, dependency_container.inject_pinecone_client())
+        self.fake_aws_db_client: FakeAwsDbClient = cast(FakeAwsDbClient, dependency_container.inject_aws_db_client())
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
 
         coordinator = EndpointServiceCoordinator(routers=[AssistantRouter(environment=ENVIRONMENT).router],

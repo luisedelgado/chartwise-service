@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 from fastapi import Request
 from pinecone import Index
+from pinecone.grpc import GRPCIndex
 from typing import Callable
 
 from .pinecone_session_date_override import PineconeQuerySessionDateOverride
@@ -172,7 +173,7 @@ class PineconeBaseClass(ABC):
     @abstractmethod
     async def fetch_historical_context(
         self,
-        index: Index,
+        index: GRPCIndex,
         namespace: str,
     ):
         """

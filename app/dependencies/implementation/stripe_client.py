@@ -74,6 +74,7 @@ class StripeClient(StripeBaseClass):
         limit: int,
         starting_after: str | None
     ) -> dict:
+        assert starting_after is not None, "Cannot use a null `starting_after` value"
         return stripe.PaymentIntent.list(
             customer=customer_id,
             limit=limit,
@@ -126,7 +127,7 @@ class StripeClient(StripeBaseClass):
 
     def retrieve_product_catalog(
             self,
-            country_iso: str = None
+            country_iso: str | None = None,
         ) -> list:
         try:
             if country_iso is None:
@@ -148,6 +149,7 @@ class StripeClient(StripeBaseClass):
 
             product_prices = {}
             for product in products['data']:
+                assert type(product) == dict and 'default_price' in product, "Missing default price in dict"
                 price = stripe.Price.retrieve(product['default_price'])
                 currency = price['currency']
                 formatted_price_amount = format_currency_amount(
@@ -178,8 +180,8 @@ class StripeClient(StripeBaseClass):
                 })
             return catalog
         except Exception as e:
-            error_msg = f"Encountered an issue while retrieving product catalog for country {country}: {e}"
-            print(error_msg)
+            error_country = None if country_iso is None else ""
+            error_msg = f"Encountered an issue while retrieving product catalog for country {error_country}: {e}"
             raise RuntimeError(error_msg) from e
 
     def retrieve_price(self, price_id: str):

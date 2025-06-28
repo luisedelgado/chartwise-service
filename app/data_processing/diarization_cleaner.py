@@ -8,7 +8,7 @@ Class meant to be used for cleaning diarization records.
 class DiarizationCleaner:
     def __init__(self):
         self._current_speaker_content = str()
-        self._current_speaker: str = None
+        self._current_speaker: str | None = None
         self._transcription = []
         self._entry_start_time = None
         self._entry_end_time = None

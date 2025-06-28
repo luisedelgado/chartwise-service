@@ -3,13 +3,13 @@ import hashlib, os, uuid
 import tiktoken, torch
 
 from datetime import date, datetime
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from pinecone import Index, PineconeApiException
+from pinecone import PineconeApiException
 from pinecone.exceptions import NotFoundException
-from pinecone.grpc import PineconeGRPC
+from pinecone.grpc import PineconeGRPC, GRPCIndex
 from starlette.concurrency import run_in_threadpool
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from typing import Callable, Tuple
@@ -58,7 +58,7 @@ class PineconeClient(PineconeBaseClass):
         session_report_id: str,
         openai_client: OpenAIBaseClass,
         summarize_chunk: Callable,
-        therapy_session_date: date = None
+        therapy_session_date: date | None = None
     ) -> list[str]:
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -96,6 +96,8 @@ class PineconeClient(PineconeBaseClass):
                 encoded_chunk_summary_ciphertext = base64.b64encode(encrypted_chunk_summary).decode("utf-8")
 
                 vector_store.namespace = namespace
+
+                assert therapy_session_date is not None, "Cannot manipulate a null date"
                 therapy_session_date_formatted = therapy_session_date.strftime(datetime_handler.DATE_FORMAT)
                 doc_id = f"{therapy_session_date_formatted}-{chunk_index}-{uuid.uuid1()}"
                 vector_ids.append(doc_id)
@@ -113,7 +115,10 @@ class PineconeClient(PineconeBaseClass):
             await run_in_threadpool(vector_store.add, vectors)
             return vector_ids
         except PineconeApiException as e:
-            raise HTTPException(status_code=e.status, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_417_EXPECTATION_FAILED,
+                detail=str(e)
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -174,7 +179,7 @@ class PineconeClient(PineconeBaseClass):
             await run_in_threadpool(vector_store.add, vectors)
 
         except PineconeApiException as e:
-            raise HTTPException(status_code=e.status, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail=str(e))
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -182,7 +187,7 @@ class PineconeClient(PineconeBaseClass):
         self,
         user_id: str,
         patient_id: str,
-        date: date = None
+        date: date | None = None
     ):
         try:
             bucket_index = self._get_bucket_for_user(user_id)
@@ -268,7 +273,10 @@ class PineconeClient(PineconeBaseClass):
                 summarize_chunk=summarize_chunk
             )
         except PineconeApiException as e:
-            raise HTTPException(status_code=e.status, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_417_EXPECTATION_FAILED,
+                detail=str(e)
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -296,7 +304,10 @@ class PineconeClient(PineconeBaseClass):
                 summarize_chunk=summarize_chunk
             )
         except PineconeApiException as e:
-            raise HTTPException(status_code=e.status, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_417_EXPECTATION_FAILED,
+                detail=str(e)
+            )
         except Exception as e:
             raise RuntimeError(e) from e
 
@@ -311,7 +322,7 @@ class PineconeClient(PineconeBaseClass):
         rerank_vectors: bool,
         request: Request,
         include_preexisting_history: bool = True,
-        session_dates_overrides: list[PineconeQuerySessionDateOverride] = None
+        session_dates_overrides: list[PineconeQuerySessionDateOverride] | None = None
     ) -> str:
         try:
             missing_session_data_error = (
@@ -376,9 +387,14 @@ class PineconeClient(PineconeBaseClass):
                 )
 
                 if found_historical_context:
-                    historical_context = (
-                        "Here's an outline of the patient's pre-existing history:\n" + historical_context
-                    )
+                    assert historical_context is not None, "Unexpected null historical context"
+
+                    historical_context = "".join([
+                        "Here's an outline of the patient's pre-existing history:",
+                        "\n",
+                        historical_context,
+                    ])
+
                     missing_session_data_error = (
                         f"{historical_context}\nBeyond this pre-existing context, there's no data from actual patient sessions. "
                         "They may have not gone through their first session since the practitioner added them to the platform. "
@@ -403,6 +419,7 @@ class PineconeClient(PineconeBaseClass):
                             ids_contained_in_current_context=ids_contained,
                         )
                     elif session_date_override.override_type == PineconeQuerySessionDateOverrideType.DATE_RANGE:
+                        assert session_date_override.session_date_end is not None, "Missing session date end"
                         context = await self._append_context_from_date_range_vectors(
                             current_context=context,
                             index=index,
@@ -421,7 +438,7 @@ class PineconeClient(PineconeBaseClass):
 
     async def fetch_historical_context(
         self,
-        index: Index,
+        index: GRPCIndex,
         namespace: str
     ):
         historial_context_namespace = ("".join([
@@ -528,7 +545,7 @@ class PineconeClient(PineconeBaseClass):
         self,
         query_input: str,
         query_top_k: int,
-        index: Index,
+        index: GRPCIndex,
         namespace: str,
         openai_client: OpenAIBaseClass,
     ) -> Tuple[list, list]:
@@ -564,10 +581,10 @@ class PineconeClient(PineconeBaseClass):
 
     def _create_context_from_vectors(
         self,
-        index: Index,
+        index: GRPCIndex,
         namespace: str,
         vector_ids: list[str],
-        query_input: str = None,
+        query_input: str | None = None,
         rerank_vectors: bool = False
     ) -> str:
         fetch_result = index.fetch(
@@ -621,7 +638,7 @@ class PineconeClient(PineconeBaseClass):
     def _append_context_from_single_date_vectors(
         self,
         session_date_override: PineconeQuerySessionDateOverride,
-        index: Index,
+        index: GRPCIndex,
         namespace: str,
         current_context: str,
         ids_contained_in_current_context: list[str]
@@ -685,7 +702,7 @@ class PineconeClient(PineconeBaseClass):
     async def _append_context_from_date_range_vectors(
             self,
             current_context: str,
-            index: Index,
+            index: GRPCIndex,
             namespace: str,
             aws_db_client: AwsDbBaseClass,
             therapist_id: str,

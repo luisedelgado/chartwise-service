@@ -31,19 +31,19 @@ class DependencyContainer:
     def __init__(self):
         self._environment = os.environ.get("ENVIRONMENT")
         self._testing_environment = (self._environment == TESTING_ENVIRONMENT)
-        self._openai_client = None
-        self._pinecone_client = None
-        self._docupanda_client = None
-        self._deepgram_client = None
-        self._stripe_client = None
-        self._resend_client = None
-        self._influx_client = None
-        self._aws_secret_manager_client = None
-        self._aws_cognito_client = None
-        self._aws_db_client = None
-        self._aws_kms_client = None
-        self._aws_s3_client = None
-        self._chartwise_encryptor = None
+        self._openai_client: OpenAIBaseClass | None = None
+        self._pinecone_client: PineconeBaseClass | None = None
+        self._docupanda_client: DocupandaBaseClass | None = None
+        self._deepgram_client: DeepgramBaseClass | None = None
+        self._stripe_client: StripeBaseClass | None = None
+        self._resend_client: ResendBaseClass | None = None
+        self._influx_client: InfluxBaseClass | None = None
+        self._aws_secret_manager_client: AwsSecretManagerBaseClass | None = None
+        self._aws_cognito_client: AwsCognitoBaseClass | None = None
+        self._aws_db_client: AwsDbBaseClass | None = None
+        self._aws_kms_client: AwsKmsBaseClass | None = None
+        self._aws_s3_client: AwsS3BaseClass | None = None
+        self._chartwise_encryptor: ChartWiseEncryptor | None = None
 
     def inject_deepgram_client(self) -> DeepgramBaseClass:
         if self._deepgram_client is None:
@@ -94,7 +94,7 @@ class DependencyContainer:
     def inject_aws_db_client(self) -> AwsDbBaseClass:
         if self._aws_db_client is None:
             chartwise_encryptor = self.inject_chartwise_encryptor()
-            self._aws_db_client: AwsDbBaseClass = FakeAwsDbClient() if self._testing_environment else AwsDbClient(encryptor=chartwise_encryptor)
+            self._aws_db_client = FakeAwsDbClient() if self._testing_environment else AwsDbClient(encryptor=chartwise_encryptor)
         return self._aws_db_client
 
     def inject_aws_kms_client(self) -> AwsKmsBaseClass:

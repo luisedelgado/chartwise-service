@@ -1,7 +1,13 @@
 from fastapi.testclient import TestClient
+from typing import cast
 
 from ..dependencies.fake.fake_stripe_client import FakeStripeClient
-from ..dependencies.dependency_container import dependency_container
+from ..dependencies.dependency_container import (
+    dependency_container,
+    FakeAsyncOpenAI,
+    FakeDocupandaClient,
+    FakePineconeClient,
+)
 from ..managers.auth_manager import AuthManager
 from ..routers.payment_processing_router import (
     PaymentProcessingRouter,
@@ -37,15 +43,17 @@ class TestingHarnessPaymentProcessingRouter:
         dependency_container._pinecone_client = None
         dependency_container._resend_client = None
         dependency_container._stripe_client = None
-        dependency_container._testing_environment = "testing"
+        dependency_container._testing_environment = True
 
-        self.fake_openai_client = dependency_container.inject_openai_client()
-        self.fake_docupanda_client = dependency_container.inject_docupanda_client()
-        self.fake_stripe_client: FakeStripeClient = dependency_container.inject_stripe_client()
-        self.fake_pinecone_client = dependency_container.inject_pinecone_client()
+        self.fake_openai_client: FakeAsyncOpenAI = cast(FakeAsyncOpenAI, dependency_container.inject_openai_client())
+        self.fake_docupanda_client: FakeDocupandaClient = cast(FakeDocupandaClient, dependency_container.inject_docupanda_client())
+        self.fake_stripe_client: FakeStripeClient = cast(FakeStripeClient, dependency_container.inject_stripe_client())
+        self.fake_pinecone_client: FakePineconeClient = cast(FakePineconeClient, dependency_container.inject_pinecone_client())
         self.session_token, _ = AuthManager().create_session_token(user_id=FAKE_THERAPIST_ID)
-        coordinator = EndpointServiceCoordinator(routers=[PaymentProcessingRouter(environment=ENVIRONMENT).router],
-                                                 environment=ENVIRONMENT)
+        coordinator = EndpointServiceCoordinator(
+            routers=[PaymentProcessingRouter(environment=ENVIRONMENT).router],
+            environment=ENVIRONMENT
+        )
         self.client = TestClient(coordinator.app)
 
     def test_generate_checkout_session_without_session_token(self):
