@@ -130,11 +130,7 @@ class StripeClient(StripeBaseClass):
             country_iso: str | None = None,
         ) -> list:
         try:
-            if country_iso is None:
-                country_iso = "default"
-
-            country_iso = country_iso.lower()
-            if country_iso == "us":
+            if country_iso is None or country_iso.lower() == "us":
                 country_iso = "default"
 
             products = stripe.Product.search(
@@ -149,18 +145,17 @@ class StripeClient(StripeBaseClass):
 
             product_prices = {}
             for product in products['data']:
-                assert type(product) == dict and 'default_price' in product, "Missing default price in dict"
-                price = stripe.Price.retrieve(product['default_price'])
+                price = stripe.Price.retrieve(product['default_price']) # type: ignore
                 currency = price['currency']
                 formatted_price_amount = format_currency_amount(
                     amount=float(price['unit_amount']),
                     currency_code=currency
                 )
 
-                product_prices[product['id']] = {
-                    "name": product['name'],
-                    "description": product['description'],
-                    "metadata": product['metadata'],
+                product_prices[product['id']] = { # type: ignore
+                    "name": product['name'], # type: ignore
+                    "description": product['description'], # type: ignore
+                    "metadata": product['metadata'], # type: ignore
                     "price": {
                         "id": price['id'],
                         "unit_amount": formatted_price_amount,
