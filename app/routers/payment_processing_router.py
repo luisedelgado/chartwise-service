@@ -822,25 +822,6 @@ class PaymentProcessingRouter:
             ) from e
 
         try:
-            assert pagination_last_item_id_retrieved is not None, "Need a non-null value for pagination_last_item_id_retrieved"
-        except Exception as e:
-            status_code = general_utilities.extract_status_code(
-                e,
-                fallback=status.HTTP_400_BAD_REQUEST
-            )
-            dependency_container.inject_influx_client().log_error(
-                endpoint_name=request.url.path,
-                method=request.method,
-                error_code=status_code,
-                description=str(e),
-                session_id=session_id
-            )
-            raise HTTPException(
-                detail=str(e),
-                status_code=status_code
-            )
-
-        try:
             aws_db_client: AwsDbBaseClass = dependency_container.inject_aws_db_client()
             customer_data = await aws_db_client.select(
                 user_id=user_id,

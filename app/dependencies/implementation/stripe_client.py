@@ -74,12 +74,13 @@ class StripeClient(StripeBaseClass):
         limit: int,
         starting_after: str | None
     ) -> dict:
-        assert starting_after is not None, "Cannot use a null `starting_after` value"
-        return stripe.PaymentIntent.list(
-            customer=customer_id,
-            limit=limit,
-            starting_after=starting_after
-        )
+        params = {
+            'customer': customer_id,
+            'limit': limit
+        }
+        if starting_after is not None:
+            params['starting_after'] = starting_after
+        return stripe.PaymentIntent.list(**params)
 
     def cancel_customer_subscription(self, subscription_id: str):
         return stripe.Subscription.modify(
