@@ -399,7 +399,7 @@ class PaymentProcessingRouter:
                     "payment_method_data": {
                         "id": payment_method_data['id'] if payment_method_data and 'id' in payment_method_data else None,
                         "type": payment_method_data['type'] if payment_method_data and 'type' in payment_method_data else None,
-                        "data": payment_method_data['data'] if payment_method_data and 'data' in payment_method_data else None,
+                        "data": payment_method_data['card'] if payment_method_data and 'card' in payment_method_data else None,
                     },
                 }
                 current_subscription.update(subscription_data)
