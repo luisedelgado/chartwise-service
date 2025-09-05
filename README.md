@@ -169,5 +169,5 @@ Test suite covers:
 
 ## 📜 License
 
-Proprietary – Copyright © ChartWise, All rights reserved.
+Proprietary – Copyright © DOLD LLC, All rights reserved.
 
