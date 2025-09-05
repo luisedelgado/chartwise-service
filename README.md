@@ -27,6 +27,7 @@ ChartWise is an AI-powered platform built for mental health professionals to gai
 - **Static Assets**: S3 + CloudFront for hosting.  
 - **Deployment**: Docker images built and pushed to ECR, deployed via ECS with rolling updates.  
 
+![Architecture Diagram](diagram.png)
 ---
 
 ## 📦 Getting Started
